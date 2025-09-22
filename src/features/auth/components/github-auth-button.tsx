@@ -1,18 +1,32 @@
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTauriAuth } from "@/hooks/use-tauri-auth";
 import { toast } from "sonner";
 
 export default function GithubSignInButton() {
-  const { signInWithGitHub, loading } = useAuth();
+  const { signInWithGitHub: webSignIn, loading: webLoading } = useAuth();
+  const { signInWithGitHub: tauriSignIn, isLoading: tauriLoading, error: tauriError } = useTauriAuth();
+
+  const isTauri = typeof window !== "undefined" && (window as any).__TAURI__;
+  const loading = isTauri ? tauriLoading : webLoading;
 
   const handleGitHubSignIn = async () => {
     try {
-      const { error } = await signInWithGitHub();
-      if (error) {
-        toast.error("Failed to sign in with GitHub: " + error.message);
+      if (isTauri) {
+        await tauriSignIn();
+        if (tauriError) {
+          toast.error("Failed to sign in with GitHub: " + tauriError);
+        } else {
+          toast.success("Opening GitHub authentication...");
+        }
       } else {
-        toast.success("Redirecting to GitHub...");
+        const { error } = await webSignIn();
+        if (error) {
+          toast.error("Failed to sign in with GitHub: " + error.message);
+        } else {
+          toast.success("Redirecting to GitHub...");
+        }
       }
     } catch (error) {
       toast.error("An unexpected error occurred");

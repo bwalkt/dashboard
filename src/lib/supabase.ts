@@ -21,10 +21,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Auth helper functions
 export const auth = {
   signInWithGitHub: async () => {
+    const isTauri = typeof window !== "undefined" && (window as any).__TAURI__;
+    const redirectTo = isTauri ? "com.salesforce-dashboard.app://auth/callback" : `${window.location.origin}/dashboard/overview`;
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: `${window.location.origin}/dashboard/overview`,
+        redirectTo,
         scopes: "read:user user:email",
       },
     });
