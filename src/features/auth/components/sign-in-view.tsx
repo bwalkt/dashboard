@@ -39,13 +39,6 @@ export default function SignInViewPage({ stars }: { stars: number }) {
         <div className='flex w-full max-w-md flex-col items-center justify-center space-y-6'>
           {/* github link  */}
 
-          <div className='ml-2 flex items-center gap-1 text-sm md:flex'>
-            <IconStar
-              className='size-4 text-gray-500 transition-all duration-300 group-hover:text-yellow-300'
-              fill='currentColor'
-            />
-            <span className='font-display font-medium'>{stars}</span>
-          </div>
           <ClerkSignInForm
             routing="path"
             path="/auth/sign-in"
