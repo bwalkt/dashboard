@@ -47,6 +47,10 @@ export default function SignInViewPage({ stars }: { stars: number }) {
             <span className='font-display font-medium'>{stars}</span>
           </div>
           <ClerkSignInForm
+            routing="path"
+            path="/auth/sign-in"
+            signUpUrl="/auth/sign-up"
+            afterSignInUrl="/dashboard"
             initialValues={{
               emailAddress: 'test@example.com'
             }}

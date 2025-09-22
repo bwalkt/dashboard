@@ -16,6 +16,10 @@ import 'nprogress/nprogress.css';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
+// Import CSS styles
+import '@/styles/globals.css';
+import '@/styles/theme.css';
+
 // Import pages
 import SignIn from './pages/auth/SignIn';
 import SignUp from './pages/auth/SignUp';

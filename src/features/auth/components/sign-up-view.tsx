@@ -68,6 +68,10 @@ export default function SignUpViewPage({ stars }: { stars: number }) {
             </div>
           </Link>
           <ClerkSignUpForm
+            routing="path"
+            path="/auth/sign-up"
+            signInUrl="/auth/sign-in"
+            afterSignUpUrl="/dashboard"
             initialValues={{
               emailAddress: 'your_mail+clerk_test@example.com'
             }}

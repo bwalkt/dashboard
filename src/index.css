@@ -3,6 +3,11 @@
 @source "../index.html";
 @source "./**/*.{ts,tsx}";
 
+.cl-footer {
+  >:nth-child(2) {
+    display: none;
+  }
+}
 @layer base {
   :root {
     --background: 0 0% 100%;
