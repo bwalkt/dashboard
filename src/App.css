@@ -1,3 +1,8 @@
+.cl-footer, .cl-internal-vorlia {
+  >:nth-child(2) {
+    display: none;
+  }
+}
 .logo.vite:hover {
   filter: drop-shadow(0 0 2em #747bff);
 }
