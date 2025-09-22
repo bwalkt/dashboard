@@ -6,21 +6,26 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useState, useEffect } from 'react';
 
 export default function MobileDashboardLayout() {
+  // Force sidebar open for mobile testing
   const [defaultOpen, setDefaultOpen] = useState(true);
 
   useEffect(() => {
-    const sidebarState = localStorage.getItem('sidebar_state');
-    setDefaultOpen(sidebarState === 'true');
+    // Always keep it open for now to debug
+    setDefaultOpen(true);
   }, []);
 
   return (
     <KBar>
       <SidebarProvider defaultOpen={defaultOpen}>
-        <MobileAppSidebar />
-        <SidebarInset>
-          <MobileHeader />
-          <Outlet />
-        </SidebarInset>
+        <div className="flex h-screen w-full">
+          <MobileAppSidebar />
+          <SidebarInset className="flex-1">
+            <MobileHeader />
+            <main className="flex-1 overflow-y-auto">
+              <Outlet />
+            </main>
+          </SidebarInset>
+        </div>
       </SidebarProvider>
     </KBar>
   );

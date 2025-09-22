@@ -9,30 +9,38 @@ import ErrorBoundary from './ErrorBoundary';
 
 console.log('=== MAIN.TSX LOADING ===');
 
-// Enhanced mobile detection that works without Tauri globals
-function isMobileEnvironment() {
+// Enhanced environment detection
+function getEnvironmentType() {
   const userAgent = navigator?.userAgent || '';
   const location = window?.location?.href || '';
   
-  // Check if we're in a mobile environment
-  const isMobileUA = /iPhone|iPad|iPod|Android|Mobile/i.test(userAgent);
+  // Check if we're in Tauri (mobile or desktop)
   const isTauriProtocol = location.startsWith('tauri://');
   const isTauriApp = typeof (window as any).__TAURI__ !== 'undefined';
   
-  // For now, let's use the mobile app for ANY Tauri environment (mobile or desktop)
-  // and also for actual mobile browsers
-  const result = isMobileUA || isTauriProtocol || isTauriApp;
+  // Check if it's a mobile browser
+  const isMobileUA = /iPhone|iPad|iPod|Android|Mobile/i.test(userAgent);
   
-  console.log('Mobile detection:', {
+  let envType: 'tauri-mobile' | 'tauri-desktop' | 'web-browser' = 'web-browser';
+  
+  if (isTauriProtocol || isTauriApp) {
+    // It's a Tauri app - check if mobile or desktop
+    envType = isMobileUA ? 'tauri-mobile' : 'tauri-desktop';
+  } else {
+    // It's a regular web browser
+    envType = 'web-browser';
+  }
+  
+  console.log('Environment detection:', {
     userAgent,
     location,
-    isMobileUA,
     isTauriProtocol,
     isTauriApp,
-    finalResult: result
+    isMobileUA,
+    envType
   });
   
-  return result;
+  return envType;
 }
 
 // Error handlers
@@ -50,20 +58,32 @@ if (!rootElement) {
 } else {
   console.log('Root element found, mounting React app');
   try {
-    // Use MobileApp for mobile environments, otherwise show a simple message
-    const isMobile = isMobileEnvironment();
-    console.log('Using mobile app:', isMobile);
-    
-    // Use the full dashboard for all environments (mobile and web)
+    const envType = getEnvironmentType();
     const root = ReactDOM.createRoot(rootElement);
-    root.render(
-      <React.StrictMode>
-        <ErrorBoundary>
-          <AppWithoutClerk />
-        </ErrorBoundary>
-      </React.StrictMode>
-    );
-    console.log('✅ Full dashboard mounted successfully (without Clerk authentication)');
+    
+    if (envType === 'web-browser') {
+      // For web browsers, use the full App with Clerk authentication
+      console.log('🌐 Web browser detected - mounting App with Clerk authentication');
+      root.render(
+        <React.StrictMode>
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        </React.StrictMode>
+      );
+      console.log('✅ Web app with authentication mounted successfully');
+    } else {
+      // For Tauri (mobile or desktop), use the app without Clerk
+      console.log('📱 Tauri environment detected - mounting App without Clerk');
+      root.render(
+        <React.StrictMode>
+          <ErrorBoundary>
+            <AppWithoutClerk />
+          </ErrorBoundary>
+        </React.StrictMode>
+      );
+      console.log('✅ Tauri app without authentication mounted successfully');
+    }
   } catch (error) {
     console.error('❌ Error mounting app:', error);
     rootElement.innerHTML = `

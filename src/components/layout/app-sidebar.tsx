@@ -181,7 +181,7 @@ export default function AppSidebar() {
 
                 <DropdownMenuGroup>
                   <DropdownMenuItem
-                    onClick={() => router.push('/dashboard/profile')}
+                    onClick={() => navigate('/dashboard/profile')}
                   >
                     <IconUserCircle className='mr-2 h-4 w-4' />
                     Profile
@@ -196,10 +196,12 @@ export default function AppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <IconLogout className='mr-2 h-4 w-4' />
-                  <SignOutButton redirectUrl='/auth/sign-in' />
-                </DropdownMenuItem>
+                <SignOutButton redirectUrl='/auth/sign-in'>
+                  <DropdownMenuItem>
+                    <IconLogout className='mr-2 h-4 w-4' />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </SignOutButton>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
