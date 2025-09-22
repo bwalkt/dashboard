@@ -13,7 +13,7 @@ export const mobileNavItems: NavItem[] = [
   {
     title: 'Accounts',
     url: '/dashboard/accounts',
-    icon: 'users',
+    icon: 'user',
     shortcut: ['a', 'a'],
     isActive: false,
     items: []
@@ -21,7 +21,7 @@ export const mobileNavItems: NavItem[] = [
   {
     title: 'Opportunities',
     url: '/dashboard/opportunities',
-    icon: 'target',
+    icon: 'billing',
     shortcut: ['p', 'p'],
     isActive: false,
     items: []
@@ -29,7 +29,7 @@ export const mobileNavItems: NavItem[] = [
   {
     title: 'Leads',
     url: '/dashboard/leads',
-    icon: 'userPlus',
+    icon: 'add',
     shortcut: ['l', 'l'],
     isActive: false,
     items: []
@@ -37,7 +37,7 @@ export const mobileNavItems: NavItem[] = [
   {
     title: 'Data',
     url: '/dashboard/data',
-    icon: 'database',
+    icon: 'page',
     shortcut: ['d', 'd'],
     isActive: false,
     items: []
