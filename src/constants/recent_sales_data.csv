@@ -1,0 +1,7 @@
+
+id,name,email,amount,image,initials
+1,Olivia Martin,olivia.martin@email.com,"+$1,999.00",https://api.slingacademy.com/public/sample-users/1.png,OM
+2,Jackson Lee,jackson.lee@email.com,+$39.00,https://api.slingacademy.com/public/sample-users/2.png,JL
+3,Isabella Nguyen,isabella.nguyen@email.com,+$299.00,https://api.slingacademy.com/public/sample-users/3.png,IN
+4,William Kim,will@email.com,+$99.00,https://api.slingacademy.com/public/sample-users/4.png,WK
+5,Sofia Davis,sofia.davis@email.com,+$39.00,https://api.slingacademy.com/public/sample-users/5.png,SD

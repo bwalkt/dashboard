@@ -1,0 +1,11 @@
+Product_Id,Product_Name,Product_Category,Unit_Price,Cost_Per_Unit,Description,Is_Active,Created_Date
+PROD001,Enterprise CRM Software,Software,2499.99,1200.00,Complete customer relationship management solution,TRUE,2024-01-15
+PROD002,Mobile App Development Kit,Software,1899.99,950.00,Cross-platform mobile development tools,TRUE,2024-02-20
+PROD003,Data Analytics Dashboard,Software,3299.99,1650.00,Real-time business intelligence platform,TRUE,2024-01-10
+PROD004,Cloud Storage Pro,Services,899.99,450.00,Secure cloud storage solution - 5TB,TRUE,2024-03-05
+PROD005,Security Monitoring Suite,Software,4999.99,2500.00,Advanced cybersecurity monitoring tools,TRUE,2024-01-25
+PROD006,Project Management Platform,Software,1499.99,750.00,Collaborative project management software,TRUE,2024-02-14
+PROD007,E-commerce Builder,Software,2199.99,1100.00,Complete e-commerce website builder,TRUE,2024-03-12
+PROD008,Training & Certification,Services,599.99,200.00,Professional development training program,TRUE,2024-01-30
+PROD009,API Integration Tools,Software,1799.99,900.00,Enterprise API management platform,TRUE,2024-02-28
+PROD010,Backup & Recovery Service,Services,1299.99,650.00,Automated backup and disaster recovery,TRUE,2024-03-18

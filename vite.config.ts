@@ -12,10 +12,18 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    host: host || false,
+    hmr: host
+      ? {
+          protocol: "ws",
+          host,
+          port: 1420,
+        }
+      : undefined,
   },
   resolve: {
     alias: {
-      "~": path.resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 });

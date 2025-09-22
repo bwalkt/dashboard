@@ -1,51 +1,183 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import { Button } from "~/components/ui/button";
-import "./App.css";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import {
+  ClerkProvider,
+  SignedIn,
+  SignedOut,
+  useAuth
+} from '@clerk/clerk-react';
+import Providers from '@/components/layout/providers';
+import { Toaster } from '@/components/ui/sonner';
+import ThemeProvider from '@/components/layout/ThemeToggle/theme-provider';
+import { fontVariables } from '@/lib/font';
+import { cn } from '@/lib/utils';
+import { NuqsAdapter } from 'nuqs/adapters/react';
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+
+// Import pages
+import SignIn from './pages/auth/SignIn';
+import SignUp from './pages/auth/SignUp';
+import DashboardLayout from './pages/dashboard/Layout';
+import Overview from './pages/dashboard/Overview';
+import Accounts from './pages/dashboard/Accounts';
+import Opportunities from './pages/dashboard/Opportunities';
+import Leads from './pages/dashboard/Leads';
+import Data from './pages/dashboard/Data';
+import Settings from './pages/dashboard/Settings';
+
+// Configure NProgress
+NProgress.configure({ showSpinner: false });
+
+function ProgressBar() {
+  const location = useLocation();
+
+  useEffect(() => {
+    NProgress.start();
+    NProgress.done();
+  }, [location.pathname]);
+
+  return null;
+}
+
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  console.log('PrivateRoute - isLoaded:', isLoaded, 'isSignedIn:', isSignedIn);
+
+  if (!isLoaded) {
+    return <div>Loading authentication...</div>;
+  }
+
+  if (!isSignedIn) {
+    return <Navigate to='/auth/sign-in' replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AppContent() {
+  const activeThemeValue = localStorage.getItem('active_theme') || '';
+  const isScaled = activeThemeValue?.endsWith('-scaled');
+
+  console.log('AppContent rendering, theme:', activeThemeValue || 'default');
+
+  return (
+    <div
+      className={cn(
+        'bg-background min-h-screen font-sans antialiased',
+        activeThemeValue ? `theme-${activeThemeValue}` : '',
+        isScaled ? 'theme-scaled' : '',
+        fontVariables
+      )}
+    >
+      <ThemeProvider
+        attribute='class'
+        defaultTheme='system'
+        enableSystem
+        disableTransitionOnChange
+        enableColorScheme
+      >
+        <Providers activeThemeValue={activeThemeValue}>
+          <Toaster />
+          <ProgressBar />
+          <Routes>
+            {/* Auth routes */}
+            <Route
+              path='/auth/sign-in'
+              element={
+                <SignedOut>
+                  <SignIn />
+                </SignedOut>
+              }
+            />
+            <Route
+              path='/auth/sign-up'
+              element={
+                <SignedOut>
+                  <SignUp />
+                </SignedOut>
+              }
+            />
+
+            {/* Dashboard routes */}
+            <Route
+              path='/dashboard/*'
+              element={
+                <PrivateRoute>
+                  <DashboardLayout />
+                </PrivateRoute>
+              }
+            >
+              <Route
+                index
+                element={<Navigate to='/dashboard/overview' replace />}
+              />
+              <Route path='overview' element={<Overview />} />
+              <Route path='accounts' element={<Accounts />} />
+              <Route path='opportunities' element={<Opportunities />} />
+              <Route path='leads' element={<Leads />} />
+              <Route path='data' element={<Data />} />
+              <Route path='settings' element={<Settings />} />
+            </Route>
+
+            {/* Root redirect - single route that checks auth state */}
+            <Route
+              path='/'
+              element={
+                <>
+                  <SignedIn>
+                    <Navigate to='/dashboard/overview' replace />
+                  </SignedIn>
+                  <SignedOut>
+                    <Navigate to='/auth/sign-in' replace />
+                  </SignedOut>
+                </>
+              }
+            />
+          </Routes>
+        </Providers>
+      </ThemeProvider>
+    </div>
+  );
+}
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  console.log('=== APP COMPONENT STARTING ===');
+  console.log(
+    'App component rendering, Clerk key:',
+    clerkPubKey ? 'present' : 'missing'
+  );
+  console.log('Environment variables:', import.meta.env);
+
+  if (!clerkPubKey) {
+    console.error(
+      'VITE_CLERK_PUBLISHABLE_KEY is not set in environment variables'
+    );
+    return (
+      <div className='flex min-h-screen items-center justify-center'>
+        <div className='text-red-500'>
+          Error: Clerk publishable key is missing. Please check your .env file.
+        </div>
+      </div>
+    );
   }
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <Button type="submit">Greet</Button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    <ClerkProvider
+      publishableKey={clerkPubKey}
+      afterSignInUrl='/dashboard'
+      afterSignUpUrl='/dashboard'
+    >
+      <BrowserRouter>
+        <NuqsAdapter>
+          <AppContent />
+        </NuqsAdapter>
+      </BrowserRouter>
+    </ClerkProvider>
   );
 }
 
