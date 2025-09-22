@@ -27,7 +27,7 @@ import {
   SidebarMenuSubItem,
   SidebarRail
 } from '@/components/ui/sidebar';
-import { navItems } from '@/constants/data';
+import { mobileNavItems } from '@/constants/mobile-nav';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import {
   IconBell,
@@ -91,7 +91,7 @@ export default function MobileAppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarMenu>
-            {navItems.map((item) => {
+            {mobileNavItems.map((item) => {
               const Icon = item.icon ? Icons[item.icon] : Icons.logo;
               return item?.items && item?.items?.length > 0 ? (
                 <Collapsible
@@ -119,7 +119,7 @@ export default function MobileAppSidebar() {
                               asChild
                               isActive={pathname === subItem.url}
                             >
-                              <Link href={subItem.url}>
+                              <Link to={subItem.url}>
                                 <span>{subItem.title}</span>
                               </Link>
                             </SidebarMenuSubButton>
@@ -136,7 +136,7 @@ export default function MobileAppSidebar() {
                     tooltip={item.title}
                     isActive={pathname === item.url}
                   >
-                    <Link href={item.url}>
+                    <Link to={item.url}>
                       <Icon />
                       <span>{item.title}</span>
                     </Link>
