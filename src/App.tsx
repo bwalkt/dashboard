@@ -9,6 +9,8 @@ import NProgress from "nprogress";
 import "nprogress/nprogress.css";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // Import all CSS styles
 import "@/styles/globals.css";
@@ -22,6 +24,8 @@ import Opportunities from "./pages/dashboard/Opportunities";
 import Leads from "./pages/dashboard/Leads";
 import Data from "./pages/dashboard/Data";
 import Settings from "./pages/dashboard/Settings";
+import SignIn from "./pages/auth/SignIn";
+import SignUp from "./pages/auth/SignUp";
 
 // Configure NProgress
 NProgress.configure({ showSpinner: false });
@@ -57,8 +61,19 @@ function AppContent() {
           <Toaster />
           <ProgressBar />
           <Routes>
-            {/* Dashboard routes - no authentication required */}
-            <Route path="/dashboard/*" element={<MobileDashboardLayout />}>
+            {/* Auth routes - no authentication required */}
+            <Route path="/auth/sign-in" element={<SignIn />} />
+            <Route path="/auth/sign-up" element={<SignUp />} />
+
+            {/* Dashboard routes - authentication required */}
+            <Route
+              path="/dashboard/*"
+              element={
+                <ProtectedRoute>
+                  <MobileDashboardLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<Navigate to="/dashboard/overview" replace />} />
               <Route path="overview" element={<Overview />} />
               <Route path="accounts" element={<Accounts />} />
@@ -68,11 +83,11 @@ function AppContent() {
               <Route path="settings" element={<Settings />} />
             </Route>
 
-            {/* Root redirect - go directly to dashboard */}
-            <Route path="/" element={<Navigate to="/dashboard/overview" replace />} />
+            {/* Root redirect - go to sign in */}
+            <Route path="/" element={<Navigate to="/auth/sign-in" replace />} />
 
             {/* Catch all other routes */}
-            <Route path="*" element={<Navigate to="/dashboard/overview" replace />} />
+            <Route path="*" element={<Navigate to="/auth/sign-in" replace />} />
           </Routes>
         </Providers>
       </ThemeProvider>
@@ -87,7 +102,9 @@ function App() {
   return (
     <BrowserRouter>
       <NuqsAdapter>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </NuqsAdapter>
     </BrowserRouter>
   );

@@ -2,15 +2,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { useEffect } from "react";
+import GithubSignInButton from "./github-auth-button";
 
 export default function SignInViewPage({ stars }: { stars: number }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, loading } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user && !loading) {
+      const from = location.state?.from?.pathname || "/dashboard/overview";
+      navigate(from, { replace: true });
+    }
+  }, [user, loading, navigate, location]);
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock sign in - just redirect to dashboard
-    navigate("/dashboard/overview");
+    // For demo purposes, we'll just show a message since we're focusing on GitHub OAuth
+    toast.info("Please use GitHub OAuth to sign in");
   };
 
   return (
@@ -42,6 +56,18 @@ export default function SignInViewPage({ stars }: { stars: number }) {
                   Sign In
                 </Button>
               </form>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background text-muted-foreground px-2">Or continue with</span>
+                </div>
+              </div>
+
+              <GithubSignInButton />
+
               <div className="mt-4 text-center text-sm">
                 Don't have an account?{" "}
                 <Link to="/auth/sign-up" className="hover:text-primary underline underline-offset-4">

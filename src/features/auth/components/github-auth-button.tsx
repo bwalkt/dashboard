@@ -1,22 +1,29 @@
-'use client';
-
-import { useSearchParams } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Icons } from '@/components/icons';
+import { Button } from "@/components/ui/button";
+import { Icons } from "@/components/icons";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export default function GithubSignInButton() {
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl');
+  const { signInWithGitHub, loading } = useAuth();
+
+  const handleGitHubSignIn = async () => {
+    try {
+      const { error } = await signInWithGitHub();
+      if (error) {
+        toast.error("Failed to sign in with GitHub: " + error.message);
+      } else {
+        toast.success("Redirecting to GitHub...");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+      console.error("GitHub sign in error:", error);
+    }
+  };
 
   return (
-    <Button
-      className='w-full'
-      variant='outline'
-      type='button'
-      onClick={() => console.log('continue with github clicked')}
-    >
-      <Icons.github className='mr-2 h-4 w-4' />
-      Continue with Github
+    <Button className="w-full" variant="outline" type="button" onClick={handleGitHubSignIn} disabled={loading}>
+      <Icons.github className="mr-2 h-4 w-4" />
+      {loading ? "Signing in..." : "Continue with Github"}
     </Button>
   );
 }
