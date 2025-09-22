@@ -146,10 +146,12 @@ function AppContent() {
 function App() {
   const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
+  console.log('=== APP COMPONENT STARTING ===');
   console.log(
     'App component rendering, Clerk key:',
     clerkPubKey ? 'present' : 'missing'
   );
+  console.log('Environment variables:', import.meta.env);
 
   if (!clerkPubKey) {
     console.error(

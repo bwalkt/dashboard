@@ -15,7 +15,26 @@
     <title>Salesforce Dashboard</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="padding: 20px; font-family: sans-serif; background: #f0f0f0; min-height: 100vh;">
+        <h1>Loading Salesforce Dashboard...</h1>
+        <p>If you see this message for more than a few seconds, there may be a JavaScript loading issue.</p>
+        <div id="debug-info">
+          <h3>Debug Information:</h3>
+          <p>Timestamp: <span id="timestamp"></span></p>
+          <p>User Agent: <span id="user-agent"></span></p>
+          <p>Location: <span id="location"></span></p>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Add immediate debug info before module loads
+      document.getElementById('timestamp').textContent = new Date().toISOString();
+      document.getElementById('user-agent').textContent = navigator.userAgent;
+      document.getElementById('location').textContent = window.location.href;
+      console.log('=== HTML SCRIPT RUNNING ===');
+      console.log('Before main.tsx load:', new Date().toISOString());
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

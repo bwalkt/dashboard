@@ -6,8 +6,10 @@ import { IconStar } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
 
 export default function SignUpViewPage({ stars }: { stars: number }) {
+  console.log('SignUpViewPage rendering, stars:', stars);
+  
   return (
-    <div className='relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0'>
+    <div className='relative h-screen flex flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0'>
       <Link
         to='/examples/authentication'
         className={cn(
