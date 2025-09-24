@@ -1,8 +1,0 @@
-.cl-footer, .cl-internal-vorlia {
-  >:nth-child(2) {
-    display: none;
-  }
-}
-.cl-lastAuthenticationStrategyBadge {
-  display: none;
-}
