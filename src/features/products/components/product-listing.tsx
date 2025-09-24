@@ -1,34 +1,30 @@
-import { Product } from '@/constants/data';
-import { fakeProducts } from '@/constants/mock-api';
-import { searchParamsCache } from '@/lib/searchparams';
-import { ProductTable } from './product-tables';
-import { columns } from './product-tables/columns';
+import { ProductTable } from "./product-tables";
+import { columns } from "./product-tables/columns";
+import { useProducts } from "@/hooks/use-products";
 
 type ProductListingPage = {};
 
-export default async function ProductListingPage({}: ProductListingPage) {
-  // Showcasing the use of search params cache in nested RSCs
-  const page = searchParamsCache.get('page');
-  const search = searchParamsCache.get('name');
-  const pageLimit = searchParamsCache.get('perPage');
-  const categories = searchParamsCache.get('category');
+export default function ProductListingPage({}: ProductListingPage) {
+  const { data: products = [], isLoading, error, isError } = useProducts();
 
-  const filters = {
-    page,
-    limit: pageLimit,
-    ...(search && { search }),
-    ...(categories && { categories: categories })
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-lg">Loading products...</div>
+      </div>
+    );
+  }
 
-  const data = await fakeProducts.getProducts(filters);
-  const totalProducts = data.total_products;
-  const products: Product[] = data.products;
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-red-600">
+          <div className="text-lg font-semibold mb-2">Error loading products</div>
+          <div className="text-sm">{error?.message || "An unknown error occurred"}</div>
+        </div>
+      </div>
+    );
+  }
 
-  return (
-    <ProductTable
-      data={products}
-      totalItems={totalProducts}
-      columns={columns}
-    />
-  );
+  return <ProductTable data={products} totalItems={products.length} columns={columns} />;
 }

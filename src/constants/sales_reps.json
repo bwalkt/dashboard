@@ -1,0 +1,112 @@
+[
+  {
+    "Sales_Rep_Id": "SR001",
+    "First_Name": "Sarah",
+    "Last_Name": "Johnson",
+    "Email": "sarah.johnson@company.com",
+    "Phone": "555-0101",
+    "Territory": "North America",
+    "Hire_Date": "2023-03-15",
+    "Quota_Target": 500000.00,
+    "Commission_Rate": 0.08
+  },
+  {
+    "Sales_Rep_Id": "SR002",
+    "First_Name": "Michael",
+    "Last_Name": "Chen",
+    "Email": "michael.chen@company.com",
+    "Phone": "555-0102",
+    "Territory": "Asia Pacific",
+    "Hire_Date": "2022-11-20",
+    "Quota_Target": 450000.00,
+    "Commission_Rate": 0.08
+  },
+  {
+    "Sales_Rep_Id": "SR003",
+    "First_Name": "Emily",
+    "Last_Name": "Rodriguez",
+    "Email": "emily.rodriguez@company.com",
+    "Phone": "555-0103",
+    "Territory": "Europe",
+    "Hire_Date": "2023-06-10",
+    "Quota_Target": 480000.00,
+    "Commission_Rate": 0.075
+  },
+  {
+    "Sales_Rep_Id": "SR004",
+    "First_Name": "David",
+    "Last_Name": "Thompson",
+    "Email": "david.thompson@company.com",
+    "Phone": "555-0104",
+    "Territory": "North America",
+    "Hire_Date": "2022-08-25",
+    "Quota_Target": 520000.00,
+    "Commission_Rate": 0.085
+  },
+  {
+    "Sales_Rep_Id": "SR005",
+    "First_Name": "Lisa",
+    "Last_Name": "Wang",
+    "Email": "lisa.wang@company.com",
+    "Phone": "555-0105",
+    "Territory": "Asia Pacific",
+    "Hire_Date": "2023-01-12",
+    "Quota_Target": 460000.00,
+    "Commission_Rate": 0.08
+  },
+  {
+    "Sales_Rep_Id": "SR006",
+    "First_Name": "James",
+    "Last_Name": "Miller",
+    "Email": "james.miller@company.com",
+    "Phone": "555-0106",
+    "Territory": "Latin America",
+    "Hire_Date": "2023-04-18",
+    "Quota_Target": 420000.00,
+    "Commission_Rate": 0.075
+  },
+  {
+    "Sales_Rep_Id": "SR007",
+    "First_Name": "Anna",
+    "Last_Name": "Kowalski",
+    "Email": "anna.kowalski@company.com",
+    "Phone": "555-0107",
+    "Territory": "Europe",
+    "Hire_Date": "2022-12-05",
+    "Quota_Target": 490000.00,
+    "Commission_Rate": 0.08
+  },
+  {
+    "Sales_Rep_Id": "SR008",
+    "First_Name": "Robert",
+    "Last_Name": "Davis",
+    "Email": "robert.davis@company.com",
+    "Phone": "555-0108",
+    "Territory": "North America",
+    "Hire_Date": "2023-02-28",
+    "Quota_Target": 510000.00,
+    "Commission_Rate": 0.085
+  },
+  {
+    "Sales_Rep_Id": "SR009",
+    "First_Name": "Maria",
+    "Last_Name": "Santos",
+    "Email": "maria.santos@company.com",
+    "Phone": "555-0109",
+    "Territory": "Latin America",
+    "Hire_Date": "2023-05-22",
+    "Quota_Target": 440000.00,
+    "Commission_Rate": 0.075
+  },
+  {
+    "Sales_Rep_Id": "SR010",
+    "First_Name": "Alex",
+    "Last_Name": "Kumar",
+    "Email": "alex.kumar@company.com",
+    "Phone": "555-0110",
+    "Territory": "Asia Pacific",
+    "Hire_Date": "2022-10-14",
+    "Quota_Target": 470000.00,
+    "Commission_Rate": 0.08
+  }
+]
