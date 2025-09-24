@@ -1,0 +1,102 @@
+[
+  {
+    "Product_Id": "PROD001",
+    "Product_Name": "Enterprise CRM Software",
+    "Product_Category": "Software",
+    "Unit_Price": 2499.99,
+    "Cost_Per_Unit": 1200.00,
+    "Description": "Complete customer relationship management solution",
+    "Is_Active": true,
+    "Created_Date": "2024-01-15"
+  },
+  {
+    "Product_Id": "PROD002",
+    "Product_Name": "Mobile App Development Kit",
+    "Product_Category": "Software",
+    "Unit_Price": 1899.99,
+    "Cost_Per_Unit": 950.00,
+    "Description": "Cross-platform mobile development tools",
+    "Is_Active": true,
+    "Created_Date": "2024-02-20"
+  },
+  {
+    "Product_Id": "PROD003",
+    "Product_Name": "Data Analytics Dashboard",
+    "Product_Category": "Software",
+    "Unit_Price": 3299.99,
+    "Cost_Per_Unit": 1650.00,
+    "Description": "Real-time business intelligence platform",
+    "Is_Active": true,
+    "Created_Date": "2024-01-10"
+  },
+  {
+    "Product_Id": "PROD004",
+    "Product_Name": "Cloud Storage Pro",
+    "Product_Category": "Services",
+    "Unit_Price": 899.99,
+    "Cost_Per_Unit": 450.00,
+    "Description": "Secure cloud storage solution - 5TB",
+    "Is_Active": true,
+    "Created_Date": "2024-03-05"
+  },
+  {
+    "Product_Id": "PROD005",
+    "Product_Name": "Security Monitoring Suite",
+    "Product_Category": "Software",
+    "Unit_Price": 4999.99,
+    "Cost_Per_Unit": 2500.00,
+    "Description": "Advanced cybersecurity monitoring tools",
+    "Is_Active": true,
+    "Created_Date": "2024-01-25"
+  },
+  {
+    "Product_Id": "PROD006",
+    "Product_Name": "Project Management Platform",
+    "Product_Category": "Software",
+    "Unit_Price": 1499.99,
+    "Cost_Per_Unit": 750.00,
+    "Description": "Collaborative project management software",
+    "Is_Active": true,
+    "Created_Date": "2024-02-14"
+  },
+  {
+    "Product_Id": "PROD007",
+    "Product_Name": "E-commerce Builder",
+    "Product_Category": "Software",
+    "Unit_Price": 2199.99,
+    "Cost_Per_Unit": 1100.00,
+    "Description": "Complete e-commerce website builder",
+    "Is_Active": true,
+    "Created_Date": "2024-03-12"
+  },
+  {
+    "Product_Id": "PROD008",
+    "Product_Name": "Training & Certification",
+    "Product_Category": "Services",
+    "Unit_Price": 599.99,
+    "Cost_Per_Unit": 200.00,
+    "Description": "Professional development training program",
+    "Is_Active": true,
+    "Created_Date": "2024-01-30"
+  },
+  {
+    "Product_Id": "PROD009",
+    "Product_Name": "API Integration Tools",
+    "Product_Category": "Software",
+    "Unit_Price": 1799.99,
+    "Cost_Per_Unit": 900.00,
+    "Description": "Enterprise API management platform",
+    "Is_Active": true,
+    "Created_Date": "2024-02-28"
+  },
+  {
+    "Product_Id": "PROD010",
+    "Product_Name": "Backup & Recovery Service",
+    "Product_Category": "Services",
+    "Unit_Price": 1299.99,
+    "Cost_Per_Unit": 650.00,
+    "Description": "Automated backup and disaster recovery",
+    "Is_Active": true,
+    "Created_Date": "2024-03-18"
+  }
+]

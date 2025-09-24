@@ -1,53 +1,54 @@
-import { NavItem } from '@/types';
+import { NavItem } from "@/types";
 
 // Mobile-specific navigation items with correct routes
 export const mobileNavItems: NavItem[] = [
   {
-    title: 'Overview',
-    url: '/dashboard/overview',
-    icon: 'dashboard',
+    title: "Overview",
+    url: "/dashboard/overview",
+    icon: "dashboard",
     isActive: false,
-    shortcut: ['o', 'o'],
-    items: []
+    shortcut: ["o", "o"],
+    items: [],
   },
   {
-    title: 'Accounts',
-    url: '/dashboard/accounts',
-    icon: 'user',
-    shortcut: ['a', 'a'],
+    title: "Products",
+    url: "/dashboard/products",
+    icon: "product",
+    shortcut: ["d", "d"],
     isActive: false,
-    items: []
+    items: [],
   },
   {
-    title: 'Opportunities',
-    url: '/dashboard/opportunities',
-    icon: 'billing',
-    shortcut: ['p', 'p'],
+    title: "Accounts",
+    url: "/dashboard/accounts",
+    icon: "user",
+    shortcut: ["a", "a"],
     isActive: false,
-    items: []
+    items: [],
   },
   {
-    title: 'Leads',
-    url: '/dashboard/leads',
-    icon: 'add',
-    shortcut: ['l', 'l'],
+    title: "Opportunities",
+    url: "/dashboard/opportunities",
+    icon: "billing",
+    shortcut: ["p", "p"],
     isActive: false,
-    items: []
+    items: [],
   },
   {
-    title: 'Data',
-    url: '/dashboard/data',
-    icon: 'page',
-    shortcut: ['d', 'd'],
+    title: "Leads",
+    url: "/dashboard/leads",
+    icon: "add",
+    shortcut: ["l", "l"],
     isActive: false,
-    items: []
+    items: [],
   },
+
   {
-    title: 'Settings',
-    url: '/dashboard/settings',
-    icon: 'settings',
-    shortcut: ['s', 's'],
+    title: "Settings",
+    url: "/dashboard/settings",
+    icon: "settings",
+    shortcut: ["s", "s"],
     isActive: false,
-    items: []
-  }
+    items: [],
+  },
 ];

@@ -1,31 +1,30 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Providers from "@/components/layout/providers";
-import { Toaster } from "@/components/ui/sonner";
 import ThemeProvider from "@/components/layout/ThemeToggle/theme-provider";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { fontVariables } from "@/lib/font";
 import { cn } from "@/lib/utils";
-import { NuqsAdapter } from "nuqs/adapters/react";
 import NProgress from "nprogress";
 import "nprogress/nprogress.css";
+import { NuqsAdapter } from "nuqs/adapters/react";
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 // Import all CSS styles
 import "@/styles/globals.css";
 import "@/styles/theme.css";
 
 // Import pages
-import MobileDashboardLayout from "./pages/dashboard/MobileLayout";
-import Overview from "./pages/dashboard/Overview";
-import Accounts from "./pages/dashboard/Accounts";
-import Opportunities from "./pages/dashboard/Opportunities";
-import Leads from "./pages/dashboard/Leads";
-import Data from "./pages/dashboard/Data";
-import Settings from "./pages/dashboard/Settings";
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
+import Accounts from "./pages/dashboard/Accounts";
+import Leads from "./pages/dashboard/Leads";
+import MobileDashboardLayout from "./pages/dashboard/MobileLayout";
+import Opportunities from "./pages/dashboard/Opportunities";
+import Overview from "./pages/dashboard/Overview";
+import Products from "./pages/dashboard/Products";
+import Settings from "./pages/dashboard/Settings";
 
 // Configure NProgress
 NProgress.configure({ showSpinner: false });
@@ -79,7 +78,7 @@ function AppContent() {
               <Route path="accounts" element={<Accounts />} />
               <Route path="opportunities" element={<Opportunities />} />
               <Route path="leads" element={<Leads />} />
-              <Route path="data" element={<Data />} />
+              <Route path="products" element={<Products />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 
