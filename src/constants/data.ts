@@ -1,14 +1,32 @@
 import { NavItem } from "@/types";
 import { json2csv } from "json-2-csv";
 export type Product = {
-  Product_Id: string;
-  Product_Name: string;
-  Product_Category: string;
-  Unit_Price: number;
-  Cost_Per_Unit: number;
+  Id: string;
+  Name: string;
+  ProductCode: string | null;
   Description: string;
-  Is_Active: boolean;
-  Created_Date: string;
+  IsActive: boolean;
+  CreatedDate: string;
+  CreatedById: string;
+  LastModifiedDate: string;
+  LastModifiedById: string;
+  SystemModstamp: string;
+  Family: string | null;
+  ExternalDataSourceId: string | null;
+  ExternalId: string | null;
+  DisplayUrl: string | null;
+  QuantityUnitOfMeasure: string | null;
+  IsDeleted: boolean;
+  IsArchived: boolean;
+  LastViewedDate: string;
+  LastReferencedDate: string;
+  StockKeepingUnit: string | null;
+  Type: string | null;
+  ProductClass: string;
+  Product_Category__c: string;
+  Unit_Price__c: number;
+  Cost_Per_Unit__c: number;
+  External_Id__c: string | null;
 };
 
 //Info: The following data is used for the sidebar navigation and Cmd K bar.

@@ -12,6 +12,7 @@ settingGroups:
     base:
       PRODUCT_NAME: salesforce-dashboard
       PRODUCT_BUNDLE_IDENTIFIER: com.salesforce-dashboard.app
+      DEVELOPMENT_TEAM: FAKETEAMID
 targetTemplates:
   app:
     type: application

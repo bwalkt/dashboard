@@ -1,129 +1,30 @@
-import { Product } from "@/constants/data";
 import { ProductTable } from "./product-tables";
 import { columns } from "./product-tables/columns";
-
-// Import the products data directly
-const productsData = [
-  {
-    Product_Id: "PROD001",
-    Product_Name: "Enterprise CRM Software",
-    Product_Category: "Software",
-    Unit_Price: 2499.99,
-    Cost_Per_Unit: 1200.0,
-    Description: "Complete customer relationship management solution",
-    Is_Active: true,
-    Created_Date: "2024-01-15",
-  },
-  {
-    Product_Id: "PROD002",
-    Product_Name: "Mobile App Development Kit",
-    Product_Category: "Software",
-    Unit_Price: 1899.99,
-    Cost_Per_Unit: 950.0,
-    Description: "Cross-platform mobile development tools",
-    Is_Active: true,
-    Created_Date: "2024-02-20",
-  },
-  {
-    Product_Id: "PROD003",
-    Product_Name: "Data Analytics Dashboard",
-    Product_Category: "Software",
-    Unit_Price: 3299.99,
-    Cost_Per_Unit: 1650.0,
-    Description: "Real-time business intelligence platform",
-    Is_Active: true,
-    Created_Date: "2024-01-10",
-  },
-  {
-    Product_Id: "PROD004",
-    Product_Name: "Cloud Storage Pro",
-    Product_Category: "Services",
-    Unit_Price: 899.99,
-    Cost_Per_Unit: 450.0,
-    Description: "Secure cloud storage solution - 5TB",
-    Is_Active: true,
-    Created_Date: "2024-03-05",
-  },
-  {
-    Product_Id: "PROD005",
-    Product_Name: "Security Monitoring Suite",
-    Product_Category: "Software",
-    Unit_Price: 4999.99,
-    Cost_Per_Unit: 2500.0,
-    Description: "Advanced cybersecurity monitoring tools",
-    Is_Active: true,
-    Created_Date: "2024-01-25",
-  },
-  {
-    Product_Id: "PROD006",
-    Product_Name: "Project Management Platform",
-    Product_Category: "Software",
-    Unit_Price: 1499.99,
-    Cost_Per_Unit: 750.0,
-    Description: "Collaborative project management software",
-    Is_Active: true,
-    Created_Date: "2024-02-14",
-  },
-  {
-    Product_Id: "PROD007",
-    Product_Name: "E-commerce Builder",
-    Product_Category: "Software",
-    Unit_Price: 2199.99,
-    Cost_Per_Unit: 1100.0,
-    Description: "Complete e-commerce website builder",
-    Is_Active: true,
-    Created_Date: "2024-03-12",
-  },
-  {
-    Product_Id: "PROD008",
-    Product_Name: "Training & Certification",
-    Product_Category: "Services",
-    Unit_Price: 599.99,
-    Cost_Per_Unit: 200.0,
-    Description: "Professional development training program",
-    Is_Active: true,
-    Created_Date: "2024-01-30",
-  },
-  {
-    Product_Id: "PROD009",
-    Product_Name: "API Integration Tools",
-    Product_Category: "Software",
-    Unit_Price: 1799.99,
-    Cost_Per_Unit: 900.0,
-    Description: "Enterprise API management platform",
-    Is_Active: true,
-    Created_Date: "2024-02-28",
-  },
-  {
-    Product_Id: "PROD010",
-    Product_Name: "Backup & Recovery Service",
-    Product_Category: "Services",
-    Unit_Price: 1299.99,
-    Cost_Per_Unit: 650.0,
-    Description: "Automated backup and disaster recovery",
-    Is_Active: true,
-    Created_Date: "2024-03-18",
-  },
-];
+import { useProducts } from "@/hooks/use-products";
 
 type ProductListingPage = {};
 
 export default function ProductListingPage({}: ProductListingPage) {
-  // // Showcasing the use of search params cache in nested RSCs
-  // const page = searchParamsCache.get("page");
-  // const search = searchParamsCache.get("name");
-  // const pageLimit = searchParamsCache.get("perPage");
-  // const categories = searchParamsCache.get("category");
+  const { data: products = [], isLoading, error, isError } = useProducts();
 
-  // const filters = {
-  //   page,
-  //   limit: pageLimit,
-  //   ...(search && { search }),
-  //   ...(categories && { categories: categories }),
-  // };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-lg">Loading products...</div>
+      </div>
+    );
+  }
 
-  // const data =  fakeProducts.getProducts(filters);
-  const products: Product[] = productsData as Product[];
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-red-600">
+          <div className="text-lg font-semibold mb-2">Error loading products</div>
+          <div className="text-sm">{error?.message || "An unknown error occurred"}</div>
+        </div>
+      </div>
+    );
+  }
 
   return <ProductTable data={products} totalItems={products.length} columns={columns} />;
 }

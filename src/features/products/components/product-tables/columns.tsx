@@ -9,10 +9,10 @@ import { CATEGORY_OPTIONS } from "./options";
 
 export const columns: ColumnDef<Product>[] = [
   {
-    id: "Product_Id",
-    accessorKey: "Product_Id",
+    id: "Id",
+    accessorKey: "Id",
     header: ({ column }: { column: Column<Product, unknown> }) => <DataTableColumnHeader column={column} title="Product ID" />,
-    cell: ({ cell }) => <div className="font-mono text-sm">{cell.getValue<Product["Product_Id"]>()}</div>,
+    cell: ({ cell }) => <div className="font-mono text-sm">{cell.getValue<Product["Id"]>()}</div>,
     meta: {
       label: "Product ID",
       placeholder: "Search by product ID...",
@@ -22,10 +22,10 @@ export const columns: ColumnDef<Product>[] = [
     enableColumnFilter: true,
   },
   {
-    id: "Product_Name",
-    accessorKey: "Product_Name",
+    id: "Name",
+    accessorKey: "Name",
     header: ({ column }: { column: Column<Product, unknown> }) => <DataTableColumnHeader column={column} title="Product Name" />,
-    cell: ({ cell }) => <div className="font-medium">{cell.getValue<Product["Product_Name"]>()}</div>,
+    cell: ({ cell }) => <div className="font-medium">{cell.getValue<Product["Name"]>()}</div>,
     meta: {
       label: "Product Name",
       placeholder: "Search products...",
@@ -35,11 +35,11 @@ export const columns: ColumnDef<Product>[] = [
     enableColumnFilter: true,
   },
   {
-    id: "Product_Category",
-    accessorKey: "Product_Category",
+    id: "Product_Category__c",
+    accessorKey: "Product_Category__c",
     header: ({ column }: { column: Column<Product, unknown> }) => <DataTableColumnHeader column={column} title="Category" />,
     cell: ({ cell }) => {
-      const category = cell.getValue<Product["Product_Category"]>();
+      const category = cell.getValue<Product["Product_Category__c"]>();
       return (
         <Badge variant="outline" className="capitalize">
           {category}
@@ -54,29 +54,29 @@ export const columns: ColumnDef<Product>[] = [
     },
   },
   {
-    id: "Unit_Price",
-    accessorKey: "Unit_Price",
+    id: "Unit_Price__c",
+    accessorKey: "Unit_Price__c",
     header: ({ column }: { column: Column<Product, unknown> }) => <DataTableColumnHeader column={column} title="Unit Price" />,
     cell: ({ cell }) => {
-      const price = cell.getValue<Product["Unit_Price"]>();
+      const price = cell.getValue<Product["Unit_Price__c"]>();
       return <div className="font-medium">${price.toLocaleString()}</div>;
     },
   },
   {
-    id: "Cost_Per_Unit",
-    accessorKey: "Cost_Per_Unit",
+    id: "Cost_Per_Unit__c",
+    accessorKey: "Cost_Per_Unit__c",
     header: ({ column }: { column: Column<Product, unknown> }) => <DataTableColumnHeader column={column} title="Cost Per Unit" />,
     cell: ({ cell }) => {
-      const cost = cell.getValue<Product["Cost_Per_Unit"]>();
+      const cost = cell.getValue<Product["Cost_Per_Unit__c"]>();
       return <div>${cost.toLocaleString()}</div>;
     },
   },
   {
-    id: "Is_Active",
-    accessorKey: "Is_Active",
+    id: "IsActive",
+    accessorKey: "IsActive",
     header: ({ column }: { column: Column<Product, unknown> }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ cell }) => {
-      const isActive = cell.getValue<Product["Is_Active"]>();
+      const isActive = cell.getValue<Product["IsActive"]>();
       const Icon = isActive ? CheckCircle2 : XCircle;
       return (
         <Badge variant={isActive ? "default" : "secondary"} className="capitalize">
@@ -96,11 +96,11 @@ export const columns: ColumnDef<Product>[] = [
     },
   },
   {
-    id: "Created_Date",
-    accessorKey: "Created_Date",
+    id: "CreatedDate",
+    accessorKey: "CreatedDate",
     header: ({ column }: { column: Column<Product, unknown> }) => <DataTableColumnHeader column={column} title="Created Date" />,
     cell: ({ cell }) => {
-      const date = cell.getValue<Product["Created_Date"]>();
+      const date = cell.getValue<Product["CreatedDate"]>();
       return <div>{new Date(date).toLocaleDateString()}</div>;
     },
   },

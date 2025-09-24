@@ -24,6 +24,8 @@ export function ProductTable<TData, TValue>({ data, totalItems, columns }: Produ
     pageCount: pageCount,
     shallow: false, //Setting to false triggers a network request with the updated querystring.
     debounceMs: 500,
+    manualFiltering: false, // Enable client-side filtering
+    manualSorting: false, // Enable client-side sorting
   });
 
   return (
