@@ -1,0 +1,22 @@
+{
+  "name": "@dashboard/shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for the dashboard project",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "type": "module",
+  "keywords": [
+    "typescript",
+    "types",
+    "shared"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "files": [
+    "dist"
+  ]
+}
