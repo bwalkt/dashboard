@@ -1,0 +1,254 @@
+import type { FastifyInstance, FastifyPluginOptions, FastifyReply, FastifyRequest } from "fastify";
+import { SalesforceClient } from "../services/salesforceClient.js";
+import { salesforceConfig } from "../config/salesforce.js";
+import type { SalesforceQueryRequest, SalesforceRecordRequest } from "../types/salesforce.js";
+
+/**
+ * Salesforce API Routes
+ * Provides REST endpoints for Salesforce integration
+ */
+export async function salesforceRoutes(fastify: FastifyInstance, options: FastifyPluginOptions): Promise<void> {
+  // Initialize Salesforce client
+  let salesforceClient: SalesforceClient | undefined;
+
+  try {
+    const config = salesforceConfig.getConfig();
+    salesforceClient = new SalesforceClient(config);
+    fastify.log.info("Salesforce client initialized successfully");
+  } catch (error) {
+    fastify.log.warn("Salesforce configuration error - server will start without Salesforce integration");
+    fastify.log.warn("To enable Salesforce integration, set the following environment variables:");
+    fastify.log.warn("- SALESFORCE_CONSUMER_KEY");
+    fastify.log.warn("- SALESFORCE_USERNAME");
+    fastify.log.warn("- SALESFORCE_LOGIN_URL (optional)");
+    fastify.log.warn(`Error: ${(error as Error).message}`);
+  }
+
+  // Authenticate with Salesforce
+  fastify.post("/salesforce/auth", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      if (!salesforceClient) {
+        reply.code(500).send({
+          error: "Salesforce client not initialized",
+        });
+        return;
+      }
+
+      const authResult = await salesforceClient.authenticate();
+
+      reply.send({
+        success: true,
+        message: "Successfully authenticated with Salesforce",
+        instanceUrl: authResult.instanceUrl,
+        tokenType: authResult.tokenType,
+        scope: authResult.scope,
+      });
+    } catch (error) {
+      fastify.log.error(error, "Salesforce authentication error");
+      reply.code(401).send({
+        error: "Authentication failed",
+        message: (error as Error).message,
+      });
+    }
+  });
+
+  // Query Salesforce records
+  fastify.get("/salesforce/:objectType/query", async (request: FastifyRequest<{ Body: SalesforceQueryRequest }>, reply: FastifyReply) => {
+    try {
+      if (!salesforceClient) {
+        reply.code(500).send({
+          error: "Salesforce client not initialized",
+        });
+        return;
+      }
+
+      const { objectType } = request.params as { objectType: string };
+
+      const soql = `SELECT FIELDS(ALL) FROM ${objectType} limit 100`;
+
+      const results = await salesforceClient.query(soql);
+
+      reply.send({
+        success: true,
+        query: soql,
+        totalSize: results.totalSize,
+        records: results.records,
+        done: results.done,
+      });
+    } catch (error) {
+      fastify.log.error(error, "Salesforce query error");
+      reply.code(400).send({
+        error: "Query failed",
+        message: (error as Error).message,
+      });
+    }
+  });
+
+  // Create a record
+  fastify.post(
+    "/salesforce/records/:objectType",
+    async (request: FastifyRequest<{ Params: { objectType: string }; Body: SalesforceRecordRequest }>, reply: FastifyReply) => {
+      try {
+        if (!salesforceClient) {
+          reply.code(500).send({
+            error: "Salesforce client not initialized",
+          });
+          return;
+        }
+
+        const { objectType } = request.params;
+        const recordData = request.body;
+
+        if (!recordData || Object.keys(recordData).length === 0) {
+          reply.code(400).send({
+            error: "Record data is required",
+          });
+          return;
+        }
+
+        const result = await salesforceClient.createRecord(objectType, recordData);
+
+        reply.send({
+          success: true,
+          message: `${objectType} record created successfully`,
+          id: result.id,
+        });
+      } catch (error) {
+        fastify.log.error(error, "Salesforce create record error");
+        reply.code(400).send({
+          error: "Record creation failed",
+          message: (error as Error).message,
+        });
+      }
+    }
+  );
+
+  // Get a record by ID
+  fastify.get(
+    "/salesforce/records/:objectType/:recordId",
+    async (request: FastifyRequest<{ Params: { objectType: string; recordId: string }; Querystring: { fields?: string } }>, reply: FastifyReply) => {
+      try {
+        if (!salesforceClient) {
+          reply.code(500).send({
+            error: "Salesforce client not initialized",
+          });
+          return;
+        }
+
+        const { objectType, recordId } = request.params;
+        const { fields } = request.query;
+
+        const fieldArray = fields ? fields.split(",") : null;
+        const record = await salesforceClient.getRecord(objectType, recordId, fieldArray);
+
+        reply.send({
+          success: true,
+          record: record,
+        });
+      } catch (error) {
+        fastify.log.error(error, "Salesforce get record error");
+        reply.code(404).send({
+          error: "Record not found",
+          message: (error as Error).message,
+        });
+      }
+    }
+  );
+
+  // Update a record
+  fastify.patch(
+    "/salesforce/records/:objectType/:recordId",
+    async (request: FastifyRequest<{ Params: { objectType: string; recordId: string }; Body: SalesforceRecordRequest }>, reply: FastifyReply) => {
+      try {
+        if (!salesforceClient) {
+          reply.code(500).send({
+            error: "Salesforce client not initialized",
+          });
+          return;
+        }
+
+        const { objectType, recordId } = request.params;
+        const updateData = request.body;
+
+        if (!updateData || Object.keys(updateData).length === 0) {
+          reply.code(400).send({
+            error: "Update data is required",
+          });
+          return;
+        }
+
+        const result = await salesforceClient.updateRecord(objectType, recordId, updateData);
+
+        reply.send({
+          success: true,
+          message: `${objectType} record updated successfully`,
+          id: recordId,
+        });
+      } catch (error) {
+        fastify.log.error(error, "Salesforce update record error");
+        reply.code(400).send({
+          error: "Record update failed",
+          message: (error as Error).message,
+        });
+      }
+    }
+  );
+
+  // Delete a record
+  fastify.delete(
+    "/salesforce/records/:objectType/:recordId",
+    async (request: FastifyRequest<{ Params: { objectType: string; recordId: string } }>, reply: FastifyReply) => {
+      try {
+        if (!salesforceClient) {
+          reply.code(500).send({
+            error: "Salesforce client not initialized",
+          });
+          return;
+        }
+
+        const { objectType, recordId } = request.params;
+
+        await salesforceClient.deleteRecord(objectType, recordId);
+
+        reply.send({
+          success: true,
+          message: `${objectType} record deleted successfully`,
+          id: recordId,
+        });
+      } catch (error) {
+        fastify.log.error(error, "Salesforce delete record error");
+        reply.code(400).send({
+          error: "Record deletion failed",
+          message: (error as Error).message,
+        });
+      }
+    }
+  );
+
+  // Get object metadata
+  fastify.get("/salesforce/metadata/:objectType", async (request: FastifyRequest<{ Params: { objectType: string } }>, reply: FastifyReply) => {
+    try {
+      if (!salesforceClient) {
+        reply.code(500).send({
+          error: "Salesforce client not initialized",
+        });
+        return;
+      }
+
+      const { objectType } = request.params;
+      const metadata = await salesforceClient.getObjectMetadata(objectType);
+
+      reply.send({
+        success: true,
+        objectType: objectType,
+        metadata: metadata,
+      });
+    } catch (error) {
+      fastify.log.error(error, "Salesforce metadata error");
+      reply.code(404).send({
+        error: "Object metadata not found",
+        message: (error as Error).message,
+      });
+    }
+  });
+}
