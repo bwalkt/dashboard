@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Product } from "@/constants/data";
+import { SalesforceProduct as Product } from "@dashboard/shared-types";
 
 interface ApiResponse {
   success: boolean;

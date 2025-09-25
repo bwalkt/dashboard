@@ -1,7 +1,7 @@
 import { AlertModal } from "@/components/modal/alert-modal";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Product } from "@/constants/data";
+import { SalesforceProduct as Product } from "@dashboard/shared-types";
 import { IconEdit, IconDotsVertical, IconTrash } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -30,7 +30,7 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
-          <DropdownMenuItem onClick={() => navigate(`/dashboard/product/${data.Product_Id}`)}>
+          <DropdownMenuItem onClick={() => navigate(`/dashboard/product/${data.Id}`)}>
             <IconEdit className="mr-2 h-4 w-4" /> Update
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setOpen(true)}>
