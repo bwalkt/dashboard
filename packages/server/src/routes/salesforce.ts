@@ -1,7 +1,8 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyReply, FastifyRequest } from "fastify";
-import { SalesforceClient } from "../services/salesforceClient.js";
 import { salesforceConfig } from "../config/salesforce.js";
-import type { SalesforceQueryRequest, SalesforceRecordRequest } from "../types/salesforce.js";
+import { authenticateToken } from "../middleware/auth.js";
+import { SalesforceClient } from "../services/salesforce-client.service.js";
+import type { SalesforceRecordRequest } from "../types/salesforce.js";
 
 /**
  * Salesforce API Routes
@@ -25,69 +26,12 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
   }
 
   // Authenticate with Salesforce
-  fastify.post("/salesforce/auth", async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      if (!salesforceClient) {
-        reply.code(500).send({
-          error: "Salesforce client not initialized",
-        });
-        return;
-      }
-
-      const authResult = await salesforceClient.authenticate();
-
-      reply.send({
-        success: true,
-        message: "Successfully authenticated with Salesforce",
-        instanceUrl: authResult.instanceUrl,
-        tokenType: authResult.tokenType,
-        scope: authResult.scope,
-      });
-    } catch (error) {
-      fastify.log.error(error, "Salesforce authentication error");
-      reply.code(401).send({
-        error: "Authentication failed",
-        message: (error as Error).message,
-      });
-    }
-  });
-
-  // Query Salesforce records
-  fastify.get("/salesforce/:objectType/query", async (request: FastifyRequest<{ Body: SalesforceQueryRequest }>, reply: FastifyReply) => {
-    try {
-      if (!salesforceClient) {
-        reply.code(500).send({
-          error: "Salesforce client not initialized",
-        });
-        return;
-      }
-
-      const { objectType } = request.params as { objectType: string };
-
-      const soql = `SELECT FIELDS(ALL) FROM ${objectType} limit 100`;
-
-      const results = await salesforceClient.query(soql);
-
-      reply.send({
-        success: true,
-        query: soql,
-        totalSize: results.totalSize,
-        records: results.records,
-        done: results.done,
-      });
-    } catch (error) {
-      fastify.log.error(error, "Salesforce query error");
-      reply.code(400).send({
-        error: "Query failed",
-        message: (error as Error).message,
-      });
-    }
-  });
-
-  // Create a record
   fastify.post(
-    "/salesforce/records/:objectType",
-    async (request: FastifyRequest<{ Params: { objectType: string }; Body: SalesforceRecordRequest }>, reply: FastifyReply) => {
+    "/salesforce/auth",
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         if (!salesforceClient) {
           reply.code(500).send({
@@ -96,8 +40,80 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
           return;
         }
 
-        const { objectType } = request.params;
-        const recordData = request.body;
+        const authResult = await salesforceClient.authenticate();
+
+        reply.send({
+          success: true,
+          message: "Successfully authenticated with Salesforce",
+          instanceUrl: authResult.instanceUrl,
+          tokenType: authResult.tokenType,
+          scope: authResult.scope,
+        });
+      } catch (error) {
+        fastify.log.error(error, "Salesforce authentication error");
+        reply.code(401).send({
+          error: "Authentication failed",
+          message: (error as Error).message,
+        });
+      }
+    }
+  );
+
+  // Query Salesforce records
+  fastify.get(
+    "/salesforce/:objectType/query",
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        if (!salesforceClient) {
+          reply.code(500).send({
+            error: "Salesforce client not initialized",
+          });
+          return;
+        }
+
+        const { objectType } = request.params as { objectType: string };
+
+        const soql = `SELECT FIELDS(ALL) FROM ${objectType} limit 100`;
+
+        const results = await salesforceClient.query(soql);
+
+        reply.send({
+          success: true,
+          query: soql,
+          totalSize: results.totalSize,
+          records: results.records,
+          done: results.done,
+        });
+      } catch (error) {
+        fastify.log.error(error, "Salesforce query error");
+        reply.code(400).send({
+          error: "Query failed",
+          message: (error as Error).message,
+        });
+      }
+    }
+  );
+
+  // Create a record
+  fastify.post(
+    "/salesforce/records/:objectType",
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        if (!salesforceClient) {
+          reply.code(500).send({
+            error: "Salesforce client not initialized",
+          });
+          return;
+        }
+
+        const { objectType } = request.params as { objectType: string };
+        const recordData = request.body as SalesforceRecordRequest;
 
         if (!recordData || Object.keys(recordData).length === 0) {
           reply.code(400).send({
@@ -126,7 +142,10 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
   // Get a record by ID
   fastify.get(
     "/salesforce/records/:objectType/:recordId",
-    async (request: FastifyRequest<{ Params: { objectType: string; recordId: string }; Querystring: { fields?: string } }>, reply: FastifyReply) => {
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         if (!salesforceClient) {
           reply.code(500).send({
@@ -135,8 +154,8 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
           return;
         }
 
-        const { objectType, recordId } = request.params;
-        const { fields } = request.query;
+        const { objectType, recordId } = request.params as { objectType: string; recordId: string };
+        const { fields } = request.query as { fields?: string };
 
         const fieldArray = fields ? fields.split(",") : null;
         const record = await salesforceClient.getRecord(objectType, recordId, fieldArray);
@@ -158,7 +177,10 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
   // Update a record
   fastify.patch(
     "/salesforce/records/:objectType/:recordId",
-    async (request: FastifyRequest<{ Params: { objectType: string; recordId: string }; Body: SalesforceRecordRequest }>, reply: FastifyReply) => {
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         if (!salesforceClient) {
           reply.code(500).send({
@@ -167,8 +189,8 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
           return;
         }
 
-        const { objectType, recordId } = request.params;
-        const updateData = request.body;
+        const { objectType, recordId } = request.params as { objectType: string; recordId: string };
+        const updateData = request.body as SalesforceRecordRequest;
 
         if (!updateData || Object.keys(updateData).length === 0) {
           reply.code(400).send({
@@ -197,7 +219,10 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
   // Delete a record
   fastify.delete(
     "/salesforce/records/:objectType/:recordId",
-    async (request: FastifyRequest<{ Params: { objectType: string; recordId: string } }>, reply: FastifyReply) => {
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         if (!salesforceClient) {
           reply.code(500).send({
@@ -206,7 +231,7 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
           return;
         }
 
-        const { objectType, recordId } = request.params;
+        const { objectType, recordId } = request.params as { objectType: string; recordId: string };
 
         await salesforceClient.deleteRecord(objectType, recordId);
 
@@ -226,29 +251,35 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
   );
 
   // Get object metadata
-  fastify.get("/salesforce/metadata/:objectType", async (request: FastifyRequest<{ Params: { objectType: string } }>, reply: FastifyReply) => {
-    try {
-      if (!salesforceClient) {
-        reply.code(500).send({
-          error: "Salesforce client not initialized",
+  fastify.get(
+    "/salesforce/metadata/:objectType",
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        if (!salesforceClient) {
+          reply.code(500).send({
+            error: "Salesforce client not initialized",
+          });
+          return;
+        }
+
+        const { objectType } = request.params as { objectType: string };
+        const metadata = await salesforceClient.getObjectMetadata(objectType);
+
+        reply.send({
+          success: true,
+          objectType: objectType,
+          metadata: metadata,
         });
-        return;
+      } catch (error) {
+        fastify.log.error(error, "Salesforce metadata error");
+        reply.code(404).send({
+          error: "Object metadata not found",
+          message: (error as Error).message,
+        });
       }
-
-      const { objectType } = request.params;
-      const metadata = await salesforceClient.getObjectMetadata(objectType);
-
-      reply.send({
-        success: true,
-        objectType: objectType,
-        metadata: metadata,
-      });
-    } catch (error) {
-      fastify.log.error(error, "Salesforce metadata error");
-      reply.code(404).send({
-        error: "Object metadata not found",
-        message: (error as Error).message,
-      });
     }
-  });
+  );
 }

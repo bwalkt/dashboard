@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -17,8 +17,8 @@ export class JWTService {
   private readonly certificatePath: string;
 
   constructor() {
-    this.privateKeyPath = path.join(__dirname, "../keys/server.key");
-    this.certificatePath = path.join(__dirname, "../keys/server.crt");
+    this.privateKeyPath = path.join(__dirname, "../keys/private.key");
+    this.certificatePath = path.join(__dirname, "../keys/certificate.crt");
   }
 
   /**
@@ -126,35 +126,41 @@ export class JWTService {
   }
 
   /**
-   * Verify JWT token (for testing purposes)
-   * @param token - JWT token to verify
-   * @param publicKey - Public key for verification
-   * @returns Decoded token payload
+   * Generic JWT token creation with HMAC algorithm
+   * @param payload - Token payload
+   * @param secret - Secret key for signing
+   * @param algorithm - Algorithm to use (default: HS256)
+   * @param expiresIn - Token expiration time
+   * @returns JWT token
    */
-  verifyJWT(token: string, publicKey: string): string | jwt.JwtPayload {
+  createHMACToken(payload: JwtPayload, secret: string, algorithm: string = "HS256", expiresIn?: string | number): string {
+    const options: jwt.SignOptions = {
+      algorithm: algorithm as jwt.Algorithm,
+    };
+
+    if (expiresIn !== undefined) {
+      options.expiresIn = expiresIn as any;
+    }
+
     try {
-      return jwt.verify(token, publicKey, { algorithms: ["RS256"] });
+      return jwt.sign(payload, secret, options);
     } catch (error) {
-      throw new Error(`JWT verification failed: ${(error as Error).message}`);
+      throw new Error(`Failed to create HMAC JWT token: ${(error as Error).message}`);
     }
   }
 
   /**
-   * Get certificate thumbprint (SHA-1 hash)
-   * @returns Certificate thumbprint
+   * Generic JWT token verification with HMAC algorithm
+   * @param token - JWT token to verify
+   * @param secret - Secret key for verification
+   * @param algorithm - Algorithm to use (default: HS256)
+   * @returns Decoded token payload
    */
-  getCertificateThumbprint(): string {
-    const certificate = this.loadCertificate();
-
-    // Remove certificate headers and footers
-    const certBody = certificate
-      .replace(/-----BEGIN CERTIFICATE-----/g, "")
-      .replace(/-----END CERTIFICATE-----/g, "")
-      .replace(/\s/g, "");
-
-    const certBuffer = Buffer.from(certBody, "base64");
-    const thumbprint = crypto.createHash("sha1").update(certBuffer).digest("hex");
-
-    return thumbprint.toUpperCase();
+  verifyHMACToken(token: string, secret: string, algorithm: string = "HS256"): any {
+    try {
+      return jwt.verify(token, secret, { algorithms: [algorithm as jwt.Algorithm] });
+    } catch (error) {
+      throw new Error(`HMAC JWT verification failed: ${(error as Error).message}`);
+    }
   }
 }

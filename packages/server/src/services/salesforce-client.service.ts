@@ -1,5 +1,5 @@
 import axios, { type AxiosRequestConfig } from "axios";
-import { JWTService } from "./jwtService.js";
+import { JWTService } from "./jwt.service.js";
 import type {
   SalesforceConfig,
   SalesforceAuthResponse,
