@@ -1,68 +1,59 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, Session } from "@supabase/supabase-js";
-import { auth } from "@/lib/supabase";
+import { User } from "@dashboard/shared-types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { createContext, useContext } from "react";
+import { api } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   loading: boolean;
-  signInWithGitHub: () => Promise<{ data: any; error: any }>;
+  signInWithGitHub: () => Promise<{ data: string; error: any }>;
   signOut: () => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
-      const { session } = await auth.getSession();
-      console.log("Initial Session:", session);
-      console.log("Initial User:", session?.user);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    };
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ["user"],
+    queryFn: async () => {
+      const { user } = await api.get<{ user: User }>("/auth/me");
+      return user;
+    },
+    retry: false,
+  });
 
-    getInitialSession();
+  const { mutateAsync: signInWithGitHub } = useMutation<{ data: string; error: any }>({
+    mutationFn: async () => {
+      const { authUrl } = await api.get<{ authUrl: string }>("/auth/login");
+      return { data: authUrl, error: null };
+    },
+    onSuccess: ({ data }) => {
+      window.location.href = data;
+    },
+    onError: (error) => {
+      console.error(error);
+    },
+  });
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = auth.onAuthStateChange((_event, session) => {
-      console.log("Auth State Change - Event:", _event);
-      console.log("Auth State Change - Session:", session);
-      console.log("Auth State Change - User:", session?.user);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const signInWithGitHub = async () => {
-    setLoading(true);
-    const result = await auth.signInWithGitHub();
-    setLoading(false);
-    return result;
-  };
-
-  const signOut = async () => {
-    setLoading(true);
-    const result = await auth.signOut();
-    setLoading(false);
-    return result;
-  };
+  const { mutateAsync: signOut } = useMutation({
+    mutationFn: async () => {
+      await api.post("/auth/logout", undefined, { skipRefresh: true });
+      queryClient.clear();
+      return { error: null };
+    },
+    onSuccess: () => {
+      window.location.href = "/auth/sign-in";
+    },
+    onError: (error) => {
+      console.error(error);
+    },
+  });
 
   const value = {
-    user,
-    session,
-    loading,
+    user: user ?? null,
+    loading: isLoading,
     signInWithGitHub,
     signOut,
   };

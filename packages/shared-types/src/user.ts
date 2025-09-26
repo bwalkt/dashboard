@@ -1,62 +1,76 @@
-export interface User {
-  id: number;
-  github_id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  created_at: string;
-  updated_at: string;
-}
+import { z } from "zod";
 
-export interface CreateUserData {
-  github_id: string;
-  name: string;
-  email: string;
-  avatar: string;
-}
+// Zod schemas
+export const UserSchema = z.object({
+  id: z.number(),
+  github_id: z.string(),
+  name: z.string(),
+  email: z.string().email(),
+  avatar: z.string().url(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
 
-// GitHub OAuth response types
-export interface GitHubUser {
-  id: string;
-  login: string;
-  name: string;
-  email: string;
-  avatar_url: string;
-}
+export const CreateUserDataSchema = z.object({
+  github_id: z.string(),
+  name: z.string(),
+  email: z.string().email(),
+  avatar: z.string().url(),
+});
 
-// JWT Token payloads
-export interface AccessTokenPayload {
-  userId: number;
-  githubId: string;
-  email: string;
-  exp: number;
-  iat: number;
-}
+// GitHub OAuth response schemas
+export const GitHubUserSchema = z.object({
+  id: z.string(),
+  login: z.string(),
+  name: z.string(),
+  email: z.string().email(),
+  avatar_url: z.string().url(),
+});
 
-export interface RefreshTokenPayload {
-  userId: number;
-  type: "refresh";
-  exp: number;
-  iat: number;
-}
+// JWT Token payload schemas
+export const AccessTokenPayloadSchema = z.object({
+  userId: z.number(),
+  githubId: z.string(),
+  email: z.string().email(),
+  exp: z.number(),
+  iat: z.number(),
+});
 
-// API Response types
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: User;
-}
+export const RefreshTokenPayloadSchema = z.object({
+  userId: z.number(),
+  type: z.literal("refresh"),
+  exp: z.number(),
+  iat: z.number(),
+});
 
-export interface UserResponse {
-  user: User;
-}
+// API Response schemas
+export const AuthResponseSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  user: UserSchema,
+});
 
-export interface ErrorResponse {
-  error: string;
-  message: string;
-}
+export const UserResponseSchema = z.object({
+  user: UserSchema,
+});
+
+export const ErrorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string(),
+});
 
 // Request types with authentication
-export interface AuthenticatedRequest {
-  user: User;
-}
+export const AuthenticatedRequestSchema = z.object({
+  user: UserSchema,
+});
+
+// Inferred types from schemas
+export type User = z.infer<typeof UserSchema>;
+export type CreateUserData = z.infer<typeof CreateUserDataSchema>;
+export type GitHubUser = z.infer<typeof GitHubUserSchema>;
+export type AccessTokenPayload = z.infer<typeof AccessTokenPayloadSchema>;
+export type RefreshTokenPayload = z.infer<typeof RefreshTokenPayloadSchema>;
+export type AuthResponse = z.infer<typeof AuthResponseSchema>;
+export type UserResponse = z.infer<typeof UserResponseSchema>;
+export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
+export type AuthenticatedRequest = z.infer<typeof AuthenticatedRequestSchema>;

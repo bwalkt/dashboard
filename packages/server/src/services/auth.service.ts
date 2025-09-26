@@ -15,24 +15,16 @@ export class AuthService extends JWTService {
    * Generate access token with SHA-512 algorithm for GitHub OAuth2
    */
   public generateAccessToken(payload: Omit<AccessTokenPayload, "exp" | "iat">): string {
-    const tokenPayload: AccessTokenPayload = {
-      ...payload,
-      exp: Math.floor(Date.now() / 1000) + 60 * 60, // 1 hour
-      iat: Math.floor(Date.now() / 1000),
-    };
-
-    return this.createHMACToken(tokenPayload, this.jwtSecret, "HS512", this.accessTokenExpiry);
+    return this.createHMACToken(payload, this.jwtSecret, "HS512", this.accessTokenExpiry);
   }
 
   /**
    * Generate refresh token with SHA-512 algorithm for GitHub OAuth2
    */
   public generateRefreshToken(userId: number): string {
-    const tokenPayload: RefreshTokenPayload = {
+    const tokenPayload: Omit<RefreshTokenPayload, "exp" | "iat"> = {
       userId,
       type: "refresh",
-      exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
-      iat: Math.floor(Date.now() / 1000),
     };
 
     return this.createHMACToken(tokenPayload, this.jwtSecret, "HS512", this.refreshTokenExpiry);
@@ -90,6 +82,28 @@ export class AuthService extends JWTService {
     }
 
     return parts[1] || null;
+  }
+
+  /**
+   * Extract token from cookies
+   */
+  public extractTokenFromCookies(cookies: any): string | null {
+    if (!cookies || !cookies.accessToken) {
+      return null;
+    }
+
+    return cookies.accessToken;
+  }
+
+  /**
+   * Extract refresh token from cookies
+   */
+  public extractRefreshTokenFromCookies(cookies: any): string | null {
+    if (!cookies || !cookies.refreshToken) {
+      return null;
+    }
+
+    return cookies.refreshToken;
   }
 
   /**

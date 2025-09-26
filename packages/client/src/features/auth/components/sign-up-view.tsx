@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useEffect } from "react";
 import GithubSignInButton from "./github-auth-button";
 
-export default function SignUpViewPage({ stars }: { stars: number }) {
+export default function SignUpViewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading } = useAuth();

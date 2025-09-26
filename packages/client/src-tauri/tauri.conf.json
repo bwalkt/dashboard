@@ -24,7 +24,7 @@
         "default-src": "'self' customprotocol: asset:",
         "script-src": "'self' 'unsafe-eval' 'unsafe-inline'",
         "style-src": "'self' 'unsafe-inline'",
-        "connect-src": "'self' ipc: http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:* http://0.0.0.0:* ws://0.0.0.0:* tauri: https://*.supabase.co https://github.com",
+        "connect-src": "'self' ipc: http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:* http://0.0.0.0:* ws://0.0.0.0:* tauri: https://github.com",
         "img-src": "'self' asset: http://asset.localhost blob: data:",
         "font-src": "'self' data:"
       }

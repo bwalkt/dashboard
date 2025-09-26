@@ -3,8 +3,7 @@ import { DataTableColumnHeader } from "@/components/ui/table/data-table-column-h
 
 import { ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, Text, XCircle } from "lucide-react";
-// Removed Next.js Image import - using regular img tag
-import { SalesforceProduct as Product } from "@dashboard/shared-types";
+import { Product } from "@dashboard/shared-types";
 import { CellAction } from "./cell-action";
 import { CATEGORY_OPTIONS } from "./options";
 

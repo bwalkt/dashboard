@@ -9,8 +9,7 @@ export const config: EnvironmentConfig = {
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || "",
   JWT_SECRET: process.env.JWT_SECRET || "default-secret-key-change-in-production",
   DATABASE_PATH: process.env.DATABASE_PATH || "./database.db",
-  PORT: parseInt(process.env.PORT || "3000", 10),
-  CALLBACK_URL: process.env.CALLBACK_URL || "http://localhost:3000/auth/callback",
+  OAUTH_REDIRECT_URL: process.env.OAUTH_REDIRECT_URL || "http://localhost:1420",
 };
 
 // Validate required environment variables

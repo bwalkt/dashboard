@@ -35,9 +35,9 @@ export function MobileUserNav() {
   // Create user object for display
   const userData = user
     ? {
-        fullName: user.user_metadata?.full_name || user.user_metadata?.name || "User",
+        fullName: user.name || "User",
         emailAddresses: [{ emailAddress: user.email || "user@example.com" }],
-        imageUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture || user.user_metadata?.avatar_url,
+        imageUrl: user.avatar,
       }
     : {
         fullName: "Mobile User",
@@ -45,16 +45,11 @@ export function MobileUserNav() {
         imageUrl: undefined,
       };
 
-  // Debug logging
-  console.log("Mobile User Nav - User:", user);
-  console.log("Mobile User Nav - User Metadata:", user?.user_metadata);
-  console.log("Mobile User Nav - Final User Data:", userData);
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <UserAvatarProfile user={userData} />
+          <UserAvatarProfile user={user} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" sideOffset={10} forceMount>

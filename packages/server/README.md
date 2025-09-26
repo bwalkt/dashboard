@@ -37,13 +37,27 @@ A Fastify-based Node.js server that provides REST API endpoints for Salesforce i
    Create a `.env` file in the root directory:
 
    ```env
-   # Salesforce Configuration
-   SALESFORCE_CONSUMER_KEY=your_consumer_key
-   SALESFORCE_USERNAME=your_salesforce_username
+   # Salesforce Configuration (Required)
+   SALESFORCE_CONSUMER_KEY=your_consumer_key_here
+   SALESFORCE_USERNAME=your_username@example.com
    SALESFORCE_LOGIN_URL=https://login.salesforce.com
 
-   # Optional: Custom Salesforce instance URL
-   SALESFORCE_INSTANCE_URL=https://your-instance.salesforce.com
+   # Server Configuration (Optional)
+   PORT=8080
+   NODE_ENV=development
+
+   # GitHub OAuth Configuration (Required)
+   GITHUB_CLIENT_ID=your_github_client_id_here
+   GITHUB_CLIENT_SECRET=your_github_client_secret_here
+
+   # JWT Configuration (Required)
+   JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+
+   # Database Configuration (Optional)
+   DATABASE_PATH=./database.db
+
+   # OAuth Callback URL (Required)
+   OAUTH_REDIRECT_URL=http://localhost:1420/auth/callback
    ```
 
 4. **Build the project**
@@ -69,26 +83,28 @@ The server will start on `http://localhost:8080`
 
 ## 📚 API Endpoints
 
-### Authentication
+### Authentication (GitHub OAuth)
 
-- `POST /salesforce/auth` - Authenticate with Salesforce
+- `GET /auth/login` - Initiate GitHub OAuth flow
+- `GET /auth/callback` - Handle OAuth callback from GitHub
+- `GET /auth/me` - Get current user info (protected)
+- `GET /auth/refresh` - Refresh access token
+- `POST /auth/logout` - Logout user (protected)
 
-### Data Operations
+### Salesforce Integration
 
-- `GET /salesforce/query` - Execute SOQL queries
-- `GET /salesforce/records/:objectType` - Get records by object type
-- `GET /salesforce/records/:objectType/:id` - Get specific record by ID
-- `POST /salesforce/records/:objectType` - Create new record
-- `PUT /salesforce/records/:objectType/:id` - Update existing record
-- `DELETE /salesforce/records/:objectType/:id` - Delete record
+- `POST /salesforce/auth` - Authenticate with Salesforce (protected)
 
-### Utility Endpoints
+### Salesforce Data Operations
 
-- `GET /salesforce/describe/:objectType` - Get object metadata
-- `GET /salesforce/limits` - Get API usage limits
-- `GET /` - Health check endpoint
+- `GET /salesforce/:objectType/query` - Query Salesforce records by object type (protected)
+- `GET /salesforce/records/:objectType/:recordId` - Get specific record by ID (protected)
+- `POST /salesforce/records/:objectType` - Create new record (protected)
+- `PUT /salesforce/records/:objectType/:recordId` - Update existing record (protected)
 
-## 🔧 Configuration
+### Salesforce Utility Endpoints
+
+- `GET /salesforce/metadata/:objectType` - Get object metadata (protected)
 
 ### Salesforce Setup
 
@@ -106,12 +122,18 @@ The server will start on `http://localhost:8080`
 
 ### Environment Variables
 
-| Variable                  | Description                | Required                    |
-| ------------------------- | -------------------------- | --------------------------- |
-| `SALESFORCE_CONSUMER_KEY` | Connected App Consumer Key | Yes                         |
-| `SALESFORCE_USERNAME`     | Salesforce username        | Yes                         |
-| `SALESFORCE_LOGIN_URL`    | Salesforce login URL       | No (defaults to production) |
-| `SALESFORCE_INSTANCE_URL` | Custom instance URL        | No                          |
+| Variable                  | Description                | Required                       |
+| ------------------------- | -------------------------- | ------------------------------ |
+| `SALESFORCE_CONSUMER_KEY` | Connected App Consumer Key | Yes                            |
+| `SALESFORCE_USERNAME`     | Salesforce username        | Yes                            |
+| `SALESFORCE_LOGIN_URL`    | Salesforce login URL       | No (defaults to production)    |
+| `PORT`                    | Server port                | No (defaults to 8080)          |
+| `NODE_ENV`                | Node environment           | No (defaults to development)   |
+| `GITHUB_CLIENT_ID`        | GitHub OAuth Client ID     | Yes                            |
+| `GITHUB_CLIENT_SECRET`    | GitHub OAuth Client Secret | Yes                            |
+| `JWT_SECRET`              | JWT signing secret         | Yes                            |
+| `DATABASE_PATH`           | SQLite database path       | No (defaults to ./database.db) |
+| `OAUTH_REDIRECT_URL`      | OAuth callback URL         | Yes                            |
 
 ## 📁 Project Structure
 
@@ -153,22 +175,31 @@ The project uses TypeScript with strict type checking. Ensure all new code inclu
 
 ## 📝 Example Usage
 
-### Authenticate with Salesforce
+### GitHub OAuth Authentication
 
 ```bash
-curl -X POST http://localhost:8080/salesforce/auth
+# Initiate OAuth flow
+curl -X GET http://localhost:8080/auth/login
+
+# Get current user info (requires authentication)
+curl -X GET http://localhost:8080/auth/me \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-### Query Salesforce Data
+### Salesforce Integration
 
 ```bash
-curl -X GET "http://localhost:8080/salesforce/query?q=SELECT Id, Name FROM Account LIMIT 10"
-```
+# Authenticate with Salesforce (requires GitHub auth first)
+curl -X POST http://localhost:8080/salesforce/auth \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
-### Create a Record
+# Query Salesforce records
+curl -X GET "http://localhost:8080/salesforce/Account/query" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
-```bash
+# Create a Salesforce record
 curl -X POST http://localhost:8080/salesforce/records/Account \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"Name": "Test Account"}'
 ```

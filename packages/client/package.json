@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "bunx vite",
-    "build": "bunx vite build",
-    "preview": "bunx vite preview",
+    "dev": "pnpx vite",
+    "build": "pnpx vite build",
+    "preview": "pnpx vite preview",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix && bun run format",
     "lint:strict": "eslint --max-warnings=0 src",
@@ -60,7 +60,6 @@
     "@radix-ui/react-toggle-group": "1.1.2",
     "@radix-ui/react-tooltip": "1.1.8",
     "@sentry/react": "9.19.0",
-    "@supabase/supabase-js": "^2.57.4",
     "@tabler/icons-react": "3.31.0",
     "@tailwindcss/postcss": "^4.1.13",
     "@tanstack/react-query": "^5.90.2",
@@ -101,11 +100,11 @@
     "uuid": "11.0.3",
     "vaul": "1.1.2",
     "zod": "4.1.8",
+    "@faker-js/faker": "9.3.0",
     "zustand": "5.0.2"
   },
   "devDependencies": {
     "@dashboard/shared-types": "workspace:*",
-    "@faker-js/faker": "9.3.0",
     "@tanstack/react-query-devtools": "^5.90.2",
     "@tauri-apps/cli": "2.8.4",
     "@types/node": "22.10.2",

@@ -3,8 +3,9 @@
 @source "../index.html";
 @source "./**/*.{ts,tsx}";
 
-.cl-footer, .cl-internal-vorlia {
-  >:nth-child(2) {
+.cl-footer,
+.cl-internal-vorlia {
+  > :nth-child(2) {
     display: none;
   }
 }

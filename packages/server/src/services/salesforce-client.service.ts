@@ -188,16 +188,16 @@ export class SalesforceClient {
   }
 
   /**
-   * Unified record operations (create, read, update, delete)
-   * @param operation - Operation type: 'create', 'read', 'update', 'delete'
+   * Unified record operations (create, read, update)
+   * @param operation - Operation type: 'create', 'read', 'update'
    * @param objectType - Salesforce object type (e.g., 'Account', 'Contact')
-   * @param recordId - Record ID (required for read, update, delete)
+   * @param recordId - Record ID (required for read, update)
    * @param recordData - Record data (required for create, update)
    * @param fields - Fields to retrieve (optional for read)
    * @returns Operation response
    */
   async recordOperation(
-    operation: "create" | "read" | "update" | "delete",
+    operation: "create" | "read" | "update",
     objectType: string,
     recordId?: string,
     recordData?: Record<string, any>,
@@ -221,10 +221,6 @@ export class SalesforceClient {
       case "update":
         if (!recordId || !recordData) throw new Error("Record ID and data are required for update operation");
         return await this.apiCall("PATCH", `${baseEndpoint}/${recordId}`, recordData);
-
-      case "delete":
-        if (!recordId) throw new Error("Record ID is required for delete operation");
-        return await this.apiCall("DELETE", `${baseEndpoint}/${recordId}`);
 
       default:
         throw new Error(`Invalid operation: ${operation}`);
@@ -250,13 +246,6 @@ export class SalesforceClient {
    */
   async updateRecord(objectType: string, recordId: string, recordData: Record<string, any>): Promise<any> {
     return await this.recordOperation("update", objectType, recordId, recordData);
-  }
-
-  /**
-   * Delete a record
-   */
-  async deleteRecord(objectType: string, recordId: string): Promise<any> {
-    return await this.recordOperation("delete", objectType, recordId);
   }
 
   /**

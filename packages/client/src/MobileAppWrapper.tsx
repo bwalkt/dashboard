@@ -5,6 +5,7 @@ import ThemeProvider from "@/components/layout/ThemeToggle/theme-provider";
 import { fontVariables } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { NuqsAdapter } from "nuqs/adapters/react";
+// @ts-expect-error no declaration file
 import NProgress from "nprogress";
 import "nprogress/nprogress.css";
 import { useEffect } from "react";

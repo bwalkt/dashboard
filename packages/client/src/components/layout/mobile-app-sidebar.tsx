@@ -45,13 +45,6 @@ const tenants = [
   { id: "3", name: "Gamma Ltd" },
 ];
 
-// Mock user for mobile
-const mockUser = {
-  fullName: "Mobile User",
-  emailAddresses: [{ emailAddress: "mobile@example.com" }],
-  imageUrl: undefined,
-};
-
 export default function MobileAppSidebar() {
   const location = useLocation();
   const pathname = location.pathname;
@@ -68,15 +61,7 @@ export default function MobileAppSidebar() {
     // Side effects based on sidebar state changes
   }, [isOpen]);
 
-  const { user: authUser } = useAuth();
-
-  const userData = authUser
-    ? {
-        fullName: authUser.user_metadata?.full_name || authUser.user_metadata?.name || "User",
-        emailAddresses: [{ emailAddress: authUser.email || "user@example.com" }],
-        imageUrl: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || authUser.user_metadata?.avatar_url,
-      }
-    : mockUser;
+  const { user } = useAuth();
 
   return (
     <Sidebar collapsible="icon">
@@ -136,11 +121,11 @@ export default function MobileAppSidebar() {
                 <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
                   <div className="flex items-center gap-2">
                     <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <UserAvatarProfile user={userData} />
+                      <UserAvatarProfile user={user} />
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">{userData.fullName}</span>
-                      <span className="truncate text-xs">{userData.emailAddresses[0].emailAddress}</span>
+                      <span className="truncate font-semibold">{user?.name}</span>
+                      <span className="truncate text-xs">{user?.email}</span>
                     </div>
                   </div>
                   <IconChevronsDown className="ml-auto size-4" />
@@ -151,11 +136,11 @@ export default function MobileAppSidebar() {
                   <div className="px-1 py-1.5">
                     <div className="flex items-center gap-2">
                       <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <UserAvatarProfile user={userData} />
+                        <UserAvatarProfile user={user} />
                       </div>
                       <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">{userData.fullName}</span>
-                        <span className="truncate text-xs">{userData.emailAddresses[0].emailAddress}</span>
+                        <span className="truncate font-semibold">{user?.name}</span>
+                        <span className="truncate text-xs">{user?.email}</span>
                       </div>
                     </div>
                   </div>

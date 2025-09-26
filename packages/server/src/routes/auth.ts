@@ -4,6 +4,7 @@ import { userService } from "../services/user.service.js";
 import { authenticateToken } from "../middleware/auth.js";
 import type { AuthenticatedRequest, AuthResponse, UserResponse, ErrorResponse } from "@dashboard/shared-types";
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
+import { config } from "../config/env.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -14,11 +15,21 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   // Register OAuth2 plugin
   await fastify.register(oauth2Plugin, {
     name: "githubOAuth2",
+    redirectStateCookieName: "oauth_state",
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      domain: "localhost",
+      path: "/",
+      maxAge: 3600, // 1 hour
+    },
     credentials: {
       client: {
         id: process.env.GITHUB_CLIENT_ID!,
         secret: process.env.GITHUB_CLIENT_SECRET!,
       },
+
       auth: {
         authorizeHost: "https://github.com",
         authorizePath: "/login/oauth/authorize",
@@ -26,7 +37,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         tokenPath: "/login/oauth/access_token",
       },
     },
-    callbackUri: process.env.CALLBACK_URL || "http://localhost:1420/auth/callback",
+    callbackUri: "http://localhost:8080/auth/callback",
     scope: ["user:email"],
   });
 
@@ -41,11 +52,15 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
       // Store state in session or cookie for validation
       // For simplicity, we'll use a cookie
+      // Debug: Log the state being set
+      console.log("Setting oauth_state cookie:", state);
+
       reply.setCookie("oauth_state", state, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        secure: false, // Set to false for development (HTTP)
+        sameSite: "lax", // Use lax for same-site requests
         maxAge: 600000, // 10 minutes
+        path: "/",
       });
 
       const githuboAuth2 = fastify.githubOAuth2;
@@ -69,9 +84,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get("/auth/callback", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { code, state } = request.query as { code: string; state: string };
-
+      console.log("Callback received code:", code);
+      console.log("Callback received state:", state);
       // Validate state parameter
+
       const storedState = request.cookies.oauth_state;
+      console.log("Callback received stored state:", storedState);
       if (!state || !storedState || state !== storedState) {
         return reply.status(400).send({
           error: "Bad Request",
@@ -90,7 +108,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       // Exchange code for access token
-      const tokenResponse = await (fastify as any).githubOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
+      const tokenResponse = await fastify.githubOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
 
       if (!tokenResponse.token.access_token) {
         return reply.status(400).send({
@@ -130,15 +148,24 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
       // Generate JWT tokens
       const { accessToken, refreshToken } = authService.generateTokenPair(user.id, user.github_id, user.email);
-
-      // Return tokens and user info
-      const response: AuthResponse = {
-        accessToken,
-        refreshToken,
-        user,
-      };
-
-      return reply.send(response);
+      const oAuthRedirectUrl = config.OAUTH_REDIRECT_URL;
+      reply.setCookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        domain: "localhost",
+        path: "/",
+        maxAge: 3600, // 1 hour
+      });
+      reply.setCookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        domain: "localhost",
+        path: "/",
+        maxAge: 3600 * 24 * 30, // 30 days
+      });
+      return reply.redirect(oAuthRedirectUrl);
     } catch (error) {
       console.error("OAuth callback error:", error);
       return reply.status(500).send({
@@ -176,11 +203,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
   /**
    * POST /auth/refresh
-   * Refresh access token using refresh token
+   * Refresh access token using refresh token from cookies
    */
-  fastify.post("/auth/refresh", async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get("/auth/refresh", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const { refreshToken } = request.body as { refreshToken: string };
+      // Extract refresh token from cookies instead of request body
+      const refreshToken = authService.extractRefreshTokenFromCookies(request.cookies);
 
       if (!refreshToken) {
         return reply.status(400).send({
@@ -208,8 +236,27 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         } as ErrorResponse);
       }
 
-      // Generate new access token
-      const { accessToken } = authService.generateTokenPair(user.id, user.github_id, user.email);
+      // Generate new token pair
+      const { accessToken, refreshToken: newRefreshToken } = authService.generateTokenPair(user.id, user.github_id, user.email);
+
+      // Set JWT tokens as cookies
+      reply.setCookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        domain: "localhost",
+        path: "/",
+        maxAge: 3600, // 1 hour
+      });
+
+      reply.setCookie("refreshToken", newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        domain: "localhost",
+        path: "/",
+        maxAge: 3600 * 24 * 30, // 30 days
+      });
 
       return reply.send({
         accessToken,
@@ -235,6 +282,17 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        // Clear JWT cookies
+        reply.clearCookie("accessToken", {
+          domain: "localhost",
+          path: "/",
+        });
+
+        reply.clearCookie("refreshToken", {
+          domain: "localhost",
+          path: "/",
+        });
+
         // In a production app, you might want to blacklist the token
         // For now, we'll just return a success message
         return reply.send({

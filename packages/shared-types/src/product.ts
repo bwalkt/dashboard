@@ -1,93 +1,104 @@
+import { z } from "zod";
+
 /**
- * TypeScript type definitions for Salesforce Product object
+ * Zod schemas for Salesforce Product object
  * Based on Salesforce describe API metadata and existing Product type
  */
 
-// Picklist value types based on actual Salesforce metadata
-export type ProductFamily = "None"; // Only "None" is available in this org
-export type ProductClass = "Simple" | "VariationParent" | "Variation" | "Bundle" | "Set";
-export type ProductType = "Base" | "Bundle" | "Set";
-export type ProductCategory = "Software" | "Services";
+// Picklist value schemas based on actual Salesforce metadata
+export const ProductFamilySchema = z.literal("None"); // Only "None" is available in this org
+export const ProductClassSchema = z.enum(["Simple", "VariationParent", "Variation", "Bundle", "Set"]);
+export const ProductTypeSchema = z.enum(["Base", "Bundle", "Set"]);
+export const ProductCategorySchema = z.enum(["Software", "Services"]);
 
-// Product attributes interface
-export interface SalesforceProductAttributes {
-  type: "Product";
-  url: string;
-}
+// Product attributes schema
+export const ProductAttributesSchema = z.object({
+  type: z.literal("Product"),
+  url: z.string().url(),
+});
 
-// Main Product interface based on Salesforce metadata
-export interface SalesforceProduct {
-  attributes: SalesforceProductAttributes;
+// Main Product schema based on Salesforce metadata
+export const ProductSchema = z.object({
+  attributes: ProductAttributesSchema,
 
   // Core fields
-  Id: string;
-  Name: string;
-  ProductCode: string | null;
-  Description: string | null;
-  IsActive: boolean;
-  Family: ProductFamily | null;
-  ProductClass: ProductClass;
-  Type: ProductType | null;
+  Id: z.string(),
+  Name: z.string(),
+  ProductCode: z.string().nullable(),
+  Description: z.string().nullable(),
+  IsActive: z.boolean(),
+  Family: ProductFamilySchema.nullable(),
+  ProductClass: ProductClassSchema,
+  Type: ProductTypeSchema.nullable(),
 
   // System fields
-  CreatedDate: string; // datetime
-  CreatedById: string; // Reference to User
-  LastModifiedDate: string; // datetime
-  LastModifiedById: string; // Reference to User
-  SystemModstamp: string; // datetime
-  IsDeleted: boolean;
-  LastViewedDate: string | null; // datetime
-  LastReferencedDate: string | null; // datetime
+  CreatedDate: z.string(), // datetime
+  CreatedById: z.string(), // Reference to User
+  LastModifiedDate: z.string(), // datetime
+  LastModifiedById: z.string(), // Reference to User
+  SystemModstamp: z.string(), // datetime
+  IsDeleted: z.boolean(),
+  LastViewedDate: z.string().nullable(), // datetime
+  LastReferencedDate: z.string().nullable(), // datetime
 
   // Product details
-  StockKeepingUnit: string | null; // SKU
-  QuantityUnitOfMeasure: string | null;
-  DisplayUrl: string | null;
-  ExternalDataSourceId: string | null; // Reference to ExternalDataSource
-  ExternalId: string | null;
+  StockKeepingUnit: z.string().nullable(), // SKU
+  QuantityUnitOfMeasure: z.string().nullable(),
+  DisplayUrl: z.string().url().nullable(),
+  ExternalDataSourceId: z.string().nullable(), // Reference to ExternalDataSource
+  ExternalId: z.string().nullable(),
 
   // Custom fields (based on existing Product type)
-  Product_Category__c: ProductCategory | null; // picklist: Software, Services
-  Unit_Price__c: number | null; // currency
-  Cost_Per_Unit__c: number | null; // currency
-  External_Id__c: string | null; // string, unique
-}
+  Product_Category__c: ProductCategorySchema.nullable(), // picklist: Software, Services
+  Unit_Price__c: z.number().nullable(), // currency
+  Cost_Per_Unit__c: z.number().nullable(), // currency
+  External_Id__c: z.string().nullable(), // string, unique
+});
 
-// Product creation request interface
-export interface SalesforceProductCreateRequest {
+// Product creation request schema
+export const ProductCreateRequestSchema = z.object({
   // Required fields
-  Name: string;
-  IsActive: boolean;
+  Name: z.string(),
+  IsActive: z.boolean(),
   // Note: ProductClass is read-only in this org and cannot be set during creation
 
   // Optional standard fields
-  ProductCode?: string;
-  Description?: string;
-  Family?: ProductFamily;
-  Type?: ProductType;
-  StockKeepingUnit?: string;
-  QuantityUnitOfMeasure?: string;
-  DisplayUrl?: string;
-  ExternalDataSourceId?: string;
-  ExternalId?: string;
+  ProductCode: z.string().nullish(),
+  Description: z.string().nullish(),
+  Family: ProductFamilySchema.nullish(),
+  Type: ProductTypeSchema.nullish(),
+  StockKeepingUnit: z.string().nullish(),
+  QuantityUnitOfMeasure: z.string().nullish(),
+  DisplayUrl: z.string().url().nullish(),
+  ExternalDataSourceId: z.string().nullish(),
+  ExternalId: z.string().nullish(),
 
   // Custom fields
-  Product_Category__c?: ProductCategory;
-  Unit_Price__c?: number;
-  Cost_Per_Unit__c?: number;
-  External_Id__c?: string;
-}
+  Product_Category__c: ProductCategorySchema.nullish(),
+  Unit_Price__c: z.number().nullish(),
+  Cost_Per_Unit__c: z.number().nullish(),
+  External_Id__c: z.string().nullish(),
+});
 
-// Product update request interface
-export interface SalesforceProductUpdateRequest extends Partial<SalesforceProductCreateRequest> {
-  // All fields are optional for updates
-}
+// Product update request schema
+export const ProductUpdateRequestSchema = ProductCreateRequestSchema.partial();
 
-// Product query response interface
-export interface SalesforceProductQueryResponse {
-  success: boolean;
-  query: string;
-  totalSize: number;
-  records: SalesforceProduct[];
-  done: boolean;
-}
+// Product query response schema
+export const ProductQueryResponseSchema = z.object({
+  success: z.boolean(),
+  query: z.string(),
+  totalSize: z.number(),
+  records: z.array(ProductSchema),
+  done: z.boolean(),
+});
+
+// Inferred types from schemas
+export type ProductFamily = z.infer<typeof ProductFamilySchema>;
+export type ProductClass = z.infer<typeof ProductClassSchema>;
+export type ProductType = z.infer<typeof ProductTypeSchema>;
+export type ProductCategory = z.infer<typeof ProductCategorySchema>;
+export type ProductAttributes = z.infer<typeof ProductAttributesSchema>;
+export type Product = z.infer<typeof ProductSchema>;
+export type ProductCreateRequest = z.infer<typeof ProductCreateRequestSchema>;
+export type ProductUpdateRequest = z.infer<typeof ProductUpdateRequestSchema>;
+export type ProductQueryResponse = z.infer<typeof ProductQueryResponseSchema>;

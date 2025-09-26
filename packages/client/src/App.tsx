@@ -2,9 +2,9 @@ import Providers from "@/components/layout/providers";
 import ThemeProvider from "@/components/layout/ThemeToggle/theme-provider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/contexts/AuthContext";
 import { fontVariables } from "@/lib/font";
 import { cn } from "@/lib/utils";
+// @ts-expect-error no declaration file
 import NProgress from "nprogress";
 import "nprogress/nprogress.css";
 import { NuqsAdapter } from "nuqs/adapters/react";
@@ -23,7 +23,10 @@ import Leads from "./pages/dashboard/Leads";
 import MobileDashboardLayout from "./pages/dashboard/MobileLayout";
 import Opportunities from "./pages/dashboard/Opportunities";
 import Overview from "./pages/dashboard/Overview";
+import Orders from "./pages/dashboard/Orders";
 import Products from "./pages/dashboard/Products";
+import ProductViewPage from "./features/products/components/product-view-page";
+import OrderViewPage from "./features/orders/components/order-view-page";
 import Settings from "./pages/dashboard/Settings";
 
 // Configure NProgress
@@ -78,7 +81,12 @@ function AppContent() {
               <Route path="accounts" element={<Accounts />} />
               <Route path="opportunities" element={<Opportunities />} />
               <Route path="leads" element={<Leads />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="orders/new" element={<OrderViewPage />} />
+              <Route path="orders/:orderId" element={<OrderViewPage />} />
               <Route path="products" element={<Products />} />
+              <Route path="products/new" element={<ProductViewPage />} />
+              <Route path="products/:productId" element={<ProductViewPage />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 
@@ -101,9 +109,7 @@ function App() {
   return (
     <BrowserRouter>
       <NuqsAdapter>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
+        <AppContent />
       </NuqsAdapter>
     </BrowserRouter>
   );

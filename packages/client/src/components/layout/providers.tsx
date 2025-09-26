@@ -2,6 +2,7 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ActiveThemeProvider } from "../active-theme";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -17,8 +18,10 @@ const queryClient = new QueryClient({
 export default function Providers({ activeThemeValue, children }: { activeThemeValue: string; children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ActiveThemeProvider initialTheme={activeThemeValue}>{children}</ActiveThemeProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
+      <AuthProvider>
+        <ActiveThemeProvider initialTheme={activeThemeValue}>{children}</ActiveThemeProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

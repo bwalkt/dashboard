@@ -1,15 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Icons } from "@/components/icons";
-import { Product } from "@dashboard/shared-types";
+import { Order } from "@dashboard/shared-types";
 import { useNavigate } from "react-router-dom";
 
 interface CellActionProps {
-  data: Product;
+  data: Order;
 }
 
 export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const navigate = useNavigate();
+
+  const handleEdit = () => {
+    navigate(`/dashboard/orders/${data.Id}`);
+  };
 
   return (
     <DropdownMenu>
@@ -21,7 +25,7 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => navigate(`/dashboard/products/${data.Id}`)}>
+        <DropdownMenuItem onClick={handleEdit}>
           <Icons.edit className="mr-2 h-4 w-4" />
           Edit
         </DropdownMenuItem>

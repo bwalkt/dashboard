@@ -175,7 +175,7 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
   );
 
   // Update a record
-  fastify.patch(
+  fastify.put(
     "/salesforce/records/:objectType/:recordId",
     {
       preHandler: authenticateToken,
@@ -199,7 +199,7 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
           return;
         }
 
-        const result = await salesforceClient.updateRecord(objectType, recordId, updateData);
+        await salesforceClient.updateRecord(objectType, recordId, updateData);
 
         reply.send({
           success: true,
@@ -210,40 +210,6 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         fastify.log.error(error, "Salesforce update record error");
         reply.code(400).send({
           error: "Record update failed",
-          message: (error as Error).message,
-        });
-      }
-    }
-  );
-
-  // Delete a record
-  fastify.delete(
-    "/salesforce/records/:objectType/:recordId",
-    {
-      preHandler: authenticateToken,
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        if (!salesforceClient) {
-          reply.code(500).send({
-            error: "Salesforce client not initialized",
-          });
-          return;
-        }
-
-        const { objectType, recordId } = request.params as { objectType: string; recordId: string };
-
-        await salesforceClient.deleteRecord(objectType, recordId);
-
-        reply.send({
-          success: true,
-          message: `${objectType} record deleted successfully`,
-          id: recordId,
-        });
-      } catch (error) {
-        fastify.log.error(error, "Salesforce delete record error");
-        reply.code(400).send({
-          error: "Record deletion failed",
           message: (error as Error).message,
         });
       }

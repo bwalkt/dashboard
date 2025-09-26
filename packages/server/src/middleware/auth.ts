@@ -5,18 +5,22 @@ import type { AuthenticatedRequest } from "@dashboard/shared-types";
 
 /**
  * JWT Authentication middleware
- * Extracts and verifies JWT token from Authorization header
+ * Extracts and verifies JWT token from Authorization header or cookies
  * Attaches user info to request object
  */
 export async function authenticateToken(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   try {
     const authHeader = request.headers.authorization;
-    const token = authService.extractTokenFromHeader(authHeader);
+    const headerToken = authService.extractTokenFromHeader(authHeader);
+    const cookieToken = authService.extractTokenFromCookies(request.cookies);
+
+    // Try header token first, then cookie token
+    const token = headerToken || cookieToken;
 
     if (!token) {
       return reply.status(401).send({
         error: "Unauthorized",
-        message: "Authorization header missing or invalid",
+        message: "Authorization header or access token cookie missing",
       });
     }
 

@@ -24,6 +24,6 @@ export interface EnvironmentConfig {
   GITHUB_CLIENT_SECRET: string;
   JWT_SECRET: string;
   DATABASE_PATH: string;
-  PORT: number;
-  CALLBACK_URL: string;
+  PORT?: number;
+  OAUTH_REDIRECT_URL: string;
 }
