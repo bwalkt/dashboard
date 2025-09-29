@@ -52,13 +52,20 @@ const MONO_THEMES = [
 
 export function ThemeSelector() {
   const { activeTheme, setActiveTheme } = useThemeConfig();
+  
+  console.log("ThemeSelector - activeTheme:", activeTheme);
+
+  const handleThemeChange = (newTheme: string) => {
+    console.log("ThemeSelector - changing theme from", activeTheme, "to", newTheme);
+    setActiveTheme(newTheme);
+  };
 
   return (
     <div className='flex items-center gap-2'>
       <Label htmlFor='theme-selector' className='sr-only'>
         Theme
       </Label>
-      <Select value={activeTheme} onValueChange={setActiveTheme}>
+      <Select value={activeTheme} onValueChange={handleThemeChange}>
         <SelectTrigger
           id='theme-selector'
           className='justify-start *:data-[slot=select-value]:w-12'
