@@ -3,6 +3,7 @@ import { salesforceConfig } from "../config/salesforce.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { SalesforceClient } from "../services/salesforce-client.service.js";
 import type { SalesforceRecordRequest } from "../types/salesforce.js";
+import { OrderSchema, ProductSchema } from "@dashboard/shared-types";
 
 /**
  * Salesforce API Routes
@@ -76,7 +77,16 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
 
         const { objectType } = request.params as { objectType: string };
 
-        const soql = `SELECT FIELDS(ALL) FROM ${objectType} limit 100`;
+        const keys: string[] = [];
+
+        if (objectType === "Order") {
+          keys.push(...Object.keys(OrderSchema.shape).filter((key) => key !== "attributes"));
+        } else if (objectType === "Product2") {
+          keys.push(...Object.keys(ProductSchema.shape).filter((key) => key !== "attributes"));
+        }
+
+        const fields = keys.join(",");
+        const soql = `SELECT ${fields} FROM ${objectType} LIMIT 20000`;
 
         const results = await salesforceClient.query(soql);
 
