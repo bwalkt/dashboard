@@ -209,9 +209,18 @@ export function BarGraph() {
               }
             />
             <Bar 
-              dataKey={activeChart} 
-              fill={chartConfig[activeChart]?.color || "hsl(221, 83%, 53%)"} 
-              radius={[4, 4, 0, 0]} 
+              dataKey="Completed" 
+              fill={chartConfig.Completed.color} 
+              stackId="chart"
+              radius={activeChart === "All" ? [0, 0, 0, 0] : [4, 4, 0, 0]}
+              hide={activeChart === "Pending"}
+            />
+            <Bar 
+              dataKey="Pending" 
+              fill={chartConfig.Pending.color} 
+              stackId="chart"
+              radius={[4, 4, 0, 0]}
+              hide={activeChart === "Completed"}
             />
           </BarChart>
         </ChartContainer>
