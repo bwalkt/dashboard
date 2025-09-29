@@ -71,13 +71,9 @@ export function generateRandomOrder(): OrderCreateRequest {
     order.Quantity__c = faker.number.int({ min: 1, max: 100 });
   }
 
-  if (faker.datatype.boolean({ probability: 0.4 })) {
-    order.Unit_Price__c = parseFloat(faker.commerce.price({ min: 10, max: 1000, dec: 2 }));
-  }
-
-  if (faker.datatype.boolean({ probability: 0.3 })) {
-    order.Total_Amount__c = parseFloat(faker.commerce.price({ min: 50, max: 5000, dec: 2 }));
-  }
+  // Always include unit price and total amount
+  order.Unit_Price__c = parseFloat(faker.commerce.price({ min: 10, max: 1000, dec: 2 }));
+  order.Total_Amount__c = parseFloat(faker.commerce.price({ min: 50, max: 5000, dec: 2 }));
 
   if (faker.datatype.boolean({ probability: 0.3 })) {
     order.Product_Id__c = faker.string.alphanumeric(10);

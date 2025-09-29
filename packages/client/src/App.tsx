@@ -16,18 +16,14 @@ import "@/styles/globals.css";
 import "@/styles/theme.css";
 
 // Import pages
+import OrderViewPage from "./features/orders/components/order-view-page";
+import ProductViewPage from "./features/products/components/product-view-page";
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
-import Accounts from "./pages/dashboard/Accounts";
-import Leads from "./pages/dashboard/Leads";
 import MobileDashboardLayout from "./pages/dashboard/MobileLayout";
-import Opportunities from "./pages/dashboard/Opportunities";
-import Overview from "./pages/dashboard/Overview";
 import Orders from "./pages/dashboard/Orders";
+import Overview from "./pages/dashboard/Overview";
 import Products from "./pages/dashboard/Products";
-import ProductViewPage from "./features/products/components/product-view-page";
-import OrderViewPage from "./features/orders/components/order-view-page";
-import Settings from "./pages/dashboard/Settings";
 
 // Configure NProgress
 NProgress.configure({ showSpinner: false });
@@ -78,16 +74,12 @@ function AppContent() {
             >
               <Route index element={<Navigate to="/dashboard/overview" replace />} />
               <Route path="overview" element={<Overview />} />
-              <Route path="accounts" element={<Accounts />} />
-              <Route path="opportunities" element={<Opportunities />} />
-              <Route path="leads" element={<Leads />} />
               <Route path="orders" element={<Orders />} />
               <Route path="orders/new" element={<OrderViewPage />} />
               <Route path="orders/:orderId" element={<OrderViewPage />} />
               <Route path="products" element={<Products />} />
               <Route path="products/new" element={<ProductViewPage />} />
               <Route path="products/:productId" element={<ProductViewPage />} />
-              <Route path="settings" element={<Settings />} />
             </Route>
 
             {/* Root redirect - go to sign in */}
