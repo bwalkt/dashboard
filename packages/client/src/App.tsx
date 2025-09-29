@@ -4,6 +4,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Toaster } from "@/components/ui/sonner";
 import { fontVariables } from "@/lib/font";
 import { cn } from "@/lib/utils";
+import { useThemeConfig } from "@/components/active-theme";
 // @ts-expect-error no declaration file
 import NProgress from "nprogress";
 import "nprogress/nprogress.css";
@@ -39,58 +40,68 @@ function ProgressBar() {
   return null;
 }
 
-function AppContent() {
-  const activeThemeValue = localStorage.getItem("active_theme") || "";
-  const isScaled = activeThemeValue?.endsWith("-scaled");
+function ThemedAppContent() {
+  const { activeTheme } = useThemeConfig();
+  const isScaled = activeTheme?.endsWith("-scaled");
 
-  console.log("App rendering, theme:", activeThemeValue || "default");
+  console.log("ThemedAppContent rendering, theme:", activeTheme);
 
   return (
     <div
       className={cn(
         "bg-background min-h-screen font-sans antialiased",
-        activeThemeValue ? `theme-${activeThemeValue}` : "",
+        `theme-${activeTheme}`,
         isScaled ? "theme-scaled" : "",
         fontVariables
       )}
     >
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange enableColorScheme>
-        <Providers activeThemeValue={activeThemeValue}>
-          <Toaster />
-          <ProgressBar />
-          <Routes>
-            {/* Auth routes - no authentication required */}
-            <Route path="/auth/sign-in" element={<SignIn />} />
-            <Route path="/auth/sign-up" element={<SignUp />} />
+      <Toaster />
+      <ProgressBar />
+      <Routes>
+        {/* Auth routes - no authentication required */}
+        <Route path="/auth/sign-in" element={<SignIn />} />
+        <Route path="/auth/sign-up" element={<SignUp />} />
 
-            {/* Dashboard routes - authentication required */}
-            <Route
-              path="/dashboard/*"
-              element={
-                <ProtectedRoute>
-                  <MobileDashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Navigate to="/dashboard/overview" replace />} />
-              <Route path="overview" element={<Overview />} />
-              <Route path="orders" element={<Orders />} />
-              <Route path="orders/new" element={<OrderViewPage />} />
-              <Route path="orders/:orderId" element={<OrderViewPage />} />
-              <Route path="products" element={<Products />} />
-              <Route path="products/new" element={<ProductViewPage />} />
-              <Route path="products/:productId" element={<ProductViewPage />} />
-            </Route>
+        {/* Dashboard routes - authentication required */}
+        <Route
+          path="/dashboard/*"
+          element={
+            <ProtectedRoute>
+              <MobileDashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/dashboard/overview" replace />} />
+          <Route path="overview" element={<Overview />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="orders/new" element={<OrderViewPage />} />
+          <Route path="orders/:orderId" element={<OrderViewPage />} />
+          <Route path="products" element={<Products />} />
+          <Route path="products/new" element={<ProductViewPage />} />
+          <Route path="products/:productId" element={<ProductViewPage />} />
+        </Route>
 
-            {/* Root redirect - go to sign in */}
-            <Route path="/" element={<Navigate to="/auth/sign-in" replace />} />
+        {/* Root redirect - go to sign in */}
+        <Route path="/" element={<Navigate to="/auth/sign-in" replace />} />
 
-            {/* Catch all other routes */}
-            <Route path="*" element={<Navigate to="/auth/sign-in" replace />} />
-          </Routes>
-        </Providers>
-      </ThemeProvider>
+        {/* Catch all other routes */}
+        <Route path="*" element={<Navigate to="/auth/sign-in" replace />} />
+      </Routes>
     </div>
+  );
+}
+
+function AppContent() {
+  const activeThemeValue = localStorage.getItem("active_theme") || "default";
+
+  console.log("App rendering, theme:", activeThemeValue);
+
+  return (
+    <ThemeProvider attribute="class" defaultTheme="blue" enableSystem disableTransitionOnChange enableColorScheme>
+      <Providers activeThemeValue={activeThemeValue}>
+        <ThemedAppContent />
+      </Providers>
+    </ThemeProvider>
   );
 }
 

@@ -28,7 +28,7 @@ const processOrdersData = (orders: Order[]) => {
       };
     }
 
-    // Count Completed orders separately, all others as Pending
+    // Count orders by status
     if (order.Status === "Completed") {
       dateGroups[dateKey].Completed++;
     } else if (order.Status) {
@@ -42,6 +42,7 @@ const processOrdersData = (orders: Order[]) => {
     .map(([date, statusCounts]) => ({
       date,
       ...statusCounts,
+      All: statusCounts.Completed + statusCounts.Pending, // Add combined total for "All" view
     }))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(-30); // Show last 30 days
@@ -51,28 +52,38 @@ const chartConfig = {
   views: {
     label: "Orders",
   },
+  All: {
+    label: "All",
+    color: "hsl(262, 83%, 58%)",
+  },
   Completed: {
     label: "Completed",
-    color: "hsl(142, 76%, 36%)",
+    color: "hsl(221, 83%, 53%)",
   },
   Pending: {
     label: "Pending",
-    color: "hsl(38, 92%, 50%)",
+    color: "hsl(48, 96%, 53%)",
   },
 } satisfies ChartConfig;
 
 export function BarGraph() {
   const { data: orders, isLoading, error } = useOrders();
-  const [activeChart, setActiveChart] = React.useState<keyof typeof chartConfig>("Pending");
+  const [activeChart, setActiveChart] = React.useState<keyof typeof chartConfig>("All");
 
   const chartData = React.useMemo(() => {
-    return processOrdersData(orders || []);
+    const data = processOrdersData(orders || []);
+    console.log("Chart data for All view:", data);
+    console.log("Active chart:", activeChart);
+    console.log("First data item:", data[0]);
+    console.log("Data length:", data.length);
+    return data;
   }, [orders]);
 
   const total = React.useMemo(() => {
-    if (!chartData.length) return { Completed: 0, Pending: 0 };
+    if (!chartData.length) return { All: 0, Completed: 0, Pending: 0 };
 
     return {
+      All: chartData.reduce((acc, curr) => acc + curr.All, 0),
       Completed: chartData.reduce((acc, curr) => acc + curr.Completed, 0),
       Pending: chartData.reduce((acc, curr) => acc + curr.Pending, 0),
     };
@@ -135,9 +146,12 @@ export function BarGraph() {
           </CardDescription>
         </div>
         <div className="flex">
-          {(["Completed", "Pending"] as const).map((key) => {
+          {(["All", "Completed", "Pending"] as const).map((key) => {
             const chart = key as keyof typeof chartConfig;
-            if (!chart || total[key as keyof typeof total] === 0) return null;
+            // For "All" tab, show if there are any orders (Completed + Pending > 0)
+            // For individual tabs, show only if that specific total > 0
+            const shouldShow = (total[key as keyof typeof total] || 0) > 0;
+            if (!chart || !shouldShow) return null;
             return (
               <button
                 key={chart}
@@ -146,7 +160,9 @@ export function BarGraph() {
                 onClick={() => setActiveChart(chart)}
               >
                 <span className="text-muted-foreground text-xs">{chartConfig[chart].label}</span>
-                <span className="text-lg leading-none font-bold sm:text-3xl">{total[key as keyof typeof total]?.toLocaleString()}</span>
+                <span className="text-lg leading-none font-bold sm:text-3xl">
+                  {total[key as keyof typeof total]?.toLocaleString()}
+                </span>
               </button>
             );
           })}
@@ -161,12 +177,6 @@ export function BarGraph() {
               right: 12,
             }}
           >
-            <defs>
-              <linearGradient id="fillBar" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.8} />
-                <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.2} />
-              </linearGradient>
-            </defs>
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="date"
@@ -183,7 +193,7 @@ export function BarGraph() {
               }}
             />
             <ChartTooltip
-              cursor={{ fill: "var(--primary)", opacity: 0.1 }}
+              cursor={{ fill: chartConfig[activeChart]?.color || "hsl(221, 83%, 53%)", opacity: 0.1 }}
               content={
                 <ChartTooltipContent
                   className="w-[150px]"
@@ -198,7 +208,20 @@ export function BarGraph() {
                 />
               }
             />
-            <Bar dataKey={activeChart} fill="url(#fillBar)" radius={[4, 4, 0, 0]} />
+            <Bar 
+              dataKey="Completed" 
+              fill={chartConfig.Completed.color} 
+              stackId="chart"
+              radius={activeChart === "All" ? [0, 0, 0, 0] : [4, 4, 0, 0]}
+              hide={activeChart === "Pending"}
+            />
+            <Bar 
+              dataKey="Pending" 
+              fill={chartConfig.Pending.color} 
+              stackId="chart"
+              radius={[4, 4, 0, 0]}
+              hide={activeChart === "Completed"}
+            />
           </BarChart>
         </ChartContainer>
       </CardContent>

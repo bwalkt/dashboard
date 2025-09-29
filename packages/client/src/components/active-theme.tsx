@@ -13,6 +13,7 @@ function setThemeCookie(theme: string) {
   if (typeof window === 'undefined') return;
 
   document.cookie = `${COOKIE_NAME}=${theme}; path=/; max-age=31536000; SameSite=Lax; ${window.location.protocol === 'https:' ? 'Secure;' : ''}`;
+  localStorage.setItem(COOKIE_NAME, theme);
 }
 
 type ThemeContextType = {
@@ -34,17 +35,25 @@ export function ActiveThemeProvider({
   );
 
   useEffect(() => {
+    console.log("ActiveThemeProvider - applying theme:", activeTheme);
     setThemeCookie(activeTheme);
 
     Array.from(document.body.classList)
       .filter((className) => className.startsWith('theme-'))
       .forEach((className) => {
+        console.log("ActiveThemeProvider - removing class:", className);
         document.body.classList.remove(className);
       });
+    
+    console.log("ActiveThemeProvider - adding class:", `theme-${activeTheme}`);
     document.body.classList.add(`theme-${activeTheme}`);
+    
     if (activeTheme.endsWith('-scaled')) {
+      console.log("ActiveThemeProvider - adding scaled class");
       document.body.classList.add('theme-scaled');
     }
+    
+    console.log("ActiveThemeProvider - final body classes:", Array.from(document.body.classList).join(', '));
   }, [activeTheme]);
 
   return (
