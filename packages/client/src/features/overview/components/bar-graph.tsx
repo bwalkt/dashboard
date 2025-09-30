@@ -52,18 +52,31 @@ const chartConfig = {
   views: {
     label: "Orders",
   },
-  All: {
-    label: "All",
-    color: "hsl(262, 83%, 58%)",
-  },
   Completed: {
     label: "Completed",
-    color: "hsl(221, 83%, 53%)",
+    color: "green",
   },
   Pending: {
     label: "Pending",
-    color: "hsl(48, 96%, 53%)",
+    color: "yellow",
   },
+  Shipped: {
+    label: "Shipped",
+    color: "blue",
+  },
+  Activated: {
+    label: "Activated",
+    color: "purple",
+  },
+  Draft: {
+    label: "Draft",
+    color: "gray",
+  },
+  All: {
+    label: "All Orders",
+    color: "hsl(221, 83%, 53%)",
+  },
+
 } satisfies ChartConfig;
 
 export function BarGraph() {
