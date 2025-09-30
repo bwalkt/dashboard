@@ -159,6 +159,26 @@ export function generateRandomOrder(): OrderCreateRequest {
     order.Ship_Date__c = faker.date.future({ years: 1 }).toISOString().split("T")[0];
   }
 
+  const productId = faker.helpers.arrayElement([
+    "01tak00000Jh4BtAAJ",
+    "01tak00000Jh4BuAAJ",
+    "01tak00000Jh4BvAAJ",
+    "01tak00000Jh4BwAAJ",
+    "01tak00000Jh4BxAAJ",
+    "01tak00000Jh4ByAAJ",
+    "01tak00000Jh4BzAAJ",
+    "01tak00000Jh4C0AAJ",
+    "01tak00000Jh4C1AAJ",
+    "01tak00000Jh4C2AAJ",
+    "01tak00000JnktBAAR",
+    "01tak00000Jnl1FAAR",
+    "01tak00000JqDO1AAN",
+    "01tak00000JqDSrAAN",
+    "01tak00000JqDXhAAN",
+  ]);
+
+  order.Product_Id__c = productId;
+
   return order;
 }
 
@@ -177,18 +197,13 @@ export async function createRandomOrder(): Promise<any> {
 
   try {
     const response = await api.post("/salesforce/records/Order", order);
-    if (response.data && response.data.id) {
-      // Successfully created order, now optionally update status to simulate workflow
-      // Note: In real Salesforce, status changes must follow the order lifecycle
-      // Here we randomly set status to simulate progression
-      // @ts-ignore
-      order.Id = response.data.id;
+    if (response && response.id) {
       const random = Math.random();
-      if (random < 0.6) order.Status = 'Completed'
-      else if (random < 0.8) order.Status = 'Processing'
-      else if (random < 0.9) order.Status = 'Shipped'
-      else order.Status = 'Activated'
-      const result = await api.put("/salesforce/records/Order", order);
+      if (random < 0.6) order.Status = "Completed";
+      else if (random < 0.8) order.Status = "Processing";
+      else if (random < 0.9) order.Status = "Shipped";
+      else order.Status = "Activated";
+      const result = await api.put(`/salesforce/records/Order/${response.id}`, order);
       return {
         success: true,
         order,
@@ -200,7 +215,7 @@ export async function createRandomOrder(): Promise<any> {
         order,
         response,
       };
-    }   
+    }
   } catch (error) {
     console.error("Failed to create random order:", error);
     return {
@@ -221,11 +236,38 @@ export async function createRandomOrders(count: number): Promise<any[]> {
   for (const order of orders) {
     try {
       const response = await api.post("/salesforce/records/Order", order);
-      results.push({
-        success: true,
-        order,
-        response,
-      });
+
+      console.log("response of createRandomOrders:", response);
+      if (response && response.id) {
+        const random = Math.random();
+        if (random < 0.6) order.Status = "Completed";
+        else if (random < 0.8) order.Status = "Processing";
+        else if (random < 0.9) order.Status = "Shipped";
+        else order.Status = "Activated";
+
+        try {
+          const updateResult = await api.put(`/salesforce/records/Order/${response.id}`, order);
+          results.push({
+            success: true,
+            order,
+            response: updateResult,
+          });
+        } catch (updateError) {
+          console.error("Failed to update order status:", updateError);
+          results.push({
+            success: true, // Order was created successfully, just status update failed
+            order,
+            response,
+            updateError,
+          });
+        }
+      } else {
+        results.push({
+          success: false,
+          order,
+          response,
+        });
+      }
     } catch (error) {
       console.error("Failed to create random order:", error);
       results.push({
