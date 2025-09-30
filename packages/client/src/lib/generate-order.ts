@@ -25,11 +25,11 @@ export function generateRandomOrder(): OrderCreateRequest {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
 
-  // Generate effective date after yesterday (within next 30 days)
+  // Generate effective date between today and last 30 days
   const effectiveDate = faker.date
     .between({
-      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      to: new Date(Date.now()), // 30 days from now
+      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+      to: new Date(), // today
     })
     .toISOString()
     .split("T")[0]; // Format as YYYY-MM-DD
@@ -136,27 +136,45 @@ export function generateRandomOrder(): OrderCreateRequest {
     order.ShippingCountry = faker.location.country();
   }
 
-  // Date fields
+  // Date fields - all between today and last 30 days
   if (faker.datatype.boolean({ probability: 0.2 })) {
     order.EndDate = faker.date
       .between({
-        from: new Date(),
-        to: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        to: new Date(), // today
       })
       .toISOString()
       .split("T")[0];
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.PoDate = faker.date.past({ years: 1 }).toISOString().split("T")[0];
+    order.PoDate = faker.date
+      .between({
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        to: new Date(), // today
+      })
+      .toISOString()
+      .split("T")[0];
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.Order_Date__c = faker.date.past({ years: 1 }).toISOString().split("T")[0];
+    order.Order_Date__c = faker.date
+      .between({
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        to: new Date(), // today
+      })
+      .toISOString()
+      .split("T")[0];
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.Ship_Date__c = faker.date.future({ years: 1 }).toISOString().split("T")[0];
+    order.Ship_Date__c = faker.date
+      .between({
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        to: new Date(), // today
+      })
+      .toISOString()
+      .split("T")[0];
   }
 
   const productId = faker.helpers.arrayElement([

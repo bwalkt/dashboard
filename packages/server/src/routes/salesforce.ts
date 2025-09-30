@@ -80,19 +80,18 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         const keys: string[] = [];
 
         if (objectType === "Order") {
-          keys.push(...Object.keys(OrderSchema.shape).filter((key) => key !== "attributes"));
+          keys.push("Id", "OrderNumber", "Name", "Status", "TotalAmount", "Customer_Name__c", "Payment__c", "EffectiveDate", "CreatedDate", "Description");
         } else if (objectType === "Product2") {
-          keys.push(...Object.keys(ProductSchema.shape).filter((key) => key !== "attributes"));
+          keys.push("Id", "Name", "Product_Category__c", "Unit_Price__c", "Cost_Per_Unit__c", "IsActive", "CreatedDate", "Description");
         }
 
         const fields = keys.join(",");
-        const soql = `SELECT ${fields} FROM ${objectType} LIMIT 20000`;
+        const soql = `SELECT ${fields} FROM ${objectType}`;
 
-        const results = await salesforceClient.query(soql);
+        const results = await salesforceClient.queryAll(soql);
 
         reply.send({
           success: true,
-          query: soql,
           totalSize: results.totalSize,
           records: results.records,
           done: results.done,

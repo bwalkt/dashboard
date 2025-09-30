@@ -188,6 +188,40 @@ export class SalesforceClient {
   }
 
   /**
+   * Query Salesforce records with pagination to fetch all records
+   * @param soql - SOQL query string
+   * @returns All query results across all pages
+   */
+  async queryAll(soql: string): Promise<SalesforceQueryResponse> {
+    const encodedQuery = encodeURIComponent(soql);
+    let allRecords: Record<string, any>[] = [];
+    let totalSize = 0;
+    let done = true;
+    let nextRecordsUrl: string | undefined;
+
+    // First query
+    const firstResponse = await this.apiCall("GET", `/services/data/v58.0/query/?q=${encodedQuery}`);
+    allRecords = [...firstResponse.records];
+    totalSize = firstResponse.totalSize;
+    done = firstResponse.done || false;
+    nextRecordsUrl = firstResponse.nextRecordsUrl;
+
+    // Fetch remaining pages if needed
+    while (!done && nextRecordsUrl) {
+      const nextResponse = await this.apiCall("GET", nextRecordsUrl);
+      allRecords = [...allRecords, ...nextResponse.records];
+      done = nextResponse.done || false;
+      nextRecordsUrl = nextResponse.nextRecordsUrl;
+    }
+
+    return {
+      totalSize,
+      done: true,
+      records: allRecords,
+    };
+  }
+
+  /**
    * Unified record operations (create, read, update)
    * @param operation - Operation type: 'create', 'read', 'update'
    * @param objectType - Salesforce object type (e.g., 'Account', 'Contact')
