@@ -28,8 +28,8 @@ export function generateRandomOrder(): OrderCreateRequest {
   // Generate effective date after yesterday (within next 30 days)
   const effectiveDate = faker.date
     .between({
-      from: new Date(), // Today
-      to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      to: new Date(Date.now()), // 30 days from now
     })
     .toISOString()
     .split("T")[0]; // Format as YYYY-MM-DD
@@ -177,11 +177,30 @@ export async function createRandomOrder(): Promise<any> {
 
   try {
     const response = await api.post("/salesforce/records/Order", order);
-    return {
-      success: true,
-      order,
-      response,
-    };
+    if (response.data && response.data.id) {
+      // Successfully created order, now optionally update status to simulate workflow
+      // Note: In real Salesforce, status changes must follow the order lifecycle
+      // Here we randomly set status to simulate progression
+      // @ts-ignore
+      order.Id = response.data.id;
+      const random = Math.random();
+      if (random < 0.6) order.Status = 'Completed'
+      else if (random < 0.8) order.Status = 'Processing'
+      else if (random < 0.9) order.Status = 'Shipped'
+      else order.Status = 'Activated'
+      const result = await api.put("/salesforce/records/Order", order);
+      return {
+        success: true,
+        order,
+        response: result,
+      };
+    } else {
+      return {
+        success: false,
+        order,
+        response,
+      };
+    }   
   } catch (error) {
     console.error("Failed to create random order:", error);
     return {
