@@ -37,6 +37,8 @@ const processOrdersData = (orders: Order[]) => {
     }
   });
 
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
   // Convert to array format for chart
   return Object.entries(dateGroups)
     .map(([date, statusCounts]) => ({
@@ -45,38 +47,26 @@ const processOrdersData = (orders: Order[]) => {
       All: statusCounts.Completed + statusCounts.Pending, // Add combined total for "All" view
     }))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(-30); // Show last 30 days
+    .filter((item) => new Date(item.date) <= today && new Date(item.date) >= thirtyDaysAgo);
 };
 
 const chartConfig = {
   views: {
     label: "Orders",
+    color: "hsl(262, 83%, 58%)",
+  },
+  All: {
+    label: "All",
+    color: "hsl(262, 83%, 58%)",
   },
   Completed: {
     label: "Completed",
-    color: "green",
+    color: "hsl(221, 83%, 53%)",
   },
   Pending: {
     label: "Pending",
-    color: "yellow",
+    color: "hsl(48, 96%, 53%)",
   },
-  Shipped: {
-    label: "Shipped",
-    color: "blue",
-  },
-  Activated: {
-    label: "Activated",
-    color: "purple",
-  },
-  Draft: {
-    label: "Draft",
-    color: "gray",
-  },
-  All: {
-    label: "All Orders",
-    color: "hsl(221, 83%, 53%)",
-  },
-
 } satisfies ChartConfig;
 
 export function BarGraph() {
@@ -173,9 +163,7 @@ export function BarGraph() {
                 onClick={() => setActiveChart(chart)}
               >
                 <span className="text-muted-foreground text-xs">{chartConfig[chart].label}</span>
-                <span className="text-lg leading-none font-bold sm:text-3xl">
-                  {total[key as keyof typeof total]?.toLocaleString()}
-                </span>
+                <span className="text-lg leading-none font-bold sm:text-3xl">{total[key as keyof typeof total]?.toLocaleString()}</span>
               </button>
             );
           })}
@@ -221,20 +209,14 @@ export function BarGraph() {
                 />
               }
             />
-            <Bar 
-              dataKey="Completed" 
-              fill={chartConfig.Completed.color} 
+            <Bar
+              dataKey="Completed"
+              fill={chartConfig.Completed.color}
               stackId="chart"
               radius={activeChart === "All" ? [0, 0, 0, 0] : [4, 4, 0, 0]}
               hide={activeChart === "Pending"}
             />
-            <Bar 
-              dataKey="Pending" 
-              fill={chartConfig.Pending.color} 
-              stackId="chart"
-              radius={[4, 4, 0, 0]}
-              hide={activeChart === "Completed"}
-            />
+            <Bar dataKey="Pending" fill={chartConfig.Pending.color} stackId="chart" radius={[4, 4, 0, 0]} hide={activeChart === "Completed"} />
           </BarChart>
         </ChartContainer>
       </CardContent>
