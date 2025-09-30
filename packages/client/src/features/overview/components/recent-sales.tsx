@@ -12,12 +12,12 @@ export function RecentSales() {
   const recentOrders =
     orders
       ?.filter((order) => {
-        const amount = order.TotalAmount || order.Total_Amount__c || 0;
+        const amount = order.Total_Amount__c || 0;
         return amount > 0;
       })
-      ?.sort((a, b) => new Date(b.CreatedDate).getTime() - new Date(a.CreatedDate).getTime())
+      ?.sort((a, b) => new Date(b.EffectiveDate).getTime() - new Date(a.EffectiveDate).getTime())
       ?.slice(0, 5) || [];
-
+  console.log("recentOrders", recentOrders);
   // Generate initials from customer name
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "UN";

@@ -74,6 +74,7 @@ export function generateRandomOrder(): OrderCreateRequest {
   // Always include unit price and total amount
   order.Unit_Price__c = parseFloat(faker.commerce.price({ min: 10, max: 1000, dec: 2 }));
   order.Total_Amount__c = parseFloat(faker.commerce.price({ min: 50, max: 5000, dec: 2 }));
+  order.Total_Amount__c = order.Total_Amount__c;
 
   if (faker.datatype.boolean({ probability: 0.3 })) {
     order.Product_Id__c = faker.string.alphanumeric(10);

@@ -80,9 +80,9 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         const keys: string[] = [];
 
         if (objectType === "Order") {
-          keys.push("Id", "OrderNumber", "Name", "Status", "TotalAmount", "Customer_Name__c", "Payment__c", "EffectiveDate", "CreatedDate", "Description");
+          keys.push(...Object.keys(OrderSchema.shape).filter((key) => key !== "attributes"));
         } else if (objectType === "Product2") {
-          keys.push("Id", "Name", "Product_Category__c", "Unit_Price__c", "Cost_Per_Unit__c", "IsActive", "CreatedDate", "Description");
+          keys.push(...Object.keys(ProductSchema.shape).filter((key) => key !== "attributes"));
         }
 
         const fields = keys.join(",");
