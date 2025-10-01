@@ -1,10 +1,10 @@
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useOrders } from "@/hooks/use-orders";
-import { useMemo } from "react";
+import { useOrdersLast30Days } from "@/hooks/use-orders";
 import { formatCurrency } from "@/lib/format";
+import { useMemo } from "react";
 
 export default function TotalRevenueCard() {
-  const { data: orders, isLoading, error } = useOrders();
+  const { data: orders, isLoading, error } = useOrdersLast30Days();
 
   const revenueData = useMemo(() => {
     if (!orders) return { total: 0 };
@@ -18,7 +18,7 @@ export default function TotalRevenueCard() {
     return (
       <Card>
         <CardHeader>
-          <CardDescription>Total Revenue</CardDescription>
+          <CardDescription>Total Revenue (Last 30 Days)</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums lg:text-3xl">Loading...</CardTitle>
         </CardHeader>
       </Card>
@@ -29,7 +29,7 @@ export default function TotalRevenueCard() {
     return (
       <Card>
         <CardHeader>
-          <CardDescription>Total Revenue</CardDescription>
+          <CardDescription>Total Revenue (Last 30 Days)</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums lg:text-3xl">Error</CardTitle>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
@@ -42,7 +42,7 @@ export default function TotalRevenueCard() {
   return (
     <Card>
       <CardHeader>
-        <CardDescription>Total Revenue</CardDescription>
+        <CardDescription>Total Revenue (Last 30 Days)</CardDescription>
         <CardTitle className="text-2xl font-semibold tabular-nums lg:text-3xl">{formatCurrency(revenueData.total)}</CardTitle>
       </CardHeader>
       <CardFooter className="flex-col items-start gap-1.5 text-sm">

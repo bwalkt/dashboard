@@ -10,7 +10,8 @@ export default function TotalProductsCard() {
   const productsData = useMemo(() => {
     if (!products) return { total: 0 };
 
-    const total = products.length;
+    // products is now a paginated response with totalSize
+    const total = products.totalSize;
 
     return { total };
   }, [products]);

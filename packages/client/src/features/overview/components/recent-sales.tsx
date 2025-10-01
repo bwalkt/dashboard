@@ -1,23 +1,22 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
-import { useOrders } from "@/hooks/use-orders";
-import { formatCurrency } from "@/lib/format";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useOrdersLast30Days } from "@/hooks/use-orders";
+import { formatCurrency } from "@/lib/format";
 import { faker } from "@faker-js/faker";
 
 export function RecentSales() {
-  const { data: orders, isLoading, error } = useOrders();
+  const { data: orders, isLoading, error } = useOrdersLast30Days();
 
   // Get the latest 5 orders with total amount > 0, sorted by creation date
   const recentOrders =
     orders
       ?.filter((order) => {
-        const amount = order.TotalAmount || order.Total_Amount__c || 0;
+        const amount = order.Total_Amount__c || 0;
         return amount > 0;
       })
-      ?.sort((a, b) => new Date(b.CreatedDate).getTime() - new Date(a.CreatedDate).getTime())
+      ?.sort((a, b) => new Date(b.EffectiveDate).getTime() - new Date(a.EffectiveDate).getTime())
       ?.slice(0, 5) || [];
-
   // Generate initials from customer name
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "UN";

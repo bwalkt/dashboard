@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useOrders } from "@/hooks/use-orders";
+import { useOrdersLast30Days } from "@/hooks/use-orders";
 import { Order } from "@dashboard/shared-types";
 
 export const description = "An interactive bar chart showing orders by date and status";
@@ -31,26 +31,28 @@ const processOrdersData = (orders: Order[]) => {
     // Count orders by status
     if (order.Status === "Completed") {
       dateGroups[dateKey].Completed++;
-    } else if (order.Status) {
+    } else {
       // All other statuses (Draft, Activated, Processing, Shipped) count as Pending
       dateGroups[dateKey].Pending++;
     }
   });
 
   // Convert to array format for chart
-  return Object.entries(dateGroups)
+  let chartData = Object.entries(dateGroups)
     .map(([date, statusCounts]) => ({
       date,
       ...statusCounts,
       All: statusCounts.Completed + statusCounts.Pending, // Add combined total for "All" view
     }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(-30); // Show last 30 days
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  return chartData;
 };
 
 const chartConfig = {
   views: {
     label: "Orders",
+    color: "hsl(262, 83%, 58%)",
   },
   All: {
     label: "All",
@@ -67,17 +69,14 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function BarGraph() {
-  const { data: orders, isLoading, error } = useOrders();
+  const { data: allOrders, isLoading: isLoading, error: error } = useOrdersLast30Days();
   const [activeChart, setActiveChart] = React.useState<keyof typeof chartConfig>("All");
 
   const chartData = React.useMemo(() => {
+    const orders = allOrders;
     const data = processOrdersData(orders || []);
-    console.log("Chart data for All view:", data);
-    console.log("Active chart:", activeChart);
-    console.log("First data item:", data[0]);
-    console.log("Data length:", data.length);
     return data;
-  }, [orders]);
+  }, [allOrders]);
 
   const total = React.useMemo(() => {
     if (!chartData.length) return { All: 0, Completed: 0, Pending: 0 };
@@ -142,9 +141,9 @@ export function BarGraph() {
           <CardTitle>Orders Chart - Interactive</CardTitle>
           <CardDescription>
             <span className="hidden @[540px]/card:block">Orders by status for the last 30 days</span>
-            <span className="@[540px]/card:hidden">Last 30 days</span>
           </CardDescription>
         </div>
+
         <div className="flex">
           {(["All", "Completed", "Pending"] as const).map((key) => {
             const chart = key as keyof typeof chartConfig;
@@ -160,9 +159,7 @@ export function BarGraph() {
                 onClick={() => setActiveChart(chart)}
               >
                 <span className="text-muted-foreground text-xs">{chartConfig[chart].label}</span>
-                <span className="text-lg leading-none font-bold sm:text-3xl">
-                  {total[key as keyof typeof total]?.toLocaleString()}
-                </span>
+                <span className="text-lg leading-none font-bold sm:text-3xl">{total[key as keyof typeof total]?.toLocaleString()}</span>
               </button>
             );
           })}
@@ -208,20 +205,14 @@ export function BarGraph() {
                 />
               }
             />
-            <Bar 
-              dataKey="Completed" 
-              fill={chartConfig.Completed.color} 
+            <Bar
+              dataKey="Completed"
+              fill={chartConfig.Completed.color}
               stackId="chart"
               radius={activeChart === "All" ? [0, 0, 0, 0] : [4, 4, 0, 0]}
               hide={activeChart === "Pending"}
             />
-            <Bar 
-              dataKey="Pending" 
-              fill={chartConfig.Pending.color} 
-              stackId="chart"
-              radius={[4, 4, 0, 0]}
-              hide={activeChart === "Completed"}
-            />
+            <Bar dataKey="Pending" fill={chartConfig.Pending.color} stackId="chart" radius={[4, 4, 0, 0]} hide={activeChart === "Completed"} />
           </BarChart>
         </ChartContainer>
       </CardContent>

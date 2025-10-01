@@ -3,8 +3,6 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import ErrorBoundary from "./ErrorBoundary";
 
-console.log("=== MAIN.TSX LOADING ===");
-
 // Environment detection removed - app now works universally
 
 // Error handlers
@@ -20,12 +18,10 @@ const rootElement = document.getElementById("root");
 if (!rootElement) {
   console.error("Root element not found!");
 } else {
-  console.log("Root element found, mounting React app");
   try {
     const root = ReactDOM.createRoot(rootElement);
 
     // Mount the main app
-    console.log("🚀 Mounting app");
     root.render(
       <React.StrictMode>
         <ErrorBoundary>
@@ -33,7 +29,6 @@ if (!rootElement) {
         </ErrorBoundary>
       </React.StrictMode>
     );
-    console.log("✅ App mounted successfully");
   } catch (error) {
     console.error("❌ Error mounting app:", error);
     rootElement.innerHTML = `

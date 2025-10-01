@@ -6,16 +6,22 @@ import { DataTableToolbar } from "@/components/ui/table/data-table-toolbar";
 import { useDataTable } from "@/hooks/use-data-table";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { parseAsInteger, useQueryState } from "nuqs";
+
 interface OrderTableParams<TData, TValue> {
   data: TData[];
-  totalItems: number;
   columns: ColumnDef<TData, TValue>[];
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    limit: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
 }
-export function OrderTable<TData, TValue>({ data, totalItems, columns }: OrderTableParams<TData, TValue>) {
-  const [pageSize] = useQueryState("perPage", parseAsInteger.withDefault(10));
 
-  const pageCount = Math.ceil(totalItems / pageSize);
+export function OrderTable<TData, TValue>({ data, columns, pagination }: OrderTableParams<TData, TValue>) {
+  // Use custom pagination with LIMIT/OFFSET
+  const pageCount = pagination?.totalPages || 1;
 
   const { table } = useDataTable({
     data, // order data
@@ -23,8 +29,9 @@ export function OrderTable<TData, TValue>({ data, totalItems, columns }: OrderTa
     pageCount: pageCount,
     shallow: false, //Setting to false triggers a network request with the updated querystring.
     debounceMs: 500,
-    manualFiltering: false, // Enable client-side filtering
-    manualSorting: false, // Enable client-side sorting
+    manualFiltering: true, // Enable server-side filtering
+    manualSorting: true, // Enable server-side sorting
+    manualPagination: true, // Enable server-side pagination
   });
 
   return (

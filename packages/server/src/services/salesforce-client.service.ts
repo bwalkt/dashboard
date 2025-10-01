@@ -73,10 +73,8 @@ export class SalesforceClient {
       const tokenExpiration = this.jwtService.getTokenExpirationTime(access_token);
       if (tokenExpiration) {
         this.tokenExpiresAt = tokenExpiration;
-        console.log(`Token expiration decoded from JWT: ${new Date(tokenExpiration).toISOString()}`);
       } else {
         this.tokenExpiresAt = Date.now() + 30 * 60 * 1000;
-        console.log(`Token expiration set to default 30 minutes: ${new Date(this.tokenExpiresAt).toISOString()}`);
       }
 
       return {
@@ -178,13 +176,54 @@ export class SalesforceClient {
   }
 
   /**
-   * Query Salesforce records using SOQL
+   * Query Salesforce records with pagination support
    * @param soql - SOQL query string
-   * @returns Query results
+   * @param nextRecordsUrl - Optional next records URL for pagination
+   * @returns Query results with pagination info
    */
-  async query(soql: string): Promise<SalesforceQueryResponse> {
+  async queryPaginated(soql: string, nextRecordsUrl?: string): Promise<SalesforceQueryResponse> {
+    if (nextRecordsUrl) {
+      // Use the nextRecordsUrl for subsequent pages
+      return await this.apiCall("GET", nextRecordsUrl);
+    } else {
+      // First page - use the SOQL query
+      const encodedQuery = encodeURIComponent(soql);
+      return await this.apiCall("GET", `/services/data/v58.0/query/?q=${encodedQuery}`);
+    }
+  }
+
+  /**
+   * Query Salesforce records with pagination to fetch all records
+   * @param soql - SOQL query string
+   * @returns All query results across all pages
+   */
+  async queryAll(soql: string): Promise<SalesforceQueryResponse> {
     const encodedQuery = encodeURIComponent(soql);
-    return await this.apiCall("GET", `/services/data/v58.0/query/?q=${encodedQuery}`);
+    let allRecords: Record<string, any>[] = [];
+    let totalSize = 0;
+    let done = true;
+    let nextRecordsUrl: string | undefined;
+
+    // First query
+    const firstResponse = await this.apiCall("GET", `/services/data/v58.0/query/?q=${encodedQuery}`);
+    allRecords = [...firstResponse.records];
+    totalSize = firstResponse.totalSize;
+    done = firstResponse.done || false;
+    nextRecordsUrl = firstResponse.nextRecordsUrl;
+
+    // Fetch remaining pages if needed
+    while (!done && nextRecordsUrl) {
+      const nextResponse = await this.apiCall("GET", nextRecordsUrl);
+      allRecords = [...allRecords, ...nextResponse.records];
+      done = nextResponse.done || false;
+      nextRecordsUrl = nextResponse.nextRecordsUrl;
+    }
+
+    return {
+      totalSize,
+      done: true,
+      records: allRecords,
+    };
   }
 
   /**

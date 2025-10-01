@@ -103,7 +103,6 @@ export const columns: ColumnDef<Product>[] = [
     header: ({ column }) => <DataTableColumnHeader column={column} title="Created Date" />,
     cell: ({ cell }) => {
       const date = cell.getValue<Product["CreatedDate"]>();
-      console.log(new Date(date));
       if (!date) return <div>N/A</div>;
       return <div>{new Date(date).toLocaleDateString()}</div>;
     },

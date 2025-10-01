@@ -86,9 +86,6 @@ export default function AppSidebar() {
       };
 
   // Debug logging
-  console.log("App Sidebar - Auth User:", authUser);
-  console.log("App Sidebar - User Metadata:", authUser?.user_metadata);
-  console.log("App Sidebar - Final User Object:", user);
 
   const activeTenant = tenants[0];
 

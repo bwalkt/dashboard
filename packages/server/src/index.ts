@@ -24,9 +24,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   });
 
   // Console log when server starts
-  fastify.addHook("onReady", async () => {
-    console.log("🚀 Server is running on http://localhost:8080");
-  });
+  fastify.addHook("onReady", async () => {});
 
   // Register authentication routes
   await fastify.register(authRoutes);

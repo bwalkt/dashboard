@@ -1,5 +1,4 @@
 import { NavItem } from "@/types";
-import { json2csv } from "json-2-csv";
 export type Product = {
   Id: string;
   Name: string;
@@ -108,7 +107,5 @@ const recentSalesData: SaleUser[] = [
     initials: "SD",
   },
 ];
-
-console.log(json2csv(recentSalesData));
 
 export { recentSalesData };

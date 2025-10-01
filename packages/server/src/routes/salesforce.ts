@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyPluginOptions, FastifyReply, FastifyReques
 import { salesforceConfig } from "../config/salesforce.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { SalesforceClient } from "../services/salesforce-client.service.js";
-import type { SalesforceRecordRequest } from "../types/salesforce.js";
+import type { SalesforceRecordRequest, SalesforceQueryParams, SalesforcePaginatedResponse } from "../types/salesforce.js";
 import { OrderSchema, ProductSchema } from "@dashboard/shared-types";
 
 /**
@@ -60,7 +60,12 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
     }
   );
 
-  // Query Salesforce records
+  // Query Salesforce records with custom pagination using LIMIT and OFFSET
+  // GET /salesforce/:objectType/query?page=1&limit=50
+  // Query parameters:
+  // - page: Page number (default: 1)
+  // - limit: Number of records per page (default: 50, max: 2000)
+  // Note: Executes two queries - COUNT() for total records and SELECT with LIMIT/OFFSET for paginated data
   fastify.get(
     "/salesforce/:objectType/query",
     {
@@ -76,6 +81,12 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         }
 
         const { objectType } = request.params as { objectType: string };
+        const { page = 1, limit = 50 } = request.query as SalesforceQueryParams;
+
+        // Validate pagination parameters
+        const pageNum = Math.max(1, Math.floor(Number(page)));
+        const limitNum = Math.min(Math.max(1, Math.floor(Number(limit))), 2000); // Salesforce max is 2000
+        const offset = (pageNum - 1) * limitNum;
 
         const keys: string[] = [];
 
@@ -86,19 +97,82 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         }
 
         const fields = keys.join(",");
-        const soql = `SELECT ${fields} FROM ${objectType} LIMIT 20000`;
 
-        const results = await salesforceClient.query(soql);
+        // Execute both COUNT and SELECT queries in parallel for better performance
+        const countSoql = `SELECT COUNT() FROM ${objectType}`;
+        const soql = `SELECT ${fields} FROM ${objectType} LIMIT ${limitNum} OFFSET ${offset}`;
+
+        const [countResults, results] = await Promise.all([salesforceClient.queryPaginated(countSoql), salesforceClient.queryPaginated(soql)]);
+
+        const totalRecords = countResults.totalSize;
+
+        // Calculate pagination metadata using actual total count
+        const totalPages = Math.ceil(totalRecords / limitNum);
+        const hasNext = pageNum < totalPages;
+        const hasPrevious = pageNum > 1;
+
+        const response: SalesforcePaginatedResponse = {
+          success: true,
+          totalSize: totalRecords, // Use actual total count from COUNT query
+          records: results.records,
+          done: results.done || false,
+          pagination: {
+            currentPage: pageNum,
+            totalPages,
+            limit: limitNum,
+            hasNext,
+            hasPrevious,
+          },
+        };
+
+        reply.send(response);
+      } catch (error) {
+        fastify.log.error(error, "Salesforce query error");
+        reply.code(400).send({
+          error: "Query failed",
+          message: (error as Error).message,
+        });
+      }
+    }
+  );
+
+  // Query Salesforce orders from the last 30 days
+  // GET /salesforce/Order/query/last-30-days
+  // Returns all orders created within the last 30 days, ordered by CreatedDate DESC
+  // Uses SOQL: SELECT ... FROM Order WHERE CreatedDate >= LAST_N_DAYS:30 ORDER BY CreatedDate DESC
+  fastify.get(
+    "/salesforce/Order/query/last-30-days",
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        if (!salesforceClient) {
+          reply.code(500).send({
+            error: "Salesforce client not initialized",
+          });
+          return;
+        }
+
+        // Get all Order schema fields except attributes
+        const keys = Object.keys(OrderSchema.shape).filter((key) => key !== "attributes");
+        const fields = keys.join(",");
+
+        // Create SOQL query with WHERE clause for last 30 days
+        // Using CreatedDate field to filter orders created in the last 30 days
+        const soql = `SELECT ${fields} FROM Order WHERE EffectiveDate <= TODAY AND EffectiveDate >= LAST_N_DAYS:30 ORDER BY EffectiveDate DESC`;
+
+        const results = await salesforceClient.queryAll(soql);
 
         reply.send({
           success: true,
-          query: soql,
           totalSize: results.totalSize,
           records: results.records,
           done: results.done,
+          query: soql,
         });
       } catch (error) {
-        fastify.log.error(error, "Salesforce query error");
+        fastify.log.error(error, "Salesforce last 30 days query error");
         reply.code(400).send({
           error: "Query failed",
           message: (error as Error).message,

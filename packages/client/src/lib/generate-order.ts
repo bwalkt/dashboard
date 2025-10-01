@@ -25,11 +25,11 @@ export function generateRandomOrder(): OrderCreateRequest {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
 
-  // Generate effective date after yesterday (within next 30 days)
+  // Generate effective date between today and last 30 days
   const effectiveDate = faker.date
     .between({
-      from: new Date(), // Today
-      to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+      to: new Date(), // today
     })
     .toISOString()
     .split("T")[0]; // Format as YYYY-MM-DD
@@ -74,6 +74,7 @@ export function generateRandomOrder(): OrderCreateRequest {
   // Always include unit price and total amount
   order.Unit_Price__c = parseFloat(faker.commerce.price({ min: 10, max: 1000, dec: 2 }));
   order.Total_Amount__c = parseFloat(faker.commerce.price({ min: 50, max: 5000, dec: 2 }));
+  order.Total_Amount__c = order.Total_Amount__c;
 
   if (faker.datatype.boolean({ probability: 0.3 })) {
     order.Product_Id__c = faker.string.alphanumeric(10);
@@ -136,28 +137,66 @@ export function generateRandomOrder(): OrderCreateRequest {
     order.ShippingCountry = faker.location.country();
   }
 
-  // Date fields
+  // Date fields - all between today and last 30 days
   if (faker.datatype.boolean({ probability: 0.2 })) {
     order.EndDate = faker.date
       .between({
-        from: new Date(),
-        to: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        to: new Date(), // today
       })
       .toISOString()
       .split("T")[0];
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.PoDate = faker.date.past({ years: 1 }).toISOString().split("T")[0];
+    order.PoDate = faker.date
+      .between({
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        to: new Date(), // today
+      })
+      .toISOString()
+      .split("T")[0];
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.Order_Date__c = faker.date.past({ years: 1 }).toISOString().split("T")[0];
+    order.Order_Date__c = faker.date
+      .between({
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        to: new Date(), // today
+      })
+      .toISOString()
+      .split("T")[0];
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.Ship_Date__c = faker.date.future({ years: 1 }).toISOString().split("T")[0];
+    order.Ship_Date__c = faker.date
+      .between({
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        to: new Date(), // today
+      })
+      .toISOString()
+      .split("T")[0];
   }
+
+  const productId = faker.helpers.arrayElement([
+    "01tak00000Jh4BtAAJ",
+    "01tak00000Jh4BuAAJ",
+    "01tak00000Jh4BvAAJ",
+    "01tak00000Jh4BwAAJ",
+    "01tak00000Jh4BxAAJ",
+    "01tak00000Jh4ByAAJ",
+    "01tak00000Jh4BzAAJ",
+    "01tak00000Jh4C0AAJ",
+    "01tak00000Jh4C1AAJ",
+    "01tak00000Jh4C2AAJ",
+    "01tak00000JnktBAAR",
+    "01tak00000Jnl1FAAR",
+    "01tak00000JqDO1AAN",
+    "01tak00000JqDSrAAN",
+    "01tak00000JqDXhAAN",
+  ]);
+
+  order.Product_Id__c = productId;
 
   return order;
 }
@@ -177,11 +216,25 @@ export async function createRandomOrder(): Promise<any> {
 
   try {
     const response = await api.post("/salesforce/records/Order", order);
-    return {
-      success: true,
-      order,
-      response,
-    };
+    if (response && response.id) {
+      const random = Math.random();
+      if (random < 0.6) order.Status = "Completed";
+      else if (random < 0.8) order.Status = "Processing";
+      else if (random < 0.9) order.Status = "Shipped";
+      else order.Status = "Activated";
+      const result = await api.put(`/salesforce/records/Order/${response.id}`, order);
+      return {
+        success: true,
+        order,
+        response: result,
+      };
+    } else {
+      return {
+        success: false,
+        order,
+        response,
+      };
+    }
   } catch (error) {
     console.error("Failed to create random order:", error);
     return {
@@ -202,11 +255,37 @@ export async function createRandomOrders(count: number): Promise<any[]> {
   for (const order of orders) {
     try {
       const response = await api.post("/salesforce/records/Order", order);
-      results.push({
-        success: true,
-        order,
-        response,
-      });
+
+      if (response && response.id) {
+        const random = Math.random();
+        if (random < 0.6) order.Status = "Completed";
+        else if (random < 0.8) order.Status = "Processing";
+        else if (random < 0.9) order.Status = "Shipped";
+        else order.Status = "Activated";
+
+        try {
+          const updateResult = await api.put(`/salesforce/records/Order/${response.id}`, order);
+          results.push({
+            success: true,
+            order,
+            response: updateResult,
+          });
+        } catch (updateError) {
+          console.error("Failed to update order status:", updateError);
+          results.push({
+            success: true, // Order was created successfully, just status update failed
+            order,
+            response,
+            updateError,
+          });
+        }
+      } else {
+        results.push({
+          success: false,
+          order,
+          response,
+        });
+      }
     } catch (error) {
       console.error("Failed to create random order:", error);
       results.push({

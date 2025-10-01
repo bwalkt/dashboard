@@ -10,7 +10,8 @@
     "start": "fastify start dist/index.js --port 8080",
     "dev": "tsx watch src/server.ts",
     "dev:fastify": "fastify start dist/index.js --watch --port 8080",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "gen": "tsx src/scripts/seed-orders.ts"
   },
   "keywords": [],
   "author": "",
