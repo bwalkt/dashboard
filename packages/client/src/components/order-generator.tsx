@@ -9,7 +9,7 @@ export function QuickOrderGenerator() {
   const { generateSingleOrder, isCreatingSingle } = useGenerateOrders();
 
   return (
-    <Button onClick={generateSingleOrder} disabled={isCreatingSingle} variant="outline" size="sm">
+    <Button className="w-fit" onClick={generateSingleOrder} disabled={isCreatingSingle} variant="outline" size="sm">
       {isCreatingSingle ? "Creating..." : "Generate Random Order"}
     </Button>
   );
