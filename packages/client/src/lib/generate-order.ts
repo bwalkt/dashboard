@@ -256,7 +256,6 @@ export async function createRandomOrders(count: number): Promise<any[]> {
     try {
       const response = await api.post("/salesforce/records/Order", order);
 
-      console.log("response of createRandomOrders:", response);
       if (response && response.id) {
         const random = Math.random();
         if (random < 0.6) order.Status = "Completed";

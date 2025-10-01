@@ -32,8 +32,6 @@ class DatabaseManager {
     `;
 
     this.db.exec(createIndex);
-
-    console.log("✅ Database initialized successfully");
   }
 
   public getUserByGithubId(githubId: string): User | null {

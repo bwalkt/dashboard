@@ -44,17 +44,8 @@ function ThemedAppContent() {
   const { activeTheme } = useThemeConfig();
   const isScaled = activeTheme?.endsWith("-scaled");
 
-  console.log("ThemedAppContent rendering, theme:", activeTheme);
-
   return (
-    <div
-      className={cn(
-        "bg-background min-h-screen font-sans antialiased",
-        `theme-${activeTheme}`,
-        isScaled ? "theme-scaled" : "",
-        fontVariables
-      )}
-    >
+    <div className={cn("bg-background min-h-screen font-sans antialiased", `theme-${activeTheme}`, isScaled ? "theme-scaled" : "", fontVariables)}>
       <Toaster />
       <ProgressBar />
       <Routes>
@@ -94,8 +85,6 @@ function ThemedAppContent() {
 function AppContent() {
   const activeThemeValue = localStorage.getItem("active_theme") || "default";
 
-  console.log("App rendering, theme:", activeThemeValue);
-
   return (
     <ThemeProvider attribute="class" defaultTheme="blue" enableSystem disableTransitionOnChange enableColorScheme>
       <Providers activeThemeValue={activeThemeValue}>
@@ -106,9 +95,6 @@ function AppContent() {
 }
 
 function App() {
-  console.log("=== APP STARTING ===");
-  console.log("App component rendering - full dashboard");
-
   return (
     <BrowserRouter>
       <NuqsAdapter>

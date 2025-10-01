@@ -2,11 +2,10 @@
 // 🛑 Nothing in here has anything to do with Nextjs, it's just a fake database
 ////////////////////////////////////////////////////////////////////////////////
 
-import { faker } from '@faker-js/faker';
-import { matchSorter } from 'match-sorter'; // For filtering
-import { json2csv } from 'json-2-csv';
-export const delay = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+import { faker } from "@faker-js/faker";
+import { matchSorter } from "match-sorter"; // For filtering
+import { json2csv } from "json-2-csv";
+export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Define the shape of Product data
 export type Product = {
@@ -28,28 +27,17 @@ export const fakeProducts = {
   initialize() {
     const sampleProducts: Product[] = [];
     function generateRandomProductData(id: number): Product {
-      const categories = [
-        'Electronics',
-        'Furniture',
-        'Clothing',
-        'Toys',
-        'Groceries',
-        'Books',
-        'Jewelry',
-        'Beauty Products'
-      ];
+      const categories = ["Electronics", "Furniture", "Clothing", "Toys", "Groceries", "Books", "Jewelry", "Beauty Products"];
 
       return {
         id,
         name: faker.commerce.productName(),
         description: faker.commerce.productDescription(),
-        created_at: faker.date
-          .between({ from: '2022-01-01', to: '2023-12-31' })
-          .toISOString(),
+        created_at: faker.date.between({ from: "2022-01-01", to: "2023-12-31" }).toISOString(),
         price: parseFloat(faker.commerce.price({ min: 5, max: 500, dec: 2 })),
         photo_url: `https://api.slingacademy.com/public/sample-products/${id}.png`,
         category: faker.helpers.arrayElement(categories),
-        updated_at: faker.date.recent().toISOString()
+        updated_at: faker.date.recent().toISOString(),
       };
     }
 
@@ -62,58 +50,36 @@ export const fakeProducts = {
   },
 
   // Get all products with optional category filtering and search
-  async getAll({
-    categories = [],
-    search
-  }: {
-    categories?: string[];
-    search?: string;
-  }) {
+  async getAll({ categories = [], search }: { categories?: string[]; search?: string }) {
     let products = [...this.records];
 
     // Filter products based on selected categories
     if (categories.length > 0) {
-      products = products.filter((product) =>
-        categories.includes(product.category)
-      );
+      products = products.filter((product) => categories.includes(product.category));
     }
 
     // Search functionality across multiple fields
     if (search) {
       products = matchSorter(products, search, {
-        keys: ['name', 'description', 'category']
+        keys: ["name", "description", "category"],
       });
     }
-    console.log(products);
     const csv = json2csv(products);
     debugger;
-    console.log(csv);
     return products;
   },
 
   // Get paginated results with optional category filtering and search
-  async getProducts({
-    page = 1,
-    limit = 10,
-    categories,
-    search
-  }: {
-    page?: number;
-    limit?: number;
-    categories?: string;
-    search?: string;
-  }) {
+  async getProducts({ page = 1, limit = 10, categories, search }: { page?: number; limit?: number; categories?: string; search?: string }) {
     await delay(1000);
-    const categoriesArray = categories ? categories.split('.') : [];
+    const categoriesArray = categories ? categories.split(".") : [];
     const allProducts = await this.getAll({
       categories: categoriesArray,
-      search
+      search,
     });
     const totalProducts = allProducts.length;
-    console.log(allProducts);
     const csv = json2csv(allProducts);
     debugger;
-    console.log(csv);
     // Pagination logic
     const offset = (page - 1) * limit;
     const paginatedProducts = allProducts.slice(offset, offset + limit);
@@ -125,11 +91,11 @@ export const fakeProducts = {
     return {
       success: true,
       time: currentTime,
-      message: 'Sample data for testing and learning purposes',
+      message: "Sample data for testing and learning purposes",
       total_products: totalProducts,
       offset,
       limit,
-      products: paginatedProducts
+      products: paginatedProducts,
     };
   },
 
@@ -143,7 +109,7 @@ export const fakeProducts = {
     if (!product) {
       return {
         success: false,
-        message: `Product with ID ${id} not found`
+        message: `Product with ID ${id} not found`,
       };
     }
 
@@ -154,9 +120,9 @@ export const fakeProducts = {
       success: true,
       time: currentTime,
       message: `Product with ID ${id} found`,
-      product
+      product,
     };
-  }
+  },
 };
 
 // Initialize sample products

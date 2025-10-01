@@ -53,7 +53,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       // Store state in session or cookie for validation
       // For simplicity, we'll use a cookie
       // Debug: Log the state being set
-      console.log("Setting oauth_state cookie:", state);
 
       reply.setCookie("oauth_state", state, {
         httpOnly: true,
@@ -84,12 +83,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get("/auth/callback", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { code, state } = request.query as { code: string; state: string };
-      console.log("Callback received code:", code);
-      console.log("Callback received state:", state);
       // Validate state parameter
 
       const storedState = request.cookies.oauth_state;
-      console.log("Callback received stored state:", storedState);
       if (!state || !storedState || state !== storedState) {
         return reply.status(400).send({
           error: "Bad Request",

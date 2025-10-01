@@ -65,7 +65,6 @@ export default function ProductForm({ initialData, pageTitle }: { initialData: P
 
   function onSubmit(values: ProductCreateRequest) {
     // Form submission logic would be implemented here
-    console.log(values);
     createProduct(values);
   }
 

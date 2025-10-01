@@ -31,23 +31,22 @@ const processOrdersData = (orders: Order[]) => {
     // Count orders by status
     if (order.Status === "Completed") {
       dateGroups[dateKey].Completed++;
-    } else if (order.Status) {
+    } else {
       // All other statuses (Draft, Activated, Processing, Shipped) count as Pending
       dateGroups[dateKey].Pending++;
     }
   });
 
-  const today = new Date();
-  const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
   // Convert to array format for chart
-  return Object.entries(dateGroups)
+  let chartData = Object.entries(dateGroups)
     .map(([date, statusCounts]) => ({
       date,
       ...statusCounts,
       All: statusCounts.Completed + statusCounts.Pending, // Add combined total for "All" view
     }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .filter((item) => new Date(item.date) <= today && new Date(item.date) >= thirtyDaysAgo);
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  return chartData;
 };
 
 const chartConfig = {
@@ -70,17 +69,14 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function BarGraph() {
-  const { data: orders, isLoading, error } = useOrdersLast30Days();
+  const { data: allOrders, isLoading: isLoading, error: error } = useOrdersLast30Days();
   const [activeChart, setActiveChart] = React.useState<keyof typeof chartConfig>("All");
 
   const chartData = React.useMemo(() => {
+    const orders = allOrders;
     const data = processOrdersData(orders || []);
-    console.log("Chart data for All view:", data);
-    console.log("Active chart:", activeChart);
-    console.log("First data item:", data[0]);
-    console.log("Data length:", data.length);
     return data;
-  }, [orders]);
+  }, [allOrders]);
 
   const total = React.useMemo(() => {
     if (!chartData.length) return { All: 0, Completed: 0, Pending: 0 };
@@ -145,9 +141,9 @@ export function BarGraph() {
           <CardTitle>Orders Chart - Interactive</CardTitle>
           <CardDescription>
             <span className="hidden @[540px]/card:block">Orders by status for the last 30 days</span>
-            <span className="@[540px]/card:hidden">Last 30 days</span>
           </CardDescription>
         </div>
+
         <div className="flex">
           {(["All", "Completed", "Pending"] as const).map((key) => {
             const chart = key as keyof typeof chartConfig;

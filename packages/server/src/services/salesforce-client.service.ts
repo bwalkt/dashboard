@@ -73,10 +73,8 @@ export class SalesforceClient {
       const tokenExpiration = this.jwtService.getTokenExpirationTime(access_token);
       if (tokenExpiration) {
         this.tokenExpiresAt = tokenExpiration;
-        console.log(`Token expiration decoded from JWT: ${new Date(tokenExpiration).toISOString()}`);
       } else {
         this.tokenExpiresAt = Date.now() + 30 * 60 * 1000;
-        console.log(`Token expiration set to default 30 minutes: ${new Date(this.tokenExpiresAt).toISOString()}`);
       }
 
       return {

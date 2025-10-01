@@ -17,7 +17,6 @@ export function RecentSales() {
       })
       ?.sort((a, b) => new Date(b.EffectiveDate).getTime() - new Date(a.EffectiveDate).getTime())
       ?.slice(0, 5) || [];
-  console.log("recentOrders", recentOrders);
   // Generate initials from customer name
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "UN";

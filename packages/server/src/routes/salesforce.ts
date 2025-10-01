@@ -160,7 +160,7 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
 
         // Create SOQL query with WHERE clause for last 30 days
         // Using CreatedDate field to filter orders created in the last 30 days
-        const soql = `SELECT ${fields} FROM Order WHERE EffectiveDate >= LAST_N_DAYS:30 ORDER BY EffectiveDate DESC`;
+        const soql = `SELECT ${fields} FROM Order WHERE EffectiveDate <= TODAY AND EffectiveDate >= LAST_N_DAYS:30 ORDER BY EffectiveDate DESC`;
 
         const results = await salesforceClient.queryAll(soql);
 

@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
-import ThemeProvider from '@/components/layout/ThemeToggle/theme-provider';
-import { fontVariables } from '@/lib/font';
-import { cn } from '@/lib/utils';
-import { safeLocalStorage } from '@/lib/platform';
+import { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "@/components/ui/sonner";
+import ThemeProvider from "@/components/layout/ThemeToggle/theme-provider";
+import { fontVariables } from "@/lib/font";
+import { cn } from "@/lib/utils";
+import { safeLocalStorage } from "@/lib/platform";
 
 // Simple mobile dashboard component
 function MobileDashboard() {
@@ -13,13 +13,11 @@ function MobileDashboard() {
   useEffect(() => {
     const info: string[] = [];
     info.push(`Window: ${typeof window}`);
-    info.push(`UserAgent: ${navigator?.userAgent || 'N/A'}`);
-    info.push(`Location: ${window?.location?.href || 'N/A'}`);
-    info.push(`Tauri: ${(window as any).__TAURI__ ? 'Available' : 'Not Available'}`);
+    info.push(`UserAgent: ${navigator?.userAgent || "N/A"}`);
+    info.push(`Location: ${window?.location?.href || "N/A"}`);
+    info.push(`Tauri: ${(window as any).__TAURI__ ? "Available" : "Not Available"}`);
     info.push(`Timestamp: ${new Date().toISOString()}`);
     setDebugInfo(info);
-    
-    console.log('MobileDashboard mounted with debug info:', info);
   }, []);
 
   return (
@@ -28,9 +26,7 @@ function MobileDashboard() {
       <div className="space-y-4">
         <div className="bg-card p-4 rounded-lg border">
           <h2 className="text-lg font-semibold">Welcome to Mobile</h2>
-          <p className="text-muted-foreground">
-            This is a simplified mobile version of the Salesforce Dashboard.
-          </p>
+          <p className="text-muted-foreground">This is a simplified mobile version of the Salesforce Dashboard.</p>
         </div>
         <div className="bg-card p-4 rounded-lg border">
           <h3 className="font-semibold mb-2">Quick Stats</h3>
@@ -62,12 +58,11 @@ function MobileDashboard() {
 
 export default function MobileApp() {
   const [mounted, setMounted] = useState(false);
-  const activeThemeValue = safeLocalStorage.getItem('active_theme') || '';
-  const isScaled = activeThemeValue?.endsWith('-scaled');
+  const activeThemeValue = safeLocalStorage.getItem("active_theme") || "";
+  const isScaled = activeThemeValue?.endsWith("-scaled");
 
   useEffect(() => {
     setMounted(true);
-    console.log('MobileApp mounted successfully');
   }, []);
 
   if (!mounted) {
@@ -82,19 +77,13 @@ export default function MobileApp() {
     <BrowserRouter>
       <div
         className={cn(
-          'bg-background min-h-screen font-sans antialiased',
-          activeThemeValue ? `theme-${activeThemeValue}` : '',
-          isScaled ? 'theme-scaled' : '',
+          "bg-background min-h-screen font-sans antialiased",
+          activeThemeValue ? `theme-${activeThemeValue}` : "",
+          isScaled ? "theme-scaled" : "",
           fontVariables
         )}
       >
-        <ThemeProvider
-          attribute='class'
-          defaultTheme='system'
-          enableSystem
-          disableTransitionOnChange
-          enableColorScheme
-        >
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange enableColorScheme>
           <Toaster />
           <Routes>
             <Route path="*" element={<MobileDashboard />} />

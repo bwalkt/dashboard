@@ -26,7 +26,7 @@ const sampleCustomers = [
 // Sample products
 const sampleProducts = [
   { id: "PROD-001", name: "Premium Software License", unitPrice: 299.99 },
-  { id: "PROD-002", name: "Professional Services Package", unitPrice: 1500.00 },
+  { id: "PROD-002", name: "Professional Services Package", unitPrice: 1500.0 },
   { id: "PROD-003", name: "Cloud Storage Plan", unitPrice: 99.99 },
   { id: "PROD-004", name: "Security Suite", unitPrice: 599.99 },
   { id: "PROD-005", name: "Analytics Dashboard", unitPrice: 899.99 },
@@ -46,14 +46,14 @@ const statusDistribution = [
 function getRandomStatus(): "Draft" | "Activated" | "Processing" | "Completed" | "Shipped" {
   const random = Math.random() * 100;
   let cumulative = 0;
-  
+
   for (const { status, weight } of statusDistribution) {
     cumulative += weight;
     if (random <= cumulative) {
       return status;
     }
   }
-  
+
   return "Completed"; // Fallback
 }
 
@@ -71,9 +71,9 @@ function getRandomQuantity() {
 
 function getRandomDate(daysBack: number = 90) {
   const now = new Date();
-  const past = new Date(now.getTime() - (daysBack * 24 * 60 * 60 * 1000));
+  const past = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
   const randomTime = past.getTime() + Math.random() * (now.getTime() - past.getTime());
-  return new Date(randomTime).toISOString().split('T')[0]; // YYYY-MM-DD format
+  return new Date(randomTime).toISOString().split("T")[0]; // YYYY-MM-DD format
 }
 
 function generateSampleOrder(accountId: string, ownerId: string): OrderCreateRequest {
@@ -82,7 +82,7 @@ function generateSampleOrder(accountId: string, ownerId: string): OrderCreateReq
   const quantity = getRandomQuantity();
   const totalAmount = product.unitPrice * quantity;
   const status = getRandomStatus();
-  
+
   return {
     AccountId: accountId,
     OwnerId: ownerId,
@@ -104,16 +104,14 @@ function generateSampleOrder(accountId: string, ownerId: string): OrderCreateReq
 
 async function createDefaultAccount(client: SalesforceClient): Promise<string> {
   try {
-    console.log("Creating default account for orders...");
     const accountData = {
       Name: "Sample Orders Account",
       Type: "Customer",
       Industry: "Technology",
       Description: "Default account for seeded orders",
     };
-    
+
     const result = await client.createRecord("Account", accountData);
-    console.log(`Created account with ID: ${result.id}`);
     return result.id;
   } catch (error) {
     console.error("Failed to create default account:", error);
@@ -123,16 +121,14 @@ async function createDefaultAccount(client: SalesforceClient): Promise<string> {
 
 async function getDefaultUserId(client: SalesforceClient): Promise<string> {
   try {
-    console.log("Getting default user ID...");
     const query = "SELECT Id, Name FROM User WHERE IsActive = true LIMIT 1";
     const result = await client.query(query);
-    
+
     if (result.records.length === 0) {
       throw new Error("No active users found");
     }
-    
+
     const userId = result.records[0].Id;
-    console.log(`Using user ID: ${userId}`);
     return userId;
   } catch (error) {
     console.error("Failed to get default user ID:", error);
@@ -142,26 +138,21 @@ async function getDefaultUserId(client: SalesforceClient): Promise<string> {
 
 async function seedOrders(numberOfOrders: number = 50) {
   try {
-    console.log("🚀 Starting order seeding process...");
-    
     // Initialize Salesforce client
     const config = salesforceConfig.getConfig();
     const salesforceClient = new SalesforceClient(config);
-    
+
     // Authenticate
-    console.log("🔐 Authenticating with Salesforce...");
     await salesforceClient.authenticate();
-    console.log("✅ Authentication successful");
-    
+
     // Get default user ID
     const ownerId = await getDefaultUserId(salesforceClient);
-    
+
     // Create default account
     const accountId = await createDefaultAccount(salesforceClient);
-    
+
     // Generate and create orders
-    console.log(`📦 Creating ${numberOfOrders} sample orders...`);
-    
+
     const statusCounts = {
       Draft: 0,
       Activated: 0,
@@ -169,42 +160,32 @@ async function seedOrders(numberOfOrders: number = 50) {
       Completed: 0,
       Shipped: 0,
     };
-    
+
     const createdOrders = [];
-    
+
     for (let i = 0; i < numberOfOrders; i++) {
       try {
         const orderData = generateSampleOrder(accountId, ownerId);
         const result = await salesforceClient.createRecord("Order", orderData);
-        console.log('result of client.createRecord:', result);
         createdOrders.push({
           id: result.id,
           status: orderData.Status,
           customerName: orderData.Customer_Name__c,
           totalAmount: orderData.Total_Amount__c,
         });
-        
+
         statusCounts[orderData.Status]++;
-        
-        console.log(`   Created order ${i + 1}/${numberOfOrders}: ${result.id} (${orderData.Status})`);
-        
+
         // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error) {
         console.error(`   Failed to create order ${i + 1}:`, error);
       }
     }
-    
-    console.log("\n📊 Order creation summary:");
-    console.log("========================");
+
     Object.entries(statusCounts).forEach(([status, count]) => {
       const percentage = ((count / numberOfOrders) * 100).toFixed(1);
-      console.log(`   ${status}: ${count} orders (${percentage}%)`);
     });
-    
-    console.log(`\n✅ Successfully created ${createdOrders.length} orders out of ${numberOfOrders} attempted`);
-    console.log("🎉 Order seeding completed!");
-    
   } catch (error) {
     console.error("❌ Error during order seeding:", error);
     process.exit(1);
@@ -214,7 +195,6 @@ async function seedOrders(numberOfOrders: number = 50) {
 // Run the script if called directly
 if (process.argv[1] === new URL(import.meta.url).pathname) {
   const numberOfOrders = parseInt(process.argv[2]) || 50;
-  console.log(`Creating ${numberOfOrders} sample orders with emphasis on 'Completed' status...`);
   seedOrders(numberOfOrders).then(() => process.exit(0));
 }
 

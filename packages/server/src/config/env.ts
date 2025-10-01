@@ -32,6 +32,4 @@ export function validateEnvironment(): void {
   if (config.JWT_SECRET === "default-secret-key-change-in-production") {
     console.warn("⚠️  Using default JWT secret. Please set JWT_SECRET environment variable for production.");
   }
-
-  console.log("✅ Environment configuration validated successfully");
 }
