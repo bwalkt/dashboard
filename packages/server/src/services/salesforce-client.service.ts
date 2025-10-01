@@ -178,13 +178,20 @@ export class SalesforceClient {
   }
 
   /**
-   * Query Salesforce records using SOQL
+   * Query Salesforce records with pagination support
    * @param soql - SOQL query string
-   * @returns Query results
+   * @param nextRecordsUrl - Optional next records URL for pagination
+   * @returns Query results with pagination info
    */
-  async query(soql: string): Promise<SalesforceQueryResponse> {
-    const encodedQuery = encodeURIComponent(soql);
-    return await this.apiCall("GET", `/services/data/v58.0/query/?q=${encodedQuery}`);
+  async queryPaginated(soql: string, nextRecordsUrl?: string): Promise<SalesforceQueryResponse> {
+    if (nextRecordsUrl) {
+      // Use the nextRecordsUrl for subsequent pages
+      return await this.apiCall("GET", nextRecordsUrl);
+    } else {
+      // First page - use the SOQL query
+      const encodedQuery = encodeURIComponent(soql);
+      return await this.apiCall("GET", `/services/data/v58.0/query/?q=${encodedQuery}`);
+    }
   }
 
   /**

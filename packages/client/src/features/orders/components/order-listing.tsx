@@ -1,13 +1,20 @@
 import { OrderTable } from "./order-tables";
 import { columns } from "./order-tables/columns";
-import { useOrders } from "@/hooks/use-orders";
+import { useOrdersPaginated } from "@/hooks/use-orders";
+import { parseAsInteger, useQueryState } from "nuqs";
 
 type OrderListingPage = {};
 
 export default function OrderListingPage({}: OrderListingPage) {
-  const { data: orders = [], isLoading, error, isError } = useOrders();
+  const [page] = useQueryState("page", parseAsInteger.withDefault(1));
+  const [perPage] = useQueryState("perPage", parseAsInteger.withDefault(10));
 
-  if (isLoading) {
+  const { data, isLoading, error, isError } = useOrdersPaginated({
+    page,
+    limit: perPage,
+  });
+
+  if (isLoading && !data) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-lg">Loading orders...</div>
@@ -26,5 +33,5 @@ export default function OrderListingPage({}: OrderListingPage) {
     );
   }
 
-  return <OrderTable data={orders} totalItems={orders.length} columns={columns} />;
+  return <OrderTable data={data?.records || []} columns={columns} pagination={data?.pagination} />;
 }

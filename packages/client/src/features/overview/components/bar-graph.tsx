@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { useOrders } from "@/hooks/use-orders";
+import { useOrdersLast30Days } from "@/hooks/use-orders";
 import { Order } from "@dashboard/shared-types";
 
 export const description = "An interactive bar chart showing orders by date and status";
@@ -70,7 +70,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function BarGraph() {
-  const { data: orders, isLoading, error } = useOrders();
+  const { data: orders, isLoading, error } = useOrdersLast30Days();
   const [activeChart, setActiveChart] = React.useState<keyof typeof chartConfig>("All");
 
   const chartData = React.useMemo(() => {

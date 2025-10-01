@@ -48,6 +48,7 @@ interface UseDataTableProps<TData>
   startTransition?: React.TransitionStartFunction;
   manualFiltering?: boolean;
   manualSorting?: boolean;
+  manualPagination?: boolean;
 }
 
 export function useDataTable<TData>(props: UseDataTableProps<TData>) {
@@ -65,6 +66,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     startTransition,
     manualFiltering = true,
     manualSorting = true,
+    manualPagination = true,
     ...tableProps
   } = props;
 
@@ -238,7 +240,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFacetedMinMaxValues: getFacetedMinMaxValues(),
-    manualPagination: true,
+    manualPagination: manualPagination,
     manualSorting: manualSorting,
     manualFiltering: manualFiltering,
   });

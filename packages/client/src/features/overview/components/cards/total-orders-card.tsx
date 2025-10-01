@@ -1,10 +1,10 @@
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useOrders } from "@/hooks/use-orders";
+import { useOrdersLast30Days } from "@/hooks/use-orders";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function TotalOrdersCard() {
-  const { data: orders, isLoading, error } = useOrders();
+  const { data: orders, isLoading, error } = useOrdersLast30Days();
   const navigate = useNavigate();
 
   const ordersData = useMemo(() => {
@@ -23,7 +23,7 @@ export default function TotalOrdersCard() {
     return (
       <Card>
         <CardHeader>
-          <CardDescription>Total Orders</CardDescription>
+          <CardDescription>Total Orders (Last 30 Days)</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums lg:text-3xl">Loading...</CardTitle>
         </CardHeader>
       </Card>
@@ -34,7 +34,7 @@ export default function TotalOrdersCard() {
     return (
       <Card>
         <CardHeader>
-          <CardDescription>Total Orders</CardDescription>
+          <CardDescription>Total Orders (Last 30 Days)</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums lg:text-3xl">Error</CardTitle>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
@@ -47,7 +47,7 @@ export default function TotalOrdersCard() {
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleCardClick}>
       <CardHeader>
-        <CardDescription>Total Orders</CardDescription>
+        <CardDescription>Total Orders (Last 30 Days)</CardDescription>
         <CardTitle className="text-2xl font-semibold tabular-nums lg:text-3xl">{ordersData.total.toLocaleString()}</CardTitle>
       </CardHeader>
       <CardFooter className="flex-col items-start gap-1.5 text-sm">

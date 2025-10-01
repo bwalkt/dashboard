@@ -117,6 +117,25 @@ export interface SalesforceQueryRequest {
   soql: string;
 }
 
+export interface SalesforceQueryParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface SalesforcePaginatedResponse {
+  success: boolean;
+  totalSize: number;
+  records: Record<string, any>[];
+  done: boolean;
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    limit: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+}
+
 export interface SalesforceRecordRequest {
   [key: string]: any;
 }
