@@ -25,6 +25,9 @@ static_resources:
                         - match: { prefix: "/" }
                           route: { cluster: server_cluster }
                 http_filters:
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
                   - name: envoy.filters.http.jwt_authn
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
@@ -50,6 +53,19 @@ static_resources:
                             - "accessToken"
                             - "refreshToken"
                       rules:
+                        # Allow auth routes without JWT authentication
+                        - match: { prefix: "/auth/login" }
+                          requires: {}
+                        - match: { prefix: "/auth/callback" }
+                          requires: {}
+                        # Allow OPTIONS requests for CORS preflight
+                        - match:
+                            prefix: "/"
+                            headers:
+                              - name: ":method"
+                                exact_match: "OPTIONS"
+                          requires: {}
+                        # Require JWT for all other routes
                         - match: { prefix: "/" }
                           requires:
                             provider_name: "jwt_auth"
