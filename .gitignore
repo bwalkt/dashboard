@@ -28,3 +28,4 @@ dist-ssr
 *.sw?
 clickhouse
 sqlite
+common/zookeeper-1/data
