@@ -9,6 +9,7 @@ pnpm-debug.log*
 lerna-debug.log*
 *crt*
 *.key
+.env
 .env*
 node_modules
 dist

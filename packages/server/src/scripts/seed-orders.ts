@@ -1,5 +1,6 @@
 #!/usr/bin/env tsx
 
+// @ts-nocheck
 import { SalesforceClient } from "../services/salesforce-client.service.js";
 import { salesforceConfig } from "../config/salesforce.js";
 import type { OrderCreateRequest } from "@dashboard/shared-types";
