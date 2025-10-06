@@ -5,7 +5,7 @@ tracing:
       "@type": type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
       http_service:
         http_uri:
-          uri: http://host.docker.internal:4318/v1/traces
+          uri: http://signoz-otel-collector:4318/v1/traces
           cluster: otel_collector
           timeout: 10s
         request_headers_to_add:
@@ -32,7 +32,7 @@ static_resources:
                       "@type": type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
                       http_service:
                         http_uri:
-                          uri: http://host.docker.internal:4318/v1/traces
+                          uri: http://signoz-otel-collector:4318/v1/traces
                           cluster: otel_collector
                           timeout: 10s
                         request_headers_to_add:
@@ -143,7 +143,7 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address:
-                    socket_address: { address: host.docker.internal, port_value: 3000 }
+                    socket_address: { address: sfdc-server-vanilla, port_value: 8080 }
     - name: otel_collector
       connect_timeout: 10s
       type: logical_dns
@@ -154,7 +154,7 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address:
-                    socket_address: { address: host.docker.internal, port_value: 4318 }
+                    socket_address: { address: signoz-otel-collector, port_value: 4318 }
     - name: otel_collector_logs
       connect_timeout: 10s
       type: logical_dns
@@ -166,7 +166,7 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address:
-                    socket_address: { address: host.docker.internal, port_value: 4317 }
+                    socket_address: { address: signoz-otel-collector, port_value: 4317 }
     - name: otel_collector_metrics
       connect_timeout: 10s
       type: logical_dns
@@ -178,7 +178,7 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address:
-                    socket_address: { address: host.docker.internal, port_value: 4317 }
+                    socket_address: { address: signoz-otel-collector, port_value: 4317 }
 
 admin:
   address:

@@ -195,7 +195,7 @@ services:
       - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
     command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
     depends_on:
-      - server
+      - sfdc-server-vanilla
       - otel-collector
     networks:
       - default
@@ -203,11 +203,11 @@ services:
     environment:
       - ENVOY_LOG_LEVEL=info
 
-  server:
+  sfdc-server-vanilla:
     build:
       context: .
-      dockerfile: ./packages/server/Dockerfile
-    container_name: dashboard-server
+      dockerfile: ./packages/sfdc-server-vanilla/Dockerfile
+    container_name: sfdc-server-vanilla
     ports:
       - "3000:8080" # Internal port for direct access (optional)
     environment:
