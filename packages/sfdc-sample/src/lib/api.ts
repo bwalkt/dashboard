@@ -80,9 +80,6 @@ async function refreshToken(): Promise<void> {
       const response = await fetch(`${getBackendUrl()}/auth/refresh`, {
         method: "GET",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
 
       if (!response.ok) {
@@ -139,6 +136,8 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
     } else {
       requestConfig.body = body;
     }
+  } else {
+    delete (requestConfig.headers as Record<string, string>)["Content-Type"];
   }
 
   try {

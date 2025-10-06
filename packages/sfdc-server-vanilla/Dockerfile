@@ -5,7 +5,7 @@ WORKDIR /app
 # Copy workspace files
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 COPY packages/shared-types ./packages/shared-types
-COPY packages/server/package.json ./packages/server/
+COPY packages/sfdc-server-vanilla/package.json ./packages/sfdc-server-vanilla/
 
 # Install pnpm
 RUN npm install -g pnpm tsx
@@ -14,9 +14,9 @@ RUN npm install -g pnpm tsx
 RUN pnpm install --no-frozen-lockfile
 
 # Copy server source code
-COPY packages/server ./packages/server
+COPY packages/sfdc-server-vanilla ./packages/sfdc-server-vanilla
 
-WORKDIR /app/packages/server
+WORKDIR /app/packages/sfdc-server-vanilla
 
 # Expose port
 EXPOSE 8080
