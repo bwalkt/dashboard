@@ -1,0 +1,13 @@
+{
+  "hostname": "localhost",
+  "port": 8080,
+  "identity": "./config/ziti-identity.json",
+  "services": [
+    {
+      "name": "sfdc-api-server",
+      "protocol": "tcp",
+      "hostname": "127.0.0.1",
+      "port": 8080
+    }
+  ]
+}

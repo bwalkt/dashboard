@@ -1,0 +1,9 @@
+{
+  "id": "sfdc-server-identity",
+  "name": "sfdc-server-identity",
+  "ca": "-----BEGIN CERTIFICATE-----\nYOUR_CA_CERTIFICATE_HERE\n-----END CERTIFICATE-----",
+  "cert": "-----BEGIN CERTIFICATE-----\nYOUR_CLIENT_CERTIFICATE_HERE\n-----END CERTIFICATE-----",
+  "key": "-----BEGIN PRIVATE KEY-----\nYOUR_CLIENT_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----",
+  "server_cert": "-----BEGIN CERTIFICATE-----\nYOUR_SERVER_CERTIFICATE_HERE\n-----END CERTIFICATE-----",
+  "server_key": "-----BEGIN PRIVATE KEY-----\nYOUR_SERVER_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----"
+}
