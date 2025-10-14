@@ -22,4 +22,5 @@ WORKDIR /app/packages/sfdc-server-vanilla
 EXPOSE 8080
 
 # Start the server using tsx directly
+# Environment variables will be provided at runtime via docker-compose
 CMD ["tsx", "src/server.ts"]
