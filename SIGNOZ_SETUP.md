@@ -72,7 +72,7 @@ SigNoz is an open-source observability platform that provides comprehensive moni
   - SQLite for application data
   - Prometheus configuration for metrics
 - **Environment Variables**:
-  - `SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000`
+  - `SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://pzero-clickhouse:9000`
   - `SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db`
   - `STORAGE=clickhouse`
 
@@ -243,7 +243,7 @@ Envoy Access Logs → OTEL Collector → ClickHouse (signoz_logs)
 #### SigNoz Backend
 
 ```bash
-SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000
+SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://pzero-clickhouse:9000
 SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
 STORAGE=clickhouse
 TELEMETRY_ENABLED=true
@@ -317,9 +317,9 @@ All services include health check configurations:
 
 4. **Check service logs**:
    ```bash
-   docker-compose logs signoz
-   docker-compose logs otel-collector
-   docker-compose logs clickhouse
+   docker-compose logs pzero-signoz
+   docker-compose logs pzero-otel-collector
+   docker-compose logs pzero-clickhouse
    ```
 
 ### Testing Telemetry Collection
@@ -366,17 +366,17 @@ lsof -i :9090
 
 ```bash
 # Test ClickHouse connectivity
-docker-compose exec clickhouse clickhouse-client --query "SELECT 1"
+docker-compose exec pzero-clickhouse clickhouse-client --query "SELECT 1"
 
 # Check ClickHouse logs
-docker-compose logs clickhouse
+docker-compose logs pzero-clickhouse
 ```
 
 #### 3. **OTEL Collector Issues**
 
 ```bash
 # Check collector configuration
-docker-compose exec otel-collector cat /etc/otel-collector-config.yaml
+docker-compose exec pzero-otel-collector cat /etc/otel-collector-config.yaml
 
 # Test collector endpoints
 curl http://localhost:4318/v1/traces
@@ -389,7 +389,7 @@ curl http://localhost:4318/v1/traces
 curl http://localhost:9090/api/v1/health
 
 # Check SigNoz logs
-docker-compose logs signoz
+docker-compose logs pzero-signoz
 ```
 
 ### Performance Tuning

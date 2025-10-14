@@ -7,7 +7,7 @@
       -->
   <zookeeper>
     <node index="1">
-      <host>zookeeper-1</host>
+      <host>pzero-zookeeper-1</host>
       <port>2181</port>
     </node>
     <!-- <node index="2">
@@ -53,7 +53,7 @@
         <!-- Optional. Shard weight when writing data. Default: 1. -->
         <!-- <weight>1</weight> -->
         <replica>
-          <host>clickhouse</host>
+          <host>pzero-clickhouse</host>
           <port>9000</port>
           <!-- Optional. Priority of the replica for load_balancing. Default: 1 (less value has more
           priority). -->
