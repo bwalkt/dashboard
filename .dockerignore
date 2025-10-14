@@ -1,0 +1,61 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+
+# Development files
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+**/coverage/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# ClickHouse data (large files)
+clickhouse/
+common/
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
