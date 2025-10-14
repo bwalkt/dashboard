@@ -29,3 +29,4 @@ dist-ssr
 clickhouse
 sqlite
 common/zookeeper-1/data
+!common/clickhouse
