@@ -101,7 +101,7 @@ SigNoz is an open-source observability platform that provides comprehensive moni
   - Custom histogram quantile function
   - Optimized for time-series data
 
-#### 4. **ZooKeeper** (`zookeeper-1`)
+#### 4. **ZooKeeper** (`pzero-signoz-zookeeper`)
 
 - **Image**: `signoz/zookeeper:3.7.1`
 - **Purpose**: Coordination service for ClickHouse clustering

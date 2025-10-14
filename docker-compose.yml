@@ -17,7 +17,7 @@ x-clickhouse-defaults: &clickhouse-defaults
   depends_on:
     init-clickhouse:
       condition: service_completed_successfully
-    zookeeper-1:
+    pzero-signoz-zookeeper:
       condition: service_healthy
   healthcheck:
     test:
@@ -56,14 +56,14 @@ x-db-depend: &db-depend
   depends_on:
     clickhouse:
       condition: service_healthy
-    schema-migrator-sync:
+    pzero-schema-migrator-sync:
       condition: service_completed_successfully
 
 services:
   init-clickhouse:
     !!merge <<: *common
     image: clickhouse/clickhouse-server:25.5.6
-    container_name: signoz-init-clickhouse
+    container_name: pzero-signoz-init-clickhouse
     command:
       - bash
       - -c
@@ -79,15 +79,15 @@ services:
     restart: on-failure
     volumes:
       - ./common/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
-  zookeeper-1:
+  pzero-signoz-zookeeper:
     !!merge <<: *zookeeper-defaults
-    container_name: signoz-zookeeper-1
+    container_name: pzero-signoz-zookeeper
     # ports:
     #   - "2181:2181"
     #   - "2888:2888"
     #   - "3888:3888"
     volumes:
-      - ./common/zookeeper-1:/bitnami/zookeeper
+      - ./common/pzero-signoz-zookeeper:/bitnami/zookeeper
     environment:
       - ZOO_SERVER_ID=1
       - ALLOW_ANONYMOUS_LOGIN=yes
@@ -96,7 +96,7 @@ services:
       - ZOO_PROMETHEUS_METRICS_PORT_NUMBER=9141
   clickhouse:
     !!merge <<: *clickhouse-defaults
-    container_name: signoz-clickhouse
+    container_name: pzero-signoz-clickhouse
     # ports:
     #   - "9000:9000"
     #   - "8123:8123"
@@ -109,10 +109,10 @@ services:
       - ./common/clickhouse/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
       - ./clickhouse:/var/lib/clickhouse/
       # - ./common/clickhouse/storage.xml:/etc/clickhouse-server/config.d/storage.xml
-  signoz:
+  pzero-signoz:
     !!merge <<: *db-depend
     image: signoz/signoz:${VERSION:-v0.96.1}
-    container_name: signoz
+    container_name: pzero-signoz
     command:
       - --config=/root/config/prometheus.yml
     ports:
@@ -142,10 +142,10 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-  otel-collector:
+  pzero-signoz-otel-collector:
     !!merge <<: *db-depend
     image: signoz/signoz-otel-collector:${OTELCOL_TAG:-v0.129.6}
-    container_name: signoz-otel-collector
+    container_name: pzero-signoz-otel-collector
     command:
       - --config=/etc/otel-collector-config.yaml
       - --manager-config=/etc/manager-config.yaml
@@ -162,12 +162,12 @@ services:
       - "4317:4317" # OTLP gRPC receiver
       - "4318:4318" # OTLP HTTP receiver
     depends_on:
-      signoz:
+      pzero-signoz:
         condition: service_healthy
-  schema-migrator-sync:
+  pzero-schema-migrator-sync:
     !!merge <<: *common
     image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.129.6}
-    container_name: schema-migrator-sync
+    container_name: pzero-schema-migrator-sync
     command:
       - sync
       - --dsn=tcp://clickhouse:9000
@@ -176,10 +176,10 @@ services:
       clickhouse:
         condition: service_healthy
     restart: on-failure
-  schema-migrator-async:
+  pzero-schema-migrator-async:
     !!merge <<: *db-depend
     image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.129.6}
-    container_name: schema-migrator-async
+    container_name: pzero-schema-migrator-async
     command:
       - async
       - --dsn=tcp://clickhouse:9000
@@ -187,7 +187,7 @@ services:
     restart: on-failure
   envoy:
     image: envoyproxy/envoy:v1.30-latest
-    container_name: envoy-proxy
+    container_name: pzero-envoy-proxy
     ports:
       - "8080:8080" # External port for client requests
       - "9901:9901" # Admin interface
@@ -196,7 +196,7 @@ services:
     command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
     depends_on:
       - sfdc-server-vanilla
-      - otel-collector
+      - pzero-signoz-otel-collector
     networks:
       - default
     restart: unless-stopped
@@ -222,8 +222,8 @@ networks:
     driver: bridge
 volumes:
   clickhouse:
-    name: signoz-clickhouse
+    name: pzero-signoz-clickhouse
   sqlite:
-    name: signoz-sqlite
-  zookeeper-1:
-    name: signoz-zookeeper-1
+    name: pzero-signoz-sqlite
+  pzero-signoz-zookeeper:
+    name: pzero-signoz-zookeeper

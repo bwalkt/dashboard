@@ -5,14 +5,14 @@ tracing:
       "@type": type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
       http_service:
         http_uri:
-          uri: http://signoz-otel-collector:4318/v1/traces
+          uri: http://pzero-signoz-otel-collector:4318/v1/traces
           cluster: otel_collector
           timeout: 10s
         request_headers_to_add:
           - header:
               key: "Content-Type"
               value: "application/x-protobuf"
-      service_name: envoy-proxy
+      service_name: pzero-envoy-proxy
 
 static_resources:
   listeners:
@@ -32,14 +32,14 @@ static_resources:
                       "@type": type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
                       http_service:
                         http_uri:
-                          uri: http://signoz-otel-collector:4318/v1/traces
+                          uri: http://pzero-signoz-otel-collector:4318/v1/traces
                           cluster: otel_collector
                           timeout: 10s
                         request_headers_to_add:
                           - header:
                               key: "Content-Type"
                               value: "application/x-protobuf"
-                      service_name: envoy-proxy
+                      service_name: pzero-envoy-proxy
                 access_log:
                   - name: envoy.access_loggers.open_telemetry
                     typed_config:
@@ -72,7 +72,7 @@ static_resources:
                         values:
                           - key: "service.name"
                             value:
-                              string_value: "envoy-proxy"
+                              string_value: "pzero-envoy-proxy"
                           - key: "service.version"
                             value:
                               string_value: "1.30"
@@ -144,7 +144,7 @@ static_resources:
               - endpoint:
                   address:
                     socket_address: { address: sfdc-server-vanilla, port_value: 8080 }
-    - name: otel_collector
+    - name: pzero-signoz-otel_collector
       connect_timeout: 10s
       type: logical_dns
       dns_lookup_family: V4_ONLY
@@ -154,8 +154,8 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address:
-                    socket_address: { address: signoz-otel-collector, port_value: 4318 }
-    - name: otel_collector_logs
+                    socket_address: { address: pzero-signoz-otel-collector, port_value: 4318 }
+    - name: pzero-signoz-otel_collector_logs
       connect_timeout: 10s
       type: logical_dns
       dns_lookup_family: V4_ONLY
@@ -166,19 +166,19 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address:
-                    socket_address: { address: signoz-otel-collector, port_value: 4317 }
-    - name: otel_collector_metrics
+                    socket_address: { address: pzero-signoz-otel-collector, port_value: 4317 }
+    - name: pzero-signoz-otel_collector_metrics
       connect_timeout: 10s
       type: logical_dns
       dns_lookup_family: V4_ONLY
       http2_protocol_options: {}
       load_assignment:
-        cluster_name: otel_collector_metrics
+        cluster_name: pzero-signoz-otel_collector_metrics
         endpoints:
           - lb_endpoints:
               - endpoint:
                   address:
-                    socket_address: { address: signoz-otel-collector, port_value: 4317 }
+                    socket_address: { address: pzero-signoz-otel-collector, port_value: 4317 }
 
 admin:
   address:
@@ -192,5 +192,5 @@ stats_sinks:
       "@type": type.googleapis.com/envoy.extensions.stat_sinks.open_telemetry.v3.SinkConfig
       grpc_service:
         envoy_grpc:
-          cluster_name: otel_collector_metrics
+          cluster_name: pzero-signoz-otel_collector_metrics
       prefix: "envoy"

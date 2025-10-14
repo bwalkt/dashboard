@@ -7,7 +7,7 @@
       -->
   <zookeeper>
     <node index="1">
-      <host>zookeeper-1</host>
+      <host>pzero-signoz-zookeeper</host>
       <port>2181</port>
     </node>
     <!-- <node index="2">
