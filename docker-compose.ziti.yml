@@ -97,7 +97,19 @@ services:
       - ziti-fs:/persistent
     networks:
       - ziti
-
+  sfdc-server-ziti:
+    build:
+      context: .
+      dockerfile: ./packages/sfdc-server-ziti/Dockerfile
+    container_name: sfdc-server-ziti
+    ports:
+      - "3000:8080" # Internal port for direct access (optional)
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+    networks:
+      - ziti
+    restart: unless-stopped
 networks:
   ziti:
 
