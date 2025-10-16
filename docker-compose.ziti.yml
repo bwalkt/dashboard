@@ -1,4 +1,4 @@
-name: ziti
+name: openziti
 services:
   ziti-controller:
     image: "openziti/quickstart:latest"
@@ -97,21 +97,31 @@ services:
       - ziti-fs:/persistent
     networks:
       - ziti
-  sfdc-server-ziti:
+  # sfdc-server-ziti:
+  #   build:
+  #     context: .
+  #     dockerfile: ./packages/sfdc-server-ziti/Dockerfile
+  #   container_name: sfdc-server-ziti
+  #   ports:
+  #     - "3000:8080" # Internal port for direct access (optional)
+  #   environment:
+  #     - NODE_ENV=development
+  #     - PORT=8080
+  #   networks:
+  #     - ziti
+  #   restart: unless-stopped
+  golang-ziti:
     build:
       context: .
-      dockerfile: ./packages/sfdc-server-ziti/Dockerfile
-    container_name: sfdc-server-ziti
+      dockerfile: ./golang-ziti/Dockerfile
+    container_name: golang-ziti
     ports:
-      - "3000:8080" # Internal port for direct access (optional)
-    environment:
-      - NODE_ENV=development
-      - PORT=8080
+      - "8080:8080"
     networks:
       - ziti
     restart: unless-stopped
 networks:
   ziti:
-
+    driver: bridge
 volumes:
   ziti-fs:

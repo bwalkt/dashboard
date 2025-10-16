@@ -1,11 +1,11 @@
-FROM node:22-alpine
+FROM --platform=linux/arm64 node:22-slim
 
 WORKDIR /app
 
 # Copy workspace files
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 COPY packages/shared-types ./packages/shared-types
-COPY packages/sfdc-server-vanilla/package.json ./packages/sfdc-server-vanilla/
+COPY packages/sfdc-server-ziti/package.json ./packages/sfdc-server-ziti/
 
 # Install pnpm
 RUN npm install -g pnpm tsx
@@ -14,9 +14,9 @@ RUN npm install -g pnpm tsx
 RUN pnpm install --no-frozen-lockfile
 
 # Copy server source code
-COPY packages/sfdc-server-vanilla ./packages/sfdc-server-vanilla
+COPY packages/sfdc-server-ziti ./packages/sfdc-server-ziti
 
-WORKDIR /app/packages/sfdc-server-vanilla
+WORKDIR /app/packages/sfdc-server-ziti
 
 # Expose port
 EXPOSE 8080

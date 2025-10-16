@@ -1,8 +1,11 @@
 import dotenv from "dotenv";
 import type { EnvironmentConfig } from "../types/index.js";
 
-// Load environment variables from .env file
-dotenv.config();
+// Load environment variables from .env file only when running locally (not in Docker)
+// In Docker, environment variables are provided at runtime via docker-compose
+if (!process.env.DOCKER_CONTAINER && !process.env.NODE_ENV?.includes("docker")) {
+  dotenv.config();
+}
 
 export const config: EnvironmentConfig = {
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
@@ -23,7 +26,13 @@ export function validateEnvironment(): void {
     missingVars.forEach((varName) => {
       console.error(`   - ${varName}`);
     });
-    console.error("\n📝 Please check your .env file and ensure all required variables are set.");
+
+    // Provide different instructions based on environment
+    if (process.env.DOCKER_CONTAINER || process.env.NODE_ENV?.includes("docker")) {
+      console.error("\n📝 Please ensure all required variables are set in docker-compose.yml.");
+    } else {
+      console.error("\n📝 Please check your .env file and ensure all required variables are set.");
+    }
     console.error("📄 See env.example for reference.");
     process.exit(1);
   }

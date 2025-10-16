@@ -2,8 +2,8 @@ import Fastify from "fastify";
 import app from "./index.js";
 import ziti from "@openziti/ziti-sdk-nodejs";
 
-const zitiIdentityFile = process.env.ZITI_IDENTITY_FILE;
-const zitiServiceName = "sfdc-server";
+const zitiIdentityFile = "./backend-service.json";
+const zitiServiceName = "my-backend-service";
 
 const fastify = Fastify({
   logger: {
@@ -17,10 +17,20 @@ await fastify.register(app);
 const startServer = async () => {
   try {
     ziti.setLogLevel(4);
-    console.log("Initializing Ziti connection");
-    // Initialize Ziti connection
-    const zitiInit = await ziti.init(zitiIdentityFile).catch((err) => {
+    console.log("Initializing Ziti connection", zitiIdentityFile);
+
+    // Add some debugging
+    console.log("Ziti SDK version:", ziti.version);
+    console.log("Ziti SDK build info:", ziti.buildInfo);
+
+    // Initialize Ziti connection with timeout
+    const zitiInit = await Promise.race([
+      ziti.init(zitiIdentityFile),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Ziti initialization timeout after 30 seconds")), 30000)),
+    ]).catch((err) => {
       console.error("Failed to initialize Ziti:", err);
+      console.error("Error details:", err.message);
+      console.error("Error stack:", err.stack);
       process.exit(1);
     });
 
