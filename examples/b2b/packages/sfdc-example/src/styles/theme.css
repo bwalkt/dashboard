@@ -1,0 +1,118 @@
+/* Theme CSS Variables */
+
+/* Default theme */
+.theme-default {
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+.theme-amber {
+  --primary: oklch(0.747 0.189 84.16);
+  --primary-foreground: oklch(0.205 0 0);
+}
+
+.theme-mono-scaled {
+  --primary: oklch(0.556 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --radius: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.theme-default-scaled {
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --radius: 0.75rem;
+}
+.theme-green {
+  --primary: oklch(0.646 0.222 142);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+.theme-orange {
+  --primary: oklch(0.747 0.189 44);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+.theme-red {
+  --primary: oklch(0.577 0.245 27.325);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+.theme-rose {
+  --primary: oklch(0.635 0.245 12.57);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+.theme-blue {
+  --primary: oklch(0.646 0.222 264.052);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+.theme-yellow {
+  --primary: oklch(0.828 0.189 84.429);
+  --primary-foreground: oklch(0.205 0 0);
+}
+
+.theme-violet {
+  --primary: oklch(0.646 0.222 305.88);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+.theme-zinc {
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+/* Scaled themes */
+.theme-scaled {
+  --radius: 0.75rem;
+}
+
+/* Theme specific adjustments */
+.theme-green-scaled {
+  --primary: oklch(0.646 0.222 142);
+  --primary-foreground: oklch(0.985 0 0);
+  --radius: 0.75rem;
+}
+
+.theme-orange-scaled {
+  --primary: oklch(0.747 0.189 44);
+  --primary-foreground: oklch(0.985 0 0);
+  --radius: 0.75rem;
+}
+
+.theme-red-scaled {
+  --primary: oklch(0.577 0.245 27.325);
+  --primary-foreground: oklch(0.985 0 0);
+  --radius: 0.75rem;
+}
+
+.theme-rose-scaled {
+  --primary: oklch(0.635 0.245 12.57);
+  --primary-foreground: oklch(0.985 0 0);
+  --radius: 0.75rem;
+}
+
+.theme-blue-scaled {
+  --primary: oklch(0.646 0.222 264.052);
+  --primary-foreground: oklch(0.985 0 0);
+  --radius: 0.75rem;
+}
+
+.theme-yellow-scaled {
+  --primary: oklch(0.828 0.189 84.429);
+  --primary-foreground: oklch(0.205 0 0);
+  --radius: 0.75rem;
+}
+
+.theme-violet-scaled {
+  --primary: oklch(0.646 0.222 305.88);
+  --primary-foreground: oklch(0.985 0 0);
+  --radius: 0.75rem;
+}
+
+.theme-zinc-scaled {
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --radius: 0.75rem;
+}

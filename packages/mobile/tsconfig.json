@@ -1,0 +1,24 @@
+{
+  "extends": "@react-native/typescript-config",
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["**/node_modules", "**/Pods"],
+  "types": ["jest", "react-native", "dom", "node"],
+  "compilerOptions": {
+    "lib": ["es2015", "esnext"],
+    "target": "es2015",
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@/src/*": ["src/*"],
+      "@/assets/*": ["assets/*"],
+      "@/hooks/*": ["src/hooks/*"],
+      "@/tests/*": ["tests/*"],
+      "@/constants/*": ["src/constants/*"],
+      "@/components/*": ["src/components/*"],
+      "@/screens/*": ["src/screens/*"],
+      "@/stores/*": ["src/stores/*"],
+      "@/types/*": ["src/types/*"],
+      "@/utils/*": ["src/utils/*"]
+    }
+  }
+}
