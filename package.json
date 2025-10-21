@@ -1,28 +1,42 @@
 {
-  "name": "salesforce-dashboard-monorepo",
+  "name": "@pzero/monorepo",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "dev": "pnpm run --parallel dev",
-    "dev:client": "pnpm --filter client dev",
-    "dev:server": "pnpm --filter server dev",
-    "build": "pnpm run --recursive build",
-    "build:client": "pnpm --filter client build",
-    "build:server": "pnpm --filter server build",
-    "tauri:dev": "pnpm --filter client tauri:dev",
-    "tauri:build": "pnpm --filter client tauri:build",
-    "lint": "pnpm run --recursive lint",
-    "format": "pnpm run --recursive format",
-    "clean": "pnpm run --recursive clean"
+    "dev:mobile": "pnpm --filter @pzero/mobile start",
+    "dev:example-b2b-server": "pnpm --filter @pzero/sfdc-server-vanilla dev",
+    "dev:example-b2b-docker": "cd examples/b2b && docker-compose -f ./docker-compose.yml up --build",
+    "dev:example-b2b-dashboard": "pnpm --filter @pzero/sfdc dev",
+    "dev:example-b2b": "pnpm dev:example-b2b-docker && pnpm run dev:example-b2b-server & pnpm run dev:example-b2b-dashboard",
+    "build:mobile": "pnpm --filter @pzero/mobile build",
+    "build:server": "pnpm --filter @pzero/sfdc-server-vanilla build",
+    "build:dashboard": "pnpm --filter @pzero/sfdc build",
+    "build:shared": "pnpm --filter @pzero/shared build",
+    "build": "pnpm run build:shared && pnpm run build:server && pnpm run build:dashboard",
+    "ios": "pnpm --filter @pzero/mobile ios",
+    "android": "pnpm --filter @pzero/mobile android",
+    "approve-builds": "pnpm install --ignore-scripts=false && pnpm rebuild",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "pnpm -r test"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "typescript": "^5.7.2"
+    "@biomejs/biome": "^2.2.4",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
   },
-  "packageManager": "pnpm@9.14.0",
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22",
     "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@10.18.3",
+  "pnpm": {
+    "overrides": {
+      "esbuild": "^0.25.0",
+      "metro-config": "0.82.5"
+    },
+    "ignoredBuiltDependencies": [
+      "react-native-nitro-modules"
+    ]
   }
 }

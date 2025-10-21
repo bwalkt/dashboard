@@ -1,0 +1,41 @@
+{
+  "name": "@pzero/examples-b2b",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:example-b2b-server": "pnpm --filter @pzero/sfdc-server-vanilla dev",
+    "dev:example-b2b-docker": "docker-compose -f ./docker-compose.yml up --build",
+    "dev:example-b2b-dashboard": "pnpm --filter @pzero/sfdc dev",
+    "dev:example-b2b": "concurrently \"pnpm dev:example-b2b-docker\"  \"pnpm run dev:example-b2b-dashboard\"",
+    "build:examples-server": "pnpm --filter @pzero/sfdc-server-vanilla build",
+    "dev:server": "pnpm --filter @pzero/sfdc-server-vanilla dev",
+    "dev:dashboard": "pnpm --filter @pzero/sfdc dev",
+    "build:server": "pnpm --filter @pzero/sfdc-server-vanilla build",
+    "build:dashboard": "pnpm --filter @pzero/sfdc build",
+    "build": "pnpm run build:server && pnpm run build:dashboard",
+    "approve-builds": "pnpm rebuild",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.4",
+    "@types/node": "catalog:",
+    "concurrently": "^9.1.0",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@10.18.3",
+  "pnpm": {
+    "overrides": {
+      "esbuild": "^0.25.0",
+      "metro-config": "0.82.5"
+    },
+    "ignoredBuiltDependencies": [
+      "react-native-nitro-modules"
+    ]
+  }
+}
