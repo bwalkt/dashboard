@@ -1,6 +1,6 @@
 # OpenZiti Docker Compose Setup
 
-we will use a react-native/tauri app which will be used as a conduit to communicate with OpenZiti
+we will use a react-native/tauri app which will be used as a conduit to communicate with OpenZiti. We codereview using coderabbit
 
 This document describes how to start and configure the OpenZiti network infrastructure using Docker Compose.
 
