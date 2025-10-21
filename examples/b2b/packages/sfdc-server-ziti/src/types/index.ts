@@ -9,7 +9,7 @@ export type {
   UserResponse,
   ErrorResponse,
   AuthenticatedRequest,
-} from "@dashboard/shared-types";
+} from "@pzero/shared";
 
 // Server-specific types
 export interface GitHubTokenResponse {

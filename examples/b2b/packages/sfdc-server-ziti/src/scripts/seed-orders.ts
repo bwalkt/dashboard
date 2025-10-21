@@ -3,7 +3,7 @@
 // @ts-nocheck
 import { SalesforceClient } from "../services/salesforce-client.service.js";
 import { salesforceConfig } from "../config/salesforce.js";
-import type { OrderCreateRequest } from "@dashboard/shared-types";
+import type { OrderCreateRequest } from "@pzero/shared";
 
 /**
  * Script to seed Salesforce with sample orders

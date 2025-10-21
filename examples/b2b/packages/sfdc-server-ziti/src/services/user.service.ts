@@ -1,5 +1,5 @@
 import { db } from "../config/database.js";
-import type { User, CreateUserData, GitHubUser } from "@dashboard/shared-types";
+import type { User, CreateUserData, GitHubUser } from "@pzero/shared";
 
 export class UserService {
   /**

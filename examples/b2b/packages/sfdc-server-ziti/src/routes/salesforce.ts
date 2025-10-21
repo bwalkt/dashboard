@@ -3,7 +3,7 @@ import { salesforceConfig } from "../config/salesforce.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { SalesforceClient } from "../services/salesforce-client.service.js";
 import type { SalesforceRecordRequest, SalesforceQueryParams, SalesforcePaginatedResponse } from "../types/salesforce.js";
-import { OrderSchema, ProductSchema } from "@dashboard/shared-types";
+import { OrderSchema, ProductSchema } from "@pzero/shared";
 
 /**
  * Salesforce API Routes
