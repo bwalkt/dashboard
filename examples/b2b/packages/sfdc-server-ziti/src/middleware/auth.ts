@@ -1,7 +1,7 @@
-import type { FastifyRequest, FastifyReply } from "fastify";
+import type { AuthenticatedRequest } from "@pzero/shared";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { authService } from "../services/auth.service.js";
 import { userService } from "../services/user.service.js";
-import type { AuthenticatedRequest } from "@pzero/shared";
 
 /**
  * JWT Authentication middleware

@@ -1,9 +1,9 @@
 #!/usr/bin/env tsx
 
+import type { OrderCreateRequest } from "@pzero/shared";
+import { salesforceConfig } from "../config/salesforce.js";
 // @ts-nocheck
 import { SalesforceClient } from "../services/salesforce-client.service.js";
-import { salesforceConfig } from "../config/salesforce.js";
-import type { OrderCreateRequest } from "@pzero/shared";
 
 /**
  * Script to seed Salesforce with sample orders

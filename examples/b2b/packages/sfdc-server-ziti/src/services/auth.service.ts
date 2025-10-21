@@ -1,5 +1,5 @@
-import { JWTService } from "./jwt.service.js";
 import type { AccessTokenPayload, RefreshTokenPayload } from "@pzero/shared";
+import { JWTService } from "./jwt.service.js";
 
 export class AuthService extends JWTService {
   private readonly jwtSecret: string;

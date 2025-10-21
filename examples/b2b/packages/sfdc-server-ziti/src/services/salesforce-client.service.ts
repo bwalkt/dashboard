@@ -1,14 +1,14 @@
 import axios, { type AxiosRequestConfig } from "axios";
-import { JWTService } from "./jwt.service.js";
 import type {
-  SalesforceConfig,
+  HttpMethod,
   SalesforceAuthResponse,
+  SalesforceAuthResponseRaw,
+  SalesforceConfig,
+  SalesforceObjectMetadata,
   SalesforceQueryResponse,
   SalesforceRecordResponse,
-  SalesforceObjectMetadata,
-  HttpMethod,
-  SalesforceAuthResponseRaw,
 } from "../types/salesforce.js";
+import { JWTService } from "./jwt.service.js";
 
 /**
  * Salesforce API Client with JWT OAuth2 authentication

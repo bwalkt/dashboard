@@ -1,6 +1,6 @@
+import ziti from "@openziti/ziti-sdk-nodejs";
 import Fastify from "fastify";
 import app from "./index.js";
-import ziti from "@openziti/ziti-sdk-nodejs";
 
 const zitiIdentityFile = "./backend-service.json";
 const zitiServiceName = "my-backend-service";

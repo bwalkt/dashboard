@@ -1,14 +1,14 @@
 // Re-export shared types for convenience
 export type {
-  User,
-  CreateUserData,
-  GitHubUser,
   AccessTokenPayload,
-  RefreshTokenPayload,
-  AuthResponse,
-  UserResponse,
-  ErrorResponse,
   AuthenticatedRequest,
+  AuthResponse,
+  CreateUserData,
+  ErrorResponse,
+  GitHubUser,
+  RefreshTokenPayload,
+  User,
+  UserResponse,
 } from "@pzero/shared";
 
 // Server-specific types
