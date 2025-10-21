@@ -1,9 +1,9 @@
-import { type FastifyInstance, type FastifyPluginOptions } from "fastify";
-import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
-import { salesforceRoutes } from "./routes/salesforce.js";
-import { authRoutes } from "./routes/auth.js";
+import cors from "@fastify/cors";
+import { type FastifyInstance, type FastifyPluginOptions } from "fastify";
 import { validateEnvironment } from "./config/env.js";
+import { authRoutes } from "./routes/auth.js";
+import { salesforceRoutes } from "./routes/salesforce.js";
 
 // Export a function that returns a Fastify instance
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {

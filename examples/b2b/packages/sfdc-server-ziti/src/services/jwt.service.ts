@@ -1,8 +1,8 @@
-import jwt, { type JwtPayload } from "jsonwebtoken";
+import crypto from "crypto";
 import fs from "fs";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import path from "path";
 import { fileURLToPath } from "url";
-import crypto from "crypto";
 import type { JWTAssertionParams, JWTPayload } from "../types/salesforce.js";
 
 const __filename = fileURLToPath(import.meta.url);

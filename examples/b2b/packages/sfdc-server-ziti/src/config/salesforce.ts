@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import type { SalesforceConfig, EnvironmentVariables } from "../types/salesforce.js";
+import type { EnvironmentVariables, SalesforceConfig } from "../types/salesforce.js";
 
 // Load environment variables
 dotenv.config();

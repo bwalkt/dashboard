@@ -1,9 +1,9 @@
+import { OrderSchema, ProductSchema } from "@pzero/shared";
 import type { FastifyInstance, FastifyPluginOptions, FastifyReply, FastifyRequest } from "fastify";
 import { salesforceConfig } from "../config/salesforce.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { SalesforceClient } from "../services/salesforce-client.service.js";
-import type { SalesforceRecordRequest, SalesforceQueryParams, SalesforcePaginatedResponse } from "../types/salesforce.js";
-import { OrderSchema, ProductSchema } from "@pzero/shared";
+import type { SalesforcePaginatedResponse, SalesforceQueryParams, SalesforceRecordRequest } from "../types/salesforce.js";
 
 /**
  * Salesforce API Routes
