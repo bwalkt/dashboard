@@ -18,8 +18,8 @@ COPY golang-ziti/ .
 
 RUN mkdir -p build
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o build/main .
+# Build the application (static build with pure Go SQLite)
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o main .
 
 # Final stage
 FROM alpine:latest
@@ -30,12 +30,21 @@ RUN apk --no-cache add ca-certificates curl
 WORKDIR /app
 
 # Copy the binary from builder stage
-COPY --from=builder /app/build/main .
+COPY --from=builder /app/main .
+RUN chmod +x main
 
 # Copy the Ziti configuration file
 COPY golang-ziti/simple-server.json .
 COPY golang-ziti/simple-client.json .
 
+# Copy all .pem files
+COPY golang-ziti/*.pem .
+
+# Copy environment file
+COPY golang-ziti/.env .
+
+# Create data directory for database
+RUN mkdir -p /app/data
 
 # Expose port (though it won't be used with Ziti)
 EXPOSE 8080

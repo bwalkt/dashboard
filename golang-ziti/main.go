@@ -18,11 +18,13 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/sdk-golang/ziti"
 	"github.com/sirupsen/logrus"
@@ -44,22 +46,24 @@ func (g Greeter) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func serve(listener net.Listener, serverType string) {
-	if err := http.Serve(listener, Greeter(serverType)); err != nil {
+func serve(listener net.Listener, serverType string, router http.Handler) {
+	if err := http.Serve(listener, router); err != nil {
 		panic(err)
 	}
 }
 
-func httpServer(listenAddr string) {
+func httpServerWithOAuth(listenAddr string, router http.Handler) {
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("listening for non-ziti requests on %v\n", listenAddr)
-	serve(listener, "plain-internet")
+	if err := http.Serve(listener, router); err != nil {
+		panic(err)
+	}
 }
 
-func zitifiedServer() {
+func zitifiedServer(router http.Handler) {
 	options := ziti.ListenOptions{
 		ConnectTimeout: 5 * time.Minute,
 		MaxConnections: 3,
@@ -93,16 +97,50 @@ func zitifiedServer() {
 	}
 
 	fmt.Printf("listening for requests for Ziti service %v\n", serviceName)
-	serve(listener, "ziti")
+	serve(listener, "ziti", router)
 }
 
 func main() {
+	// Load environment variables from .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using system environment variables")
+	}
+
 	if os.Getenv("DEBUG") == "true" {
 		pfxlog.GlobalInit(logrus.DebugLevel, pfxlog.DefaultOptions())
 		pfxlog.Logger().Debugf("debug enabled")
 	}
 
-	// Startup zitified server and plain http server
-	go zitifiedServer()
-	httpServer("0.0.0.0:8080")
+	// Initialize database
+	dbPath := os.Getenv("DATABASE_PATH")
+	if dbPath == "" {
+		dbPath = "./users.db"
+	}
+
+	db, err := NewDatabase(dbPath)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer db.Close()
+
+	// Initialize auth configuration
+	authConfig := NewAuthConfig()
+
+	// Initialize middleware
+	middleware := NewMiddleware(authConfig, db)
+
+	// Setup routes
+	router := middleware.SetupRoutes()
+
+	// Startup zitified server and plain http server with OAuth
+	// Temporarily disable Ziti server to test routes
+	// go func() {
+	// 	defer func() {
+	// 		if r := recover(); r != nil {
+	// 			log.Printf("Ziti server failed to start: %v", r)
+	// 		}
+	// 	}()
+	// 	zitifiedServer(router)
+	// }()
+	httpServerWithOAuth("0.0.0.0:8080", router)
 }
