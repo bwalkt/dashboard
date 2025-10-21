@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import type { User, CreateUserData } from "@dashboard/shared-types";
+import type { User, CreateUserData } from "@pzero/shared";
 
 class DatabaseManager {
   private db: Database.Database;

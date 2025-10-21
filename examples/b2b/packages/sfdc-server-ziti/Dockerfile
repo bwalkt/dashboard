@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Copy workspace files
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
-COPY packages/shared-types ./packages/shared-types
+COPY ../../packages/shared ./packages/shared
 COPY packages/sfdc-server-ziti/package.json ./packages/sfdc-server-ziti/
 
 # Install pnpm

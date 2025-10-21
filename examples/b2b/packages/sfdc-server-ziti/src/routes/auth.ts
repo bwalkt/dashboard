@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { authService } from "../services/auth.service.js";
 import { userService } from "../services/user.service.js";
 import { authenticateToken } from "../middleware/auth.js";
-import type { AuthenticatedRequest, AuthResponse, UserResponse, ErrorResponse } from "@dashboard/shared-types";
+import type { AuthenticatedRequest, AuthResponse, UserResponse, ErrorResponse } from "@pzero/shared";
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import { config } from "../config/env.js";
 
