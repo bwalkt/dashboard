@@ -205,8 +205,8 @@ services:
 
   pzero-sfdc-server-vanilla:
     build:
-      context: ../..
-      dockerfile: ./examples/b2b/packages/sfdc-server-vanilla/Dockerfile
+      context: .
+      dockerfile: ./packages/sfdc-server-vanilla/Dockerfile
     container_name: pzero-sfdc-server-vanilla
     ports:
       - "3000:8080" # Internal port for direct access (optional)
