@@ -1,0 +1,156 @@
+name: openziti
+services:
+  ziti-controller:
+    image: "openziti/quickstart:latest"
+    healthcheck:
+      test: curl -m 1 -s -k -f https://${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}:${ZITI_CTRL_EDGE_ADVERTISED_PORT:-1280}/edge/client/v1/version
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    env_file:
+      - ./.env
+    ports:
+      - ${ZITI_INTERFACE:-0.0.0.0}:${ZITI_CTRL_EDGE_ADVERTISED_PORT:-1280}:${ZITI_CTRL_EDGE_ADVERTISED_PORT:-1280}
+      - ${ZITI_INTERFACE:-0.0.0.0}:${ZITI_CTRL_ADVERTISED_PORT:-6262}:${ZITI_CTRL_ADVERTISED_PORT:-6262}
+    environment:
+      - ZITI_CTRL_NAME=${ZITI_CTRL_NAME:-ziti-edge-controller}
+      - ZITI_CTRL_EDGE_ADVERTISED_ADDRESS=${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}
+      - ZITI_CTRL_EDGE_ADVERTISED_PORT=${ZITI_CTRL_EDGE_ADVERTISED_PORT:-1280}
+      - ZITI_CTRL_EDGE_IP_OVERRIDE=${ZITI_CTRL_EDGE_IP_OVERRIDE:-127.0.0.1}
+      - ZITI_CTRL_ADVERTISED_PORT=${ZITI_CTRL_ADVERTISED_PORT:-6262}
+      - ZITI_EDGE_IDENTITY_ENROLLMENT_DURATION=${ZITI_EDGE_IDENTITY_ENROLLMENT_DURATION}
+      - ZITI_ROUTER_ENROLLMENT_DURATION=${ZITI_ROUTER_ENROLLMENT_DURATION}
+      - ZITI_USER=${ZITI_USER:-admin}
+      - ZITI_PWD=${ZITI_PWD}
+    networks:
+      ziti:
+        aliases:
+          - ziti-edge-controller
+    volumes:
+      - ziti-fs:/persistent
+    entrypoint:
+      - "/var/openziti/scripts/run-controller.sh"
+
+  ziti-controller-init-container:
+    image: "openziti/quickstart:latest"
+    depends_on:
+      ziti-controller:
+        condition: service_healthy
+    environment:
+      - ZITI_CTRL_EDGE_ADVERTISED_ADDRESS=${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}
+      - ZITI_CTRL_EDGE_ADVERTISED_PORT=${ZITI_CTRL_EDGE_ADVERTISED_PORT:-1280}
+    env_file:
+      - ./.env
+    networks:
+      ziti:
+    volumes:
+      - ziti-fs:/persistent
+    entrypoint:
+      - "/var/openziti/scripts/run-with-ziti-cli.sh"
+    command:
+      - "/var/openziti/scripts/access-control.sh"
+
+  ziti-edge-router:
+    image: "openziti/quickstart:latest"
+    env_file:
+      - ./.env
+    depends_on:
+      ziti-controller:
+        condition: service_healthy
+    ports:
+      - ${ZITI_INTERFACE:-0.0.0.0}:${ZITI_ROUTER_PORT:-3022}:${ZITI_ROUTER_PORT:-3022}
+      - ${ZITI_INTERFACE:-0.0.0.0}:${ZITI_ROUTER_LISTENER_BIND_PORT:-10080}:${ZITI_ROUTER_LISTENER_BIND_PORT:-10080}
+    environment:
+      - ZITI_CTRL_ADVERTISED_ADDRESS=${ZITI_CTRL_ADVERTISED_ADDRESS:-ziti-controller}
+      - ZITI_CTRL_ADVERTISED_PORT=${ZITI_CTRL_ADVERTISED_PORT:-6262}
+      - ZITI_CTRL_EDGE_ADVERTISED_ADDRESS=${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}
+      - ZITI_CTRL_EDGE_ADVERTISED_PORT=${ZITI_CTRL_EDGE_ADVERTISED_PORT:-1280}
+      - ZITI_ROUTER_NAME=${ZITI_ROUTER_NAME:-ziti-edge-router}
+      - ZITI_ROUTER_ADVERTISED_ADDRESS=${ZITI_ROUTER_ADVERTISED_ADDRESS:-ziti-edge-router}
+      - ZITI_ROUTER_PORT=${ZITI_ROUTER_PORT:-3022}
+      - ZITI_ROUTER_LISTENER_BIND_PORT=${ZITI_ROUTER_LISTENER_BIND_PORT:-10080}
+      - ZITI_ROUTER_ROLES=public
+    networks:
+      - ziti
+    volumes:
+      - ziti-fs:/persistent
+    entrypoint: /bin/bash
+    command: "/var/openziti/scripts/run-router.sh edge"
+
+  ziti-console:
+    image: openziti/zac
+    working_dir: /usr/src/app
+    environment:
+      - ZAC_SERVER_CERT_CHAIN=/persistent/pki/${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}-intermediate/certs/${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}-server.cert
+      - ZAC_SERVER_KEY=/persistent/pki/${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}-intermediate/keys/${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}-server.key
+      - ZITI_CTRL_EDGE_ADVERTISED_ADDRESS=${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}
+      - ZITI_CTRL_EDGE_ADVERTISED_PORT=${ZITI_CTRL_EDGE_ADVERTISED_PORT:-1280}
+      - ZITI_CTRL_NAME=${ZITI_CTRL_NAME:-ziti-edge-controller}
+      - ZAC_CONTROLLER_URLS=https://ziti-edge-controller:1280
+      - PORTTLS=8443
+    depends_on:
+      ziti-controller:
+        condition: service_healthy
+    ports:
+      - ${ZITI_INTERFACE:-0.0.0.0}:8443:8443
+    volumes:
+      - ziti-fs:/persistent
+    networks:
+      - ziti
+  # sfdc-server-ziti:
+  #   build:
+  #     context: .
+  #     dockerfile: ./packages/sfdc-server-ziti/Dockerfile
+  #   container_name: sfdc-server-ziti
+  #   ports:
+  #     - "3000:8080" # Internal port for direct access (optional)
+  #   environment:
+  #     - NODE_ENV=development
+  #     - PORT=8080
+  #   networks:
+  #     - ziti
+  #   restart: unless-stopped
+  golang-ziti:
+    build:
+      context: .
+      dockerfile: ./golang-ziti/Dockerfile
+    container_name: golang-ziti
+    ports:
+      - "8080:8080"
+    environment:
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - GITHUB_REDIRECT_URL=${GITHUB_REDIRECT_URL:-http://localhost:8080/auth/callback}
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      - DATABASE_PATH=${DATABASE_PATH:-/app/data/users.db}
+      - DEBUG=${DEBUG:-false}
+    env_file:
+      - ./.env
+    networks:
+      - ziti
+    depends_on:
+      ziti-controller:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - golang-ziti-data:/app/data
+
+  ziti-host:
+    image: docker.io/openziti/ziti-host
+    container_name: pzero-ziti-host
+    networks:
+      - ziti
+    volumes:
+      - ziti-host:/ziti-edge-tunnel
+    environment:
+      - ZITI_DNS_IP_RANGE=100.64.0.0/10
+      # Provide one of the following, per OpenZiti docs
+      - ZITI_ENROLL_TOKEN=${ZITI_ENROLL_TOKEN:-eyJhbGciOiJSUzI1NiIsImtpZCI6ImY1ZDI2YzEwMjYzNzZjZTcwNTAyMTIwNmIwMmNlMmY4ODAxMjVhYWQiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3ppdGktZWRnZS1jb250cm9sbGVyOjEyODAiLCJzdWIiOiJYSDQ5bEUwU0giLCJhdWQiOlsiIl0sImV4cCI6MTc2MTU2NjExMywianRpIjoiN2EwMGNmNDgtN2Q5OC00OTdlLTlkODktNWI2MTcxYzM1ZmVmIiwiZW0iOiJvdHQiLCJjdHJscyI6WyJ0bHM6eml0aS1jb250cm9sbGVyOjYyNjIiXX0.WeCkZI2IpF2u_vdMkOiShRs4y2SyOR1aXvTIuKuCv-awHGbzTwPpBydqbB2WsFREqOyl_LPdoBs-eUYllSYl90U-QV4IUu3kCdEvq-_FibkxAUUvGhU_r4fTCtAFb_iJum1dHgNbngP6P1XZSIyGVTTdT1yKDHvwjKCmIE6Ax7di47JEwCbH0y3RKdqdQMbj1I4VYiKAt1Ojp9q-YurhjI5UvC4gA2LCPgduffdEuJG8XodmEkw1PCP5pxPxLEbdNf5Xrvt3mFhwz3XQQbGHdwLJz0DZh01Q1gMQzQGoD1P2DBtSxmK9__AGnNP_6Oh6I0fgn44bRZXJkHoD-9hWOy4qGOGxms3orC5nBTVn8B6fgR_9Bl86u7u55DTkyFc0u9h8k9Z7TCRgkz1c1QtJzPccWVPz4VJzGshqhlsblrdZYjTjzc8lQZFQ-0tYTlOYghSgJH6A_yEgIYEFWny9QdBesKclGJpx6sSzLPZMUY6zHc2r8BLVXLqOX0gQs6rZqsK60_HXnL6puaghXL8ipQOjrga1T3CRVpjD-mQc4bm5KSGRgjixvGw21gqd6gHy_N54Y47d3pN1m4hFHrALUSqfxlYlJCkyk6l7aU84njagcbk9f-dWQ0-A7o6vTuGJzDBwrycrCqr31NlnIllptE2ESMxVDBcchjDVbBlyLac}
+      # - ZITI_IDENTITY_JSON=${ZITI_IDENTITY_JSON:-}
+networks:
+  ziti:
+    driver: bridge
+volumes:
+  ziti-fs:
+  ziti-host:
+  golang-ziti-data:
