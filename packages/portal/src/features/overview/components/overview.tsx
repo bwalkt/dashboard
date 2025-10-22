@@ -13,14 +13,7 @@ import { BarGraphSkeleton } from "./bar-graph-skeleton";
  * @returns The JSX element representing the overview dashboard page.
  */
 export default function OverViewPage() {
-  const config = useMemo(
-    () => ({
-      intervalMs: 5000,
-      minOrdersPerBatch: 1,
-      maxOrdersPerBatch: 3,
-    }),
-    [],
-  )
+  
 
   return (
     <PageContainer>
