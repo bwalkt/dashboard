@@ -1,23 +1,24 @@
-import type { Column } from '@tanstack/react-table';
-import { dataTableConfig } from '@/config/data-table';
-import type {
-  ExtendedColumnFilter,
-  FilterOperator,
-  FilterVariant
-} from '@/types/data-table';
+import type { Column } from '@tanstack/react-table'
+import { dataTableConfig } from '@/config/data-table'
+import type { ExtendedColumnFilter, FilterOperator, FilterVariant } from '@/types/data-table'
 
+/**
+ * Compute inline CSS properties for a table column based on its pinning state.
+ *
+ * @param column - The table column whose pinning/positioning state is used to compute styles.
+ * @param withBorder - If `true`, include an inset edge shadow for the outer pinned column to simulate a border.
+ * @returns A React.CSSProperties object containing positioning offsets (`left`/`right`), `position`, `opacity`, `background`, `width`, `zIndex`, and an optional `boxShadow` when `withBorder` is enabled for pinned edge columns.
+ */
 export function getCommonPinningStyles<TData>({
   column,
-  withBorder = false
+  withBorder = false,
 }: {
-  column: Column<TData>;
-  withBorder?: boolean;
+  column: Column<TData>
+  withBorder?: boolean
 }): React.CSSProperties {
-  const isPinned = column.getIsPinned();
-  const isLastLeftPinnedColumn =
-    isPinned === 'left' && column.getIsLastColumn('left');
-  const isFirstRightPinnedColumn =
-    isPinned === 'right' && column.getIsFirstColumn('right');
+  const isPinned = column.getIsPinned()
+  const isLastLeftPinnedColumn = isPinned === 'left' && column.getIsLastColumn('left')
+  const isFirstRightPinnedColumn = isPinned === 'right' && column.getIsFirstColumn('right')
 
   return {
     boxShadow: withBorder
@@ -33,15 +34,18 @@ export function getCommonPinningStyles<TData>({
     position: isPinned ? 'sticky' : 'relative',
     background: isPinned ? 'hsl(var(--background))' : 'hsl(var(--background))',
     width: column.getSize(),
-    zIndex: isPinned ? 1 : 0
-  };
+    zIndex: isPinned ? 1 : 0,
+  }
 }
 
+/**
+ * Get the filter operators appropriate for a filter variant.
+ *
+ * @param filterVariant - The filter variant to retrieve operators for
+ * @returns An array of operator objects with `label` and `value` properties; falls back to text operators when the variant has no specific mapping
+ */
 export function getFilterOperators(filterVariant: FilterVariant) {
-  const operatorMap: Record<
-    FilterVariant,
-    { label: string; value: FilterOperator }[]
-  > = {
+  const operatorMap: Record<FilterVariant, { label: string; value: FilterOperator }[]> = {
     text: dataTableConfig.textOperators,
     number: dataTableConfig.numericOperators,
     range: dataTableConfig.numericOperators,
@@ -49,29 +53,40 @@ export function getFilterOperators(filterVariant: FilterVariant) {
     dateRange: dataTableConfig.dateOperators,
     boolean: dataTableConfig.booleanOperators,
     select: dataTableConfig.selectOperators,
-    multiSelect: dataTableConfig.multiSelectOperators
-  };
+    multiSelect: dataTableConfig.multiSelectOperators,
+  }
 
-  return operatorMap[filterVariant] ?? dataTableConfig.textOperators;
+  return operatorMap[filterVariant] ?? dataTableConfig.textOperators
 }
 
+/**
+ * Selects the default filter operator for a given filter variant.
+ *
+ * @param filterVariant - The filter variant (for example, `'text'`, `'number'`, etc.) used to determine available operators
+ * @returns The default `FilterOperator` for `filterVariant`; uses the first configured operator when available, otherwise returns `'iLike'` for `'text'` and `'eq'` for other variants
+ */
 export function getDefaultFilterOperator(filterVariant: FilterVariant) {
-  const operators = getFilterOperators(filterVariant);
+  const operators = getFilterOperators(filterVariant)
 
-  return operators[0]?.value ?? (filterVariant === 'text' ? 'iLike' : 'eq');
+  return operators[0]?.value ?? (filterVariant === 'text' ? 'iLike' : 'eq')
 }
 
-export function getValidFilters<TData>(
-  filters: ExtendedColumnFilter<TData>[]
-): ExtendedColumnFilter<TData>[] {
+/**
+ * Filter an array of ExtendedColumnFilter to include only entries that represent meaningful filtering criteria.
+ *
+ * A filter is considered valid if its `operator` is `isEmpty` or `isNotEmpty`, if its `value` is a non-empty array,
+ * or if its `value` is not `''`, `null`, or `undefined`.
+ *
+ * @param filters - The list of column filters to validate.
+ * @returns An array containing only filters that are empty-check operators or have non-empty values.
+ */
+export function getValidFilters<TData>(filters: ExtendedColumnFilter<TData>[]): ExtendedColumnFilter<TData>[] {
   return filters.filter(
-    (filter) =>
+    filter =>
       filter.operator === 'isEmpty' ||
       filter.operator === 'isNotEmpty' ||
       (Array.isArray(filter.value)
         ? filter.value.length > 0
-        : filter.value !== '' &&
-          filter.value !== null &&
-          filter.value !== undefined)
-  );
+        : filter.value !== '' && filter.value !== null && filter.value !== undefined),
+  )
 }

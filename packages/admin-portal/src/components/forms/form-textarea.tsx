@@ -1,28 +1,28 @@
-'use client';
+'use client'
 
-import { FieldPath, FieldValues } from 'react-hook-form';
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
-import { BaseFormFieldProps, TextareaConfig } from '@/types/base-form';
+import type { FieldPath, FieldValues } from 'react-hook-form'
+import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Textarea } from '@/components/ui/textarea'
+import type { BaseFormFieldProps, TextareaConfig } from '@/types/base-form'
 
 interface FormTextareaProps<
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > extends BaseFormFieldProps<TFieldValues, TName> {
-  placeholder?: string;
-  config?: TextareaConfig;
+  placeholder?: string
+  config?: TextareaConfig
 }
 
+/**
+ * Renders a controlled textarea form field integrated with react-hook-form, including an optional label, description, validation message, and an optional character count.
+ *
+ * @param props - Component props.
+ * @param props.config - Textarea configuration. Defaults: `showCharCount = true`, `rows = 4`, `resize = 'vertical'`. Provide `maxLength` to enable the character counter.
+ * @returns The textarea form field as a JSX element.
+ */
 function FormTextarea<
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >({
   control,
   name,
@@ -32,14 +32,9 @@ function FormTextarea<
   placeholder,
   config = {},
   disabled,
-  className
+  className,
 }: FormTextareaProps<TFieldValues, TName>) {
-  const {
-    maxLength,
-    showCharCount = true,
-    rows = 4,
-    resize = 'vertical'
-  } = config;
+  const { maxLength, showCharCount = true, rows = 4, resize = 'vertical' } = config
 
   return (
     <FormField
@@ -50,11 +45,11 @@ function FormTextarea<
           {label && (
             <FormLabel>
               {label}
-              {required && <span className='ml-1 text-red-500'>*</span>}
+              {required && <span className="ml-1 text-red-500">*</span>}
             </FormLabel>
           )}
           <FormControl>
-            <div className='space-y-2'>
+            <div className="space-y-2">
               <Textarea
                 placeholder={placeholder}
                 disabled={disabled}
@@ -64,7 +59,7 @@ function FormTextarea<
                 {...field}
               />
               {showCharCount && maxLength && (
-                <div className='text-muted-foreground text-right text-sm'>
+                <div className="text-muted-foreground text-right text-sm">
                   {field.value?.length || 0} / {maxLength}
                 </div>
               )}
@@ -75,7 +70,7 @@ function FormTextarea<
         </FormItem>
       )}
     />
-  );
+  )
 }
 
-export { FormTextarea };
+export { FormTextarea }

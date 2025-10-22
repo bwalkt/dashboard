@@ -23,7 +23,7 @@ import {
   IconPhoto,
   IconPizza,
   IconPlus,
-  IconProps,
+  type IconProps,
   IconSettings,
   IconShoppingBag,
   IconSun,
@@ -33,9 +33,9 @@ import {
   IconUserEdit,
   IconUserX,
   IconX,
-} from "@tabler/icons-react";
+} from '@tabler/icons-react'
 
-export type Icon = React.ComponentType<IconProps>;
+export type Icon = React.ComponentType<IconProps>
 
 export const Icons = {
   dashboard: IconLayoutDashboard,
@@ -72,4 +72,4 @@ export const Icons = {
   moreHorizontal: IconDotsVertical,
   eye: IconEye,
   edit: IconEdit,
-};
+}

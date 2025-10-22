@@ -1,4 +1,4 @@
-import * as Sentry from '@sentry/react';
+import * as Sentry from '@sentry/react'
 
 const sentryOptions: Sentry.BrowserOptions = {
   // Sentry DSN
@@ -13,13 +13,18 @@ const sentryOptions: Sentry.BrowserOptions = {
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
   debug: false,
 
-  integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()]
-};
+  integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+}
 
+/**
+ * Initialize Sentry with the module's configured options unless disabled by the VITE_SENTRY_DISABLED environment flag.
+ *
+ * When the environment flag is truthy, initialization is skipped.
+ */
 export function initSentry() {
   if (!import.meta.env.VITE_SENTRY_DISABLED) {
-    Sentry.init(sentryOptions);
+    Sentry.init(sentryOptions)
   }
 }
 
-export const captureException = Sentry.captureException;
+export const captureException = Sentry.captureException

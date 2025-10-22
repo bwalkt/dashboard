@@ -1,18 +1,25 @@
-import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import KBar from '@/components/kbar';
-import MobileAppSidebar from '@/components/layout/mobile-app-sidebar';
-import MobileHeader from '@/components/layout/mobile-header';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { useEffect, useState } from 'react'
+import { Outlet } from 'react-router-dom'
+import KBar from '@/components/kbar'
+import MobileAppSidebar from '@/components/layout/mobile-app-sidebar'
+import MobileHeader from '@/components/layout/mobile-header'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
+/**
+ * Render the mobile-optimized admin dashboard layout with a sidebar, header, and nested-route outlet.
+ *
+ * The layout is wrapped in KBar and SidebarProvider and keeps the sidebar open for testing purposes.
+ *
+ * @returns The React element for the mobile dashboard layout containing the sidebar, header, and an Outlet for nested routes.
+ */
 export default function MobileDashboardLayout() {
   // Force sidebar open for mobile testing
-  const [defaultOpen, setDefaultOpen] = useState(true);
+  const [defaultOpen, setDefaultOpen] = useState(true)
 
   useEffect(() => {
     // Always keep it open for now to debug
-    setDefaultOpen(true);
-  }, []);
+    setDefaultOpen(true)
+  }, [])
 
   return (
     <KBar>
@@ -28,5 +35,5 @@ export default function MobileDashboardLayout() {
         </div>
       </SidebarProvider>
     </KBar>
-  );
+  )
 }
