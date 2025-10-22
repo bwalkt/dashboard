@@ -8,7 +8,7 @@ RUN apk add --no-cache python3 make g++ sqlite-dev
 # Copy workspace files
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 COPY packages/shared ./packages/shared
-COPY examples/b2b/packages/sfdc-server-vanilla/package.json ./examples/b2b/packages/sfdc-server-vanilla/
+COPY packages/sfdc-server-vanilla/package.json ./packages/sfdc-server-vanilla/
 
 # Install pnpm
 RUN npm install -g pnpm tsx
@@ -20,9 +20,9 @@ RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @pzero/shared build
 
 # Copy server source code
-COPY examples/b2b/packages/sfdc-server-vanilla ./examples/b2b/packages/sfdc-server-vanilla
+COPY packages/sfdc-server-vanilla ./packages/sfdc-server-vanilla
 
-WORKDIR /app/examples/b2b/packages/sfdc-server-vanilla
+WORKDIR /app/packages/sfdc-server-vanilla
 
 # Rebuild better-sqlite3 for the container architecture
 # Using npm rebuild instead of pnpm because pnpm requires interactive approval of build scripts
