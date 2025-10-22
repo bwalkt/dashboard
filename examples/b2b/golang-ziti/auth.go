@@ -76,7 +76,7 @@ func NewAuthConfig() *AuthConfig {
 	}
 
 	if jwtSecret == "" {
-		jwtSecret = "your-secret-key-change-this-in-production"
+		log.Fatal("JWT_SECRET environment variable is required - application cannot start without a secure JWT secret")
 	}
 
 	config := &oauth2.Config{
