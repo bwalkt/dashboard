@@ -1,7 +1,7 @@
 name: openziti
 services:
   ziti-controller:
-    image: "openziti/quickstart:latest"
+    image: "openziti/quickstart:1.7.0"
     healthcheck:
       test: curl -m 1 -s -k -f https://${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}:${ZITI_CTRL_EDGE_ADVERTISED_PORT:-1280}/edge/client/v1/version
       interval: 1s
@@ -32,7 +32,7 @@ services:
       - "/var/openziti/scripts/run-controller.sh"
 
   ziti-controller-init-container:
-    image: "openziti/quickstart:latest"
+    image: "openziti/quickstart:1.7.0"
     depends_on:
       ziti-controller:
         condition: service_healthy
@@ -51,7 +51,7 @@ services:
       - "/var/openziti/scripts/access-control.sh"
 
   ziti-edge-router:
-    image: "openziti/quickstart:latest"
+    image: "openziti/quickstart:1.7.0"
     env_file:
       - ./.env
     depends_on:
@@ -78,7 +78,7 @@ services:
     command: "/var/openziti/scripts/run-router.sh edge"
 
   ziti-console:
-    image: openziti/zac
+    image: openziti/zac:3.12.6
     working_dir: /usr/src/app
     environment:
       - ZAC_SERVER_CERT_CHAIN=/persistent/pki/${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}-intermediate/certs/${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS:-ziti-edge-controller}-server.cert
@@ -97,19 +97,6 @@ services:
       - ziti-fs:/persistent
     networks:
       - ziti
-  # sfdc-server-ziti:
-  #   build:
-  #     context: .
-  #     dockerfile: ./packages/sfdc-server-ziti/Dockerfile
-  #   container_name: sfdc-server-ziti
-  #   ports:
-  #     - "3000:8080" # Internal port for direct access (optional)
-  #   environment:
-  #     - NODE_ENV=development
-  #     - PORT=8080
-  #   networks:
-  #     - ziti
-  #   restart: unless-stopped
   golang-ziti:
     build:
       context: .
@@ -145,7 +132,7 @@ services:
     environment:
       - ZITI_DNS_IP_RANGE=100.64.0.0/10
       # Provide one of the following, per OpenZiti docs
-      - ZITI_ENROLL_TOKEN=${ZITI_ENROLL_TOKEN:-eyJhbGciOiJSUzI1NiIsImtpZCI6ImY1ZDI2YzEwMjYzNzZjZTcwNTAyMTIwNmIwMmNlMmY4ODAxMjVhYWQiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3ppdGktZWRnZS1jb250cm9sbGVyOjEyODAiLCJzdWIiOiJYSDQ5bEUwU0giLCJhdWQiOlsiIl0sImV4cCI6MTc2MTU2NjExMywianRpIjoiN2EwMGNmNDgtN2Q5OC00OTdlLTlkODktNWI2MTcxYzM1ZmVmIiwiZW0iOiJvdHQiLCJjdHJscyI6WyJ0bHM6eml0aS1jb250cm9sbGVyOjYyNjIiXX0.WeCkZI2IpF2u_vdMkOiShRs4y2SyOR1aXvTIuKuCv-awHGbzTwPpBydqbB2WsFREqOyl_LPdoBs-eUYllSYl90U-QV4IUu3kCdEvq-_FibkxAUUvGhU_r4fTCtAFb_iJum1dHgNbngP6P1XZSIyGVTTdT1yKDHvwjKCmIE6Ax7di47JEwCbH0y3RKdqdQMbj1I4VYiKAt1Ojp9q-YurhjI5UvC4gA2LCPgduffdEuJG8XodmEkw1PCP5pxPxLEbdNf5Xrvt3mFhwz3XQQbGHdwLJz0DZh01Q1gMQzQGoD1P2DBtSxmK9__AGnNP_6Oh6I0fgn44bRZXJkHoD-9hWOy4qGOGxms3orC5nBTVn8B6fgR_9Bl86u7u55DTkyFc0u9h8k9Z7TCRgkz1c1QtJzPccWVPz4VJzGshqhlsblrdZYjTjzc8lQZFQ-0tYTlOYghSgJH6A_yEgIYEFWny9QdBesKclGJpx6sSzLPZMUY6zHc2r8BLVXLqOX0gQs6rZqsK60_HXnL6puaghXL8ipQOjrga1T3CRVpjD-mQc4bm5KSGRgjixvGw21gqd6gHy_N54Y47d3pN1m4hFHrALUSqfxlYlJCkyk6l7aU84njagcbk9f-dWQ0-A7o6vTuGJzDBwrycrCqr31NlnIllptE2ESMxVDBcchjDVbBlyLac}
+      - ZITI_ENROLL_TOKEN=${ZITI_ENROLL_TOKEN}
       # - ZITI_IDENTITY_JSON=${ZITI_IDENTITY_JSON:-}
 networks:
   ziti:
