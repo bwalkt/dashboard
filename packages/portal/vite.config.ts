@@ -26,9 +26,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@pzero/shared': path.resolve(__dirname, '../../../../packages/shared/src'),
     },
+    dedupe: ['react', 'react-dom', 'react-router-dom'],
   },
   optimizeDeps: {
-    include: ['@pzero/shared', 'zod'],
+    include: ['@pzero/shared', 'zod', 'react', 'react-dom', 'react-router-dom'],
   },
   build: {
     commonjsOptions: {

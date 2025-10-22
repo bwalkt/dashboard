@@ -17,14 +17,10 @@ import '@/styles/globals.css'
 import '@/styles/theme.css'
 
 // Import pages
-import OrderViewPage from './features/orders/components/order-view-page'
-import ProductViewPage from './features/products/components/product-view-page'
-import SignIn from './pages/auth/SignIn'
-import SignUp from './pages/auth/SignUp'
-import MobileDashboardLayout from './pages/dashboard/MobileLayout'
-import Orders from './pages/dashboard/Orders'
-import Overview from './pages/dashboard/Overview'
-import Products from './pages/dashboard/Products'
+import SignIn from "./pages/auth/SignIn";
+import SignUp from "./pages/auth/SignUp";
+import MobileDashboardLayout from "./pages/dashboard/MobileLayout";
+import Overview from "./pages/dashboard/Overview";
 
 // Configure NProgress
 NProgress.configure({ showSpinner: false })
@@ -86,12 +82,7 @@ function ThemedAppContent() {
         >
           <Route index element={<Navigate to="/dashboard/overview" replace />} />
           <Route path="overview" element={<Overview />} />
-          <Route path="orders" element={<Orders />} />
-          <Route path="orders/new" element={<OrderViewPage />} />
-          <Route path="orders/:orderId" element={<OrderViewPage />} />
-          <Route path="products" element={<Products />} />
-          <Route path="products/new" element={<ProductViewPage />} />
-          <Route path="products/:productId" element={<ProductViewPage />} />
+         
         </Route>
 
         {/* Root redirect - go to sign in */}
