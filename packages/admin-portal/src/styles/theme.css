@@ -15,7 +15,8 @@
   --primary: oklch(0.556 0 0);
   --primary-foreground: oklch(0.985 0 0);
   --radius: 0.75rem;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Monaco, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 .theme-default-scaled {

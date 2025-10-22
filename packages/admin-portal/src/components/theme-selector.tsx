@@ -1,52 +1,68 @@
-"use client";
+'use client'
 
-import { useThemeConfig } from "@/components/active-theme";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useThemeConfig } from '@/components/active-theme'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const DEFAULT_THEMES = [
   {
-    name: "Default",
-    value: "default",
+    name: 'Default',
+    value: 'default',
   },
   {
-    name: "Blue",
-    value: "blue",
+    name: 'Blue',
+    value: 'blue',
   },
   {
-    name: "Green",
-    value: "green",
+    name: 'Green',
+    value: 'green',
   },
   {
-    name: "Amber",
-    value: "amber",
+    name: 'Amber',
+    value: 'amber',
   },
-];
+]
 
 const SCALED_THEMES = [
   {
-    name: "Default",
-    value: "default-scaled",
+    name: 'Default',
+    value: 'default-scaled',
   },
   {
-    name: "Blue",
-    value: "blue-scaled",
+    name: 'Blue',
+    value: 'blue-scaled',
   },
-];
+]
 
 const MONO_THEMES = [
   {
-    name: "Mono",
-    value: "mono-scaled",
+    name: 'Mono',
+    value: 'mono-scaled',
   },
-];
+]
 
+/**
+ * Render a grouped theme selector UI that displays available themes and updates the active theme when changed.
+ *
+ * The component is bound to the theme configuration hook and reflects the current active theme; selecting an option updates that active theme.
+ *
+ * @returns A React element containing a labeled, grouped dropdown of theme options tied to the active theme configuration.
+ */
 export function ThemeSelector() {
-  const { activeTheme, setActiveTheme } = useThemeConfig();
+  const { activeTheme, setActiveTheme } = useThemeConfig()
 
   const handleThemeChange = (newTheme: string) => {
-    setActiveTheme(newTheme);
-  };
+    setActiveTheme(newTheme)
+  }
 
   return (
     <div className="flex items-center gap-2">
@@ -62,7 +78,7 @@ export function ThemeSelector() {
         <SelectContent align="end">
           <SelectGroup>
             <SelectLabel>Default</SelectLabel>
-            {DEFAULT_THEMES.map((theme) => (
+            {DEFAULT_THEMES.map(theme => (
               <SelectItem key={theme.name} value={theme.value}>
                 {theme.name}
               </SelectItem>
@@ -71,7 +87,7 @@ export function ThemeSelector() {
           <SelectSeparator />
           <SelectGroup>
             <SelectLabel>Scaled</SelectLabel>
-            {SCALED_THEMES.map((theme) => (
+            {SCALED_THEMES.map(theme => (
               <SelectItem key={theme.name} value={theme.value}>
                 {theme.name}
               </SelectItem>
@@ -79,7 +95,7 @@ export function ThemeSelector() {
           </SelectGroup>
           <SelectGroup>
             <SelectLabel>Monospaced</SelectLabel>
-            {MONO_THEMES.map((theme) => (
+            {MONO_THEMES.map(theme => (
               <SelectItem key={theme.name} value={theme.value}>
                 {theme.name}
               </SelectItem>
@@ -88,5 +104,5 @@ export function ThemeSelector() {
         </SelectContent>
       </Select>
     </div>
-  );
+  )
 }

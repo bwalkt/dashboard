@@ -1,11 +1,36 @@
 use tauri::{Emitter, Listener};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+/// Constructs a greeting message that includes the provided `name`.
+///
+/// The returned string is formatted as: `Hello, {name}! You've been greeted from Rust!`.
+///
+/// # Examples
+///
+/// ```
+/// let s = greet("Alice");
+/// assert_eq!(s, "Hello, Alice! You've been greeted from Rust!");
+/// ```
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+/// Builds and runs the Tauri application for the admin portal, registering plugins,
+/// the `greet` invoke handler, and (on iOS) a deep-link listener that forwards URLs to the frontend.
+///
+/// The application is configured with the `tauri_plugin_opener` and `tauri_plugin_shell` plugins,
+/// and exposes the `greet` command to the frontend. On iOS, incoming "deep-link" events are
+/// forwarded to the frontend as `tauri://url` events with the link payload.
+///
+/// # Examples
+///
+/// ```no_run
+/// fn main() {
+///     // Starts the Tauri application (blocks the current thread while running).
+///     run();
+/// }
+/// ```
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()

@@ -1,17 +1,14 @@
 // This file configures the initialization of Sentry for the React app.
 // This replaces the Next.js specific Sentry client configuration.
 // https://docs.sentry.io/platforms/javascript/guides/react/
-import * as Sentry from '@sentry/react';
+import * as Sentry from '@sentry/react'
 
 if (!import.meta.env.VITE_SENTRY_DISABLED) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
 
     // Add optional integrations for additional features
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration()
-    ],
+    integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
 
     // Adds request headers and IP for users, for more info visit
     sendDefaultPii: true,
@@ -28,6 +25,6 @@ if (!import.meta.env.VITE_SENTRY_DISABLED) {
     replaysOnErrorSampleRate: 1.0,
 
     // Setting this option to true will print useful information to the console while you're setting up Sentry.
-    debug: false
-  });
+    debug: false,
+  })
 }

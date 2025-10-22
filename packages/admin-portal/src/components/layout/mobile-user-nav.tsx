@@ -1,6 +1,6 @@
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,41 +9,48 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { UserAvatarProfile } from "@/components/user-avatar-profile";
-import { useAuth } from "@/contexts/AuthContext";
+} from '@/components/ui/dropdown-menu'
+import { UserAvatarProfile } from '@/components/user-avatar-profile'
+import { useAuth } from '@/contexts/AuthContext'
 
+/**
+ * Render a mobile-friendly user avatar button that opens a dropdown menu with account and navigation actions.
+ *
+ * The menu displays the user's name and primary email. Selecting "Sign Out" attempts to sign the user out, shows a success or error toast, and navigates to the sign-in page on successful sign-out.
+ *
+ * @returns A JSX element containing the user avatar trigger and dropdown menu with profile, navigation, and sign-out actions.
+ */
 export function MobileUserNav() {
-  const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const navigate = useNavigate()
+  const { user, signOut } = useAuth()
 
   const handleSignOut = async () => {
     try {
-      const { error } = await signOut();
+      const { error } = await signOut()
       if (error) {
-        toast.error("Failed to sign out: " + error.message);
+        toast.error('Failed to sign out: ' + error.message)
       } else {
-        toast.success("Signed out successfully");
-        navigate("/auth/sign-in");
+        toast.success('Signed out successfully')
+        navigate('/auth/sign-in')
       }
     } catch (error) {
-      toast.error("An unexpected error occurred");
-      console.error("Sign out error:", error);
+      toast.error('An unexpected error occurred')
+      console.error('Sign out error:', error)
     }
-  };
+  }
 
   // Create user object for display
   const userData = user
     ? {
-        fullName: user.name || "User",
-        emailAddresses: [{ emailAddress: user.email || "user@example.com" }],
+        fullName: user.name || 'User',
+        emailAddresses: [{ emailAddress: user.email || 'user@example.com' }],
         imageUrl: user.avatar,
       }
     : {
-        fullName: "Mobile User",
-        emailAddresses: [{ emailAddress: "mobile@example.com" }],
+        fullName: 'Mobile User',
+        emailAddresses: [{ emailAddress: 'mobile@example.com' }],
         imageUrl: undefined,
-      };
+      }
 
   return (
     <DropdownMenu>
@@ -61,15 +68,15 @@ export function MobileUserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>Profile</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>Profile</DropdownMenuItem>
           <DropdownMenuItem>Billing</DropdownMenuItem>
           <DropdownMenuItem>Settings</DropdownMenuItem>
           <DropdownMenuItem>New Team</DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate("/dashboard/overview")}>Home</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>Home</DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }
