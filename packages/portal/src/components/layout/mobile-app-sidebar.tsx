@@ -1,7 +1,15 @@
-import { IconBell, IconChevronRight, IconChevronsDown, IconCreditCard, IconLogout, IconPhotoUp, IconUserCircle } from "@tabler/icons-react";
-import * as React from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  IconBell,
+  IconChevronRight,
+  IconChevronsDown,
+  IconCreditCard,
+  IconLogout,
+  IconPhotoUp,
+  IconUserCircle,
+} from '@tabler/icons-react'
+import * as React from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +18,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Sidebar,
   SidebarContent,
@@ -25,43 +33,54 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
-} from "@/components/ui/sidebar";
-import { mobileNavItems } from "@/constants/mobile-nav";
-import { useAuth } from "@/contexts/AuthContext";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { Icons } from "../icons";
-import { OrgSwitcher } from "../org-switcher";
-import { UserAvatarProfile } from "../user-avatar-profile";
+} from '@/components/ui/sidebar'
+import { mobileNavItems } from '@/constants/mobile-nav'
+import { useAuth } from '@/contexts/AuthContext'
+import { useMediaQuery } from '@/hooks/use-media-query'
+import { Icons } from '../icons'
+import { OrgSwitcher } from '../org-switcher'
+import { UserAvatarProfile } from '../user-avatar-profile'
 
 export const company = {
-  name: "Acme Inc",
+  name: 'Acme Inc',
   logo: IconPhotoUp,
-  plan: "Enterprise",
-};
+  plan: 'Enterprise',
+}
 
 const tenants = [
-  { id: "1", name: "Acme Inc" },
-  { id: "2", name: "Beta Corp" },
-  { id: "3", name: "Gamma Ltd" },
-];
+  { id: '1', name: 'Acme Inc' },
+  { id: '2', name: 'Beta Corp' },
+  { id: '3', name: 'Gamma Ltd' },
+]
 
+/**
+ * Render the mobile collapsible sidebar for the admin portal.
+ *
+ * The sidebar includes an org switcher, an overview navigation menu that supports nested collapsible sections,
+ * and a footer user panel with a dropdown for profile, billing, notifications, and home actions. Navigation
+ * active states are determined from the current location pathname and user information is sourced from the auth context.
+ *
+ * Note: tenant switching handler is a placeholder and does not perform any action.
+ *
+ * @returns The sidebar JSX element with header, content (navigation), footer (user dropdown), and rail.
+ */
 export default function MobileAppSidebar() {
-  const location = useLocation();
-  const pathname = location.pathname;
-  const { isOpen } = useMediaQuery();
-  const navigate = useNavigate();
+  const location = useLocation()
+  const pathname = location.pathname
+  const { isOpen } = useMediaQuery()
+  const navigate = useNavigate()
 
   const handleSwitchTenant = (_tenantId: string) => {
     // Tenant switching functionality would be implemented here
-  };
+  }
 
-  const activeTenant = tenants[0];
+  const activeTenant = tenants[0]
 
   React.useEffect(() => {
     // Side effects based on sidebar state changes
-  }, [isOpen]);
+  }, [isOpen])
 
-  const { user } = useAuth();
+  const { user } = useAuth()
 
   return (
     <Sidebar collapsible="icon">
@@ -72,8 +91,8 @@ export default function MobileAppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarMenu>
-            {mobileNavItems.map((item) => {
-              const Icon = item.icon ? Icons[item.icon] : Icons.logo;
+            {mobileNavItems.map(item => {
+              const Icon = item.icon ? Icons[item.icon] : Icons.logo
               return item?.items && item?.items?.length > 0 ? (
                 <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
                   <SidebarMenuItem>
@@ -86,7 +105,7 @@ export default function MobileAppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {item.items?.map((subItem) => (
+                        {item.items?.map(subItem => (
                           <SidebarMenuSubItem key={subItem.title}>
                             <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
                               <Link to={subItem.url}>
@@ -108,7 +127,7 @@ export default function MobileAppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              );
+              )
             })}
           </SidebarMenu>
         </SidebarGroup>
@@ -118,7 +137,10 @@ export default function MobileAppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
                   <div className="flex items-center gap-2">
                     <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                       <UserAvatarProfile user={user} />
@@ -131,7 +153,12 @@ export default function MobileAppSidebar() {
                   <IconChevronsDown className="ml-auto size-4" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg" side="bottom" align="end" sideOffset={4}>
+              <DropdownMenuContent
+                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                side="bottom"
+                align="end"
+                sideOffset={4}
+              >
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="px-1 py-1.5">
                     <div className="flex items-center gap-2">
@@ -148,7 +175,7 @@ export default function MobileAppSidebar() {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
+                  <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>
                     <IconUserCircle className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
@@ -162,7 +189,7 @@ export default function MobileAppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/dashboard/overview")}>
+                <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>
                   <IconLogout className="mr-2 h-4 w-4" />
                   Home
                 </DropdownMenuItem>
@@ -173,5 +200,5 @@ export default function MobileAppSidebar() {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  );
+  )
 }

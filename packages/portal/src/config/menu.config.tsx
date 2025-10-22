@@ -53,8 +53,8 @@ import {
   Users,
   Briefcase as WorkIcon,
   Zap,
-} from 'lucide-react';
-import { type MenuConfig } from './types';
+} from 'lucide-react'
+import type { MenuConfig } from './types'
 
 export const MENU_SIDEBAR: MenuConfig = [
   {
@@ -393,7 +393,7 @@ export const MENU_SIDEBAR: MenuConfig = [
   { title: 'Store - Services', icon: Codepen, disabled: true },
   { title: 'AI Promt', icon: Theater, disabled: true },
   { title: 'Invoice Generator', icon: ScrollText, disabled: true },
-];
+]
 
 export const MENU_SIDEBAR_CUSTOM: MenuConfig = [
   {
@@ -446,7 +446,7 @@ export const MENU_SIDEBAR_CUSTOM: MenuConfig = [
       { title: 'Order Receipt', path: '/store-client/order-receipt' },
     ],
   },
-];
+]
 
 export const MENU_SIDEBAR_COMPACT: MenuConfig = [
   {
@@ -742,7 +742,7 @@ export const MENU_SIDEBAR_COMPACT: MenuConfig = [
       { title: 'Error 500', path: '/error/500' },
     ],
   },
-];
+]
 
 export const MENU_MEGA: MenuConfig = [
   { title: 'Home', path: '/' },
@@ -1192,7 +1192,7 @@ export const MENU_MEGA: MenuConfig = [
       },
     ],
   },
-];
+]
 
 export const MENU_MEGA_MOBILE: MenuConfig = [
   { title: 'Home', path: '/' },
@@ -1631,7 +1631,7 @@ export const MENU_MEGA_MOBILE: MenuConfig = [
       },
     ],
   },
-];
+]
 
 export const MENU_HELP: MenuConfig = [
   {
@@ -1672,7 +1672,7 @@ export const MENU_HELP: MenuConfig = [
   },
   { separator: true },
   { title: 'Contact Us', icon: Share2, path: 'https://keenthemes.com/contact' },
-];
+]
 
 export const MENU_ROOT: MenuConfig = [
   {
@@ -1710,4 +1710,4 @@ export const MENU_ROOT: MenuConfig = [
     path: 'authentication/get-started',
     childrenIndex: 5,
   },
-];
+]

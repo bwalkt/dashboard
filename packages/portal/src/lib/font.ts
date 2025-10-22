@@ -1,1 +1,1 @@
-export const fontVariables = '';
+export const fontVariables = ''

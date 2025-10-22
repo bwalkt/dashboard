@@ -1,24 +1,28 @@
-import { useEffect, useState } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import ThemeProvider from "@/components/layout/ThemeToggle/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
-import { fontVariables } from "@/lib/font";
-import { safeLocalStorage } from "@/lib/platform";
-import { cn } from "@/lib/utils";
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import ThemeProvider from '@/components/layout/ThemeToggle/theme-provider'
+import { Toaster } from '@/components/ui/sonner'
+import { fontVariables } from '@/lib/font'
+import { safeLocalStorage } from '@/lib/platform'
+import { cn } from '@/lib/utils'
 
-// Simple mobile dashboard component
+/**
+ * Render a simplified mobile Salesforce dashboard that shows a welcome card, quick stats, and runtime debug information.
+ *
+ * @returns A JSX element containing the mobile dashboard UI
+ */
 function MobileDashboard() {
-  const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const [debugInfo, setDebugInfo] = useState<string[]>([])
 
   useEffect(() => {
-    const info: string[] = [];
-    info.push(`Window: ${typeof window}`);
-    info.push(`UserAgent: ${navigator?.userAgent || "N/A"}`);
-    info.push(`Location: ${window?.location?.href || "N/A"}`);
-    info.push(`Tauri: ${(window as any).__TAURI__ ? "Available" : "Not Available"}`);
-    info.push(`Timestamp: ${new Date().toISOString()}`);
-    setDebugInfo(info);
-  }, []);
+    const info: string[] = []
+    info.push(`Window: ${typeof window}`)
+    info.push(`UserAgent: ${navigator?.userAgent || 'N/A'}`)
+    info.push(`Location: ${window?.location?.href || 'N/A'}`)
+    info.push(`Tauri: ${(window as any).__TAURI__ ? 'Available' : 'Not Available'}`)
+    info.push(`Timestamp: ${new Date().toISOString()}`)
+    setDebugInfo(info)
+  }, [])
 
   return (
     <div className="p-6 max-w-md mx-auto">
@@ -53,34 +57,42 @@ function MobileDashboard() {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
+/**
+ * Initialize and render the mobile application root, providing theme support, routing, and a mount-time loading state.
+ *
+ * Reads the "active_theme" value from local storage and applies corresponding theme classes (including a "-scaled" variant)
+ * to the root container, wraps the app in a ThemeProvider and BrowserRouter, and renders the MobileDashboard for all routes.
+ *
+ * @returns The root JSX element for the mobile application, or a centered loading message until the component is mounted.
+ */
 export default function MobileApp() {
-  const [mounted, setMounted] = useState(false);
-  const activeThemeValue = safeLocalStorage.getItem("active_theme") || "";
-  const isScaled = activeThemeValue?.endsWith("-scaled");
+  const [mounted, setMounted] = useState(false)
+  const activeThemeValue = safeLocalStorage.getItem('active_theme') || ''
+  const isScaled = activeThemeValue?.endsWith('-scaled')
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    setMounted(true)
+  }, [])
 
   if (!mounted) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg">Loading mobile app...</div>
       </div>
-    );
+    )
   }
 
   return (
     <BrowserRouter>
       <div
         className={cn(
-          "bg-background min-h-screen font-sans antialiased",
-          activeThemeValue ? `theme-${activeThemeValue}` : "",
-          isScaled ? "theme-scaled" : "",
-          fontVariables
+          'bg-background min-h-screen font-sans antialiased',
+          activeThemeValue ? `theme-${activeThemeValue}` : '',
+          isScaled ? 'theme-scaled' : '',
+          fontVariables,
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange enableColorScheme>
@@ -91,5 +103,5 @@ export default function MobileApp() {
         </ThemeProvider>
       </div>
     </BrowserRouter>
-  );
+  )
 }

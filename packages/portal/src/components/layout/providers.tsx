@@ -1,12 +1,13 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import React from "react";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ActiveThemeProvider } from "../active-theme";
+import { useState } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import type React from 'react'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { ActiveThemeProvider } from '../active-theme'
 
 export default function Providers({ activeThemeValue, children }: { activeThemeValue: string; children: React.ReactNode }) {
   // Create a client inside the component to ensure proper initialization
-  const [queryClient] = React.useState(
+  const [queryClient] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
@@ -26,5 +27,5 @@ export default function Providers({ activeThemeValue, children }: { activeThemeV
       </AuthProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
-  );
+  )
 }

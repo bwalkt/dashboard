@@ -1,4 +1,4 @@
-import { Settings } from './types';
+import type { Settings } from './types'
 
 export const APP_SETTINGS: Settings = {
   layout: '',
@@ -25,4 +25,4 @@ export const APP_SETTINGS: Settings = {
       headerStickyOffset: 200,
     },
   },
-};
+}
