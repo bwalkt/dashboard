@@ -69,7 +69,7 @@ func TestJWTToken(t *testing.T) {
 	}
 
 	// Test generating JWT
-	token, err := authConfig.generateJWT("user123", "testuser")
+	token, err := authConfig.generateJWT("user123", "testuser", "test@example.com")
 	if err != nil {
 		t.Fatalf("Failed to generate JWT: %v", err)
 	}

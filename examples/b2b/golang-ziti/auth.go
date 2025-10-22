@@ -30,9 +30,10 @@ type GitHubUser struct {
 
 // AuthConfig holds OAuth and JWT configuration
 type AuthConfig struct {
-	OAuthConfig *oauth2.Config
-	Store       *sessions.CookieStore
-	JWTSecret   string
+	OAuthConfig   *oauth2.Config
+	Store         *sessions.CookieStore
+	JWTSecret     string
+	SecureCookies bool
 }
 
 // Claims represents JWT token claims for access tokens
@@ -66,6 +67,7 @@ func NewAuthConfig() *AuthConfig {
 	clientSecret := os.Getenv("GITHUB_CLIENT_SECRET")
 	redirectURL := os.Getenv("GITHUB_REDIRECT_URL")
 	jwtSecret := os.Getenv("JWT_SECRET")
+	secureCookies := os.Getenv("SECURE_COOKIES") != "false" // Default to true for production safety
 
 	if clientID == "" || clientSecret == "" {
 		log.Fatal("GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables are required")
@@ -90,9 +92,10 @@ func NewAuthConfig() *AuthConfig {
 	store := sessions.NewCookieStore([]byte(jwtSecret))
 
 	return &AuthConfig{
-		OAuthConfig: config,
-		Store:       store,
-		JWTSecret:   jwtSecret,
+		OAuthConfig:   config,
+		Store:         store,
+		JWTSecret:     jwtSecret,
+		SecureCookies: secureCookies,
 	}
 }
 
@@ -223,18 +226,19 @@ func (ac *AuthConfig) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
-func (ac *AuthConfig) generateJWT(userID, username string) (string, error) {
+func (ac *AuthConfig) generateJWT(userID, username, email string) (string, error) {
 	claims := Claims{
 		UserID:   userID,
 		Username: username,
+		Email:    email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)), // 1 hour
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	return token.SignedString([]byte(ac.JWTSecret))
 }
 
@@ -398,7 +402,7 @@ func (ac *AuthConfig) SetJWTCookies(w http.ResponseWriter, accessToken, refreshT
 		Name:     "accessToken",
 		Value:    accessToken,
 		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
+		Secure:   ac.SecureCookies,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 		MaxAge:   3600, // 1 hour
@@ -409,7 +413,7 @@ func (ac *AuthConfig) SetJWTCookies(w http.ResponseWriter, accessToken, refreshT
 		Name:     "refreshToken",
 		Value:    refreshToken,
 		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
+		Secure:   ac.SecureCookies,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 		MaxAge:   3600 * 24 * 30, // 30 days
