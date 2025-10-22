@@ -200,7 +200,6 @@ func (ac *AuthConfig) CallbackHandler(db *Database) http.HandlerFunc {
 		session.Values["user_id"] = user.ID
 		session.Values["username"] = user.Username
 		session.Values["email"] = user.Email
-		session.Values["jwt_token"] = accessToken
 		session.Save(r, w)
 
 		// Redirect to dashboard or home page

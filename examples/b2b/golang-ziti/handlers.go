@@ -3,9 +3,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 )
+
+// Context key for storing user in request context
+type contextKey string
+
+const userContextKey contextKey = "user"
 
 // Middleware holds authentication configuration and database connection
 type Middleware struct {
@@ -21,57 +28,66 @@ func NewMiddleware(authConfig *AuthConfig, db *Database) *Middleware {
 	}
 }
 
-// AuthMiddleware validates JWT tokens and sessions, adding user info to request headers
+// extractAndVerifyUser extracts and verifies user authentication from request
+// First checks Authorization header, then cookies, verifies the token and returns the user from DB
+// Falls back to session lookup when no token is present
+// Returns nil user and error when no valid user is found
+func (m *Middleware) extractAndVerifyUser(r *http.Request) (*User, error) {
+	// Check for JWT token in Authorization header
+	authHeader := r.Header.Get("Authorization")
+	tokenString := m.authConfig.ExtractTokenFromHeader(authHeader)
+
+	// If no token in header, try cookies
+	if tokenString == "" {
+		cookies := make(map[string]string)
+		for _, cookie := range r.Cookies() {
+			cookies[cookie.Name] = cookie.Value
+		}
+		tokenString = m.authConfig.ExtractTokenFromCookies(cookies)
+	}
+
+	// If we have a token, verify it
+	if tokenString != "" {
+		payload, err := m.authConfig.VerifyAccessToken(tokenString)
+		if err == nil {
+			// Token is valid, get user from database
+			user, err := m.db.GetUserByID(payload.UserID)
+			if err == nil {
+				return user, nil
+			}
+		}
+	}
+
+	// Fallback to session-based auth
+	session, _ := m.authConfig.Store.Get(r, "auth-session")
+	userID, ok := session.Values["user_id"].(string)
+	if !ok {
+		return nil, http.ErrNoCookie // Use a standard error to indicate no valid auth
+	}
+
+	// Verify user exists in database
+	user, err := m.db.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+// AuthMiddleware validates JWT tokens and sessions, adding user info to request context
 func (m *Middleware) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check for JWT token in Authorization header
-		authHeader := r.Header.Get("Authorization")
-		tokenString := m.authConfig.ExtractTokenFromHeader(authHeader)
-
-		// If no token in header, try cookies
-		if tokenString == "" {
-			cookies := make(map[string]string)
-			for _, cookie := range r.Cookies() {
-				cookies[cookie.Name] = cookie.Value
-			}
-			tokenString = m.authConfig.ExtractTokenFromCookies(cookies)
-		}
-
-		// If we have a token, verify it
-		if tokenString != "" {
-			payload, err := m.authConfig.VerifyAccessToken(tokenString)
-			if err == nil {
-				// Token is valid, add user info to request context
-				user, err := m.db.GetUserByID(payload.UserID)
-				if err == nil {
-					r.Header.Set("X-User-ID", user.ID)
-					r.Header.Set("X-Username", user.Username)
-					r.Header.Set("X-User-Email", user.Email)
-					next.ServeHTTP(w, r)
-					return
-				}
-			}
-		}
-
-		// Fallback to session-based auth
-		session, _ := m.authConfig.Store.Get(r, "auth-session")
-		userID, ok := session.Values["user_id"].(string)
-		if !ok {
+		// Extract and verify user authentication
+		user, err := m.extractAndVerifyUser(r)
+		if err != nil {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		// Verify user exists in database
-		user, err := m.db.GetUserByID(userID)
-		if err != nil {
-			http.Error(w, "User not found", http.StatusUnauthorized)
-			return
-		}
+		// Attach user to request context
+		ctx := context.WithValue(r.Context(), userContextKey, user)
+		r = r.WithContext(ctx)
 
-		// Add user info to request context
-		r.Header.Set("X-User-ID", user.ID)
-		r.Header.Set("X-Username", user.Username)
-		r.Header.Set("X-User-Email", user.Email)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -79,40 +95,12 @@ func (m *Middleware) AuthMiddleware(next http.Handler) http.Handler {
 // OptionalAuthMiddleware validates authentication but doesn't require it (for public routes)
 func (m *Middleware) OptionalAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check for JWT token in Authorization header
-		authHeader := r.Header.Get("Authorization")
-		tokenString := m.authConfig.ExtractTokenFromHeader(authHeader)
-
-		// If no token in header, try cookies
-		if tokenString == "" {
-			cookies := make(map[string]string)
-			for _, cookie := range r.Cookies() {
-				cookies[cookie.Name] = cookie.Value
-			}
-			tokenString = m.authConfig.ExtractTokenFromCookies(cookies)
-		}
-
-		// If we have a token, verify it
-		if tokenString != "" {
-			payload, err := m.authConfig.VerifyAccessToken(tokenString)
-			if err == nil {
-				user, err := m.db.GetUserByID(payload.UserID)
-				if err == nil {
-					r.Header.Set("X-User-ID", user.ID)
-					r.Header.Set("X-Username", user.Username)
-					r.Header.Set("X-User-Email", user.Email)
-				}
-			}
-		} else {
-			// Check for session
-			session, _ := m.authConfig.Store.Get(r, "auth-session")
-			if userID, ok := session.Values["user_id"].(string); ok {
-				if user, err := m.db.GetUserByID(userID); err == nil {
-					r.Header.Set("X-User-ID", user.ID)
-					r.Header.Set("X-Username", user.Username)
-					r.Header.Set("X-User-Email", user.Email)
-				}
-			}
+		// Extract and verify user authentication (optional)
+		user, err := m.extractAndVerifyUser(r)
+		if err == nil && user != nil {
+			// Attach user to request context if found
+			ctx := context.WithValue(r.Context(), userContextKey, user)
+			r = r.WithContext(ctx)
 		}
 
 		next.ServeHTTP(w, r)
@@ -134,7 +122,20 @@ func (m *Middleware) JSONResponse(w http.ResponseWriter, success bool, message s
 		Message: message,
 		Data:    data,
 	}
-	json.NewEncoder(w).Encode(response)
+
+	// Check for JSON encoding errors
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("JSON encoding error: %v", err)
+
+		// Try to write a minimal error response
+		w.WriteHeader(http.StatusInternalServerError)
+		if _, writeErr := w.Write([]byte(`{"error":"Internal Server Error","message":"Failed to encode response"}`)); writeErr != nil {
+			log.Printf("Failed to write error response: %v", writeErr)
+			// Last resort: try plain text
+			w.Header().Set("Content-Type", "text/plain")
+			w.Write([]byte("Internal Server Error"))
+		}
+	}
 }
 
 // SetupRoutes configures all HTTP routes and returns the main router
@@ -144,9 +145,11 @@ func (m *Middleware) SetupRoutes() http.Handler {
 	// Register auth routes (matching vanilla server API)
 	mux.HandleFunc("/auth/login", m.AuthLoginHandler)
 	mux.HandleFunc("/auth/callback", m.authConfig.CallbackHandler(m.db))
-	mux.HandleFunc("/auth/me", m.AuthMeHandler)
-	mux.HandleFunc("/auth/refresh", m.AuthRefreshHandler)
-	mux.HandleFunc("/auth/logout", m.AuthLogoutHandler)
+
+	// Protected auth routes
+	mux.Handle("/auth/me", m.AuthMiddleware(http.HandlerFunc(m.AuthMeHandler)))
+	mux.Handle("/auth/refresh", m.AuthMiddleware(http.HandlerFunc(m.AuthRefreshHandler)))
+	mux.Handle("/auth/logout", m.AuthMiddleware(http.HandlerFunc(m.AuthLogoutHandler)))
 
 	// Legacy routes for backward compatibility
 	mux.HandleFunc("/login", m.authConfig.LoginHandler)
@@ -157,8 +160,9 @@ func (m *Middleware) SetupRoutes() http.Handler {
 		w.Write([]byte("Test route works!"))
 	})
 
-	// Dashboard page (protected)
-	mux.HandleFunc("/dashboard", m.DashboardHandler)
+	// Protected routes
+	mux.Handle("/dashboard", m.AuthMiddleware(http.HandlerFunc(m.DashboardHandler)))
+	mux.Handle("/profile", m.AuthMiddleware(http.HandlerFunc(m.ProfileHandler)))
 
 	// Home page (catch-all for unmatched routes)
 	mux.HandleFunc("/", m.HomeHandler)
@@ -174,9 +178,8 @@ func (m *Middleware) HomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user is already authenticated
-	userID := r.Header.Get("X-User-ID")
-	if userID != "" {
+	// Check if user is already authenticated from context
+	if user := r.Context().Value(userContextKey); user != nil {
 		// User is logged in, redirect to dashboard
 		http.Redirect(w, r, "/dashboard", http.StatusTemporaryRedirect)
 		return
@@ -206,9 +209,8 @@ func (m *Middleware) HomeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *Middleware) ProfileHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Header.Get("X-User-ID")
-	user, err := m.db.GetUserByID(userID)
-	if err != nil {
+	user := r.Context().Value(userContextKey).(*User)
+	if user == nil {
 		m.JSONResponse(w, false, "User not found", nil)
 		return
 	}
@@ -218,53 +220,20 @@ func (m *Middleware) ProfileHandler(w http.ResponseWriter, r *http.Request) {
 
 // DashboardHandler serves the protected dashboard page with user authentication
 func (m *Middleware) DashboardHandler(w http.ResponseWriter, r *http.Request) {
-	// Check for authentication from middleware headers first
-	username := r.Header.Get("X-Username")
-	userID := r.Header.Get("X-User-ID")
-
-	// If no user info in headers, try to get from session or JWT
-	if username == "" || userID == "" {
-		// Try JWT token from header or cookies
-		authHeader := r.Header.Get("Authorization")
-		tokenString := m.authConfig.ExtractTokenFromHeader(authHeader)
-
-		// If no token in header, try cookies
-		if tokenString == "" {
-			cookies := make(map[string]string)
-			for _, cookie := range r.Cookies() {
-				cookies[cookie.Name] = cookie.Value
-			}
-			tokenString = m.authConfig.ExtractTokenFromCookies(cookies)
-		}
-
-		// If we have a token, verify it
-		if tokenString != "" {
-			payload, err := m.authConfig.VerifyAccessToken(tokenString)
-			if err == nil {
-				user, err := m.db.GetUserByID(payload.UserID)
-				if err == nil {
-					username = user.Username
-					userID = user.ID
-				}
-			}
-		}
-
-		// If still no user info, try session
-		if username == "" || userID == "" {
-			session, _ := m.authConfig.Store.Get(r, "auth-session")
-			if sessionUserID, ok := session.Values["user_id"].(string); ok {
-				if user, err := m.db.GetUserByID(sessionUserID); err == nil {
-					username = user.Username
-					userID = user.ID
-				}
-			}
-		}
+	// Check for authentication from context first
+	var user *User
+	if contextUser := r.Context().Value(userContextKey); contextUser != nil {
+		user = contextUser.(*User)
 	}
 
-	// If still no user info, redirect to login
-	if username == "" || userID == "" {
-		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
-		return
+	// If no user in context, try to extract and verify user
+	if user == nil {
+		var err error
+		user, err = m.extractAndVerifyUser(r)
+		if err != nil || user == nil {
+			http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+			return
+		}
 	}
 
 	html := `
@@ -287,7 +256,7 @@ func (m *Middleware) DashboardHandler(w http.ResponseWriter, r *http.Request) {
     </div>
     
     <div class="card">
-        <h2>Welcome, ` + username + `!</h2>
+        <h2>Welcome, ` + user.Username + `!</h2>
         <p>You are successfully logged in with GitHub OAuth.</p>
     </div>
     
@@ -308,8 +277,15 @@ func (m *Middleware) DashboardHandler(w http.ResponseWriter, r *http.Request) {
 
 func (m *Middleware) GreetHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
-	userID := r.Header.Get("X-User-ID")
-	username := r.Header.Get("X-Username")
+
+	var username string
+	var userID string
+
+	if user := r.Context().Value(userContextKey); user != nil {
+		userObj := user.(*User)
+		username = userObj.Username
+		userID = userObj.ID
+	}
 
 	if name == "" {
 		name = "Anonymous"
@@ -340,7 +316,11 @@ func (m *Middleware) AuthLoginHandler(w http.ResponseWriter, r *http.Request) {
 	// Store state in session
 	session, _ := m.authConfig.Store.Get(r, "auth-session")
 	session.Values["state"] = state
-	session.Save(r, w)
+	if err := session.Save(r, w); err != nil {
+		log.Printf("Failed to save session state: %v", err)
+		http.Error(w, "Failed to save session", http.StatusInternalServerError)
+		return
+	}
 
 	// Generate authorization URL
 	url := m.authConfig.OAuthConfig.AuthCodeURL(state)
