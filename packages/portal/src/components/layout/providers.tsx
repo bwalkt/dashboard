@@ -4,24 +4,27 @@ import React from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ActiveThemeProvider } from "../active-theme";
 
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
 export default function Providers({ activeThemeValue, children }: { activeThemeValue: string; children: React.ReactNode }) {
+  // Create a client inside the component to ensure proper initialization
+  const [queryClient] = React.useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 5 * 60 * 1000, // 5 minutes
+            retry: 1,
+            refetchOnWindowFocus: false,
+          },
+        },
+      })
+  );
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ActiveThemeProvider initialTheme={activeThemeValue}>{children}</ActiveThemeProvider>
-        <ReactQueryDevtools initialIsOpen={false} />
       </AuthProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

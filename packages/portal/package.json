@@ -1,5 +1,5 @@
 {
-  "name": "@pzero/admin-portal",
+  "name": "@pzero/portal",
   "version": "1.0.0",
   "type": "module",
   "private": true,
@@ -24,6 +24,7 @@
     "@dnd-kit/utilities": "catalog:",
     "@faker-js/faker": "catalog:",
     "@hookform/resolvers": "catalog:",
+    "@pzero/shared": "../../../../packages/shared",
     "@radix-ui/react-accordion": "catalog:",
     "@radix-ui/react-alert-dialog": "catalog:",
     "@radix-ui/react-aspect-ratio": "catalog:",
@@ -90,11 +91,10 @@
     "uuid": "catalog:",
     "vaul": "catalog:",
     "zod": "catalog:",
-    "zustand": "catalog:",
-    "@pzero/shared": "../../../../packages/shared"
+    "zustand": "catalog:"
   },
   "devDependencies": {
-    "@tanstack/react-query-devtools": "5.90.2",
+    "@tanstack/react-query-devtools": "catalog:",
     "@tauri-apps/cli": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
@@ -102,7 +102,7 @@
     "@types/uuid": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "tw-animate-css": "catalog:",
-    "vite": "catalog:"
+    "vite": "^6.4.1"
   },
   "overrides": {
     "@types/react": "catalog:",
