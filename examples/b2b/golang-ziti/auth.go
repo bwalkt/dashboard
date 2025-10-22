@@ -213,12 +213,12 @@ func (ac *AuthConfig) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Clear session
 	session, _ := ac.Store.Get(r, "auth-session")
-	session.Values["user_id"] = nil
-	session.Values["username"] = nil
-	session.Values["email"] = nil
-	session.Values["jwt_token"] = nil
 	session.Options.MaxAge = -1
-	session.Save(r, w)
+	if err := session.Save(r, w); err != nil {
+		log.Printf("Failed to save invalidated session: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
