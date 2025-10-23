@@ -1,6 +1,8 @@
 import { SERVER_PORT } from '@env'
 import type { Endpoint } from '@pzero/shared/pzero'
 import { endpointStatuses } from '@pzero/shared/pzero'
+import { Buffer } from 'buffer'
+import { createHash } from 'react-native-quick-crypto'
 import TcpSocket from 'react-native-tcp-socket'
 import { EndpointsStore } from '../stores/endpoints'
 import { getLocalIPAddress } from '../utils/network'
@@ -40,6 +42,7 @@ interface WebSocketFrame {
   opcode: number
   mask: boolean
   payload: Buffer
+  bytesConsumed: number
 }
 
 class HTTPServer {
@@ -94,9 +97,12 @@ class HTTPServer {
                 }
               }
             } else {
-              // Handle WebSocket frames
-              this.handleWebSocketFrame(socket, buffer)
-              buffer = Buffer.alloc(0)
+              // Parse as many complete frames as available
+              while (buffer.length > 0) {
+                const bytesConsumed = this.handleWebSocketFrame(socket, buffer)
+                if (bytesConsumed === 0) break // Incomplete frame, wait for more data
+                buffer = buffer.slice(bytesConsumed)
+              }
             }
           })
 
@@ -198,10 +204,8 @@ class HTTPServer {
       return
     }
 
-    // Generate accept key
-    const crypto = require('crypto')
-    const acceptKey = crypto
-      .createHash('sha1')
+    // Generate accept key using RN-compatible crypto
+    const acceptKey = createHash('sha1')
       .update(key + WEBSOCKET_MAGIC_STRING)
       .digest('base64')
 
@@ -220,12 +224,13 @@ class HTTPServer {
 
   /**
    * Handle WebSocket frame
+   * @returns Number of bytes consumed from buffer
    */
-  private handleWebSocketFrame(socket: any, buffer: Buffer): void {
-    if (buffer.length < 2) return
+  private handleWebSocketFrame(socket: any, buffer: Buffer): number {
+    if (buffer.length < 2) return 0
 
     const frame = this.parseWebSocketFrame(buffer)
-    if (!frame) return
+    if (!frame) return 0
 
     // Handle different opcodes
     switch (frame.opcode) {
@@ -241,10 +246,13 @@ class HTTPServer {
         this.sendWebSocketPong(socket, frame.payload)
         break
     }
+
+    return frame.bytesConsumed
   }
 
   /**
    * Parse WebSocket frame
+   * @returns WebSocketFrame with bytesConsumed, or null if incomplete
    */
   private parseWebSocketFrame(buffer: Buffer): WebSocketFrame | null {
     if (buffer.length < 2) return null
@@ -277,13 +285,15 @@ class HTTPServer {
         payload[i] = buffer[offset + i] ^ maskingKey[i % 4]
       }
 
-      return { fin, opcode, mask, payload }
+      const bytesConsumed = offset + payloadLength
+      return { fin, opcode, mask, payload, bytesConsumed }
     }
 
     if (buffer.length < offset + payloadLength) return null
     const payload = buffer.slice(offset, offset + payloadLength)
+    const bytesConsumed = offset + payloadLength
 
-    return { fin, opcode, mask, payload }
+    return { fin, opcode, mask, payload, bytesConsumed }
   }
 
   /**
@@ -291,24 +301,50 @@ class HTTPServer {
    */
   private sendWebSocketFrame(socket: any, message: string): void {
     const payload = Buffer.from(message, 'utf8')
-    const frame = Buffer.alloc(2 + payload.length)
+    const payloadLength = payload.length
+    let header: Buffer
 
-    frame[0] = 0x81 // FIN + text frame
-    frame[1] = payload.length
+    if (payloadLength <= 125) {
+      header = Buffer.from([0x81, payloadLength])
+    } else if (payloadLength <= 0xffff) {
+      header = Buffer.alloc(4)
+      header[0] = 0x81
+      header[1] = 126
+      header.writeUInt16BE(payloadLength, 2)
+    } else {
+      header = Buffer.alloc(10)
+      header[0] = 0x81
+      header[1] = 127
+      header.writeUInt32BE(0, 2)              // High 32 bits (zero for payloads < 4GB)
+      header.writeUInt32BE(payloadLength, 6)  // Low 32 bits
+    }
 
-    payload.copy(frame, 2)
-    socket.write(frame)
+    socket.write(Buffer.concat([header, payload]))
   }
 
   /**
    * Send WebSocket pong
    */
   private sendWebSocketPong(socket: any, payload: Buffer): void {
-    const frame = Buffer.alloc(2 + payload.length)
-    frame[0] = 0x8a // FIN + pong frame
-    frame[1] = payload.length
-    payload.copy(frame, 2)
-    socket.write(frame)
+    const payloadLength = payload.length
+    let header: Buffer
+
+    if (payloadLength <= 125) {
+      header = Buffer.from([0x8a, payloadLength])
+    } else if (payloadLength <= 0xffff) {
+      header = Buffer.alloc(4)
+      header[0] = 0x8a
+      header[1] = 126
+      header.writeUInt16BE(payloadLength, 2)
+    } else {
+      header = Buffer.alloc(10)
+      header[0] = 0x8a
+      header[1] = 127
+      header.writeUInt32BE(0, 2)              // High 32 bits (zero for payloads < 4GB)
+      header.writeUInt32BE(payloadLength, 6)  // Low 32 bits
+    }
+
+    socket.write(Buffer.concat([header, payload]))
   }
 
   /**
@@ -416,9 +452,18 @@ let serverInstance: HTTPServer | null = null
  * Start server if there are verified endpoints
  */
 export async function startServer(): Promise<void> {
-  if (!serverInstance) {
-    serverInstance = new HTTPServer()
-    await serverInstance.start()
+  
+  try {
+    if (!serverInstance) {
+      serverInstance = new HTTPServer()
+    }
+    if (serverInstance) {
+      await serverInstance.start()
+    }
+  } catch (error) {
+    console.error('Failed to start server:', error)
+    serverInstance = null
+    throw error
   }
 }
 
@@ -426,8 +471,14 @@ export async function startServer(): Promise<void> {
  * Stop the server
  */
 export async function stopServer(): Promise<void> {
-  if (serverInstance) {
-    await serverInstance.stop()
+  try {
+    if (serverInstance) {
+      await serverInstance.stop()
+    }
+  } catch (error) {
+    console.error('Failed to stop server:', error)
+    throw error
+  } finally {
     serverInstance = null
   }
 }

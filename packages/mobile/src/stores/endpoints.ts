@@ -18,7 +18,7 @@ export class EndpointsStoreClass extends ZStorage {
       this.maybeToggleServer()
     }
   }
-  addEndpoint(endpoint: Endpoint) {
+  async addEndpoint(endpoint: Endpoint) {
     const id = uuid()
     if (this.endpoints.has(id)) {
       throw new Error(`Endpoint with id ${id} already exists`)
@@ -32,13 +32,11 @@ export class EndpointsStoreClass extends ZStorage {
     }
     this.endpoints.set(id, newEndpoint)
     this.setItem({ key: id, data: newEndpoint })
-    if ((newEndpoint.status === endpointStatuses.verified || newEndpoint.status === endpointStatuses.active) && (!newEndpoint.dateRevoked) && (!this.isServerRunning)) {
-      this.maybeToggleServer()
-      console.log(`Endpoint ${id} added with verified status ${newEndpoint.status}`)
-    }
+    await this.maybeToggleServer()
+    console.log(`Endpoint ${id} added with verified status ${newEndpoint.status}`)
     return newEndpoint
   }
-  updateEndpoint(id: string, updates: Partial<Endpoint>) {
+  async updateEndpoint(id: string, updates: Partial<Endpoint>) {
     const endpoint = this.endpoints.get(id)
     if (!endpoint) {
       throw new Error(`Endpoint with id ${id} does not exist`)
@@ -50,13 +48,14 @@ export class EndpointsStoreClass extends ZStorage {
     if (!status) {
       console.log('No Op - no change')
     }
-    this.setItem({ key: id, data: JSON.parse(data) })
-    this.endpoints.set(id, data)
-    if ((endpoint.status !== data.status)) {
-      this.maybeToggleServer()
-      console.log(`Endpoint ${id} verified status changed to ${data.status}`)
+    const parsedEndpoint: Endpoint = typeof data === 'string' ? JSON.parse(data) : data
+    this.setItem({ key: id, data: parsedEndpoint })
+    this.endpoints.set(id, parsedEndpoint)
+    if ((endpoint.status !== parsedEndpoint.status)) {
+      await this.maybeToggleServer()
+      console.log(`Endpoint ${id} verified status changed to ${parsedEndpoint.status}`)
     }
-    return data
+    return parsedEndpoint
   }
   getEndpoint(id: string) {
     return this.endpoints.get(id)
@@ -67,11 +66,17 @@ export class EndpointsStoreClass extends ZStorage {
   getActiveEndpoints() {
     return Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && endpoint.status === endpointStatuses.active)
   }
-  maybeToggleServer() {
-    const activeEndpoints = Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && (endpoint.status === endpointStatuses.active || endpoint.status === endpointStatuses.verified))
+  async maybeToggleServer() {
+    const activeEndpoints = this.getActiveEndpoints()
     const hasActiveEndpoints = activeEndpoints.length > 0
     if (hasActiveEndpoints) {
-      startServer()
+       try {
+         await startServer()
+         this.isServerRunning = true
+       } catch (error) {
+         console.error('Failed to start server:', error)
+         this.isServerRunning = false
+       }
     } else {
       stopServer()
     }
