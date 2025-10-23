@@ -16,7 +16,7 @@ describe('genGrid', () => {
     })
 
     it('should generate a grid with numbers within expected range', () => {
-        vi.spyOn(Math, 'random').mockReturnValue(0.5)
+        const spy = vi.spyOn(Math, 'random').mockReturnValue(0.5)
         const grid = genGrid(3)
         // @ts-ignore
         grid.forEach((row: number[]) => {
@@ -25,6 +25,7 @@ describe('genGrid', () => {
                 expect(cell).toBeGreaterThan(0)
             })
         })
+        spy.mockRestore()
     })
 })
 
@@ -62,7 +63,7 @@ describe('expandGrid', () => {
 
 describe('genRandomMathFunction', () => {
     it('should generate a random math function with valid structure', () => {
-        const result = genRandomMathFunction(10, 10)
+        const result = genRandomMathFunction(10)
 
         expect(result).toHaveProperty('functionName')
         expect(result).toHaveProperty('expression')

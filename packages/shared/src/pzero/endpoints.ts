@@ -43,7 +43,7 @@ export type Endpoint = {
   address?: string | IPAddress | PhysicalAddress
   headers?: URLHeader[]
   methods?: Method[]
-  variables?: Record<string, any>
+  variables?: Record<string, unknown>
   dateAdded: number
   dateUpdated: number
   dateRevoked?: number

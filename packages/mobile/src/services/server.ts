@@ -415,17 +415,10 @@ let serverInstance: HTTPServer | null = null
 /**
  * Start server if there are verified endpoints
  */
-export async function startServerIfNeeded(): Promise<void> {
-  const verifiedEndpoints = EndpointsStore.getAllEndpoints().filter(
-    (e) => e.status === endpointStatuses.verified
-  )
-
-  if (verifiedEndpoints.length > 0 && !serverInstance) {
+export async function startServer(): Promise<void> {
+  if (!serverInstance) {
     serverInstance = new HTTPServer()
     await serverInstance.start()
-  } else if (verifiedEndpoints.length === 0 && serverInstance) {
-    await serverInstance.stop()
-    serverInstance = null
   }
 }
 

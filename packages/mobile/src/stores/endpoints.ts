@@ -1,6 +1,6 @@
 import { type Endpoint, type EndpointStatus, endpointStatuses } from '@pzero/shared/pzero'
 import { uuid } from '@pzero/shared/uuid'
-import { HTTPServer } from '../services/server'
+import { startServer, stopServer } from '../services/server'
 import { HistoryStore, Keys } from './history'
 import { ZStorage } from './store'
 
@@ -8,7 +8,6 @@ const STORE = 'EndpointsStore'
 
 export class EndpointsStoreClass extends ZStorage {
   endpoints: Map<string, Endpoint> = new Map()
-  serverInstance: HTTPServer | null = null
   isServerRunning = false
 
   constructor() {
@@ -71,17 +70,10 @@ export class EndpointsStoreClass extends ZStorage {
   maybeToggleServer() {
     const activeEndpoints = Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && (endpoint.status === endpointStatuses.active || endpoint.status === endpointStatuses.verified))
     const hasActiveEndpoints = activeEndpoints.length > 0
-    if (hasActiveEndpoints && !this.serverInstance) {
-      this.serverInstance = new HTTPServer()
-    }
-    if (hasActiveEndpoints && !this.isServerRunning && this.serverInstance) {
-      this.serverInstance.start()
-      this.isServerRunning = true
-    }
-    if (!hasActiveEndpoints && this.serverInstance) {
-      this.serverInstance.stop()
-      this.serverInstance = null
-      this.isServerRunning = false
+    if (hasActiveEndpoints) {
+      startServer()
+    } else {
+      stopServer()
     }
   }
   getRevokedEndpoints() {
@@ -90,6 +82,7 @@ export class EndpointsStoreClass extends ZStorage {
   removeEndpoint(id: string) {
     this.endpoints.delete(id)
     this.removeItem(id)
+    this.maybeToggleServer()
   }
   getEndpointStatus(id: string): EndpointStatus | null {
     const endpoint = this.endpoints.get(id)

@@ -1,8 +1,8 @@
 import { evaluate as mathjsEvaluate, randomInt } from 'mathjs'
 
 export function genGrid(size: number = 10) {
-  const min = Math.ceil(Math.random() * 100)
-  const max = Math.ceil(min + Math.random() * 1000)
+  const min = Math.ceil(Math.random() * 100) || 1
+  const max = Math.ceil((min + Math.random()) * 1000)
   const grid = randomInt([size, size], min, max)
   return grid;
 }
@@ -16,7 +16,7 @@ export function expandGrid(grid: number[][], newSize: number) {
     // Expand rows
     for (let i = size; i < newSize; i++) {
         // @ts-ignore
-        grid[i] = addGrid[i];
+        grid[i] = addGrid[i - size];
     }
 
     return grid;
