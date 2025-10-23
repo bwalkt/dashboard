@@ -2,7 +2,7 @@ import { SERVER_PORT } from '@env'
 import type { Endpoint } from '@pzero/shared/pzero'
 import { endpointStatuses } from '@pzero/shared/pzero'
 import { Buffer } from 'buffer'
-import { createHash } from 'react-native-quick-crypto'
+import createHash from 'react-native-quick-crypto'
 import TcpSocket from 'react-native-tcp-socket'
 import { EndpointsStore } from '../stores/endpoints'
 import { getLocalIPAddress } from '../utils/network'
@@ -84,13 +84,13 @@ class HTTPServer {
               // Check if we have a complete HTTP request
               const headerEnd = buffer.indexOf('\r\n\r\n')
               if (headerEnd !== -1) {
-                const request = this.parseHTTPRequest(buffer.slice(0, headerEnd + 4))
+                const request = this.parseHTTPRequest(Buffer.from(buffer.subarray(0, headerEnd + 4)))
 
                 // Check for WebSocket upgrade
                 if (this.isWebSocketUpgrade(request)) {
                   isWebSocket = true
                   this.handleWebSocketUpgrade(socket, request)
-                  buffer = buffer.slice(headerEnd + 4)
+                  buffer = Buffer.from(buffer.subarray(headerEnd + 4))
                 } else {
                   this.handleHTTPRequest(socket, request)
                   buffer = Buffer.alloc(0)
@@ -101,7 +101,7 @@ class HTTPServer {
               while (buffer.length > 0) {
                 const bytesConsumed = this.handleWebSocketFrame(socket, buffer)
                 if (bytesConsumed === 0) break // Incomplete frame, wait for more data
-                buffer = buffer.slice(bytesConsumed)
+                buffer = Buffer.from(buffer.subarray(bytesConsumed))
               }
             }
           })
@@ -277,7 +277,7 @@ class HTTPServer {
 
     if (mask) {
       if (buffer.length < offset + 4 + payloadLength) return null
-      const maskingKey = buffer.slice(offset, offset + 4)
+      const maskingKey = Buffer.from(buffer.subarray(offset, offset + 4))
       offset += 4
 
       const payload = Buffer.alloc(payloadLength)
@@ -290,7 +290,7 @@ class HTTPServer {
     }
 
     if (buffer.length < offset + payloadLength) return null
-    const payload = buffer.slice(offset, offset + payloadLength)
+    const payload = Buffer.from(buffer.subarray(offset, offset + payloadLength))
     const bytesConsumed = offset + payloadLength
 
     return { fin, opcode, mask, payload, bytesConsumed }
