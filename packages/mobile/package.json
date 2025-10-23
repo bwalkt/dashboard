@@ -43,6 +43,7 @@
     "react-native-splash-screen": "catalog:",
     "react-native-svg": "catalog:",
     "react-native-swipe-list-view": "catalog:",
+    "react-native-tcp-socket": "^6.3.0",
     "react-native-ui-lib": "catalog:",
     "react-native-vision-camera": "catalog:",
     "react-native-worklets": "catalog:",

@@ -41,6 +41,10 @@
       "import": "./dist/types/index.js",
       "require": "./dist/types/index.js"
     },
+    "./grid": {
+      "import": "./dist/grid/index.js",
+      "types": "./dist/grid/index.d.ts"
+    },
     "./actor": {
       "import": "./dist/actor/index.js",
       "types": "./dist/actor/index.d.ts"

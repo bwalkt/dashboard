@@ -1,5 +1,6 @@
 import { type Endpoint, type EndpointStatus, endpointStatuses } from '@pzero/shared/pzero'
 import { uuid } from '@pzero/shared/uuid'
+import { HTTPServer } from '../services/server'
 import { HistoryStore, Keys } from './history'
 import { ZStorage } from './store'
 
@@ -7,10 +8,15 @@ const STORE = 'EndpointsStore'
 
 export class EndpointsStoreClass extends ZStorage {
   endpoints: Map<string, Endpoint> = new Map()
-
+  serverInstance: HTTPServer | null = null
   constructor() {
     super(STORE)
     const storedEndpoints = this.getAll()
+    const activeEndpoint = Array.from(Object.values(storedEndpoints)).find((endpoint => (endpoint.status === endpointStatuses.active || endpoint.status === endpointStatuses.verified) && !endpoint.dateRevoked))
+    if (activeEndpoint) {
+      this.serverInstance = new HTTPServer()
+      this.serverInstance.start()
+    }
     if (storedEndpoints !== undefined && storedEndpoints !== null) {
       this.endpoints = new Map(Object.entries(storedEndpoints))
     }
@@ -45,6 +51,10 @@ export class EndpointsStoreClass extends ZStorage {
     }
     this.setItem({ key: id, data: JSON.parse(data) })
     this.endpoints.set(id, data)
+    if ((endpoint.status !== data.status) && (data.status === endpointStatuses.verified || data.status === endpointStatuses.active) && (!this.isServerRunning)) {
+
+      console.log(`Endpoint ${id} verified status changed to ${data.status}`)
+    }
     return data
   }
   getEndpoint(id: string) {
@@ -54,7 +64,11 @@ export class EndpointsStoreClass extends ZStorage {
     return Array.from(this.endpoints.values())
   }
   getActiveEndpoints() {
-    return Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked)
+    return Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && (endpoint.status === endpointStatuses.active || endpoint.status === endpointStatuses.verified))
+  }
+  canStartServer() {
+      const activeEndpoints = Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && (endpoint.status === endpointStatuses.active || endpoint.status === endpointStatuses.verified))
+      return activeEndpoints.length > 0
   }
   getRevokedEndpoints() {
     return Array.from(this.endpoints.values()).filter(endpoint => endpoint.dateRevoked)
