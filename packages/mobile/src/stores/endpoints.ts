@@ -9,16 +9,14 @@ const STORE = 'EndpointsStore'
 export class EndpointsStoreClass extends ZStorage {
   endpoints: Map<string, Endpoint> = new Map()
   serverInstance: HTTPServer | null = null
+  isServerRunning = false
+
   constructor() {
     super(STORE)
     const storedEndpoints = this.getAll()
-    const activeEndpoint = Array.from(Object.values(storedEndpoints)).find((endpoint => (endpoint.status === endpointStatuses.active || endpoint.status === endpointStatuses.verified) && !endpoint.dateRevoked))
-    if (activeEndpoint) {
-      this.serverInstance = new HTTPServer()
-      this.serverInstance.start()
-    }
     if (storedEndpoints !== undefined && storedEndpoints !== null) {
       this.endpoints = new Map(Object.entries(storedEndpoints))
+      this.maybeToggleServer()
     }
   }
   addEndpoint(endpoint: Endpoint) {
@@ -35,6 +33,10 @@ export class EndpointsStoreClass extends ZStorage {
     }
     this.endpoints.set(id, newEndpoint)
     this.setItem({ key: id, data: newEndpoint })
+    if ((newEndpoint.status === endpointStatuses.verified || newEndpoint.status === endpointStatuses.active) && (!newEndpoint.dateRevoked) && (!this.isServerRunning)) {
+      this.maybeToggleServer()
+      console.log(`Endpoint ${id} added with verified status ${newEndpoint.status}`)
+    }
     return newEndpoint
   }
   updateEndpoint(id: string, updates: Partial<Endpoint>) {
@@ -51,8 +53,8 @@ export class EndpointsStoreClass extends ZStorage {
     }
     this.setItem({ key: id, data: JSON.parse(data) })
     this.endpoints.set(id, data)
-    if ((endpoint.status !== data.status) && (data.status === endpointStatuses.verified || data.status === endpointStatuses.active) && (!this.isServerRunning)) {
-
+    if ((endpoint.status !== data.status)) {
+      this.maybeToggleServer()
       console.log(`Endpoint ${id} verified status changed to ${data.status}`)
     }
     return data
@@ -64,11 +66,23 @@ export class EndpointsStoreClass extends ZStorage {
     return Array.from(this.endpoints.values())
   }
   getActiveEndpoints() {
-    return Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && (endpoint.status === endpointStatuses.active || endpoint.status === endpointStatuses.verified))
+    return Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && endpoint.status === endpointStatuses.active)
   }
-  canStartServer() {
-      const activeEndpoints = Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && (endpoint.status === endpointStatuses.active || endpoint.status === endpointStatuses.verified))
-      return activeEndpoints.length > 0
+  maybeToggleServer() {
+    const activeEndpoints = Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && (endpoint.status === endpointStatuses.active || endpoint.status === endpointStatuses.verified))
+    const hasActiveEndpoints = activeEndpoints.length > 0
+    if (hasActiveEndpoints && !this.serverInstance) {
+      this.serverInstance = new HTTPServer()
+    }
+    if (hasActiveEndpoints && !this.isServerRunning && this.serverInstance) {
+      this.serverInstance.start()
+      this.isServerRunning = true
+    }
+    if (!hasActiveEndpoints && this.serverInstance) {
+      this.serverInstance.stop()
+      this.serverInstance = null
+      this.isServerRunning = false
+    }
   }
   getRevokedEndpoints() {
     return Array.from(this.endpoints.values()).filter(endpoint => endpoint.dateRevoked)
