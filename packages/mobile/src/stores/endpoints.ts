@@ -1,6 +1,6 @@
 import { type Endpoint, type EndpointStatus, endpointStatuses } from '@pzero/shared/pzero'
 import { uuid } from '@pzero/shared/uuid'
-import { startServer, stopServer } from '../services/server'
+import { startServer, stopServer } from '../services'
 import { HistoryStore, Keys } from './history'
 import { ZStorage } from './store'
 
