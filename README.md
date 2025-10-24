@@ -8,6 +8,11 @@ This monorepo contains the following packages:
 
 ### `@pzero/mobile`
 React Native mobile application with features including:
+- **HTTP/WebSocket Server** - Built-in server for handling requests from SaaS applications
+  - Listens on configurable port (default: 8070)
+  - Automatic WebSocket upgrade support
+  - Routes requests to verified endpoints
+  - Connection management and monitoring
 - Navigation (bottom tabs, drawer, native stack)
 - Biometric authentication
 - BLE connectivity
@@ -137,6 +142,38 @@ This monorepo uses:
 5. **Lint your code** before committing: `pnpm lint`
 
 ## 📱 Mobile Development
+
+### Environment Configuration
+
+The mobile app uses environment variables for configuration. Create a `.env` file in `packages/mobile/`:
+
+```bash
+# Server Configuration
+SERVER_PORT=8070
+```
+
+### HTTP/WebSocket Server
+
+The mobile app includes a built-in HTTP/WebSocket server that:
+- Automatically starts when there are verified endpoints
+- Listens on the configured `SERVER_PORT` (default: 8070)
+- Handles HTTP requests and WebSocket upgrades
+- Routes requests based on endpoint configuration
+
+**Usage:**
+```typescript
+import { startServerIfNeeded, stopServer, getServerStatus } from '@pzero/mobile/services'
+
+// Start server when verified endpoints exist
+await startServerIfNeeded()
+
+// Check server status
+const status = getServerStatus()
+console.log(status) // { isRunning: true, port: 8070, connections: 2 }
+
+// Stop server
+await stopServer()
+```
 
 ### iOS Setup
 ```bash

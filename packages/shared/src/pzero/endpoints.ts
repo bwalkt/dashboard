@@ -43,14 +43,24 @@ export type Endpoint = {
   address?: string | IPAddress | PhysicalAddress
   headers?: URLHeader[]
   methods?: Method[]
-  variables?: Record<string, any>
+  variables?: Record<string, unknown>
   dateAdded: number
   dateUpdated: number
   dateRevoked?: number
   revokedReason?: string
   location?: Location
   status: EndpointStatus
-  [key: string]: any
+  [key: string]: unknown
+}
+export type Thread = {
+  id: string
+  name: string
+  endpoint: Endpoint
+  dateStarted: number
+  dateUpdated: number
+  isActive: boolean
+  dateRevoked?: number
+  revokedReason?: string
 }
 export const endpointSchema = {
   type: 'object',

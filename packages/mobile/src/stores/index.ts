@@ -1,11 +1,10 @@
+// Please note that endpoint store is combined with sever.ts
 import { DevicesStore } from './devices'
-import { EndpointsStore } from './endpoints'
 import { SettingsStore } from './settings'
 import { ThemeStore } from './theme'
 
 export const stores = {
-  EndpointsStore: EndpointsStore,
-  DevicesStore: DevicesStore,
-  ThemeStore: ThemeStore,
-  SettingsStore: SettingsStore,
+  DevicesStore,
+  ThemeStore,
+  SettingsStore,
 }
