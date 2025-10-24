@@ -1,0 +1,37 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Push a new beta build to TestFlight"
+  lane :beta do
+    # Increment build number
+    increment_build_number(xcodeproj: "pzero.xcodeproj")
+
+    # Build the app
+    build_app(
+      workspace: "pzero.xcworkspace",
+      scheme: "pzero",
+      configuration: "Release",
+      export_method: "app-store",
+      xcargs: "-allowProvisioningUpdates"
+    )
+
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      apple_id: ENV["APPLE_ID"]
+    )
+  end
+
+  desc "Build only (no upload)"
+  lane :build_only do
+    increment_build_number(xcodeproj: "pzero.xcodeproj")
+
+    build_app(
+      workspace: "pzero.xcworkspace",
+      scheme: "pzero",
+      configuration: "Release",
+      export_method: "app-store",
+      xcargs: "-allowProvisioningUpdates"
+    )
+  end
+end

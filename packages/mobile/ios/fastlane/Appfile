@@ -1,0 +1,5 @@
+app_identifier("org.reactjs.native.example.pzero")
+apple_id(ENV["APPLE_ID"])
+team_id("Q2UTS2Q5Z4")
+
+itc_team_id(ENV["ITC_TEAM_ID"])
