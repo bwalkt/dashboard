@@ -1,3 +1,5 @@
+//TODO 1. add threads for each endpoint, 2. keep track of thread status. 3. add 
+
 import { SERVER_PORT } from '@env'
 import { type Endpoint, type EndpointStatus, endpointStatuses } from '@pzero/shared/pzero'
 import { uuid } from '@pzero/shared/uuid'
@@ -114,19 +116,19 @@ class HTTPServer extends ZStorage {
     return Array.from(this.endpoints.values())
   }
   getActiveEndpoints() {
-    return Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && endpoint.status === endpointStatuses.active)
+    return Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && (endpoint.status === endpointStatuses.verified) || (endpoint.status === endpointStatuses.active))
   }
   async maybeToggleServer() {
     const activeEndpoints = this.getActiveEndpoints()
     const hasActiveEndpoints = activeEndpoints.length > 0
     if (hasActiveEndpoints) {
        try {
-         await startServer()
+         await this.start()
        } catch (error) {
          console.error('Failed to start server:', error)
        }
     } else {
-      stopServer()
+      this.stop()
     }
   }
   getRevokedEndpoints() {
@@ -535,48 +537,17 @@ class HTTPServer extends ZStorage {
 }
 
 // Singleton instance
-let serverInstance: HTTPServer | null = null
+export const endpointStore: HTTPServer = new HTTPServer()
 
 /**
  * Start server if there are verified endpoints
  */
-export async function startServer(): Promise<void> {
-  
-  try {
-    if (!serverInstance) {
-      serverInstance = new HTTPServer()
-    }
-    if (serverInstance) {
-      await serverInstance.start()
-    }
-  } catch (error) {
-    console.error('Failed to start server:', error)
-    serverInstance = null
-    throw error
-  }
-}
-
-/**
- * Stop the server
- */
-export async function stopServer(): Promise<void> {
-  try {
-    if (serverInstance) {
-      await serverInstance.stop()
-    }
-  } catch (error) {
-    console.error('Failed to stop server:', error)
-    throw error
-  } finally {
-    serverInstance = null
-  }
-}
 
 /**
  * Get server status
  */
 export function getServerStatus() {
-  return serverInstance?.getStatus() || { isRunning: false, port: 0, connections: 0 }
+  return endpointStore?.getStatus() || { isRunning: false, port: 0, connections: 0 }
 }
 
 /**
@@ -614,5 +585,3 @@ export async function getWebSocketURL(): Promise<string | null> {
 
   return `ws://${ipAddress}:${status.port}`
 }
-
-export { HTTPServer }

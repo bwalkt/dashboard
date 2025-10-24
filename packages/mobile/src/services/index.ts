@@ -1,6 +1,6 @@
 export { stores } from '../stores'
 export { getLocalIPAddress, getNetworkInfo, subscribeToNetworkChanges } from '../utils/network'
-export { getServerStatus, getServerURL, getWebSocketURL, HTTPServer, startServer, stopServer } from './server'
+export { endpointStore, getServerStatus, getServerURL, getWebSocketURL } from './server'
 
 import type { Method, URLHeader } from '@pzero/shared/pzero'
 // Using native fetch with timeout handling
