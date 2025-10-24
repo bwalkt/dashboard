@@ -1,12 +1,12 @@
 import { SERVER_PORT } from '@env'
+import { type Endpoint, type EndpointStatus, endpointStatuses } from '@pzero/shared/pzero'
+import { uuid } from '@pzero/shared/uuid'
 import { Buffer } from 'buffer'
 import crypto from 'react-native-quick-crypto'
 import TcpSocket from 'react-native-tcp-socket'
-import { getLocalIPAddress } from '../utils/network'
-import { type Endpoint, type EndpointStatus, endpointStatuses } from '@pzero/shared/pzero'
-import { uuid } from '@pzero/shared/uuid'
 import { HistoryStore, Keys } from '../stores/history'
 import { ZStorage } from '../stores/store'
+import { getLocalIPAddress } from '../utils/network'
 
 const DEFAULT_PORT = Number.parseInt(SERVER_PORT || '8070', 10)
 
@@ -57,7 +57,12 @@ class HTTPServer extends ZStorage {
 
   constructor(config?: Partial<ServerConfig>) {
     super(STORE)
+
     const storedEndpoints = this.getAll()
+    if (storedEndpoints !== undefined && storedEndpoints !== null) {
+      this.endpoints = new Map(Object.entries(storedEndpoints))
+      this.maybeToggleServer()
+    }
     this.config = {
       port: config?.port || DEFAULT_PORT,
       host: config?.host || '0.0.0.0',
