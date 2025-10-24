@@ -12,10 +12,16 @@ export type Prune = {
   dateTo: number
   sortField: string
 }
+const names = new Set<string>()
 export class ZStorage {
   keys: Set<string> = new Set()
   zustandStorage: StateStorage
+  name: string
   constructor(name: string) {
+    if (names.has(name)) {
+      throw new Error(`Storage with name ${name} already exists`)
+    }
+    this.name = name
     name = `${envs.APP_NAME}_${envs.APP_VERSION}_${name}_mmkv`
     const storage = new MMKV({ id: name })
     this.zustandStorage = {

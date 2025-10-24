@@ -1,11 +1,12 @@
 import { SERVER_PORT } from '@env'
-import type { Endpoint } from '@pzero/shared/pzero'
-import { endpointStatuses } from '@pzero/shared/pzero'
 import { Buffer } from 'buffer'
-import createHash from 'react-native-quick-crypto'
+import crypto from 'react-native-quick-crypto'
 import TcpSocket from 'react-native-tcp-socket'
-import { EndpointsStore } from '../stores/endpoints'
 import { getLocalIPAddress } from '../utils/network'
+import { type Endpoint, type EndpointStatus, endpointStatuses } from '@pzero/shared/pzero'
+import { uuid } from '@pzero/shared/uuid'
+import { HistoryStore, Keys } from '../stores/history'
+import { ZStorage } from '../stores/store'
 
 const DEFAULT_PORT = Number.parseInt(SERVER_PORT || '8070', 10)
 
@@ -45,19 +46,102 @@ interface WebSocketFrame {
   bytesConsumed: number
 }
 
-class HTTPServer {
+export const STORE = 'EndpointsStore'
+
+class HTTPServer extends ZStorage {
   private server: any = null
   private config: ServerConfig
   private connections: Set<any> = new Set()
   private isRunning = false
+  endpoints: Map<string, Endpoint> = new Map()
 
   constructor(config?: Partial<ServerConfig>) {
+    super(STORE)
+    const storedEndpoints = this.getAll()
     this.config = {
       port: config?.port || DEFAULT_PORT,
       host: config?.host || '0.0.0.0',
     }
   }
-
+  async addEndpoint(endpoint: Endpoint) {
+    const id = uuid()
+    if (this.endpoints.has(id)) {
+      throw new Error(`Endpoint with id ${id} already exists`)
+    }
+    const newEndpoint = {
+      ...endpoint,
+      id,
+      name: endpoint.name || id,
+      dateAdded: Date.now(),
+      status: endpoint.status || endpointStatuses.unverified,
+    }
+    this.endpoints.set(id, newEndpoint)
+    this.setItem({ key: id, data: newEndpoint })
+    await this.maybeToggleServer()
+    console.log(`Endpoint ${id} added with verified status ${newEndpoint.status}`)
+    return newEndpoint
+  }
+  async updateEndpoint(id: string, updates: Partial<Endpoint>) {
+    const endpoint = this.endpoints.get(id)
+    if (!endpoint) {
+      throw new Error(`Endpoint with id ${id} does not exist`)
+    }
+    if (endpoint.id !== updates.id) {
+      throw new Error('Endpoint id cannot be changed')
+    }
+    const { status, data } = HistoryStore.putHistory({ id, key: Keys.endpoints, original: endpoint, updates })
+    if (!status) {
+      console.log('No Op - no change')
+    }
+    const parsedEndpoint: Endpoint = typeof data === 'string' ? JSON.parse(data) : data
+    this.setItem({ key: id, data: parsedEndpoint })
+    this.endpoints.set(id, parsedEndpoint)
+    if ((endpoint.status !== parsedEndpoint.status)) {
+      await this.maybeToggleServer()
+      console.log(`Endpoint ${id} verified status changed to ${parsedEndpoint.status}`)
+    }
+    return parsedEndpoint
+  }
+  getEndpoint(id: string) {
+    return this.endpoints.get(id)
+  }
+  getAllEndpoints() {
+    return Array.from(this.endpoints.values())
+  }
+  getActiveEndpoints() {
+    return Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && endpoint.status === endpointStatuses.active)
+  }
+  async maybeToggleServer() {
+    const activeEndpoints = this.getActiveEndpoints()
+    const hasActiveEndpoints = activeEndpoints.length > 0
+    if (hasActiveEndpoints) {
+       try {
+         await startServer()
+       } catch (error) {
+         console.error('Failed to start server:', error)
+       }
+    } else {
+      stopServer()
+    }
+  }
+  getRevokedEndpoints() {
+    return Array.from(this.endpoints.values()).filter(endpoint => endpoint.dateRevoked)
+  }
+  removeEndpoint(id: string) {
+    this.endpoints.delete(id)
+    this.removeItem(id)
+    this.maybeToggleServer()
+  }
+  getEndpointStatus(id: string): EndpointStatus | null {
+    const endpoint = this.endpoints.get(id)
+    if (!endpoint) {
+      return null
+    }
+    if (endpoint.dateRevoked) {
+      return endpointStatuses.revoked
+    }
+    return endpoint.status
+  }
   /**
    * Start the HTTP/WebSocket server
    */
@@ -205,7 +289,7 @@ class HTTPServer {
     }
 
     // Generate accept key using RN-compatible crypto
-    const acceptKey = createHash('sha1')
+    const acceptKey = crypto.createHash('sha1')
       .update(key + WEBSOCKET_MAGIC_STRING)
       .digest('base64')
 
@@ -354,7 +438,7 @@ class HTTPServer {
     console.log(`${request.method} ${request.path}`)
 
     // Get verified endpoints
-    const endpoints = EndpointsStore.getAllEndpoints().filter(
+    const endpoints = this.getAllEndpoints().filter(
       (e) => e.status === endpointStatuses.verified
     )
 
