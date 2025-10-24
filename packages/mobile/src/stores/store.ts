@@ -21,9 +21,10 @@ export class ZStorage {
     if (names.has(name)) {
       throw new Error(`Storage with name ${name} already exists`)
     }
+    names.add(name)
     this.name = name
-    name = `${envs.APP_NAME}_${envs.APP_VERSION}_${name}_mmkv`
-    const storage = new MMKV({ id: name })
+    const id = `${envs.APP_NAME}_${envs.APP_VERSION}_${name}_mmkv`
+    const storage = new MMKV({ id })
     this.zustandStorage = {
       setItem: (name: string, value: string) => {
         return storage.set(name, value)

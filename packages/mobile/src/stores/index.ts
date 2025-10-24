@@ -1,4 +1,4 @@
-// Please note that enpoint store is combined with sever.ts
+// Please note that endpoint store is combined with sever.ts
 import { DevicesStore } from './devices'
 import { SettingsStore } from './settings'
 import { ThemeStore } from './theme'

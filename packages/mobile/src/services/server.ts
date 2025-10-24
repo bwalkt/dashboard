@@ -63,7 +63,6 @@ class HTTPServer extends ZStorage {
     const storedEndpoints = this.getAll()
     if (storedEndpoints !== undefined && storedEndpoints !== null) {
       this.endpoints = new Map(Object.entries(storedEndpoints))
-      this.maybeToggleServer()
     }
     this.config = {
       port: config?.port || DEFAULT_PORT,
@@ -115,30 +114,39 @@ class HTTPServer extends ZStorage {
   getAllEndpoints() {
     return Array.from(this.endpoints.values())
   }
+  getServableEndpoints() {
+    return Array.from(this.endpoints.values()).filter(
+      (e) =>
+        !e.dateRevoked &&
+        (e.status === endpointStatuses.active || e.status === endpointStatuses.verified)
+    )
+  }
   getActiveEndpoints() {
-    return Array.from(this.endpoints.values()).filter(endpoint => !endpoint.dateRevoked && (endpoint.status === endpointStatuses.verified) || (endpoint.status === endpointStatuses.active))
+    return Array.from(this.endpoints.values()).filter(
+      endpoint => !endpoint.dateRevoked && 
+        (endpoint.status === endpointStatuses.verified || endpoint.status === endpointStatuses.active)
+    )
   }
   async maybeToggleServer() {
-    const activeEndpoints = this.getActiveEndpoints()
-    const hasActiveEndpoints = activeEndpoints.length > 0
-    if (hasActiveEndpoints) {
-       try {
-         await this.start()
-       } catch (error) {
+    const canServe = this.getServableEndpoints().length > 0
+    if (canServe) {
+      try {
+        await this.start()
+        } catch (error) {
          console.error('Failed to start server:', error)
        }
     } else {
-      this.stop()
+      await this.stop()
     }
   }
   getRevokedEndpoints() {
     return Array.from(this.endpoints.values()).filter(endpoint => endpoint.dateRevoked)
   }
-  removeEndpoint(id: string) {
-    this.endpoints.delete(id)
-    this.removeItem(id)
-    this.maybeToggleServer()
-  }
+  async removeEndpoint(id: string) {
+     this.endpoints.delete(id)
+     this.removeItem(id)
+    await this.maybeToggleServer()
+   }
   getEndpointStatus(id: string): EndpointStatus | null {
     const endpoint = this.endpoints.get(id)
     if (!endpoint) {
