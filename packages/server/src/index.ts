@@ -47,6 +47,10 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     decorateReply: false,
   })
 
+  // Register routes
+  await fastify.register(authRoutes)
+  await fastify.register(emailRoutes)
+
   // Console log when server starts
   fastify.addHook('onReady', async () => {})
 
