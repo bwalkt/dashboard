@@ -8,13 +8,13 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 # Copy go mod files
-COPY golang-ziti/go.mod golang-ziti/go.sum ./
+COPY golang-proxy/go.mod golang-proxy/go.sum ./
 
 # Download dependencies
 RUN go mod download
 
 # Copy source code
-COPY golang-ziti/ .
+COPY golang-proxy/ .
 
 RUN mkdir -p build
 
@@ -34,14 +34,14 @@ COPY --from=builder /app/main .
 RUN chmod +x main
 
 # Copy the Ziti configuration file
-COPY golang-ziti/simple-server.json .
-COPY golang-ziti/simple-client.json .
+COPY golang-proxy/simple-server.json .
+COPY golang-proxy/simple-client.json .
 
 # Copy all .pem files
-COPY golang-ziti/*.pem .
+COPY golang-proxy/*.pem .
 
 # Copy environment file
-COPY golang-ziti/.env .
+COPY golang-proxy/.env .
 
 # Create data directory for database
 RUN mkdir -p /app/data

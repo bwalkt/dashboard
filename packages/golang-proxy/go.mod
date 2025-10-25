@@ -1,4 +1,4 @@
-module go-hello-ziti
+module golang-proxy
 
 go 1.24.0
 
