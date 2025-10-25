@@ -39,7 +39,6 @@ export class SQLStatement {
     }
     return this
   }
-
   /**
    * Use a prepared statement with Sequelize.
    * Makes `query` return a query with `$n` syntax instead of `?` and switches the `values` key name to `bind`

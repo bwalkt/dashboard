@@ -1128,8 +1128,8 @@ importers:
         specifier: ^3.0.1
         version: 3.0.1
       '@pzero/shared':
-        specifier: ../../../../packages/shared
-        version: link:../../../../packages/shared
+        specifier: workspace:*
+        version: link:../shared
       '@react-email/components':
         specifier: ^0.5.7
         version: 0.5.7(react-dom@19.1.1(react@18.3.1))(react@18.3.1)

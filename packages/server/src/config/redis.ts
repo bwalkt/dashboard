@@ -16,7 +16,7 @@ class RedisManager {
       },
       reconnectOnError: (err) => {
         const targetError = 'READONLY'
-        if (err.message.includes(targetError)) {
+        if (err.message?.includes(targetError)) {
           // Only reconnect when the error contains "READONLY"
           return true
         }
