@@ -11,8 +11,21 @@ export const config: EnvironmentConfig = {
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || '',
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || '',
   JWT_SECRET: process.env.JWT_SECRET || 'default-secret-key-change-in-production',
-  DATABASE_PATH: process.env.DATABASE_PATH || './database.db',
+  POSTGRES_HOST: process.env.POSTGRES_HOST || 'localhost',
+  POSTGRES_PORT: parseInt(process.env.POSTGRES_PORT || '5432', 10),
+  POSTGRES_USER: process.env.POSTGRES_USER || 'postgres',
+  POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD || 'postgres',
+  POSTGRES_DB: process.env.POSTGRES_DB || 'pzero',
+  REDIS_HOST: process.env.REDIS_HOST || 'localhost',
+  REDIS_PORT: parseInt(process.env.REDIS_PORT || '6379', 10),
+  BREVO_API_KEY: process.env.BREVO_API_KEY || '',
+  BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL || '',
+  BREVO_SENDER_NAME: process.env.BREVO_SENDER_NAME || 'P-Zero',
+  SIGNALWIRE_PROJECT_ID: process.env.SIGNALWIRE_PROJECT_ID || '',
+  SIGNALWIRE_TOKEN: process.env.SIGNALWIRE_TOKEN || '',
+  SIGNALWIRE_PHONE_NUMBER: process.env.SIGNALWIRE_PHONE_NUMBER || '',
   OAUTH_REDIRECT_URL: process.env.OAUTH_REDIRECT_URL || 'http://localhost:1420',
+  SERVER_BASE_URL: process.env.SERVER_BASE_URL || 'http://localhost:8090',
 }
 
 /**
@@ -24,7 +37,16 @@ export const config: EnvironmentConfig = {
  * If JWT_SECRET equals the default development value, logs a warning advising to set a production secret.
  */
 export function validateEnvironment(): void {
-  const requiredVars = ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'JWT_SECRET']
+  const requiredVars = [
+    'GITHUB_CLIENT_ID',
+    'GITHUB_CLIENT_SECRET',
+    'JWT_SECRET',
+    'BREVO_API_KEY',
+    'BREVO_SENDER_EMAIL',
+    'SIGNALWIRE_PROJECT_ID',
+    'SIGNALWIRE_TOKEN',
+    'SIGNALWIRE_PHONE_NUMBER',
+  ]
 
   const missingVars = requiredVars.filter(varName => !process.env[varName])
 

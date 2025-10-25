@@ -1,74 +1,114 @@
 import type { CreateUserData, User } from '@pzero/shared'
-import Database from 'better-sqlite3'
+import pg from 'pg'
+
+const { Pool } = pg
 
 class DatabaseManager {
-  private db: Database.Database
+  private pool: pg.Pool
+  private initialized: boolean = false
 
   constructor() {
-    const dbPath = process.env.DATABASE_PATH || './database.db'
-    this.db = new Database(dbPath)
-    this.initializeDatabase()
+    this.pool = new Pool({
+      host: process.env.POSTGRES_HOST || 'localhost',
+      port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
+      user: process.env.POSTGRES_USER || 'postgres',
+      password: process.env.POSTGRES_PASSWORD || 'postgres',
+      database: process.env.POSTGRES_DB || 'pzero',
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    })
+
+    // Handle pool errors
+    this.pool.on('error', (err) => {
+      console.error('Unexpected error on idle client', err)
+    })
   }
 
-  private initializeDatabase(): void {
-    // Create users table
-    const createUsersTable = `
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        github_id TEXT UNIQUE NOT NULL,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        avatar TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `
+  public async initialize(): Promise<void> {
+    if (this.initialized) return
 
-    this.db.exec(createUsersTable)
-
-    // Create index on github_id for faster lookups
-    const createIndex = `
-      CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id)
-    `
-
-    this.db.exec(createIndex)
+    try {
+      await this.initializeDatabase()
+      this.initialized = true
+      console.log('✅ Database initialized successfully')
+    } catch (error) {
+      console.error('❌ Failed to initialize database:', error)
+      throw error
+    }
   }
 
-  public getUserByGithubId(githubId: string): User | null {
-    const stmt = this.db.prepare('SELECT * FROM users WHERE github_id = ?')
-    return stmt.get(githubId) as User | null
+  private async initializeDatabase(): Promise<void> {
+    const client = await this.pool.connect()
+    try {
+      // Create users table
+      const createUsersTable = `
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          github_id TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL,
+          avatar TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `
+
+      await client.query(createUsersTable)
+
+      // Create index on github_id for faster lookups
+      const createIndex = `
+        CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id)
+      `
+
+      await client.query(createIndex)
+    } finally {
+      client.release()
+    }
   }
 
-  public getUserById(id: number): User | null {
-    const stmt = this.db.prepare('SELECT * FROM users WHERE id = ?')
-    return stmt.get(id) as User | null
+  public async getUserByGithubId(githubId: string): Promise<User | null> {
+    const result = await this.pool.query(
+      'SELECT * FROM users WHERE github_id = $1',
+      [githubId]
+    )
+    return result.rows[0] || null
   }
 
-  public createUser(userData: CreateUserData): User {
-    const stmt = this.db.prepare(`
-      INSERT INTO users (github_id, name, email, avatar)
-      VALUES (?, ?, ?, ?)
-    `)
-
-    const result = stmt.run(userData.github_id, userData.name, userData.email, userData.avatar)
-
-    return this.getUserById(result.lastInsertRowid as number)!
+  public async getUserById(id: number): Promise<User | null> {
+    const result = await this.pool.query(
+      'SELECT * FROM users WHERE id = $1',
+      [id]
+    )
+    return result.rows[0] || null
   }
 
-  public updateUser(githubId: string, userData: Partial<CreateUserData>): User | null {
-    const fields = []
-    const values = []
+  public async createUser(userData: CreateUserData): Promise<User> {
+    const result = await this.pool.query(
+      `INSERT INTO users (github_id, name, email, avatar)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [userData.github_id, userData.name, userData.email, userData.avatar]
+    )
+
+    return result.rows[0]
+  }
+
+  public async updateUser(githubId: string, userData: Partial<CreateUserData>): Promise<User | null> {
+    const fields: string[] = []
+    const values: any[] = []
+    let paramCount = 1
 
     if (userData.name !== undefined) {
-      fields.push('name = ?')
+      fields.push(`name = $${paramCount++}`)
       values.push(userData.name)
     }
     if (userData.email !== undefined) {
-      fields.push('email = ?')
+      fields.push(`email = $${paramCount++}`)
       values.push(userData.email)
     }
     if (userData.avatar !== undefined) {
-      fields.push('avatar = ?')
+      fields.push(`avatar = $${paramCount++}`)
       values.push(userData.avatar)
     }
 
@@ -79,28 +119,34 @@ class DatabaseManager {
     fields.push('updated_at = CURRENT_TIMESTAMP')
     values.push(githubId)
 
-    const stmt = this.db.prepare(`
-      UPDATE users 
-      SET ${fields.join(', ')} 
-      WHERE github_id = ?
-    `)
+    const result = await this.pool.query(
+      `UPDATE users
+       SET ${fields.join(', ')}
+       WHERE github_id = $${paramCount}
+       RETURNING *`,
+      values
+    )
 
-    stmt.run(...values)
-    return this.getUserByGithubId(githubId)
+    return result.rows[0] || null
   }
 
-  public upsertUser(userData: CreateUserData): User {
-    const existingUser = this.getUserByGithubId(userData.github_id)
+  public async upsertUser(userData: CreateUserData): Promise<User> {
+    const existingUser = await this.getUserByGithubId(userData.github_id)
 
     if (existingUser) {
-      return this.updateUser(userData.github_id, userData) || existingUser
+      const updated = await this.updateUser(userData.github_id, userData)
+      return updated || existingUser
     } else {
       return this.createUser(userData)
     }
   }
 
-  public close(): void {
-    this.db.close()
+  public async close(): Promise<void> {
+    await this.pool.end()
+  }
+
+  public getPool(): pg.Pool {
+    return this.pool
   }
 }
 

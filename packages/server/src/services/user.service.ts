@@ -5,21 +5,21 @@ export class UserService {
   /**
    * Get user by GitHub ID
    */
-  public getUserByGithubId(githubId: string): User | null {
+  public async getUserByGithubId(githubId: string): Promise<User | null> {
     return db.getUserByGithubId(githubId)
   }
 
   /**
    * Get user by internal ID
    */
-  public getUserById(id: number): User | null {
+  public async getUserById(id: number): Promise<User | null> {
     return db.getUserById(id)
   }
 
   /**
    * Create or update user from GitHub profile
    */
-  public upsertUserFromGitHub(githubUser: GitHubUser): User {
+  public async upsertUserFromGitHub(githubUser: GitHubUser): Promise<User> {
     const userData: CreateUserData = {
       github_id: githubUser.id.toString(),
       name: githubUser.name || githubUser.login,
@@ -33,14 +33,14 @@ export class UserService {
   /**
    * Create a new user
    */
-  public createUser(userData: CreateUserData): User {
+  public async createUser(userData: CreateUserData): Promise<User> {
     return db.createUser(userData)
   }
 
   /**
    * Update user information
    */
-  public updateUser(githubId: string, userData: Partial<CreateUserData>): User | null {
+  public async updateUser(githubId: string, userData: Partial<CreateUserData>): Promise<User | null> {
     return db.updateUser(githubId, userData)
   }
 

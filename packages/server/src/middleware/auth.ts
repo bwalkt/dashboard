@@ -34,7 +34,7 @@ export async function authenticateToken(request: FastifyRequest, reply: FastifyR
     }
 
     // Get user from database
-    const user = userService.getUserById(payload.userId)
+    const user = await userService.getUserById(payload.userId)
 
     if (!user) {
       return reply.status(401).send({
