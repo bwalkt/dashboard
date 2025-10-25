@@ -1,7 +1,7 @@
 import Fastify from 'fastify'
-import { db } from './config/database.js'
-import { redis } from './config/redis.js'
-import app from './index.js'
+import { db } from './config/database'
+import { redis } from './config/redis'
+import app from './index'
 
 const fastify = Fastify({
   logger: {

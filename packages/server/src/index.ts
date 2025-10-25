@@ -4,11 +4,11 @@ import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
 import fastifyStatic from '@fastify/static'
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
-import { db } from './config/database.js'
-import { validateEnvironment } from './config/env.js'
-import { redis } from './config/redis.js'
-import { authRoutes } from './routes/auth.js'
-import { emailRoutes } from './routes/email.js'
+import { db } from './config/database'
+import { validateEnvironment } from './config/env'
+import { redis } from './config/redis'
+import { authRoutes } from './routes/auth'
+import { emailRoutes } from './routes/email'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)

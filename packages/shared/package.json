@@ -89,6 +89,10 @@
     "./queue": {
       "import": "./dist/queue/index.js",
       "types": "./dist/queue/index.d.ts"
+    },
+    "./sql": {
+      "import": "./dist/sql/index.js",
+      "types": "./dist/sql/index.d.ts"
     }
   }
 }

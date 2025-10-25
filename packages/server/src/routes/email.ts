@@ -2,10 +2,10 @@ import crypto from 'node:crypto'
 import type { ErrorResponse } from '@pzero/shared'
 import { render } from '@react-email/render'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import { redis } from '../config/redis.js'
-import SlackStyleConfirmEmail from '../emails/slack-style-confirm.js'
-import VerificationEmail from '../emails/verification-email.js'
-import { emailService } from '../services/email.service.js'
+import { redis } from '../config/redis'
+import SlackStyleConfirmEmail from '../emails/slack-style-confirm'
+import VerificationEmail from '../emails/verification-email'
+import { emailService } from '../services/email.service'
 
 interface SendVerificationEmailRequest {
   Body: {
@@ -58,7 +58,7 @@ export async function emailRoutes(fastify: FastifyInstance): Promise<void> {
         await emailService.sendVerificationEmail({
           to: email,
           verificationToken,
-          name,
+          ...(name && { name }),
         })
 
         return reply.status(200).send({
@@ -168,7 +168,7 @@ export async function emailRoutes(fastify: FastifyInstance): Promise<void> {
         await emailService.sendVerificationEmail({
           to: email,
           verificationToken,
-          name,
+          ...(name && { name }),
         })
 
         return reply.status(200).send({
@@ -214,7 +214,7 @@ export async function emailRoutes(fastify: FastifyInstance): Promise<void> {
         await emailService.sendConfirmationCodeEmail({
           to: email,
           confirmationCode,
-          recipientName,
+          ...(recipientName && { recipientName }),
         })
 
         return reply.status(200).send({

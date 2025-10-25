@@ -1,5 +1,5 @@
 import { SignalWire } from '@signalwire/realtime-api'
-import { config } from '../config/env.js'
+import { config } from '../config/env'
 
 interface SendSMSOptions {
   to: string
@@ -12,10 +12,14 @@ interface SendVerificationCodeOptions {
 }
 
 class SMSService {
-  private client: SignalWire
+  private client!: Awaited<ReturnType<typeof SignalWire>>
 
   constructor() {
-    this.client = new SignalWire({
+    this.initializeClient()
+  }
+
+  private async initializeClient() {
+    this.client = await SignalWire({
       project: config.SIGNALWIRE_PROJECT_ID,
       token: config.SIGNALWIRE_TOKEN,
     })

@@ -42,6 +42,7 @@
     "react-native-reanimated": "catalog:",
     "react-native-safe-area-context": "catalog:",
     "react-native-screens": "catalog:",
+    "react-native-simcard-info": "^1.1.2",
     "react-native-splash-screen": "catalog:",
     "react-native-svg": "catalog:",
     "react-native-swipe-list-view": "catalog:",

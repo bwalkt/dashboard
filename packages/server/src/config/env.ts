@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-import type { EnvironmentConfig } from '../types/index.js'
+import type { EnvironmentConfig } from '../types/index'
 
 // Load environment variables from .env file only when running locally (not in Docker)
 // In Docker, environment variables are provided at runtime via docker-compose

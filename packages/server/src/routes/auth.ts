@@ -1,12 +1,12 @@
 import oauth2Plugin, { type OAuth2Namespace } from '@fastify/oauth2'
 import type { AuthenticatedRequest, ErrorResponse, UserResponse } from '@pzero/shared'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import { config } from '../config/env.js'
-import { redisClient } from '../config/redis.js'
-import { authenticateToken } from '../middleware/auth.js'
-import { authService } from '../services/auth.service.js'
-import { smsService } from '../services/sms.service.js'
-import { userService } from '../services/user.service.js'
+import { config } from '../config/env'
+import { redis } from '../config/redis'
+import { authenticateToken } from '../middleware/auth'
+import { authService } from '../services/auth.service'
+import { smsService } from '../services/sms.service'
+import { userService } from '../services/user.service'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -331,7 +331,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
       // Store verification code in Redis with 10 minute expiration
       const redisKey = `phone_verification:${phone}`
-      await redisClient.setEx(redisKey, 600, verificationCode)
+      await redis.set(redisKey, verificationCode, 600)
 
       // Send SMS with verification code
       await smsService.sendVerificationCode({

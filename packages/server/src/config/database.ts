@@ -29,41 +29,16 @@ class DatabaseManager {
     if (this.initialized) return
 
     try {
-      await this.initializeDatabase()
-      this.initialized = true
-      console.log('✅ Database initialized successfully')
-    } catch (error) {
-      console.error('❌ Failed to initialize database:', error)
-      throw error
-    }
-  }
-
-  private async initializeDatabase(): Promise<void> {
-    const client = await this.pool.connect()
-    try {
-      // Create users table
-      const createUsersTable = `
-        CREATE TABLE IF NOT EXISTS users (
-          id SERIAL PRIMARY KEY,
-          github_id TEXT UNIQUE NOT NULL,
-          name TEXT NOT NULL,
-          email TEXT NOT NULL,
-          avatar TEXT NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `
-
-      await client.query(createUsersTable)
-
-      // Create index on github_id for faster lookups
-      const createIndex = `
-        CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id)
-      `
-
-      await client.query(createIndex)
-    } finally {
+      // Test database connection
+      const client = await this.pool.connect()
       client.release()
+
+      this.initialized = true
+      console.log('✅ Database connected successfully')
+      console.log('💡 Run "pnpm migrate:up" to apply migrations')
+    } catch (error) {
+      console.error('❌ Failed to connect to database:', error)
+      throw error
     }
   }
 
