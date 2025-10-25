@@ -9,14 +9,11 @@ CREATE TABLE pzero.users (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE INDEX idx_users_github_id ON pzero.users(github_id);
-
 CREATE TABLE pzero.sessions (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES pzero.users(id),
-    token TEXT NOT NULL,
-    expires_at TIMESTAMP NOT NULL
+    user_id INTEGER REFERENCES pzero.users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL
 );
 
 -- Down Migration

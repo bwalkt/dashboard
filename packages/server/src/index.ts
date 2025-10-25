@@ -50,8 +50,8 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   // Console log when server starts
   fastify.addHook('onReady', async () => {})
 
-  // Register routes
-  await fastify.register(authRoutes)
-  await fastify.register(emailRoutes)
-
+  // Close resources on server shutdown
+  fastify.addHook('onClose', async () => {
+    await Promise.allSettled([db.close(), redis.close()])
+  })
 }

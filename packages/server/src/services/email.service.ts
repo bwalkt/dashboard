@@ -1,8 +1,8 @@
 import * as brevo from '@getbrevo/brevo'
 import { render } from '@react-email/render'
 import { config } from '../config/env'
-import SlackStyleConfirmEmail from '../emails/slack-style-confirm'
-import VerificationEmail from '../emails/verification-email'
+import {SlackStyleConfirmEmail} from '../emails/slack-style-confirm'
+import {VerificationEmail} from '../emails/verification-email'
 
 interface SendEmailOptions {
   to: string
@@ -25,12 +25,10 @@ interface SendConfirmationCodeEmailOptions {
 
 class EmailService {
   private apiInstance: brevo.TransactionalEmailsApi
-  private apiKey: brevo.TransactionalEmailsApiApiKeys
 
   constructor() {
     this.apiInstance = new brevo.TransactionalEmailsApi()
-    this.apiKey = this.apiInstance.authentications['apiKey']
-    this.apiKey.apiKey = config.BREVO_API_KEY
+    this.apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, config.BREVO_API_KEY)
   }
 
   /**
