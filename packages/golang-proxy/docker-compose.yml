@@ -140,9 +140,4 @@ networks:
 volumes:
   ziti-fs:
   ziti-host:
-<<<<<<< HEAD:examples/b2b/docker-compose.ziti.yml
-  golang-ziti-data:
-  
-=======
   golang-proxy-data:
->>>>>>> e5c911a (feat: golang proxy server):packages/golang-proxy/docker-compose.yml
