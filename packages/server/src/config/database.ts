@@ -1,5 +1,6 @@
 import type { CreateUserData, User } from '@pzero/shared'
 import pg from 'pg'
+import { config } from '../config/env'
 
 const { Pool } = pg
 
@@ -9,11 +10,11 @@ class DatabaseManager {
 
   constructor() {
     this.pool = new Pool({
-      host: process.env.POSTGRES_HOST || 'localhost',
-      port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
-      user: process.env.POSTGRES_USER || 'postgres',
-      password: process.env.POSTGRES_PASSWORD || 'postgres',
-      database: process.env.POSTGRES_DB || 'pzero',
+      host: config.POSTGRES_HOST,
+      port: config.POSTGRES_PORT,
+      user: config.POSTGRES_USER,
+      password: config.POSTGRES_PASSWORD,
+      database: config.POSTGRES_DB,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
@@ -106,14 +107,19 @@ class DatabaseManager {
   }
 
   public async upsertUser(userData: CreateUserData): Promise<User> {
-    const existingUser = await this.getUserByGithubId(userData.github_id)
-
-    if (existingUser) {
-      const updated = await this.updateUser(userData.github_id, userData)
-      return updated || existingUser
-    } else {
-      return this.createUser(userData)
-    }
+    const result = await this.pool.query(
+      `INSERT INTO users (github_id, name, email, avatar)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (github_id)
+       DO UPDATE SET
+         name = EXCLUDED.name,
+         email = EXCLUDED.email,
+         avatar = EXCLUDED.avatar,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [userData.github_id, userData.name, userData.email, userData.avatar]
+    )
+    return result.rows[0]
   }
 
   public async close(): Promise<void> {

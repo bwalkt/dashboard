@@ -1,4 +1,5 @@
 import Redis from 'ioredis'
+import { config } from './env'
 
 class RedisManager {
   private client: Redis
@@ -6,8 +7,8 @@ class RedisManager {
 
   constructor() {
     this.client = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      host: config.REDIS_HOST,
+      port: config.REDIS_PORT,
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         const delay = Math.min(times * 50, 2000)
@@ -26,7 +27,6 @@ class RedisManager {
     // Handle connection events
     this.client.on('connect', () => {
       console.log('✅ Redis client connected')
-      this.initialized = true
     })
 
     this.client.on('error', (err) => {

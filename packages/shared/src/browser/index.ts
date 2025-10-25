@@ -1,6 +1,6 @@
-var browserTool = require("browser-tool");
+import browserTool from "browser-tool";
 
-export const info = browserTool.browser.getInfo();
+export const info: any = browserTool.browser.getInfo();
 
 import type { ValueOf } from '../type'
 
@@ -19,7 +19,7 @@ const OSes = {
     android: 'android',
     ios: 'ios',
     other: 'other',
-}
+} as const
 type OS = ValueOf<typeof OSes>
 type Browser = ValueOf<typeof Browsers>
 export { Browsers, OSes, type Browser, type OS }
@@ -38,7 +38,7 @@ interface BrowserInfo {
   osVersion?: string;
 }
 
-function getBrowserInfo(): BrowserInfo {
+export function getBrowserInfo(): BrowserInfo {
   const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   const browserInfo: BrowserInfo = { userAgent };
 
