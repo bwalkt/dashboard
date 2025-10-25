@@ -13,6 +13,7 @@ A Fastify-based Node.js server that provides REST API endpoints for Salesforce i
 
 - Node.js (v18 or higher)
 - pnpm (recommended) or npm
+- Docker and Docker Compose (for PostgreSQL and Redis)
 
 ## 🛠️ Installation
 
@@ -32,8 +33,9 @@ A Fastify-based Node.js server that provides REST API endpoints for Salesforce i
 3. **Environment Setup**
    Create a `.env` file in the root directory:
 
+   ```bash
    # Server Configuration (Optional)
-   PORT=8080
+   PORT=8090
    NODE_ENV=development
 
    # GitHub OAuth Configuration (Required)
@@ -43,8 +45,16 @@ A Fastify-based Node.js server that provides REST API endpoints for Salesforce i
    # JWT Configuration (Required)
    JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
 
-   # Database Configuration (Optional)
-   DATABASE_PATH=./database.db
+   # PostgreSQL Database Configuration
+   POSTGRES_HOST=localhost
+   POSTGRES_PORT=5432
+   POSTGRES_USER=postgres
+   POSTGRES_PASSWORD=postgres
+   POSTGRES_DB=pzero
+
+   # Redis Configuration
+   REDIS_HOST=localhost
+   REDIS_PORT=6379
 
    # OAuth Callback URL (Required)
    OAUTH_REDIRECT_URL=http://localhost:1420/auth/callback
@@ -57,15 +67,39 @@ A Fastify-based Node.js server that provides REST API endpoints for Salesforce i
 
 ## 🚀 Running the Server
 
-### Development Mode
+### With Docker (Recommended)
 
-```bash
-pnpm dev
-```
+1. **Start all services (PostgreSQL, Redis, and Server)**
+   ```bash
+   docker-compose up -d
+   ```
+
+2. **View logs**
+   ```bash
+   docker-compose logs -f
+   ```
+
+3. **Stop services**
+   ```bash
+   docker-compose down
+   ```
+
+### Local Development (without Docker)
+
+1. **Start PostgreSQL and Redis using Docker**
+   ```bash
+   docker-compose up -d postgres redis
+   ```
+
+2. **Run the server locally**
+   ```bash
+   pnpm dev
+   ```
 
 ### Production Mode
 
 ```bash
+pnpm build
 pnpm start
 ```
 
@@ -81,23 +115,59 @@ The server will start on `http://localhost:8090`
 - `GET /auth/refresh` - Refresh access token
 - `POST /auth/logout` - Logout user (protected)
 
+### Email Verification
+
+- `POST /verify/email` - Send email verification (requires: `email`, optional: `name`)
+- `GET /verify/email` - Verify email with token (requires: `token` query parameter)
+- `POST /verify/email/resend` - Resend verification email (requires: `email`, optional: `name`)
+
 ### Environment Variables
 
-| Variable                  | Description                | Required                       |
-| `PORT`                    | Server port                | No (defaults to 8090)          |
-| `NODE_ENV`                | Node environment           | No (defaults to development)   |
-| `GITHUB_CLIENT_ID`        | GitHub OAuth Client ID     | Yes                            |
-| `GITHUB_CLIENT_SECRET`    | GitHub OAuth Client Secret | Yes                            |
-| `JWT_SECRET`              | JWT signing secret         | Yes                            |
-| `DATABASE_PATH`           | SQLite database path       | No (defaults to ./database.db) |
-| `OAUTH_REDIRECT_URL`      | OAuth callback URL         | Yes                            |
+| Variable                  | Description                   | Required                    |
+|---------------------------|-------------------------------|-----------------------------|
+| `PORT`                    | Server port                   | No (defaults to 8090)       |
+| `NODE_ENV`                | Node environment              | No (defaults to development)|
+| `GITHUB_CLIENT_ID`        | GitHub OAuth Client ID        | Yes                         |
+| `GITHUB_CLIENT_SECRET`    | GitHub OAuth Client Secret    | Yes                         |
+| `JWT_SECRET`              | JWT signing secret            | Yes                         |
+| `POSTGRES_HOST`           | PostgreSQL host               | No (defaults to localhost)  |
+| `POSTGRES_PORT`           | PostgreSQL port               | No (defaults to 5432)       |
+| `POSTGRES_USER`           | PostgreSQL username           | No (defaults to postgres)   |
+| `POSTGRES_PASSWORD`       | PostgreSQL password           | No (defaults to postgres)   |
+| `POSTGRES_DB`             | PostgreSQL database name      | No (defaults to pzero)      |
+| `REDIS_HOST`              | Redis host                    | No (defaults to localhost)  |
+| `REDIS_PORT`              | Redis port                    | No (defaults to 6379)       |
+| `BREVO_API_KEY`           | Brevo API key for email       | Yes                         |
+| `BREVO_SENDER_EMAIL`      | Sender email address          | Yes                         |
+| `BREVO_SENDER_NAME`       | Sender name                   | No (defaults to P-Zero)     |
+| `OAUTH_REDIRECT_URL`      | OAuth callback URL            | Yes                         |
 
 ## 📁 Project Structure
 
 ```
 src/
-├── index.ts                   # Main application setup
-└── server.ts                  # Server entry point
+├── config/
+│   ├── database.ts           # PostgreSQL connection pool
+│   ├── redis.ts              # Redis client configuration
+│   └── env.ts                # Environment configuration
+├── emails/
+│   └── verification-email.tsx # Email verification React Email template
+├── middleware/
+│   └── auth.ts               # Authentication middleware
+├── routes/
+│   ├── auth.ts               # Authentication routes
+│   └── email.ts              # Email verification routes
+├── services/
+│   ├── auth.service.ts       # Authentication service
+│   ├── email.service.ts      # Email service (Brevo integration)
+│   ├── jwt.service.ts        # JWT token service
+│   └── user.service.ts       # User service
+├── types/
+│   └── index.ts              # TypeScript type definitions
+├── index.ts                  # Main application setup
+└── server.ts                 # Server entry point
+docker-compose.yml            # Docker services configuration
+Dockerfile                    # Server Docker image
 ```
 
 ## 🔒 Security Features
@@ -132,20 +202,60 @@ curl -X GET http://localhost:8090/auth/login
 curl -X GET http://localhost:8090/auth/me \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
+
+### Email Verification
+
+```bash
+# Send verification email
+curl -X POST http://localhost:8090/verify/email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "name": "John Doe"
+  }'
+
+# Verify email with token
+curl -X GET "http://localhost:8090/verify/email?token=YOUR_VERIFICATION_TOKEN"
+
+# Resend verification email
+curl -X POST http://localhost:8090/verify/email/resend \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "name": "John Doe"
+  }'
+```
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **Authentication Errors**
+1. **Database Connection Errors**
+   - Ensure PostgreSQL container is running: `docker-compose ps`
+   - Check PostgreSQL logs: `docker-compose logs postgres`
+   - Verify environment variables in `.env` file
 
-2. **CORS Issues**
+2. **Redis Connection Errors**
+   - Ensure Redis container is running: `docker-compose ps`
+   - Check Redis logs: `docker-compose logs redis`
 
+3. **Authentication Errors**
+   - Verify GitHub OAuth credentials in `.env`
+   - Check OAuth callback URL matches your configuration
+
+4. **CORS Issues**
    - Verify CORS configuration in `src/index.ts`
    - Check frontend origin settings
 
-3. **Build Errors**
+5. **Build Errors**
    - Run `pnpm clean` and `pnpm build`
    - Check TypeScript configuration
+
+### Database Migration from SQLite
+
+If you're migrating from the old SQLite database:
+- The old `database.db` file is no longer used
+- User data will need to be re-created in PostgreSQL
+- All database operations are now asynchronous
 
 ## 📄 License
 

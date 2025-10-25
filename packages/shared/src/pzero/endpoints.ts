@@ -52,16 +52,6 @@ export type Endpoint = {
   status: EndpointStatus
   [key: string]: unknown
 }
-export type Thread = {
-  id: string
-  name: string
-  endpoint: Endpoint
-  dateStarted: number
-  dateUpdated: number
-  isActive: boolean
-  dateRevoked?: number
-  revokedReason?: string
-}
 export const endpointSchema = {
   type: 'object',
   properties: {

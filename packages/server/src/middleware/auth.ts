@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from '@pzero/shared'
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import { authService } from '../services/auth.service.js'
-import { userService } from '../services/user.service.js'
+import { authService } from '../services/auth.service'
+import { userService } from '../services/user.service'
 
 /**
  * JWT Authentication middleware
@@ -34,7 +34,7 @@ export async function authenticateToken(request: FastifyRequest, reply: FastifyR
     }
 
     // Get user from database
-    const user = userService.getUserById(payload.userId)
+    const user = await userService.getUserById(payload.userId)
 
     if (!user) {
       return reply.status(401).send({

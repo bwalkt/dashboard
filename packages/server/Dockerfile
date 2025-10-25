@@ -2,8 +2,8 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Install build tools required for native modules (better-sqlite3)
-RUN apk add --no-cache python3 make g++ sqlite-dev
+# Install PostgreSQL client for debugging (optional)
+RUN apk add --no-cache postgresql-client
 
 # Copy workspace files
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
@@ -23,10 +23,6 @@ RUN pnpm --filter @pzero/shared build
 COPY /packages/server ./packages/server
 
 WORKDIR /app/packages/server
-
-# Rebuild better-sqlite3 for the container architecture
-# Using npm rebuild instead of pnpm because pnpm requires interactive approval of build scripts
-RUN cd /app/node_modules/.pnpm/better-sqlite3@12.4.1/node_modules/better-sqlite3 && npm rebuild
 
 # Expose port
 EXPOSE 8080

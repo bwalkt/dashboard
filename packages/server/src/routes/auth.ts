@@ -1,10 +1,12 @@
 import oauth2Plugin, { type OAuth2Namespace } from '@fastify/oauth2'
 import type { AuthenticatedRequest, ErrorResponse, UserResponse } from '@pzero/shared'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import { config } from '../config/env.js'
-import { authenticateToken } from '../middleware/auth.js'
-import { authService } from '../services/auth.service.js'
-import { userService } from '../services/user.service.js'
+import { config } from '../config/env'
+import { redis } from '../config/redis'
+import { authenticateToken } from '../middleware/auth'
+import { authService } from '../services/auth.service'
+import { smsService } from '../services/sms.service'
+import { userService } from '../services/user.service'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -140,7 +142,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       // Create or update user in database
-      const user = userService.upsertUserFromGitHub(githubUser)
+      const user = await userService.upsertUserFromGitHub(githubUser)
 
       // Generate JWT tokens
       const { accessToken, refreshToken } = authService.generateTokenPair(user.id, user.github_id, user.email)
@@ -223,7 +225,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       // Get user from database
-      const user = userService.getUserById(payload.userId)
+      const user = await userService.getUserById(payload.userId)
 
       if (!user) {
         return reply.status(401).send({
@@ -307,4 +309,46 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
     },
   )
+
+  /**
+   * POST /verify/phone
+   * Send phone verification code via SMS
+   */
+  fastify.post('/verify/phone', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { phone } = request.body as { phone: string }
+
+      // Validate phone number format
+      if (!phone || !smsService.validatePhoneFormat(phone)) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'Invalid phone number format. Please use E.164 format (e.g., +12345678900)',
+        } as ErrorResponse)
+      }
+
+      // Generate verification code
+      const verificationCode = smsService.generateVerificationCode()
+
+      // Store verification code in Redis with 10 minute expiration
+      const redisKey = `phone_verification:${phone}`
+      await redis.set(redisKey, verificationCode, 600)
+
+      // Send SMS with verification code
+      await smsService.sendVerificationCode({
+        to: phone,
+        code: verificationCode,
+      })
+
+      return reply.send({
+        message: 'Verification code sent successfully',
+        expiresIn: 600, // seconds
+      })
+    } catch (error) {
+      console.error('Phone verification error:', error)
+      return reply.status(500).send({
+        error: 'Internal Server Error',
+        message: 'Failed to send verification code',
+      } as ErrorResponse)
+    }
+  })
 }
