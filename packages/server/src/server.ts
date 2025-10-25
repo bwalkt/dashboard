@@ -27,8 +27,8 @@ const gracefulShutdown = async (signal: NodeJS.Signals) => {
   }
 }
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
-process.on('SIGINT', () => gracefulShutdown('SIGINT'))
+process.on('SIGTERM', () => gracefulShutdown)
+process.on('SIGINT', () => gracefulShutdown)
 
 // Start the server
 try {
