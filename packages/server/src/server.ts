@@ -12,18 +12,17 @@ const fastify = Fastify({
 // Register the plugin
 await fastify.register(app)
 
-// Graceful shutdown
-const gracefulShutdown = async (signal: string) => {
-  console.log(`\n${signal} received. Starting graceful shutdown...`)
+let shuttingDown = false
+const gracefulShutdown = async (signal: NodeJS.Signals) => {
+  if (shuttingDown) return
+  shuttingDown = true
+  fastify.log.info({ signal }, 'Starting graceful shutdown')
   try {
-    await fastify.close()
-    await db.close()
-    await redis.close()
-    console.log('Database and Redis connections closed')
-    console.log('Server closed successfully')
+    await fastify.close() // triggers onClose hooks to clean up db/redis
+    fastify.log.info('Server closed successfully')
     process.exit(0)
   } catch (err) {
-    console.error('Error during graceful shutdown:', err)
+    fastify.log.error({ err }, 'Error during graceful shutdown')
     process.exit(1)
   }
 }
