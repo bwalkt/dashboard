@@ -53,6 +53,8 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   // Console log when server starts
   fastify.addHook('onReady', async () => {})
+  await db.initialize()
+  await redis.initialize()
 
   // Close resources on server shutdown
   fastify.addHook('onClose', async () => {

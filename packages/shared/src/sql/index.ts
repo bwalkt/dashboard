@@ -30,9 +30,13 @@ export class SQLStatement {
     if (statement instanceof SQLStatement) {
       this.strings[this.strings.length - 1] += statement.strings[0]
       this.strings.push(...statement.strings.slice(1))
-      const list = this.values || this.bind
-      if (list) {
-        list.push(...statement.values || [])
+      const target = this.bind ?? this.values
+      const source = (statement as SQLStatement).bind ?? (statement as SQLStatement).values ?? []
+      if (target) {
+        target.push(...source)
+      } else if (source.length) {
+        // default to values array when first params are appended
+        this.values = [...source]
       }
     } else {
       this.strings[this.strings.length - 1] += statement
