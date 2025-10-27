@@ -241,3 +241,4 @@ volumes:
     name: pzero-signoz-sqlite
   zookeeper-1:
     name: pzero-signoz-zookeeper-1
+    

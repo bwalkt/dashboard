@@ -97,11 +97,11 @@ services:
       - ziti-fs:/persistent
     networks:
       - ziti
-  golang-ziti:
+  golang-proxy:
     build:
       context: .
-      dockerfile: ./golang-ziti/Dockerfile
-    container_name: golang-ziti
+      dockerfile: ./golang-proxy/Dockerfile
+    container_name: golang-proxy
     ports:
       - "8080:8080"
     environment:
@@ -120,7 +120,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
-      - golang-ziti-data:/app/data
+      - golang-proxy-data:/app/data
 
   ziti-host:
     image: docker.io/openziti/ziti-host
@@ -140,4 +140,4 @@ networks:
 volumes:
   ziti-fs:
   ziti-host:
-  golang-ziti-data:
+  golang-proxy-data:
