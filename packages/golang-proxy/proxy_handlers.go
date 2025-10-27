@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -45,9 +45,9 @@ func isPortAllowed(port int) bool {
 }
 
 // validateURLPath checks for path traversal attacks and other malicious patterns
-func validateURLPath(path string) bool {
+func validateURLPath(urlPath string) bool {
 	// Check path length
-	if len(path) > MaxPathLength {
+	if len(urlPath) > MaxPathLength {
 		return false
 	}
 
@@ -58,7 +58,7 @@ func validateURLPath(path string) bool {
 		"..%252f", "..%255c", "%c0%ae%c0%ae%c0%af",
 	}
 
-	pathLower := strings.ToLower(path)
+	pathLower := strings.ToLower(urlPath)
 	for _, pattern := range dangerousPatterns {
 		if strings.Contains(pathLower, pattern) {
 			return false
@@ -66,13 +66,13 @@ func validateURLPath(path string) bool {
 	}
 
 	// Check for null bytes
-	if strings.Contains(path, "\x00") {
+	if strings.Contains(urlPath, "\x00") {
 		return false
 	}
 
-	// Validate path using filepath.Clean
-	cleanPath := filepath.Clean(path)
-	if cleanPath != path && !strings.HasPrefix(cleanPath, "/") {
+	// Validate path using path.Clean for URL-path semantics
+	cleanPath := path.Clean(urlPath)
+	if cleanPath != urlPath && !strings.HasPrefix(cleanPath, "/") {
 		return false
 	}
 
@@ -183,11 +183,7 @@ func validateHostname(hostname string) bool {
 	}
 
 	// Check for .internal domains
-	if strings.HasSuffix(hostnameLower, ".internal") {
-		return false
-	}
-
-	return true
+	return !strings.HasSuffix(hostnameLower, ".internal")
 }
 
 // logProxyRequest logs proxy requests for monitoring and security analysis
@@ -285,12 +281,12 @@ func sanitizeHeaders(headers map[string]string) map[string]string {
 		"Authorization":       true,
 		"Cookie":              true,
 		"X-Forwarded-For":     true,
-		"X-Real-IP":           true,
+		"X-Real-Ip":           true,
 		"X-Forwarded-Proto":   true,
 		"X-Forwarded-Host":    true,
 		"X-Forwarded-Port":    true,
-		"X-Original-URL":      true,
-		"X-Rewrite-URL":       true,
+		"X-Original-Url":      true,
+		"X-Rewrite-Url":       true,
 		"Proxy-Authorization": true,
 		"Proxy-Connection":    true,
 		"Upgrade":             true,
@@ -301,11 +297,11 @@ func sanitizeHeaders(headers map[string]string) map[string]string {
 	}
 
 	for key, value := range headers {
-		// Normalize header name
-		normalizedKey := strings.Title(strings.ToLower(key))
+		// Canonicalize header name to standard format
+		canonicalKey := http.CanonicalHeaderKey(key)
 
 		// Skip blocked headers
-		if blockedHeaders[normalizedKey] {
+		if blockedHeaders[canonicalKey] {
 			continue
 		}
 
@@ -314,7 +310,7 @@ func sanitizeHeaders(headers map[string]string) map[string]string {
 			continue
 		}
 
-		sanitized[key] = value
+		sanitized[canonicalKey] = value
 	}
 
 	return sanitized
@@ -373,11 +369,25 @@ func isValidDomain(targetURL string) bool {
 		return false
 	}
 
-	// Split comma-separated domains and check if the target domain is in the list
+	// Split comma-separated domains and check if the target hostname is allowed
 	allowedDomains := strings.Split(allowedDomainsStr, ",")
+	targetHost := parsedURL.Hostname()
 	for _, domain := range allowedDomains {
-		domain = strings.TrimSpace(domain)
-		if parsedURL.Host == domain {
+		d := strings.TrimSpace(domain)
+		if d == "" {
+			continue
+		}
+
+		// Support wildcard-style subdomain allowlist entries starting with '.'
+		// e.g., ".example.com" allows any subdomain of example.com
+		if strings.HasPrefix(d, ".") {
+			if strings.HasSuffix(targetHost, d) {
+				return true
+			}
+			continue
+		}
+
+		if targetHost == d {
 			return true
 		}
 	}
@@ -388,8 +398,8 @@ func isValidDomain(targetURL string) bool {
 // ProxyHandler handles HTTP proxy requests - validates URL and forwards the request
 func (m *Middleware) ProxyHandler(w http.ResponseWriter, r *http.Request) {
 	// Get user from context for logging
-	user := r.Context().Value(userContextKey).(*User)
-	if user == nil {
+	user, ok := r.Context().Value(userContextKey).(*User)
+	if !ok || user == nil {
 		m.JSONResponse(w, false, "User not found", nil)
 		return
 	}

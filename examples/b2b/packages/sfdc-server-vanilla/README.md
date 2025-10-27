@@ -88,7 +88,7 @@ The server will start on `http://localhost:8080`
 - `GET /auth/login` - Initiate GitHub OAuth flow
 - `GET /auth/callback` - Handle OAuth callback from GitHub
 - `GET /auth/me` - Get current user info (protected)
-- `GET /auth/refresh` - Refresh access token
+- `POST /auth/refresh` - Refresh access token (no access token required; uses refresh cookie)
 - `POST /auth/logout` - Logout user (protected)
 
 ### Salesforce Integration

@@ -35,26 +35,30 @@ const sampleProducts = [
   { id: "PROD-008", name: "Support Plan", unitPrice: 399.99 },
 ];
 
+type OrderStatus = "Draft" | "Activated" | "Processing" | "Completed" | "Shipped";
+
 // Order statuses with weighted distribution (favoring completed orders)
-const statusDistribution = [
-  { status: "Completed" as const, weight: 60 }, // 60% completed
-  { status: "Processing" as const, weight: 20 }, // 20% processing
-  { status: "Shipped" as const, weight: 15 }, // 10% shipped
-  { status: "Draft" as const, weight: 10 }, // 3% draft
+const statusDistribution: ReadonlyArray<{ status: OrderStatus; weight: number }> = [
+  { status: "Completed", weight: 60 }, // 60% completed
+  { status: "Processing", weight: 20 }, // 20% processing
+  { status: "Shipped", weight: 10 }, // 10% shipped
+  { status: "Draft", weight: 3 }, // 3% draft
+  { status: "Activated", weight: 7 }, // 7% activated
 ];
 
 /**
  * Selects an order status according to the configured weighted distribution.
  *
- * @returns `'Draft' | 'Activated' | 'Processing' | 'Completed' | 'Shipped'` — the chosen status based on the weights in `statusDistribution`; returns `'Completed'` as a fallback.
+ * @returns OrderStatus — the chosen status based on the weights in `statusDistribution`; returns 'Completed' as a fallback.
  */
-function getRandomStatus(): "Draft" | "Activated" | "Processing" | "Completed" | "Shipped" {
-  const random = Math.random() * 100;
+function getRandomStatus(): OrderStatus {
+  const totalWeight = statusDistribution.reduce((sum, item) => sum + item.weight, 0);
+  const target = Math.random() * totalWeight; // [0, totalWeight)
   let cumulative = 0;
 
   for (const { status, weight } of statusDistribution) {
     cumulative += weight;
-    if (random <= cumulative) {
+    if (target < cumulative) {
       return status;
     }
   }
@@ -206,7 +210,7 @@ async function seedOrders(numberOfOrders: number = 50) {
 
     // Generate and create orders
 
-    const statusCounts = {
+    const statusCounts: Record<OrderStatus, number> = {
       Draft: 0,
       Activated: 0,
       Processing: 0,

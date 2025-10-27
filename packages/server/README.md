@@ -1,7 +1,7 @@
-
 A Fastify-based Node.js server that provides REST API endpoints for Salesforce integration, including authentication, data querying, and record management.
 
 ## 🚀 Features
+
 - This is server for pzero.
 - TODO We will split as microservices and use bff pattern to access various services.
 - **CORS Support**: Cross-origin resource sharing enabled for frontend integration
@@ -36,13 +36,17 @@ A Fastify-based Node.js server that provides REST API endpoints for Salesforce i
    ```bash
    # Server Configuration (Optional)
    PORT=8090
+
+   PORT=8080
    NODE_ENV=development
 
    # GitHub OAuth Configuration (Required)
+
    GITHUB_CLIENT_ID=your_github_client_id_here
    GITHUB_CLIENT_SECRET=your_github_client_secret_here
 
    # JWT Configuration (Required)
+
    JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
 
    # PostgreSQL Database Configuration
@@ -55,9 +59,18 @@ A Fastify-based Node.js server that provides REST API endpoints for Salesforce i
    # Redis Configuration
    REDIS_HOST=localhost
    REDIS_PORT=6379
+   # Database Configuration (Optional)
+
+   DATABASE_PATH=./database.db
 
    # OAuth Callback URL (Required)
+
    OAUTH_REDIRECT_URL=http://localhost:1420/auth/callback
+
+   ```
+
+   ```
+
    ```
 
 4. **Build the project**
@@ -70,11 +83,13 @@ A Fastify-based Node.js server that provides REST API endpoints for Salesforce i
 ### With Docker (Recommended)
 
 1. **Start all services (PostgreSQL, Redis, and Server)**
+
    ```bash
    docker-compose up -d
    ```
 
 2. **View logs**
+
    ```bash
    docker-compose logs -f
    ```
@@ -87,6 +102,7 @@ A Fastify-based Node.js server that provides REST API endpoints for Salesforce i
 ### Local Development (without Docker)
 
 1. **Start PostgreSQL and Redis using Docker**
+
    ```bash
    docker-compose up -d postgres redis
    ```
@@ -112,7 +128,7 @@ The server will start on `http://localhost:8090`
 - `GET /auth/login` - Initiate GitHub OAuth flow
 - `GET /auth/callback` - Handle OAuth callback from GitHub
 - `GET /auth/me` - Get current user info (protected)
-- `GET /auth/refresh` - Refresh access token
+- `POST /auth/refresh` - Refresh access token (no access token required; uses refresh cookie)
 - `POST /auth/logout` - Logout user (protected)
 
 ### Email Verification
@@ -123,24 +139,32 @@ The server will start on `http://localhost:8090`
 
 ### Environment Variables
 
-| Variable                  | Description                   | Required                    |
-|---------------------------|-------------------------------|-----------------------------|
-| `PORT`                    | Server port                   | No (defaults to 8090)       |
-| `NODE_ENV`                | Node environment              | No (defaults to development)|
-| `GITHUB_CLIENT_ID`        | GitHub OAuth Client ID        | Yes                         |
-| `GITHUB_CLIENT_SECRET`    | GitHub OAuth Client Secret    | Yes                         |
-| `JWT_SECRET`              | JWT signing secret            | Yes                         |
-| `POSTGRES_HOST`           | PostgreSQL host               | No (defaults to localhost)  |
-| `POSTGRES_PORT`           | PostgreSQL port               | No (defaults to 5432)       |
-| `POSTGRES_USER`           | PostgreSQL username           | No (defaults to postgres)   |
-| `POSTGRES_PASSWORD`       | PostgreSQL password           | No (defaults to postgres)   |
-| `POSTGRES_DB`             | PostgreSQL database name      | No (defaults to pzero)      |
-| `REDIS_HOST`              | Redis host                    | No (defaults to localhost)  |
-| `REDIS_PORT`              | Redis port                    | No (defaults to 6379)       |
-| `BREVO_API_KEY`           | Brevo API key for email       | Yes                         |
-| `BREVO_SENDER_EMAIL`      | Sender email address          | Yes                         |
-| `BREVO_SENDER_NAME`       | Sender name                   | No (defaults to P-Zero)     |
-| `OAUTH_REDIRECT_URL`      | OAuth callback URL            | Yes                         |
+| Variable               | Description                | Required                       |
+| ---------------------- | -------------------------- | ------------------------------ |
+| `PORT`                 | Server port                | No (defaults to 8090)          |
+| `NODE_ENV`             | Node environment           | No (defaults to development)   |
+| `GITHUB_CLIENT_ID`     | GitHub OAuth Client ID     | Yes                            |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes                            |
+| `JWT_SECRET`           | JWT signing secret         | Yes                            |
+| `POSTGRES_HOST`        | PostgreSQL host            | No (defaults to localhost)     |
+| `POSTGRES_PORT`        | PostgreSQL port            | No (defaults to 5432)          |
+| `POSTGRES_USER`        | PostgreSQL username        | No (defaults to postgres)      |
+| `POSTGRES_PASSWORD`    | PostgreSQL password        | No (defaults to postgres)      |
+| `POSTGRES_DB`          | PostgreSQL database name   | No (defaults to pzero)         |
+| `REDIS_HOST`           | Redis host                 | No (defaults to localhost)     |
+| `REDIS_PORT`           | Redis port                 | No (defaults to 6379)          |
+| `BREVO_API_KEY`        | Brevo API key for email    | Yes                            |
+| `BREVO_SENDER_EMAIL`   | Sender email address       | Yes                            |
+| `BREVO_SENDER_NAME`    | Sender name                | No (defaults to P-Zero)        |
+| `OAUTH_REDIRECT_URL`   | OAuth callback URL         | Yes                            |
+| Variable               | Description                | Required                       |
+| `PORT`                 | Server port                | No (defaults to 8090)          |
+| `NODE_ENV`             | Node environment           | No (defaults to development)   |
+| `GITHUB_CLIENT_ID`     | GitHub OAuth Client ID     | Yes                            |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes                            |
+| `JWT_SECRET`           | JWT signing secret         | Yes                            |
+| `DATABASE_PATH`        | SQLite database path       | No (defaults to ./database.db) |
+| `OAUTH_REDIRECT_URL`   | OAuth callback URL         | Yes                            |
 
 ## 📁 Project Structure
 
@@ -225,24 +249,29 @@ curl -X POST http://localhost:8090/verify/email/resend \
     "name": "John Doe"
   }'
 ```
+
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
 1. **Database Connection Errors**
+
    - Ensure PostgreSQL container is running: `docker-compose ps`
    - Check PostgreSQL logs: `docker-compose logs postgres`
    - Verify environment variables in `.env` file
 
 2. **Redis Connection Errors**
+
    - Ensure Redis container is running: `docker-compose ps`
    - Check Redis logs: `docker-compose logs redis`
 
 3. **Authentication Errors**
+
    - Verify GitHub OAuth credentials in `.env`
    - Check OAuth callback URL matches your configuration
 
 4. **CORS Issues**
+
    - Verify CORS configuration in `src/index.ts`
    - Check frontend origin settings
 
@@ -253,6 +282,7 @@ curl -X POST http://localhost:8090/verify/email/resend \
 ### Database Migration from SQLite
 
 If you're migrating from the old SQLite database:
+
 - The old `database.db` file is no longer used
 - User data will need to be re-created in PostgreSQL
 - All database operations are now asynchronous

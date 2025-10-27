@@ -138,8 +138,7 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
 
   // Query Salesforce orders from the last 30 days
   // GET /salesforce/Order/query/last-30-days
-  // Returns all orders created within the last 30 days, ordered by CreatedDate DESC
-  // Uses SOQL: SELECT ... FROM Order WHERE CreatedDate >= LAST_N_DAYS:30 ORDER BY CreatedDate DESC
+  // Returns all orders within the last 30 days, ordered by EffectiveDate DESC
   fastify.get(
     "/salesforce/Order/query/last-30-days",
     {
@@ -159,7 +158,7 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         const fields = keys.join(",");
 
         // Create SOQL query with WHERE clause for last 30 days
-        // Using CreatedDate field to filter orders created in the last 30 days
+        // Using EffectiveDate field to filter orders in the last 30 days
         const soql = `SELECT ${fields} FROM Order WHERE EffectiveDate <= TODAY AND EffectiveDate >= LAST_N_DAYS:30 ORDER BY EffectiveDate DESC`;
 
         const results = await salesforceClient.queryAll(soql);
@@ -169,7 +168,6 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
           totalSize: results.totalSize,
           records: results.records,
           done: results.done,
-          query: soql,
         });
       } catch (error) {
         fastify.log.error(error, "Salesforce last 30 days query error");

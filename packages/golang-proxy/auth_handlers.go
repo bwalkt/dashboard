@@ -18,7 +18,12 @@ func (m *Middleware) AuthLoginHandler(w http.ResponseWriter, r *http.Request) {
 	state := generateRandomState()
 
 	// Store state in session
-	session, _ := m.authConfig.Store.Get(r, "auth-session")
+	session, err := m.authConfig.Store.Get(r, "auth-session")
+	if err != nil {
+		log.Printf("Failed to get session: %v", err)
+		http.Error(w, "Failed to get session", http.StatusInternalServerError)
+		return
+	}
 	session.Values["state"] = state
 	if err := session.Save(r, w); err != nil {
 		log.Printf("Failed to save session state: %v", err)
@@ -102,14 +107,14 @@ func (m *Middleware) AuthMeHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// AuthRefreshHandler handles GET /auth/refresh - refreshes access token using refresh token (matching vanilla server API)
+// AuthRefreshHandler handles POST /auth/refresh - refreshes access token using refresh token (matching vanilla server API)
 func (m *Middleware) AuthRefreshHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
+	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Extract refresh token from cookies
+	// Extract refresh token from cookies (no access token required)
 	cookies := make(map[string]string)
 	for _, cookie := range r.Cookies() {
 		cookies[cookie.Name] = cookie.Value
@@ -189,13 +194,28 @@ func (m *Middleware) AuthLogoutHandler(w http.ResponseWriter, r *http.Request) {
 	m.authConfig.ClearJWTCookies(w)
 
 	// Clear session
-	session, _ := m.authConfig.Store.Get(r, "auth-session")
-	session.Values["user_id"] = nil
-	session.Values["username"] = nil
-	session.Values["email"] = nil
-	session.Values["jwt_token"] = nil
-	session.Options.MaxAge = -1
-	session.Save(r, w)
+	session, err := m.authConfig.Store.Get(r, "auth-session")
+	if err != nil {
+		log.Printf("Failed to get session: %v", err)
+		http.Error(w, "Failed to get session", http.StatusInternalServerError)
+		return
+	}
+	if session != nil {
+		if session.Values != nil {
+			delete(session.Values, "user_id")
+			delete(session.Values, "username")
+			delete(session.Values, "email")
+			delete(session.Values, "jwt_token")
+		}
+		if session.Options != nil {
+			session.Options.MaxAge = -1
+		}
+		if err := session.Save(r, w); err != nil {
+			log.Printf("Failed to save session during logout: %v", err)
+			http.Error(w, "Failed to save session", http.StatusInternalServerError)
+			return
+		}
+	}
 
 	// Return success response (matching vanilla server format)
 	w.Header().Set("Content-Type", "application/json")

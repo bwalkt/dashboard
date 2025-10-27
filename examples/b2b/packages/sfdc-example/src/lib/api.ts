@@ -23,12 +23,7 @@ export interface ApiResponse<T = any> {
 }
 
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-    public statusText: string,
-    public response?: Response
-  ) {
+  constructor(message: string, public status: number, public statusText: string, public response?: Response) {
     super(message);
     this.name = "ApiError";
   }
@@ -78,7 +73,7 @@ async function refreshToken(): Promise<void> {
   refreshPromise = (async () => {
     try {
       const response = await fetch(`${getBackendUrl()}/auth/refresh`, {
-        method: "GET",
+        method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",

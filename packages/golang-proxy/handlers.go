@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"log"
@@ -128,8 +129,6 @@ type APIResponse struct {
 
 // JSONResponse sends a JSON response with the given parameters
 func (m *Middleware) JSONResponse(w http.ResponseWriter, success bool, message string, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-
 	// Sanitize error messages in production
 	if !success && os.Getenv("ENVIRONMENT") == "production" {
 		message = "An error occurred"
@@ -141,19 +140,29 @@ func (m *Middleware) JSONResponse(w http.ResponseWriter, success bool, message s
 		Data:    data,
 	}
 
-	// Check for JSON encoding errors
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	// Encode to buffer first to catch any encoding errors before committing headers
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
 		log.Printf("JSON encoding error: %v", err)
-
-		// Try to write a minimal error response
+		// Write a minimal error response without attempting to reset already-sent headers
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		if _, writeErr := w.Write([]byte(`{"error":"Internal Server Error","message":"Failed to encode response"}`)); writeErr != nil {
-			log.Printf("Failed to write error response: %v", writeErr)
-			// Last resort: try plain text
-			w.Header().Set("Content-Type", "text/plain")
-			w.Write([]byte("Internal Server Error"))
-		}
+		w.Write([]byte(`{"success":false,"message":"Failed to encode response"}`))
+		return
 	}
+
+	// Determine HTTP status code based on success flag
+	statusCode := http.StatusOK
+	if !success {
+		// Default to 500 for generic errors; specific handlers can use different codes
+		// by calling w.WriteHeader before calling this function if needed
+		statusCode = http.StatusInternalServerError
+	}
+
+	// Now that encoding succeeded, write the response with correct headers and status
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	buf.WriteTo(w)
 }
 
 // SetupRoutes configures all HTTP routes and returns the main router
@@ -166,7 +175,8 @@ func (m *Middleware) SetupRoutes() http.Handler {
 
 	// Protected auth routes
 	mux.Handle("/auth/me", m.AuthMiddleware(http.HandlerFunc(m.AuthMeHandler)))
-	mux.Handle("/auth/refresh", m.AuthMiddleware(http.HandlerFunc(m.AuthRefreshHandler)))
+	// Refresh is a public POST endpoint relying only on refresh cookie
+	mux.HandleFunc("/auth/refresh", m.AuthRefreshHandler)
 	mux.Handle("/auth/logout", m.AuthMiddleware(http.HandlerFunc(m.AuthLogoutHandler)))
 
 	// Legacy routes for backward compatibility

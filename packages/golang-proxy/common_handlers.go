@@ -100,7 +100,7 @@ func (m *Middleware) DashboardHandler(w http.ResponseWriter, r *http.Request) {
         <h3>API Endpoints</h3>
         <ul>
             <li><a href="/auth/me">GET /auth/me</a> - Get your profile information</li>
-            <li><a href="/auth/refresh">GET /auth/refresh</a> - Refresh your access token</li>
+            <li><strong>POST /auth/refresh</strong> - Refresh your access token (no access token required)</li>
             <li><a href="/test">GET /test</a> - Test endpoint</li>
             <li><strong>POST /proxy</strong> - Proxy HTTP requests to allowed domains</li>
         </ul>
