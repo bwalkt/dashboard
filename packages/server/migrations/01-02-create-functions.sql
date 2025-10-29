@@ -49,7 +49,7 @@ AS $$
         // You can modify the objects here if needed
         plv8.return_next(users[i]); // Return each object as a row
     }
-  } catch (err) {
+  } exception (err) {
     plv8.elog(ERROR, err);
   }
 $$ language plv8;
@@ -88,7 +88,7 @@ try {
             results[i][columns[j]] = rec[columns[j]];
         }
     }
-}catch (err) {
+} exception (err) {
     plv8.elog(ERROR, err);
     return `ERROR: ${err}`;
 } finally {
@@ -108,7 +108,7 @@ CREATE OR REPLACE FUNCTION incmix.check_table_exists (table_name text, schema_na
         if (result && result.length > 0) {
             return true;
         }
-    } catch (err) {
+    } exception (err) {
         plv8.elog(ERROR, err);
         return false;
     }
