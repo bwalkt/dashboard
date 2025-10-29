@@ -1,23 +1,28 @@
 -- Initialize PostgreSQL extensions
 -- This script runs automatically when the database container first starts
+CREATE EXTENSION if NOT EXISTS plpython3u;
 
-CREATE EXTENSION IF NOT EXISTS plpython3u;
-CREATE EXTENSION IF NOT EXISTS PGCRYPTO;
-CREATE EXTENSION IF NOT EXISTS CITEXT;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS hstore;
-CREATE EXTENSION IF NOT EXISTS POSTGIS;
-CREATE EXTENSION IF NOT EXISTS pgx_ulid;
+CREATE EXTENSION if NOT EXISTS pgcrypto;
 
+CREATE EXTENSION if NOT EXISTS citext;
 
-CREATE SCHEMA IF NOT EXISTS pzero;
+CREATE EXTENSION if NOT EXISTS pg_trgm;
 
-CREATE DOMAIN PZERO.UUID AS TEXT;
+CREATE EXTENSION if NOT EXISTS hstore;
+
+CREATE EXTENSION if NOT EXISTS postgis;
+
+CREATE EXTENSION if NOT EXISTS pgx_ulid;
+
+CREATE SCHEMA if NOT EXISTS pzero;
+
+CREATE DOMAIN pzero.uuid AS text;
+
 -- Create alias for ULID generation to maintain consistent API
-CREATE OR REPLACE FUNCTION pzero.gen_ulid() RETURNS pzero.UUID AS $$
+CREATE OR REPLACE FUNCTION pzero.gen_ulid () returns pzero.uuid AS $$
     SELECT gen_ulid()::pzero.UUID;
-$$ LANGUAGE SQL VOLATILE;
+$$ language sql volatile;
 
-CREATE OR REPLACE FUNCTION pzero.gen_monotonic_id() RETURNS pzero.UUID AS $$
+CREATE OR REPLACE FUNCTION pzero.gen_monotonic_id () returns pzero.uuid AS $$
     SELECT gen_monotonic_ulid()::pzero.UUID;
-$$ LANGUAGE SQL VOLATILE;
+$$ language sql volatile;

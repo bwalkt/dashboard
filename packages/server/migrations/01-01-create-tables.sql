@@ -1,62 +1,80 @@
 -- Up Migration
-CREATE SCHEMA IF NOT EXISTS pzero;
+CREATE SCHEMA if NOT EXISTS pzero;
 
-CREATE DOMAIN PZERO.UUID AS ulid;
-CREATE DOMAIN PZERO.ID AS PZERO.UUID;
-CREATE DOMAIN PZERO.IID AS PZERO.ID;
-CREATE DOMAIN PZERO.DATA AS JSONB;
+CREATE DOMAIN pzero.uuid AS ulid;
+
+CREATE DOMAIN pzero.id AS pzero.uuid;
+
+CREATE DOMAIN pzero.iid AS pzero.id;
+
+CREATE DOMAIN pzero.data AS jsonb;
 
 -- Create alias for ULID generation to maintain consistent API
-CREATE OR REPLACE FUNCTION pzero.gen_ulid() RETURNS pzero.UUID AS $$
+CREATE OR REPLACE FUNCTION pzero.gen_ulid () returns pzero.uuid AS $$
     SELECT gen_ulid()::pzero.UUID;
-$$ LANGUAGE SQL VOLATILE;
+$$ language sql volatile;
 
-CREATE OR REPLACE FUNCTION pzero.gen_monotonic_id() RETURNS pzero.UUID AS $$
+CREATE OR REPLACE FUNCTION pzero.gen_monotonic_id () returns pzero.uuid AS $$
     SELECT gen_monotonic_ulid()::pzero.UUID;
-$$ LANGUAGE SQL VOLATILE;
+$$ language sql volatile;
 
-CREATE OR REPLACE FUNCTION pzero.is_valid_email(text) RETURNS boolean AS $$
+CREATE OR REPLACE FUNCTION pzero.is_valid_email (text) returns boolean AS $$
     BEGIN
         RETURN $1 ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$';
     END;
-    $$ LANGUAGE plpgsql;
+    $$ language plpgsql;
 
-CREATE DOMAIN pzero.email AS TEXT
-CHECK (
-  VALUE ~* '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
+CREATE DOMAIN pzero.email AS text CHECK (
+  value ~* '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
 );
 
-CREATE DOMAIN pzero.VALID_HANDLE AS VARCHAR(25)
-  NOT NULL
-  CHECK (VALUE ~* '^[A-Za-z0-9._\-]+$');
+CREATE DOMAIN pzero.valid_handle AS varchar(25) NOT NULL CHECK (value ~* '^[A-Za-z0-9._\-]+$');
+
 ;
-CREATE DOMAIN pzero.VALID_COL_NAME AS VARCHAR(100)
-  NOT NULL
-  CHECK (VALUE ~* '^[A-Za-z0-9_]+$');
 
-CREATE TYPE PZERO.ADDRESS  AS (
-  STREET TEXT,
-  CITY TEXT,
-  STATE TEXT,
-  ZIPCODE TEXT,
-  COUNTRY TEXT
-);
-CREATE TYPE PZERO.METHOD AS ENUM ('GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS');
-CREATE TYPE pzero.LOCATION AS (
-  ADDRESS pzero.ADDRESS,
-  LAT INT,
-  LON INT,
-  ALT INT
+CREATE DOMAIN pzero.valid_col_name AS varchar(100) NOT NULL CHECK (value ~* '^[A-Za-z0-9_]+$');
+
+CREATE TYPE pzero.address AS (
+  street text,
+  city text,
+  state text,
+  zipcode text,
+  country text
 );
 
-CREATE DOMAIN pzero.MMN_TYPE AS CHAR(3);
-CREATE TYPE PZERO.USER_STATUS AS ENUM ('ACTIVE', 'INACTIVE', 'BANNED', 'DELETED', 'PENDING');
-CREATE TYPE PZERO.DEVICE_STATUS AS ENUM ('ACTIVE', 'INACTIVE', 'LOST', 'UNKNOWN');
-CREATE DOMAIN PZERO.KEY_VALUES AS HSTORE;
-CREATE TYPE PZERO.SESSION_STATUS AS ENUM ('ACTIVE', 'INACTIVE', 'EXPIRED');
-CREATE TYPE PZERO.SESSION_TYPE AS ENUM ('WEB', 'MOBILE', 'API', 'OTHER');
-CREATE TYPE PZERO.DEVICE_TYPE AS ENUM ('MOBILE', 'TABLET', 'DESKTOP', 'LAPTOP', 'OTHER');
-CREATE TYPE PZERO.ENDPOINT_STATUS AS ENUM (
+CREATE TYPE pzero.method AS enum(
+  'GET',
+  'POST',
+  'PUT',
+  'DELETE',
+  'PATCH',
+  'HEAD',
+  'OPTIONS'
+);
+
+CREATE TYPE pzero.location AS (address pzero.address, lat int, lon int, alt int);
+
+CREATE DOMAIN pzero.mmn_type AS char(3);
+
+CREATE TYPE pzero.user_status AS enum(
+  'ACTIVE',
+  'INACTIVE',
+  'BANNED',
+  'DELETED',
+  'PENDING'
+);
+
+CREATE TYPE pzero.device_status AS enum('ACTIVE', 'INACTIVE', 'LOST', 'UNKNOWN');
+
+CREATE DOMAIN pzero.key_values AS hstore;
+
+CREATE TYPE pzero.session_status AS enum('ACTIVE', 'INACTIVE', 'EXPIRED');
+
+CREATE TYPE pzero.session_type AS enum('WEB', 'MOBILE', 'API', 'OTHER');
+
+CREATE TYPE pzero.device_type AS enum('MOBILE', 'TABLET', 'DESKTOP', 'LAPTOP', 'OTHER');
+
+CREATE TYPE pzero.endpoint_status AS enum(
   'ACTIVE',
   'INACTIVE',
   'DEPRECATED',
@@ -68,58 +86,83 @@ CREATE TYPE PZERO.ENDPOINT_STATUS AS ENUM (
   'SUSPENDED',
   'DELETED'
 );
-CREATE TYPE DIR.STATUS AS ENUM (
-  'CORRUPTED',
-)
-CREATE TYPE PZERO.ORG_STATUS AS PZERO.ENDPOINT_STATUS
-CREATE TYPE PZERO.SUBSCRIBER_TIER_LEVEL AS ENUM (
-  'FREE',
-  'ENTERPRISE'
-)
-create type pzero.domain as TEXT;
-CREATE TYPE OAUTH_PROVIDER AS ENUM ('GITHUB', 'GOOGLE', 'MICROSOFT');
+
+CREATE TYPE dir.status AS enum('CORRUPTED',)
+CREATE TYPE pzero.org_status AS pzero.endpoint_status
+CREATE TYPE pzero.subscriber_tier_level AS enum('FREE', 'ENTERPRISE')
+CREATE TYPE pzero.domain AS text;
+
+CREATE TYPE oauth_provider AS enum('GITHUB', 'GOOGLE', 'MICROSOFT');
+
 -- OB - OWNED BY, PC - PARENT-CHILD, PP - PEER-PEER, EXTEND-PARENT,CLONED-OBJECT, LINKED-OBJECT, ROOT-OBJECT, RELATED, REPLACED-OBJECT, Admined-by, member-of
-CREATE TYPE pzero.RELATION_TYPE AS ENUM('OB', 'PC', 'PP', 'EP', 'CO', 'LO', 'RO', 'RL', 'RP', 'AB');
-CREATE TYPE pzero.FILE_TYPE AS ENUM('.png', '.gif', '.mp4', '.txt', '.pdf');
-CREATE TYPE pzero.FILE_UNIT AS ENUM ('B','KB','MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
-
-CREATE TABLE pzero.MMN (
-  mmn pzero.MMN_TYPE unique primary key,
-  table_name pzero.VALID_HANDLE unique
+CREATE TYPE pzero.relation_type AS enum(
+  'OB',
+  'PC',
+  'PP',
+  'EP',
+  'CO',
+  'LO',
+  'RO',
+  'RL',
+  'RP',
+  'AB'
 );
 
-CREATE TABLE pzero.TXNS(
-  ID BIGINT PRIMARY KEY NOT NULL,
-  C_BY pzero.ID NOT NULL REFERENCE pzero.auth(id),
-  C_AT TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TYPE pzero.file_type AS enum('.png', '.gif', '.mp4', '.txt', '.pdf');
+
+CREATE TYPE pzero.file_unit AS enum(
+  'B',
+  'KB',
+  'MB',
+  'GB',
+  'TB',
+  'PB',
+  'EB',
+  'ZB',
+  'YB'
 );
-CREATE INDEX idx_pzero_txns_c_at_by ON pzero.txns ( c_at, c_by);
+
+CREATE TABLE pzero.mmn (
+  mmn pzero.mmn_type UNIQUE PRIMARY KEY,
+  table_name pzero.valid_handle UNIQUE
+);
+
+CREATE TABLE pzero.txns (
+  id bigint PRIMARY KEY NOT NULL,
+  c_by pzero.id NOT NULL reference pzero.auth (id),
+  c_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_pzero_txns_c_at_by ON pzero.txns (c_at, c_by);
 
 CREATE TABLE pzero.relations (
-  UUID1 pzero.uuid not null,
-  UUID2 pzero.uuid not null,
-  relation pzero.RELATION_TYPE NOT NULL,
-  IS_DEL BOOLEAN DEFAULT FALSE,
-  last_seen timestampz not null default now(),
-  primary key (UUID1,UUID2)
+  uuid1 pzero.uuid NOT NULL,
+  uuid2 pzero.uuid NOT NULL,
+  relation pzero.relation_type NOT NULL,
+  is_del boolean DEFAULT FALSE,
+  last_seen timestampz NOT NULL DEFAULT now(),
+  PRIMARY KEY (uuid1, uuid2)
 );
-CREATE INDEX idx_pzero_relations_uuid2 ON pzero.relations (UUID2);
+
+CREATE INDEX idx_pzero_relations_uuid2 ON pzero.relations (uuid2);
 
 CREATE TABLE pzero.audits (
-  id pzero.ID NOT NULL DEFAULT pzero.gen_monotonic_ulid() PRIMARY KEY,
-  mmn pzero.MMN_TYPE NOT NULL,
-  txn_id pzero.ID NOT NULL REFERENCES pzero.txns(id) ON DELETE CASCADE,
-  row_id pzero.ID NOT NULL,
-  col_name TEXT NOT NULL,
-  new_value TEXT,
-  is_del BOOLEAN DEFAULT FALSE
+  id pzero.id NOT NULL DEFAULT pzero.gen_monotonic_ulid () PRIMARY KEY,
+  mmn pzero.mmn_type NOT NULL,
+  txn_id pzero.id NOT NULL REFERENCES pzero.txns (id) ON DELETE CASCADE,
+  row_id pzero.id NOT NULL,
+  col_name text NOT NULL,
+  new_value text,
+  is_del boolean DEFAULT FALSE
 );
+
 CREATE INDEX idx_pzero_audits_mmn ON pzero.audits (mmn);
-CREATE INDEX idx_pzero_audits_row_id ON pzero.audits (mmn,row_id);
+
+CREATE INDEX idx_pzero_audits_row_id ON pzero.audits (mmn, row_id);
+
 CREATE INDEX idx_pzero_audits_txn_id ON pzero.audits (txn_id);
 
-CREATE OR REPLACE FUNCTION pzero.add_audit_columns_to_table_plv8()
-  RETURNS event_trigger AS $$
+CREATE OR REPLACE FUNCTION pzero.add_audit_columns_to_table_plv8 () returns event_trigger AS $$
   var ddl_commands = plv8.execute(
         "SELECT object_identity FROM pg_event_trigger_ddl_commands() WHERE command_tag = 'CREATE TABLE'"
   );
@@ -141,185 +184,270 @@ CREATE OR REPLACE FUNCTION pzero.add_audit_columns_to_table_plv8()
       plv8.execute(alter_sql);
     }
   }
-$$ LANGUAGE plv8;
+$$ language plv8;
 
-CREATE EVENT TRIGGER on_table_creation_trigger
-  ON ddl_command_end
-  WHEN TAG IN ('CREATE TABLE')
-  EXECUTE FUNCTION pzero.add_audit_columns_to_table_plv8();
+CREATE EVENT TRIGGER on_table_creation_trigger ON ddl_command_end WHEN tag IN ('CREATE TABLE')
+EXECUTE function pzero.add_audit_columns_to_table_plv8 ();
 
 CREATE TABLE pzero.auth (
-  id ulid NOT NULL DEFAULT pzero.gen_monotonic_id() PRIMARY KEY,
-  PASSWORD TEXT,
-  oauth_provider OAUTH_PROVIDER,
-  oauth_id TEXT,
-  email TEXT UNIQUE NOT NULL,
-  phone TEXT UNIQUE,
-  EMAIL_VERIFIED BOOLEAN NOT NULL DEFAULT FALSE,
-  PHONE_VERIFIED BOOLEAN NOT NULL DEFAULT FALSE,
-  status PZERO.USER_STATUS NOT NULL DEFAULT PZERO.USER_STATUS.PENDING
+  id ulid NOT NULL DEFAULT pzero.gen_monotonic_id () PRIMARY KEY,
+  password text,
+  oauth_provider oauth_provider,
+  oauth_id text,
+  email text UNIQUE NOT NULL,
+  phone text UNIQUE,
+  email_verified boolean NOT NULL DEFAULT FALSE,
+  phone_verified boolean NOT NULL DEFAULT FALSE,
+  status pzero.user_status NOT NULL DEFAULT pzero.user_status.pending
 );
-create index idx_pzero_auth_email on pzero.auth using gin (email gin_trgm_ops);
-create index idx_pzero_is_del on pzero.auth (is_del);
 
-CREATE TABLE pzero.BASE_TABLE
-(
-  id not null default pzero.gen_monotonic_id(),
-  NAME pzero.VALID_HANDLE NOT NULL,
-  IS_DEL BOOLEAN DEFAULT FALSE,
-  DSCR TEXT,
-  DATA pzero.data
-);
-CREATE TABLE pzero.LOC_BASE_TABLE (
-  LOC pzero.LOCATION,
-  last_seen TIMESTAMPZ not null default now()
-) INHERITS (pzero.BASE_TABLE);
+CREATE INDEX idx_pzero_auth_email ON pzero.auth USING gin (email gin_trgm_ops);
 
-CREATE TABLE pzero.EFFECTIVE_TABLE (
-  EFF_FROM TIMESTAMPTZ ,
-  EFF_TO TIMESTAMPTZ
+CREATE INDEX idx_pzero_is_del ON pzero.auth (is_del);
+
+CREATE TABLE pzero.base_table (
+  id NOT NULL DEFAULT pzero.gen_monotonic_id (),
+  name pzero.valid_handle NOT NULL,
+  is_del boolean DEFAULT FALSE,
+  dscr text,
+  data pzero.data
 );
+
+CREATE TABLE pzero.loc_base_table (
+  loc pzero.location,
+  last_seen timestampz NOT NULL DEFAULT now()
+) inherits (pzero.base_table);
+
+CREATE TABLE pzero.effective_table (eff_from timestamptz, eff_to timestamptz);
+
 CREATE TABLE pzero.users (
-  id pzero.IID NOT NULL PRIMARY KEY REFERENCES pzero.auth(id) ON DELETE CASCADE,
-  avatar TEXT,
-  status pzero.USER_STATUS
-) INHERITS (pzero.LOC_BASE_TABLE);
+  id pzero.iid NOT NULL PRIMARY KEY REFERENCES pzero.auth (id) ON DELETE CASCADE,
+  avatar text,
+  status pzero.user_status
+) inherits (pzero.loc_base_table);
+
 CREATE INDEX idx_pzero_users_name ON pzero.users USING gin (name gin_trgm_ops);
+
 CREATE INDEX idx_pzero_users_is_del ON pzero.users (is_del);
-CREATE INDEX idx_pzero_users_loc ON pzero.users using gin (loc gin_trgm_ops);
-CREATE INDEX idx_pzero_users_status on pzero.users (status);
+
+CREATE INDEX idx_pzero_users_loc ON pzero.users USING gin (loc gin_trgm_ops);
+
+CREATE INDEX idx_pzero_users_status ON pzero.users (status);
 
 CREATE TABLE pzero.orgs (
-  website pzero.domain unique,
-  favicon TEXT,
+  website pzero.domain UNIQUE,
+  favicon text,
   whitelisted_domains pzero.domain[],
   blacklisted_domains pzero.domain[],
-  headers PZERO.KEY_VALUES,
-  variables PZERO.KEY_VALUES,
+  headers pzero.key_values,
+  variables pzero.key_values,
   status pzero.org_status,
-  primary key (id)
-) INHERITS (pzero.LOC_BASE_TABLE);
-CREATE INDEX idx_pzero_orgs_name on pzero.org(name);
+  PRIMARY KEY (id)
+) inherits (pzero.loc_base_table);
+
+CREATE INDEX idx_pzero_orgs_name ON pzero.org (name);
+
 CREATE INDEX idx_pzero_orgs_name_gin ON pzero.orgs USING gin (name gin_trgm_ops);
+
 CREATE INDEX idx_pzero_orgs_is_del ON pzero.orgs (is_del);
-CREATE INDEX idx_pzero_orgs_status on pzero.status(status);
-CREATE INDEX idx_pzero_orgs_loc ON pzero.users using gin (loc gin_trgm_ops);
+
+CREATE INDEX idx_pzero_orgs_status ON pzero.status (status);
+
+CREATE INDEX idx_pzero_orgs_loc ON pzero.users USING gin (loc gin_trgm_ops);
 
 CREATE TABLE pzero.active_sessions (
-  id pzero.ID NOT NULL PRIMARY KEY,
-  ip TEXT,
-  user_agent TEXT
-) INHERITS (pzero.LOC_BASE_TABLE);
+  id pzero.id NOT NULL PRIMARY KEY,
+  ip text,
+  user_agent text
+) inherits (pzero.loc_base_table);
+
 CREATE INDEX idx_pzero_active_sessions_c_by ON pzero.active_sessions (c_by);
-CREATE INDEX idx_pzero_orgs_loc ON pzero.users using gin (loc gin_trgm_ops);
+
+CREATE INDEX idx_pzero_orgs_loc ON pzero.users USING gin (loc gin_trgm_ops);
 
 CREATE TABLE pzero.sessions (
-  id pzero.ID NOT NULL PRIMARY KEY,
+  id pzero.id NOT NULL PRIMARY KEY,
   status pzero.session_status
-) INHERITS (pzero.sessions);
+) inherits (pzero.sessions);
 
 CREATE TABLE pzero.devices (
   info pzero.data,
-  is_primary BOOLEAN DEFAULT FALSE,
-  device_type PZERO.DEVICE_TYPE DEFAULT PZERO.DEVICE_TYPE.OTHER,
-  is_verifier BOOLEAN DEFAULT FALSE,
-  device_status PZERO.DEVICE_STATUS DEFAULT PZERO.DEVICE_STATUS.UNKNOWN,
-  duration_used BIGINT DEFAULT 0, -- total duration used in microseconds
-  primary key (id)
-) INHERITS (pzero.LOC_BASE_TABLE);
+  is_primary boolean DEFAULT FALSE,
+  device_type pzero.device_type DEFAULT pzero.device_type.other,
+  is_verifier boolean DEFAULT FALSE,
+  device_status pzero.device_status DEFAULT pzero.device_status.unknown,
+  duration_used bigint DEFAULT 0, -- total duration used in microseconds
+  PRIMARY KEY (id)
+) inherits (pzero.loc_base_table);
+
 CREATE INDEX idx_pzero_devices_uid ON pzero.devices (uid);
 
 CREATE TABLE pzero.endpoints (
   url pzero.domain NOT NULL UNIQUE,
-  status PZERO.ENDPOINT_STATUS NOT NULL DEFAULT PZERO.ENDPOINT_STATUS.PENDING,
-  methods PZERO.METHOD[]  NOT NULL,
-  headers PZERO.KEY_VALUES,
-  variables PZERO.KEY_VALUES,
-  primary key(id)
-) INHERITS (pzero.LOC_BASE_TABLE);
+  status pzero.endpoint_status NOT NULL DEFAULT pzero.endpoint_status.pending,
+  methods pzero.method[] NOT NULL,
+  headers pzero.key_values,
+  variables pzero.key_values,
+  PRIMARY KEY (id)
+) inherits (pzero.loc_base_table);
 
 CREATE TABLE pzero.dirs (
-  PARENT_ID pzero.ID REFERENCES pzero.dirs(id) ON DELETE CASCADE,
-  is_act boolean not null default true,
-  last_seen timestampz not null default now(),
-  status pzero.DIR_STATUS
-  primary key(id)
-) INHERITS (pzero.BASE_TABLE)
-CREATE UNIQUE INDEX idx_pzero_dirs_parent ON pzero.dirs ( PARENT_ID, NAME, is_act);
-CREATE INDEX idx_pero_dirs_status on pzero.dirs(status);
+  parent_id pzero.id REFERENCES pzero.dirs (id) ON DELETE CASCADE,
+  is_act boolean NOT NULL DEFAULT TRUE,
+  last_seen timestampz NOT NULL DEFAULT now(),
+  status pzero.dir_status PRIMARY KEY (id)
+) inherits (pzero.base_table)
+CREATE UNIQUE INDEX idx_pzero_dirs_parent ON pzero.dirs (parent_id, name, is_act);
+
+CREATE INDEX idx_pero_dirs_status ON pzero.dirs (status);
 
 CREATE TABLE pzero.files (
-  DIR_ID pzero.ID REFERENCES pzero.dirs(id) ON DELETE CASCADE,
-  FILE_TYPE PZERO.FILE_TYPE NOT NULL,
-  FILE_SIZE BIGINT NOT NULL, -- rounded off by 100
-  FILE_UNIT PZERO.FILE_UNIT NOT NULL,
-  last_seen timestampz not null default now()
-  is_act boolean not null default true,
-  status pzero.DIR_STATUS
-  primary key(id)
-) INHERITS (pzero.BASE_TABLE);
-CREATE UNIQUE INDEX idx_pzero_files ON pzero.files (DIR_ID,NAME,IS_ACT);
-CREATE INDEX idx_pzero_files_status on pzero.files (status)
-CREATE TABLE pzero.thread_heads (
-  id pzero.ID NOT NULL primary key,
-  epid pzero.ID not null references pzero.endpoints(id),
-  uid pzero.ID not null references pzero.auth(id),
-  status pzero.ENDPOINT_STATUS,
-  -- that started the thread
-  data pzero.data
-);
-CREATE UNIQUE INDEX idx_threads_epid on pzero.thread_heads(epid);
-CREATE UNIQUE INDEX idx_threads_uid on pzero.thread_heads(uid);
-CREATE TABLE pzero.threads (
-  id pzero.ID NOT NULL primary key,
-  -- that started the thread
-  root_id pzero.ID not null references pzero.threads(id),
-  status pzero.ENDPOINT_STATUS,
-  data pzero.data
-);
-CREATE INDEX idx_threads_root on pzero.threads(root_id);
+  dir_id pzero.id REFERENCES pzero.dirs (id) ON DELETE CASCADE,
+  file_type pzero.file_type NOT NULL,
+  file_size bigint NOT NULL, -- rounded off by 100
+  file_unit pzero.file_unit NOT NULL,
+  last_seen timestampz NOT NULL DEFAULT now() is_act boolean NOT NULL DEFAULT TRUE,
+  status pzero.dir_status PRIMARY KEY (id)
+) inherits (pzero.base_table);
 
-insert into pzero.MMN (TABLE_NAME, MMN) values ('pzero.auth', 'A');
-insert into pzero.MMN (TABLE_NAME, MMN) values ('pzero.users', 'U');
-insert into pzero.MMN (TABLE_NAME, MMN) values ('pzero.orgs', 'O');
-insert into pzero.MMN (TABLE_NAME, MMN) values ('pzero.sessions', 'S');
-insert into pzero.MMN (TABLE_NAME, MMN) values ('pzero.active_sessions', 'AS'); 
-insert into pzero.MMN (TABLE_NAME, MMN) values ('pzero.devices', 'D');
-insert into pzero.MMN (TABLE_NAME, MMN) values ('pzero.endpoints', 'E');
-insert into pzero.MMN (TABLE_NAME, MMN) values ('pzero.files', 'F');
-insert into pzero.MMN (TABLE_NAME, MMN) values ('pzero.dirs', 'D');
-insert into pzero.MMN (TABLE_NAME, MMN) values ('pzero.relations', 'R');
-insert into pzero.MMN (TABLE_NAME, MMN) values ('pzero.audits', 'AD');  
+CREATE UNIQUE INDEX idx_pzero_files ON pzero.files (dir_id, name, is_act);
+
+CREATE INDEX idx_pzero_files_status ON pzero.files (status)
+CREATE TABLE pzero.thread_heads (
+  id pzero.id NOT NULL PRIMARY KEY,
+  epid pzero.id NOT NULL REFERENCES pzero.endpoints (id),
+  uid pzero.id NOT NULL REFERENCES pzero.auth (id),
+  status pzero.endpoint_status,
+  -- that started the thread
+  data pzero.data
+);
+
+CREATE UNIQUE INDEX idx_threads_epid ON pzero.thread_heads (epid);
+
+CREATE UNIQUE INDEX idx_threads_uid ON pzero.thread_heads (uid);
+
+CREATE TABLE pzero.threads (
+  id pzero.id NOT NULL PRIMARY KEY,
+  -- that started the thread
+  root_id pzero.id NOT NULL REFERENCES pzero.threads (id),
+  status pzero.endpoint_status,
+  data pzero.data
+);
+
+CREATE INDEX idx_threads_root ON pzero.threads (root_id);
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('pzero.auth', 'A');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('pzero.users', 'U');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('pzero.orgs', 'O');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('pzero.sessions', 'S');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('pzero.active_sessions', 'AS');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('pzero.devices', 'D');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('pzero.endpoints', 'E');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('pzero.files', 'F');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('pzero.dirs', 'D');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('pzero.relations', 'R');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('pzero.audits', 'AD');
+
 -- Down Migration
 DROP TABLE IF EXISTS pzero.endpoints;
+
 DROP TABLE IF EXISTS pzero.sessions;
+
 DROP TABLE IF EXISTS pzero.users;
+
 DROP TABLE IF EXISTS pzero.devices;
+
 DROP TABLE IF EXISTS pzero.files;
+
 DROP TABLE IF EXISTS pzero.dirs;
+
 DROP TABLE IF EXISTS pzero.orgs;
+
 DROP TABLE IF EXISTS pzero.relations;
+
 DROP TABLE IF EXISTS pzero.audits;
+
 DROP TABLE IF EXISTS pzero.txns;
+
 DROP TABLE IF EXISTS pzero.auth;
-DROP TABLE IF EXISTS pzero.MMN;
 
-DROP TYPE IF EXISTS pzero.FILE_UNIT;
-DROP TYPE IF EXISTS pzero.FILE_TYPE;
-DROP TYPE IF EXISTS pzero.RELATION_TYPE;
-DROP TYPE IF EXISTS PZERO.DEVICE_TYPE;
-DROP TYPE IF EXISTS PZERO.SESSION_TYPE;
-DROP TYPE IF EXISTS PZERO.SESSION_STATUS;
-DROP TYPE IF EXISTS PZERO.DEVICE_STATUS;
-DROP TYPE IF EXISTS PZERO.USER_STATUS;
-DROP TYPE IF EXISTS PZERO.METHOD;
-DROP TYPE IF EXISTS pzero.LOCATION;
-DROP TYPE IF EXISTS pzero.ADDRESS;
-DROP TYPE IF EXISTS pzero.ORG_STATUS;
-DROP TYPE IF EXISTS pzero.ENDPOINT_STATUS;
+DROP TABLE IF EXISTS pzero.mmn;
 
-DROP DOMAIN IF EXISTS PZERO.KEY_VALUES;
-DROP DOMAIN IF EXISTS PZERO.IID;
-DROP DOMAIN IF EXISTS PZERO.ID;
-DROP DOMAIN IF EXISTS pzero.MMN_TYPE;
-DROP SCHEMA IF EXISTS pzero CASCADE;
+DROP TYPE if EXISTS pzero.file_unit;
+
+DROP TYPE if EXISTS pzero.file_type;
+
+DROP TYPE if EXISTS pzero.relation_type;
+
+DROP TYPE if EXISTS pzero.device_type;
+
+DROP TYPE if EXISTS pzero.session_type;
+
+DROP TYPE if EXISTS pzero.session_status;
+
+DROP TYPE if EXISTS pzero.device_status;
+
+DROP TYPE if EXISTS pzero.user_status;
+
+DROP TYPE if EXISTS pzero.method;
+
+DROP TYPE if EXISTS pzero.location;
+
+DROP TYPE if EXISTS pzero.address;
+
+DROP TYPE if EXISTS pzero.org_status;
+
+DROP TYPE if EXISTS pzero.endpoint_status;
+
+DROP DOMAIN if EXISTS pzero.key_values;
+
+DROP DOMAIN if EXISTS pzero.iid;
+
+DROP DOMAIN if EXISTS pzero.id;
+
+DROP DOMAIN if EXISTS pzero.mmn_type;
+
+DROP SCHEMA if EXISTS pzero cascade;

@@ -1,5 +1,4 @@
-CREATE OR REPLACE FUNCTION pzero.get_info(table_name text, schema_name text DEFAULT 'pzero')
-RETURNS jsonb AS $$
+CREATE OR REPLACE FUNCTION pzero.get_info (table_name text, schema_name text DEFAULT 'pzero') returns jsonb AS $$
     var stmt = `SELECT
     tc.table_schema,
     tc.constraint_name,
@@ -24,10 +23,9 @@ RETURNS jsonb AS $$
         recs[i] = rec;
     }
     return recs;
-$$ LANGUAGE plv8 IMMUTABLE STRICT;
+$$ language plv8 immutable strict;
 
-
-CREATE OR REPLACE FUNCTION is_valid_url(url text) RETURNS BOOLEAN AS $$
+CREATE OR REPLACE FUNCTION is_valid_url (url text) returns boolean AS $$
     if (!!!url) {
         return false;
     }
@@ -40,10 +38,9 @@ CREATE OR REPLACE FUNCTION is_valid_url(url text) RETURNS BOOLEAN AS $$
     }
     var regex = new RegExp(`^((http|https)://)?[a-zA-Z0-9.-]+.[a-zA-Z]{2,}$`)
     return regex.test(url);
-$$ LANGUAGE plv8 IMMUTABLE STRICT;
+$$ language plv8 immutable strict;
 
-CREATE OR REPLACE FUNCTION pzero.get_records_internal(stmt text)
-RETURNS SETOF jsonb -- Or setof json
+CREATE OR REPLACE FUNCTION pzero.get_records_internal (stmt text) returns setof jsonb -- Or setof json
 AS $$
   try {
     var users = plv8.execute(stmt);
@@ -55,11 +52,9 @@ AS $$
   } catch (err) {
     plv8.elog(ERROR, err);
   }
-$$ LANGUAGE plv8;
+$$ language plv8;
 
-CREATE OR REPLACE FUNCTION pzero.get_records(stmt text, columns text[])
-RETURNS SETOF jsonb
-AS $$
+CREATE OR REPLACE FUNCTION pzero.get_records (stmt text, columns TEXT[]) returns setof jsonb AS $$
 try {
 
     var recs = plv8.execute('select pzero.get_records_internal($1)', stmt);
@@ -101,13 +96,12 @@ try {
 }
 plv8.elog(INFO, `returning #153: ${results}`);
 return results;
-$$ LANGUAGE plv8;
-select pzero.get_info('auth','pzero');
+$$ language plv8;
 
+SELECT
+  pzero.get_info ('auth', 'pzero');
 
-CREATE OR REPLACE FUNCTION incmix.check_table_exists( table_name text, schema_name text DEFAULT 'pzero')
-RETURNS boolean
-AS $$
+CREATE OR REPLACE FUNCTION incmix.check_table_exists (table_name text, schema_name text DEFAULT 'pzero') returns boolean AS $$
     var  stmt = `SELECT 1 FROM pg_tables WHERE schemaname = ${schema_name} AND tablename = ${table_name}`;
     try {
         var result = plv8.execute(stmt);
@@ -119,27 +113,31 @@ AS $$
         return false;
     }
     return false;
-$$ LANGUAGE plv8 IMMUTABLE STRICT;
+$$ language plv8 immutable strict;
 
-CREATE OR REPLACE FUNCTION getColumnNo(table_name text, column_name text, schema_name text DEFAULT 'pzero') RETURNS INTEGER AS $$
+CREATE OR REPLACE FUNCTION getcolumnno (
+  table_name text,
+  column_name text,
+  schema_name text DEFAULT 'pzero'
+) returns integer AS $$
     var stmt = `SELECT ordinal_position FROM information_schema.columns WHERE table_schema = $3 AND table_name = $1 AND column_name = $2`;
     var result = plv8.execute(stmt, table_name, column_name, schema_name);
     if (result.length > 0) {
         return result[0]['ordinal_position'];
     }
     return -1;
-$$ LANGUAGE plv8 IMMUTABLE STRICT;
+$$ language plv8 immutable strict;
 
-CREATE OR REPLACE FUNCTION pzero.generate_uuid(table_name text, id BIGINT, C_AT TIMES) RETURNS UUID AS $$
+CREATE OR REPLACE FUNCTION pzero.generate_uuid (table_name text, id bigint, c_at times) returns uuid AS $$
     var result = plv8.execute('SELECT mmn from mmn AS m WHERE m.table_name = $1', table_name);
     if (result.length === 0) {
         throw `No MMN found for table: ${table_name}`;
     }
     var mmn = result[0]['mmn'];
     return uuid[0]['uuid'];
-$$ LANGUAGE plv8 IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION jsonb_diff(a jsonb, b jsonb)
-RETURNS jsonb AS $$
+$$ language plv8 immutable strict;
+
+CREATE OR REPLACE FUNCTION jsonb_diff (a jsonb, b jsonb) returns jsonb AS $$
   // Helper function to find all keys in both objects
   const allKeys = (obj1, obj2) => {
     const keys = new Set();
@@ -192,12 +190,12 @@ RETURNS jsonb AS $$
   const result = diff(obj_a, obj_b);
   
   return JSON.stringify(result);
-$$ LANGUAGE plv8 IMMUTABLE STRICT;
+$$ language plv8 immutable strict;
+
 --SELECT jsonb_diff(
 --  '{"user": {"name": "Alice", "id": 123}, "active": true}'::jsonb,
 --  '{"user": {"name": "Bob", "email": "bob@example.com"}, "active": true}'::jsonb
 --);
-
 -- {
 --  "user": {
 --    "status": "updated",
@@ -208,8 +206,7 @@ $$ LANGUAGE plv8 IMMUTABLE STRICT;
 --    }
 --  }
 --}
-
-CREATE OR REPLACE FUNCTION get_country_name(country_id SMALLINT) RETURNS TEXT AS $$
+CREATE OR REPLACE FUNCTION get_country_name (country_id smallint) returns text AS $$
         plv8.elog(NOTICE, 'Initializing country cache...');
         const data = plv8.execute("SELECT id, name FROM country_codes");
         plv8.country_cache = {}; // Create the cache object.
@@ -220,11 +217,9 @@ CREATE OR REPLACE FUNCTION get_country_name(country_id SMALLINT) RETURNS TEXT AS
 
     // Return the value from the cache.
     return plv8.country_cache[country_id];
-$$ LANGUAGE plv8 IMMUTABLE;
+$$ language plv8 immutable;
 
-
-CREATE OR REPLACE FUNCTION pzero.audit_trigger_plv8()
-RETURNS TRIGGER LANGUAGE plv8 AS $$
+CREATE OR REPLACE FUNCTION pzero.audit_trigger_plv8 () returns trigger language plv8 AS $$
     var txid = plv8.execute("SELECT txid_current()")[0].txid_current;
     var tableName = TD.table_name;
     var oldRow = TD.old; // Available for UPDATE and DELETE
@@ -327,8 +322,7 @@ RETURNS TRIGGER LANGUAGE plv8 AS $$
     return newRow; // For INSERT and UPDATE triggers, return the new row
 $$;
 
-CREATE OR REPLACE FUNCTION pzero.audit_threads_trigger_plv8()
-RETURNS TRIGGER LANGUAGE plv8 AS $$
+CREATE OR REPLACE FUNCTION pzero.audit_threads_trigger_plv8 () returns trigger language plv8 AS $$
     var txid = plv8.execute("SELECT txid_current()")[0].txid_current;
     var tableName = TD.table_name;
     if (TD.event === 'UPDATE' || TD.event === 'DELETE') {
@@ -357,9 +351,7 @@ RETURNS TRIGGER LANGUAGE plv8 AS $$
     return newRow;
 $$;
 
-CREATE OR REPLACE FUNCTION pzero.create_triggers_plv8()
-RETURNS void
-AS $$
+CREATE OR REPLACE FUNCTION pzero.create_triggers_plv8 () returns void AS $$
   var tables = ['pzero.devices', 'pzero.endpoints', 'pzero.active_sessions', 'pzero.orgs', 'pzero.auth', 'pzero.users', 'pzero.relations'];
   // Define a name for the new trigger.
   for (var i = 0; i < tables.length; i++) {
@@ -381,6 +373,7 @@ AS $$
     plv8.execute(sql);
     plv8.elog(NOTICE, 'Created trigger ' + trigger_name + ' on table ' + target_table);
 
-$$ LANGUAGE plv8;
+$$ language plv8;
 
-select pzero.create_triggers_plv8();
+SELECT
+  pzero.create_triggers_plv8 ();
