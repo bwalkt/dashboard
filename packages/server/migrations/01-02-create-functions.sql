@@ -138,6 +138,90 @@ CREATE OR REPLACE FUNCTION pzero.generate_uuid(table_name text, id BIGINT, C_AT 
     var mmn = result[0]['mmn'];
     return uuid[0]['uuid'];
 $$ LANGUAGE plv8 IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION jsonb_diff(a jsonb, b jsonb)
+RETURNS jsonb AS $$
+  // Helper function to find all keys in both objects
+  const allKeys = (obj1, obj2) => {
+    const keys = new Set();
+    if (typeof obj1 === 'object') {
+      Object.keys(obj1).forEach(key => keys.add(key));
+    }
+    if (typeof obj2 === 'object') {
+      Object.keys(obj2).forEach(key => keys.add(key));
+    }
+    return Array.from(keys);
+  };
+
+  // Recursive diffing function
+  const diff = (obj1, obj2) => {
+    const changes = {};
+    const keys = allKeys(obj1, obj2);
+
+    for (const key of keys) {
+      const val1 = obj1 ? obj1[key] : undefined;
+      const val2 = obj2 ? obj2[key] : undefined;
+
+      // New key added to obj2
+      if (val1 === undefined) {
+        changes[key] = { status: 'added', newValue: val2 };
+        continue;
+      }
+
+      // Key deleted from obj2
+      if (val2 === undefined) {
+        changes[key] = { status: 'deleted', oldValue: val1 };
+        continue;
+      }
+
+      // Values differ (check for nested objects)
+      if (typeof val1 === 'object' && typeof val2 === 'object' && val1 !== null && val2 !== null) {
+        const nestedChanges = diff(val1, val2);
+        if (Object.keys(nestedChanges).length > 0) {
+          changes[key] = { status: 'updated', changes: nestedChanges };
+        }
+      } else if (val1 !== val2) {
+        changes[key] = { status: 'updated', oldValue: val1, newValue: val2 };
+      }
+    }
+    return changes;
+  };
+
+  // Entry point for the function
+  const obj_a = JSON.parse(a);
+  const obj_b = JSON.parse(b);
+  const result = diff(obj_a, obj_b);
+  
+  return JSON.stringify(result);
+$$ LANGUAGE plv8 IMMUTABLE STRICT;
+--SELECT jsonb_diff(
+--  '{"user": {"name": "Alice", "id": 123}, "active": true}'::jsonb,
+--  '{"user": {"name": "Bob", "email": "bob@example.com"}, "active": true}'::jsonb
+--);
+
+-- {
+--  "user": {
+--    "status": "updated",
+--    "changes": {
+--      "name": { "status": "updated", "oldValue": "Alice", "newValue": "Bob" },
+--      "id": { "status": "deleted", "oldValue": 123 },
+--      "email": { "status": "added", "newValue": "bob@example.com" }
+--    }
+--  }
+--}
+
+CREATE OR REPLACE FUNCTION get_country_name(country_id SMALLINT) RETURNS TEXT AS $$
+        plv8.elog(NOTICE, 'Initializing country cache...');
+        const data = plv8.execute("SELECT id, name FROM country_codes");
+        plv8.country_cache = {}; // Create the cache object.
+        for (let i = 0; i < data.length; i++) {
+            plv8.country_cache[data[i].id] = data[i].name; // Populate the cache.
+        }
+    }
+
+    // Return the value from the cache.
+    return plv8.country_cache[country_id];
+$$ LANGUAGE plv8 IMMUTABLE;
+
 
 CREATE OR REPLACE FUNCTION pzero.audit_trigger_plv8()
 RETURNS TRIGGER LANGUAGE plv8 AS $$
@@ -145,31 +229,70 @@ RETURNS TRIGGER LANGUAGE plv8 AS $$
     var tableName = TD.table_name;
     var oldRow = TD.old; // Available for UPDATE and DELETE
     var newRow = TD.new; // Available for INSERT and UPDATE
-    var auditColumns = ['id', 'c_by', 'c_at', 'u_by', 'u_at', 'is_del']; // Columns to audit
+    var auditColumns = ['id', 'c_by', 'c_at', 'u_by', 'u_at', 'is_del', 'last_seen']; // Columns to audit
     var isDelColumn = 'is_del';
+    var result;
     var c_by = newRow.c_by;
+    var diffs = {}
+    if (TD.event === 'DELETE') {
+        throw 'cannot delete record'
+    }
+    if (oldRow && newRow.u_by) {
+        c_by = newRow.u_by
+    }
+    if ((oldRow && newRow) && (oldRow.id !== newRow.id)) {
+        throw 'id for tableName not mutable';
+    }
     var data = newRow.data;
     if (data) {
         data = JSON.parse(data)
         if (data.meta) {
             c_by = data.meta.c_by;
+            if (data.meta.u_by) {
+                c_by = data.meta.u_by
+            }
             delete data.meta;
+            if (!(object.keys(data).length)) {
+               delete newRow.data 
+            }
+        }
+        if (data.diff) {
+            var diffKeys = object.keys(data.diff)
+            if (diffKeys.length) {
+                diffs = {...data.diff}
+            }
+            delete data.diff;
         }
     }
-    delete newRow.c_by;
-    delete newRow.u_by;
+    
     if (!c_by) {
         throw `Missing Audit field - c_by`
     }
     var id = newRow.id;
+    if (!id) {
+        try {
+            result = plv8.execute("select pzero.gen_monotonic_id() as id");
+            id = result[0]['id']
+            newRow.id = id;
+        } exception() {
+            throw 'Unable to gen id'
+        }
+    }
     // Insert into txns table if not exists
-    plv8.execute("SELECT mmn from pzero.mmn where table_name = $1", [tableName]);
+    result = plv8.execute("SELECT mmn from pzero.mmn where table_name = $1", [tableName]);
     var mmn = result[0]['mmn'];
+    if (!mn) {
+        throw 'mneumonic not defined';
+    }
     if (TD.event === 'INSERT' && !newRow.id) {
         newRow.id = pzero.gen_monotonic_id(mmn);
+    } else {
+        if (newRow.id !=== oldRow.id) {
+            throw 'Ids do not match'
+        }
     }
     plv8.execute("INSERT INTO pzero.txns (id, c_by, c_at) VALUES ($1, $2, NOW()) ON CONFLICT (txid) DO NOTHING", [txid, c_by]);
-    if (newRow.is_del || (TD.event === 'DELETE')) {
+    if (newRow.is_del) {
         // If the is_del column is set to true, log a deletion
         plv8.execute(
             "INSERT INTO pzero.audits (txn_id, mmn, row_id, col_name, new_val, is_del) VALUES ($1, $2, $3, $4, $5, TRUE)",
@@ -185,13 +308,53 @@ RETURNS TRIGGER LANGUAGE plv8 AS $$
     }
     for (var colName in newRow) {
         if ((auditColumns.indexOf(colName.toLowerCase()) !== -1) && newRow.hasOwnProperty(colName)) {
+            var colValue = String(newRow[colName]);
+            if (colName === 'loc') {
+                if (diffAddress) {
+
+                }
+            }
+            var colValue = String(newRow[colName]);
+            if (diffs[colName]) {
+                colValue = JSON.stringify(diffs[colName]);
+            }
             plv8.execute(
                 "INSERT INTO pzero.audits (txn_id, mmn, rowid, cname, cvalue) VALUES ($1, $2, $3, $4, $5)",
-                [txid, mmn, id, colName, String(newRow[colName])]
+                [txid, mmn, id, colName, colValue]
             );
         }
     }
-    return TD.new; // For INSERT and UPDATE triggers, return the new row
+    return newRow; // For INSERT and UPDATE triggers, return the new row
+$$;
+
+CREATE OR REPLACE FUNCTION pzero.audit_threads_trigger_plv8()
+RETURNS TRIGGER LANGUAGE plv8 AS $$
+    var txid = plv8.execute("SELECT txid_current()")[0].txid_current;
+    var tableName = TD.table_name;
+    if (TD.event === 'UPDATE' || TD.event === 'DELETE') {
+        plv8.elog('Update or Delete on threads not allowed')
+        throw 'Update or Delete on threads not allowed'
+    }
+    var newRow = TD.new; // Available for INSERT and UPDATE
+    var data = newRow.data;
+    if (data) {
+        data = JSON.parse(data)
+        if (data.meta) {
+            delete data.meta;
+        }
+    }
+    try {
+        result = plv8.execute("select pzero.gen_monotonic_id() as id");
+        id = result[0]['id']
+        newRow.id = id;
+    } exception() {
+        plv8.elog('Unable to gen id');
+        throw 'Unable to gen id'
+    }
+    if (!newRow.root_id) {
+        newRow.root_id = id;
+    }
+    return newRow;
 $$;
 
 CREATE OR REPLACE FUNCTION pzero.create_triggers_plv8()
@@ -203,13 +366,21 @@ AS $$
     var target_table = tables[i];
   // Build the dynamic CREATE TRIGGER statement
     var sql = `CREATE TRIGGER pzero.audit_trigger_${target_table}` +
-            ' BEFORE INSERT OR UPDATE ON ' + target_table +
+            ' BEFORE INSERT OR UPDATE OR DELETE ON ' + target_table +
             ' FOR EACH ROW EXECUTE FUNCTION pzero.audit_trigger_plv8()';
 
   // Execute the dynamic SQL using plv8.execute().
     plv8.execute(sql);
     plv8.elog(NOTICE, 'Created trigger ' + trigger_name + ' on table ' + target_table);
   }
+   var sql = `CREATE TRIGGER pzero.audit_trigger_threads` +
+            ' BEFORE INSERT OR UPDATE OR DELETE ON ' + pzero.threads +
+            ' FOR EACH ROW EXECUTE FUNCTION pzero.audit_threads_trigger_plv8()';
+
+  // Execute the dynamic SQL using plv8.execute().
+    plv8.execute(sql);
+    plv8.elog(NOTICE, 'Created trigger ' + trigger_name + ' on table ' + target_table);
+
 $$ LANGUAGE plv8;
 
 select pzero.create_triggers_plv8();
