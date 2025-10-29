@@ -5,14 +5,11 @@ go 1.24.0
 toolchain go1.24.2
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/sessions v1.2.2
 	github.com/joho/godotenv v1.5.1
 	github.com/michaelquigley/pfxlog v0.6.10
 	github.com/openziti/sdk-golang v0.23.12
 	github.com/sirupsen/logrus v1.9.3
-	golang.org/x/oauth2 v0.32.0
 	modernc.org/sqlite v1.28.0
 )
 
@@ -36,6 +33,7 @@ require (
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-openapi/validate v0.24.0 // indirect
 	github.com/go-resty/resty/v2 v2.12.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/schema v1.4.1 // indirect
@@ -85,6 +83,7 @@ require (
 	golang.org/x/exp v0.0.0-20221031165847-c99f073a8326 // indirect
 	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/net v0.46.0 // indirect
+	golang.org/x/oauth2 v0.32.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/term v0.36.0 // indirect

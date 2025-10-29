@@ -18,7 +18,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ["user"],
     queryFn: async () => {
-      const { user } = await api.get<{ user: User }>("/auth/me");
+      const { user } = await api.get<{ user: User }>("/auth/me", {
+        headers: {
+          "X-Client-Type": "web",
+        }
+      });
       return user;
     },
     retry: false,

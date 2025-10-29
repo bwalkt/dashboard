@@ -25,6 +25,8 @@ import MobileDashboardLayout from "./pages/dashboard/MobileLayout";
 import Orders from "./pages/dashboard/Orders";
 import Overview from "./pages/dashboard/Overview";
 import Products from "./pages/dashboard/Products";
+import CallbackPage from "./pages/auth/callback";
+import TauriCallbackPage from "./pages/auth/tauri-callback";
 
 // Configure NProgress
 NProgress.configure({ showSpinner: false });
@@ -43,7 +45,7 @@ function ProgressBar() {
 function ThemedAppContent() {
   const { activeTheme } = useThemeConfig();
   const isScaled = activeTheme?.endsWith("-scaled");
-
+  const isTauri = typeof window !== "undefined" && (window as any).__TAURI__;
   return (
     <div className={cn("bg-background min-h-screen font-sans antialiased", `theme-${activeTheme}`, isScaled ? "theme-scaled" : "", fontVariables)}>
       <Toaster />
@@ -52,6 +54,8 @@ function ThemedAppContent() {
         {/* Auth routes - no authentication required */}
         <Route path="/auth/sign-in" element={<SignIn />} />
         <Route path="/auth/sign-up" element={<SignUp />} />
+        <Route path="/auth/callback" element={<CallbackPage />} />
+        {isTauri && <Route path="/auth/tauri-callback" element={<TauriCallbackPage />} />}
 
         {/* Dashboard routes - authentication required */}
         <Route

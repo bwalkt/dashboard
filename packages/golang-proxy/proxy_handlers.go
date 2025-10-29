@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"log"
@@ -26,15 +27,15 @@ type ProxyRequest struct {
 
 // ProxyResponse represents the response structure from the proxy endpoint
 type ProxyResponse struct {
-	StatusCode int                 `json:"statusCode"`
-	Headers    map[string][]string `json:"headers"`
-	Body       string              `json:"body"`
+	StatusCode int    `json:"statusCode"`
+	Body       string `json:"body"`
 }
 
 // Allowed ports for HTTP/HTTPS
 var allowedPorts = map[int]bool{
 	80:   true, // HTTP
 	443:  true, // HTTPS
+	3000: true, // Common dev port
 	8080: true, // Common dev port
 	8443: true, // Common dev HTTPS port
 }
@@ -191,10 +192,20 @@ func (m *Middleware) logProxyRequest(r *http.Request, user *User, targetURL stri
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	var userID string
+	var username string
+	if user != nil {
+		userID = user.ID
+		username = user.Username
+	} else {
+		userID = "anonymous"
+		username = "anonymous"
+	}
+
 	logData := map[string]interface{}{
 		"timestamp":     time.Now().UTC().Format(time.RFC3339),
-		"user_id":       user.ID,
-		"username":      user.Username,
+		"user_id":       userID,
+		"username":      username,
 		"client_ip":     getClientIP(r),
 		"user_agent":    r.UserAgent(),
 		"target_url":    targetURL,
@@ -316,6 +327,70 @@ func sanitizeHeaders(headers map[string]string) map[string]string {
 	return sanitized
 }
 
+// isHostnameInAllowedDomains checks if a hostname:port combination is explicitly in ALLOWED_DOMAINS
+func isHostnameInAllowedDomains(targetHost, targetPort string) bool {
+	allowedDomainsStr := os.Getenv("ALLOWED_DOMAINS")
+	if allowedDomainsStr == "" {
+		return false
+	}
+
+	allowedDomains := strings.Split(allowedDomainsStr, ",")
+
+	for _, domain := range allowedDomains {
+		d := strings.TrimSpace(domain)
+		if d == "" {
+			continue
+		}
+
+		var allowedHostname string
+		var allowedPort string
+
+		// Extract hostname and port from domain
+		if strings.Contains(d, ":") {
+			// If domain includes port, extract both hostname and port
+			if host, port, err := net.SplitHostPort(d); err == nil {
+				allowedHostname = host
+				allowedPort = port
+			} else {
+				// If parsing fails, treat as hostname only
+				allowedHostname = d
+				allowedPort = ""
+			}
+		} else {
+			// No port specified in allowed domain
+			allowedHostname = d
+			allowedPort = ""
+		}
+
+		// Support wildcard-style subdomain allowlist entries starting with '.'
+		// e.g., ".example.com" allows any subdomain of example.com
+		if strings.HasPrefix(allowedHostname, ".") {
+			if strings.HasSuffix(targetHost, allowedHostname) {
+				// For wildcard domains, only validate port if specified
+				if allowedPort == "" || targetPort == allowedPort {
+					return true
+				}
+			}
+			continue
+		}
+
+		// Check hostname match
+		if targetHost == allowedHostname {
+			// If port is specified in allowed domain, it must match
+			if allowedPort == "" {
+				// No port specified - allow any valid port
+				return true
+			} else if targetPort == allowedPort {
+				// Port specified and matches
+				return true
+			}
+			// Hostname matches but port doesn't - continue checking other domains
+		}
+	}
+
+	return false
+}
+
 // isValidDomain checks if the given URL belongs to an allowed domain with enhanced validation
 func isValidDomain(targetURL string) bool {
 	// Parse the URL to extract the domain
@@ -329,17 +404,27 @@ func isValidDomain(targetURL string) bool {
 		return false
 	}
 
-	// Validate hostname
-	if !validateHostname(parsedURL.Hostname()) {
-		return false
+	targetHost := parsedURL.Hostname()
+	targetPortStr := parsedURL.Port()
+	targetPort := targetPortStr
+
+	// Get default port based on scheme if no port specified
+	if targetPort == "" {
+		if parsedURL.Scheme == "https" {
+			targetPort = "443"
+		} else {
+			targetPort = "80"
+		}
 	}
 
-	// Validate port
-	if parsedURL.Port() != "" {
-		port, err := strconv.Atoi(parsedURL.Port())
-		if err != nil || !isPortAllowed(port) {
-			return false
-		}
+	// Validate port (use the actual port string if provided, otherwise use default)
+	portToValidate := targetPortStr
+	if portToValidate == "" {
+		portToValidate = targetPort
+	}
+	port, err := strconv.Atoi(portToValidate)
+	if err != nil || !isPortAllowed(port) {
+		return false
 	}
 
 	// Validate path
@@ -352,14 +437,27 @@ func isValidDomain(targetURL string) bool {
 		return false
 	}
 
-	// Block internal IP addresses
-	if isInternalIP(parsedURL.Hostname()) {
-		return false
-	}
+	// Check if hostname is explicitly in ALLOWED_DOMAINS first
+	// If it is, skip security restrictions (allows localhost, internal IPs, etc.)
+	isExplicitlyAllowed := isHostnameInAllowedDomains(targetHost, targetPort)
 
-	// Block cloud metadata endpoints
-	if isCloudMetadata(parsedURL.Hostname()) {
-		return false
+	if !isExplicitlyAllowed {
+		// If not explicitly allowed, apply security restrictions
+
+		// Validate hostname (blocks localhost, etc.)
+		if !validateHostname(targetHost) {
+			return false
+		}
+
+		// Block internal IP addresses
+		if isInternalIP(targetHost) {
+			return false
+		}
+
+		// Block cloud metadata endpoints
+		if isCloudMetadata(targetHost) {
+			return false
+		}
 	}
 
 	// Get allowed domains from environment variable
@@ -369,40 +467,14 @@ func isValidDomain(targetURL string) bool {
 		return false
 	}
 
-	// Split comma-separated domains and check if the target hostname is allowed
-	allowedDomains := strings.Split(allowedDomainsStr, ",")
-	targetHost := parsedURL.Hostname()
-	for _, domain := range allowedDomains {
-		d := strings.TrimSpace(domain)
-		if d == "" {
-			continue
-		}
-
-		// Support wildcard-style subdomain allowlist entries starting with '.'
-		// e.g., ".example.com" allows any subdomain of example.com
-		if strings.HasPrefix(d, ".") {
-			if strings.HasSuffix(targetHost, d) {
-				return true
-			}
-			continue
-		}
-
-		if targetHost == d {
-			return true
-		}
-	}
-
-	return false
+	// Final check: verify the hostname is in ALLOWED_DOMAINS
+	return isHostnameInAllowedDomains(targetHost, targetPort)
 }
 
 // ProxyHandler handles HTTP proxy requests - validates URL and forwards the request
 func (m *Middleware) ProxyHandler(w http.ResponseWriter, r *http.Request) {
-	// Get user from context for logging
-	user, ok := r.Context().Value(userContextKey).(*User)
-	if !ok || user == nil {
-		m.JSONResponse(w, false, "User not found", nil)
-		return
-	}
+	// Authentication removed; proceed without user context
+	var user *User
 
 	if r.Method != "POST" {
 		m.logProxyRequest(r, user, "", "", false, "Method not allowed")
@@ -496,16 +568,63 @@ func (m *Middleware) ProxyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create response
+	// Copy headers from target server response to proxy response
+	// Skip certain headers that should be set by the proxy itself
+	skipHeaders := map[string]bool{
+		"Content-Type":                     true, // We'll set this to application/json
+		"Content-Length":                   true, // Go will set this automatically
+		"Transfer-Encoding":                true,
+		"Connection":                       true,
+		"Upgrade":                          true,
+		"Access-Control-Allow-Origin":      true, // CORS headers are managed by CORS middleware
+		"Access-Control-Allow-Methods":     true,
+		"Access-Control-Allow-Headers":     true,
+		"Access-Control-Allow-Credentials": true,
+		"Access-Control-Expose-Headers":    true,
+		"Access-Control-Max-Age":           true,
+	}
+	for key, values := range resp.Header {
+		if !skipHeaders[http.CanonicalHeaderKey(key)] {
+			for _, value := range values {
+				w.Header().Add(key, value)
+			}
+		}
+	}
+
+	// Create response data (headers are now in HTTP response, not in JSON)
 	proxyResp := ProxyResponse{
 		StatusCode: resp.StatusCode,
-		Headers:    resp.Header,
 		Body:       string(bodyBytes),
 	}
 
 	// Log successful request
 	m.logProxyRequest(r, user, proxyReq.URL, proxyReq.Method, true, "")
 
-	// Return the proxy response
-	m.JSONResponse(w, true, "Request completed successfully", proxyResp)
+	// Set status code and return JSON response
+	// Note: We need to set the status code before calling JSONResponse
+	// but JSONResponse will override it, so we need a custom response here
+	response := APIResponse{
+		Success: true,
+		Message: "Request completed successfully",
+		Data:    proxyResp,
+	}
+
+	// Encode to buffer first to catch any encoding errors before committing headers
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		log.Printf("JSON encoding error: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"success":false,"message":"Failed to encode response"}`))
+		return
+	}
+
+	// Set Content-Type for JSON (override any Content-Type from target server)
+	w.Header().Set("Content-Type", "application/json")
+
+	// Set the status code from the target server response
+	w.WriteHeader(resp.StatusCode)
+
+	// Write the JSON response
+	buf.WriteTo(w)
 }
