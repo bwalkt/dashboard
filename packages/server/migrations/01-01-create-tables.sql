@@ -30,8 +30,6 @@ CREATE DOMAIN pzero.email AS text CHECK (
 
 CREATE DOMAIN pzero.valid_handle AS varchar(25) NOT NULL CHECK (value ~* '^[A-Za-z0-9._\-]+$');
 
-;
-
 CREATE DOMAIN pzero.valid_col_name AS varchar(100) NOT NULL CHECK (value ~* '^[A-Za-z0-9_]+$');
 
 CREATE TYPE pzero.address AS (
@@ -64,6 +62,7 @@ CREATE TYPE pzero.user_status AS enum(
   'PENDING'
 );
 
+CREATE TYPE pzero.user_online_status AS enum('ONLINE', 'OOO', 'AWAY', 'BUSY', 'INACTIVE')
 CREATE TYPE pzero.device_status AS enum('ACTIVE', 'INACTIVE', 'LOST', 'UNKNOWN');
 
 CREATE DOMAIN pzero.key_values AS hstore;
@@ -139,12 +138,18 @@ CREATE TABLE pzero.relations (
   uuid1 pzero.uuid NOT NULL,
   uuid2 pzero.uuid NOT NULL,
   relation pzero.relation_type NOT NULL,
+  is_act boolean DEFAULT TRUE,
   is_del boolean DEFAULT FALSE,
-  last_seen timestampz NOT NULL DEFAULT now(),
   PRIMARY KEY (uuid1, uuid2)
-);
+)
+PARTITION BY
+  list (is_act);
 
 CREATE INDEX idx_pzero_relations_uuid2 ON pzero.relations (uuid2);
+
+CREATE TABLE pzero.active_relations partition of pzero.relations FOR
+VALUES
+  IN (TRUE);
 
 CREATE TABLE pzero.audits (
   id pzero.id NOT NULL DEFAULT pzero.gen_monotonic_ulid () PRIMARY KEY,
@@ -197,8 +202,7 @@ CREATE TABLE pzero.auth (
   email text UNIQUE NOT NULL,
   phone text UNIQUE,
   email_verified boolean NOT NULL DEFAULT FALSE,
-  phone_verified boolean NOT NULL DEFAULT FALSE,
-  status pzero.user_status NOT NULL DEFAULT pzero.user_status.pending
+  phone_verified boolean NOT NULL DEFAULT FALSE
 );
 
 CREATE INDEX idx_pzero_auth_email ON pzero.auth USING gin (email gin_trgm_ops);
@@ -213,18 +217,28 @@ CREATE TABLE pzero.base_table (
   data pzero.data
 );
 
-CREATE TABLE pzero.loc_base_table (
-  loc pzero.location,
-  last_seen timestampz NOT NULL DEFAULT now()
-) inherits (pzero.base_table);
+CREATE TABLE pzero.loc_base_table (loc pzero.location) inherits (pzero.base_table);
 
 CREATE TABLE pzero.effective_table (eff_from timestamptz, eff_to timestamptz);
 
 CREATE TABLE pzero.users (
   id pzero.iid NOT NULL PRIMARY KEY REFERENCES pzero.auth (id) ON DELETE CASCADE,
   avatar text,
-  status pzero.user_status
-) inherits (pzero.loc_base_table);
+  status pzero.user_status,
+  online_status pzero.user_online_status
+) inherits (pzero.loc_base_table)
+PARTITION BY
+  list (status);
+
+CREATE TABLE pzero.inactive_users partition of pzero.users FOR
+VALUES
+  IN ('ACTIVE');
+
+CREATE INDEX idx_pzero_active_users_name ON pzero.active_users USING gin (name gin_trgm_ops);
+
+CREATE INDEX idx_pzero_active_users_name ON pzero.active_users (name);
+
+CREATE INDEX idx_pzero_active_users_loc ON pzero.active_users USING gin (loc gin_trgm_ops);
 
 CREATE INDEX idx_pzero_users_name ON pzero.users USING gin (name gin_trgm_ops);
 
@@ -253,22 +267,23 @@ CREATE INDEX idx_pzero_orgs_is_del ON pzero.orgs (is_del);
 
 CREATE INDEX idx_pzero_orgs_status ON pzero.status (status);
 
-CREATE INDEX idx_pzero_orgs_loc ON pzero.users USING gin (loc gin_trgm_ops);
-
-CREATE TABLE pzero.active_sessions (
-  id pzero.id NOT NULL PRIMARY KEY,
-  ip text,
-  user_agent text
-) inherits (pzero.loc_base_table);
-
-CREATE INDEX idx_pzero_active_sessions_c_by ON pzero.active_sessions (c_by);
-
-CREATE INDEX idx_pzero_orgs_loc ON pzero.users USING gin (loc gin_trgm_ops);
+CREATE INDEX idx_pzero_orgs_loc ON pzero.orgs USING gin (loc gin_trgm_ops);
 
 CREATE TABLE pzero.sessions (
   id pzero.id NOT NULL PRIMARY KEY,
-  status pzero.session_status
-) inherits (pzero.sessions);
+  ip text,
+  user_agent text,
+  status pzero.session_status,
+  c_by pzero.id NOT NULL REFERENCES pzero.auth (id)
+) inherits (pzero.loc_base_table)
+PARTITION BY
+  list (status);
+
+CREATE TABLE pzero.active_sessions partition of pzero.sessions FOR
+VALUES
+  IN ('ACIVE');
+
+CREATE INDEX idx_pzero_active_sessions_c_by ON pzero.active_sessions (c_by);
 
 CREATE TABLE pzero.devices (
   info pzero.data,
@@ -294,7 +309,6 @@ CREATE TABLE pzero.endpoints (
 CREATE TABLE pzero.dirs (
   parent_id pzero.id REFERENCES pzero.dirs (id) ON DELETE CASCADE,
   is_act boolean NOT NULL DEFAULT TRUE,
-  last_seen timestampz NOT NULL DEFAULT now(),
   status pzero.dir_status PRIMARY KEY (id)
 ) inherits (pzero.base_table)
 CREATE UNIQUE INDEX idx_pzero_dirs_parent ON pzero.dirs (parent_id, name, is_act);
@@ -306,7 +320,6 @@ CREATE TABLE pzero.files (
   file_type pzero.file_type NOT NULL,
   file_size bigint NOT NULL, -- rounded off by 100
   file_unit pzero.file_unit NOT NULL,
-  last_seen timestampz NOT NULL DEFAULT now() is_act boolean NOT NULL DEFAULT TRUE,
   status pzero.dir_status PRIMARY KEY (id)
 ) inherits (pzero.base_table);
 
@@ -316,23 +329,27 @@ CREATE INDEX idx_pzero_files_status ON pzero.files (status)
 CREATE TABLE pzero.thread_heads (
   id pzero.id NOT NULL PRIMARY KEY,
   epid pzero.id NOT NULL REFERENCES pzero.endpoints (id),
-  uid pzero.id NOT NULL REFERENCES pzero.auth (id),
-  status pzero.endpoint_status,
+  c_by pzero.id NOT NULL REFERENCES pzero.auth (id),
+  status pzero.session_status,
   -- that started the thread
   data pzero.data
-);
+)
+PARTITION BY
+  list (status);
 
-CREATE UNIQUE INDEX idx_threads_epid ON pzero.thread_heads (epid);
+CREATE UNIQUE INDEX idx_thread_heads_epid ON pzero.thread_heads (epid);
 
-CREATE UNIQUE INDEX idx_threads_uid ON pzero.thread_heads (uid);
+CREATE UNIQUE INDEX idx_thread_heads_cby ON pzero.thread_heads (c_by);
 
 CREATE TABLE pzero.threads (
   id pzero.id NOT NULL PRIMARY KEY,
   -- that started the thread
   root_id pzero.id NOT NULL REFERENCES pzero.threads (id),
-  status pzero.endpoint_status,
+  status pzero.session_status,
   data pzero.data
-);
+)
+PARTITION BY
+  list (status);
 
 CREATE INDEX idx_threads_root ON pzero.threads (root_id);
 
