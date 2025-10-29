@@ -1,0 +1,36 @@
+# Custom PostgreSQL image with all required extensions
+FROM postgres:17
+
+# Install required dependencies, PostGIS, and build tools
+RUN apt-get update && \
+    apt-get install -y \
+    postgresql-17-postgis-3 \
+    postgresql-plpython3-17 \
+    build-essential \
+    git \
+    curl \
+    libssl-dev \
+    pkg-config \
+    postgresql-server-dev-17 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust (required for pgx_ulid)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install cargo-pgrx
+RUN cargo install --locked cargo-pgrx && \
+    cargo pgrx init --pg17 /usr/lib/postgresql/17/bin/pg_config
+
+# Install pgx_ulid extension
+RUN git clone https://github.com/pksunkara/pgx_ulid.git /tmp/pgx_ulid && \
+    cd /tmp/pgx_ulid && \
+    cargo pgrx install --release && \
+    cd / && \
+    rm -rf /tmp/pgx_ulid
+
+# Configure PostgreSQL to preload the pgx_ulid extension
+RUN echo "shared_preload_libraries = 'pgx_ulid'" >> /usr/share/postgresql/postgresql.conf.sample
+
+# The init-db.sql script will be mounted via docker-compose
+# and will run automatically on first database initialization
