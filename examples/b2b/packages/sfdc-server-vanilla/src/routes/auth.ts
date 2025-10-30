@@ -19,7 +19,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "none",
+      sameSite: "lax",
       path: "/",
       maxAge: 3600, // 1 hour
     },
@@ -44,6 +44,16 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
       return `${config.FRONTEND_URL}/auth/callback`;
     },
+    generateStateFunction: async () => {
+      return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    },
+    checkStateFunction: async (request) => {
+      const { state } = request.query as { code: string; state: string };
+      if (!state) {
+        throw new Error("Invalid state");
+      }
+      return true;
+    },
     scope: ["user:email"],
   });
 
@@ -53,21 +63,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.get("/auth/login", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      // Generate state parameter for CSRF protection
-      const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-
-      // Store state in session or cookie for validation
-      // For simplicity, we'll use a cookie
-      // Debug: Log the state being set
-
-      reply.setCookie("oauth_state", state, {
-        httpOnly: true,
-        secure: false, // Set to false for development (HTTP)
-        sameSite: "none", // Use none for same-site requests
-        maxAge: 600000, // 10 minutes
-        path: "/",
-      });
-
       const githuboAuth2 = fastify.githubOAuth2;
       // Redirect to GitHub OAuth
       const authUrl = await githuboAuth2.generateAuthorizationUri(request, reply);
@@ -90,9 +85,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     try {
       const { code, state } = request.query as { code: string; state: string };
       // Validate state parameter
+      // const storedState = request.cookies.oauth_state;
 
-      const storedState = request.cookies.oauth_state;
-      if (!state || !storedState || state !== storedState) {
+      if (!state) {
         return reply.status(400).send({
           error: "Bad Request",
           message: "Invalid state parameter",
@@ -153,14 +148,14 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       reply.setCookie("accessToken", accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
+        sameSite: "lax",
         path: "/",
         maxAge: 3600, // 1 hour
       });
       reply.setCookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
+        sameSite: "lax",
         path: "/",
         maxAge: 3600 * 24 * 30, // 30 days
       });
@@ -247,7 +242,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       reply.setCookie("accessToken", accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
+        sameSite: "lax",
         path: "/",
         maxAge: 3600, // 1 hour
       });
@@ -255,7 +250,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       reply.setCookie("refreshToken", newRefreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
+        sameSite: "lax",
         path: "/",
         maxAge: 3600 * 24 * 30, // 30 days
       });

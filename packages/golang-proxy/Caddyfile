@@ -1,0 +1,8 @@
+localhost {
+  tls /etc/caddy/ssl/public.cert /etc/caddy/ssl/private.key
+   # Disable HTTP/3 / QUIC
+    servers {
+        protocols h1 h2
+    }
+  reverse_proxy golang-proxy:8080
+}

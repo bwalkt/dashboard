@@ -1,8 +1,0 @@
-{
-  "url": "http://pzero-sfdc-server:3000/auth/me",
-  "method": "GET",
-  "headers": {
-    "Accept": "application/json",
-    "User-Agent": "golang-proxy-client"
-  }
-}

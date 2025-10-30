@@ -12,12 +12,17 @@ const CallbackPage = () => {
     queryFn: () => {
       const code = searchParams.get('code')
       const state = searchParams.get('state')
-      return api.get<{ user: User, message: string }>(`/auth/callback?code=${code}&state=${state}`)
+
+      return api.get<{ user: User, accessToken: string, refreshToken: string, message: string }>(`/auth/callback?code=${code}&state=${state}`,
+        { skipAuth: true }
+      )
     },
   })
 
   React.useEffect(() => {
-    if (data?.user) {
+    if (data) {
+      localStorage.setItem('accessToken', data.accessToken)
+      localStorage.setItem('refreshToken', data.refreshToken)
       navigate('/dashboard/overview', { replace: true })
     }
   }, [data, navigate])

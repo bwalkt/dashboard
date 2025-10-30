@@ -289,8 +289,6 @@ func sanitizeHeaders(headers map[string]string) map[string]string {
 	// Blocked headers that could be dangerous
 	blockedHeaders := map[string]bool{
 		"Host":                true,
-		"Authorization":       true,
-		"Cookie":              true,
 		"X-Forwarded-For":     true,
 		"X-Real-Ip":           true,
 		"X-Forwarded-Proto":   true,
@@ -325,6 +323,54 @@ func sanitizeHeaders(headers map[string]string) map[string]string {
 	}
 
 	return sanitized
+}
+
+// overrideCookieDomain modifies a Set-Cookie header to override the domain attribute
+// with the domain from the COOKIE_DOMAIN environment variable
+func overrideCookieDomain(cookieValue string, overrideDomain string) string {
+	if overrideDomain == "" {
+		return cookieValue // Return as-is if no override domain is set
+	}
+
+	// Parse the cookie string
+	// Format: name=value; Domain=domain; Path=path; Secure; HttpOnly; SameSite=value
+	parts := strings.Split(cookieValue, ";")
+	if len(parts) == 0 {
+		return cookieValue
+	}
+
+	// The first part is the cookie name=value pair
+	cookiePair := strings.TrimSpace(parts[0])
+	var domainFound bool
+	var newParts []string
+
+	// Always include the cookie name=value pair
+	newParts = append(newParts, cookiePair)
+
+	// Process the rest of the attributes
+	for i := 1; i < len(parts); i++ {
+		part := strings.TrimSpace(parts[i])
+		if part == "" {
+			continue
+		}
+
+		// Check if this is a Domain attribute
+		if strings.HasPrefix(strings.ToLower(part), "domain=") {
+			// Replace the domain
+			newParts = append(newParts, "Domain="+overrideDomain)
+			domainFound = true
+		} else {
+			// Keep other attributes as-is
+			newParts = append(newParts, part)
+		}
+	}
+
+	// If domain wasn't found, add it
+	if !domainFound {
+		newParts = append(newParts, "Domain="+overrideDomain)
+	}
+
+	return strings.Join(newParts, "; ")
 }
 
 // isHostnameInAllowedDomains checks if a hostname:port combination is explicitly in ALLOWED_DOMAINS
@@ -550,6 +596,18 @@ func (m *Middleware) ProxyHandler(w http.ResponseWriter, r *http.Request) {
 		req.Header.Set(key, value)
 	}
 
+	// If no Cookie header was provided explicitly in the proxy request body,
+	// forward cookies from the original incoming HTTP request to the upstream.
+	if req.Header.Get("Cookie") == "" {
+		// Preserve multiple Cookie header lines if present
+		incomingCookies := r.Header.Values("Cookie")
+		for _, v := range incomingCookies {
+			if v != "" {
+				req.Header.Add("Cookie", v)
+			}
+		}
+	}
+
 	// Execute the request
 	resp, err := client.Do(req)
 	if err != nil {
@@ -568,6 +626,9 @@ func (m *Middleware) ProxyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get cookie domain override from environment variable
+	cookieDomainOverride := os.Getenv("COOKIE_DOMAIN")
+
 	// Copy headers from target server response to proxy response
 	// Skip certain headers that should be set by the proxy itself
 	skipHeaders := map[string]bool{
@@ -584,9 +645,18 @@ func (m *Middleware) ProxyHandler(w http.ResponseWriter, r *http.Request) {
 		"Access-Control-Max-Age":           true,
 	}
 	for key, values := range resp.Header {
-		if !skipHeaders[http.CanonicalHeaderKey(key)] {
-			for _, value := range values {
-				w.Header().Add(key, value)
+		canonicalKey := http.CanonicalHeaderKey(key)
+		if !skipHeaders[canonicalKey] {
+			// Special handling for Set-Cookie headers
+			if canonicalKey == "Set-Cookie" && cookieDomainOverride != "" {
+				for _, value := range values {
+					modifiedCookie := overrideCookieDomain(value, cookieDomainOverride)
+					w.Header().Add(key, modifiedCookie)
+				}
+			} else {
+				for _, value := range values {
+					w.Header().Add(key, value)
+				}
 			}
 		}
 	}

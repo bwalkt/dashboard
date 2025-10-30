@@ -13,6 +13,7 @@ export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   body?: any;
   baseUrl?: string;
   skipRefresh?: boolean; // Skip automatic token refresh for this request
+  skipAuth?: boolean; // Skip authentication for this request
 }
 
 export interface ApiResponse<T = any> {
@@ -118,6 +119,10 @@ async function refreshTokenWithProxy(): Promise<void> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        throw new ApiError("Refresh token not found", 401, "Refresh token not found");
+      }
       const response = await fetch(`${getProxyUrl()}`, {
         method: "POST",
         credentials: "include",
@@ -127,6 +132,9 @@ async function refreshTokenWithProxy(): Promise<void> {
         body: JSON.stringify({
           url: `${getProxyTarget()}/auth/refresh`,
           method: "POST",
+          headers: {
+            Authorization: `Bearer ${refreshToken}`,
+          },
         }),
       });
 
@@ -292,7 +300,7 @@ type ApiProxyRequestBody = {
  * @param options - Request options including body, headers, and skipRefresh flag
  * @returns Promise resolving to the response data
  */
-export async function apiRequestWithProxy<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
+export async function apiRequestWithProxy<T = any>(endpoint: string, options: ApiRequestOptions = { skipAuth: false }): Promise<T> {
   const { baseUrl = getProxyTarget(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options;
   const targetUrl = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
@@ -305,6 +313,14 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options: Ap
     headers: headers,
     body: body,
   };
+
+  const accessToken = localStorage.getItem("accessToken");
+  if (accessToken && !options.skipAuth) {
+    requestConfig.headers = {
+      ...requestConfig.headers,
+      Authorization: `Bearer ${accessToken}`,
+    };
+  }
 
   // Handle body serialization
   if (body !== undefined) {
