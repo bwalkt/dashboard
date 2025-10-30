@@ -32,84 +32,81 @@ Update the `.env` file with your configuration:
 - `ENVIRONMENT`: Set to `development` or `production`
 - `DEBUG`: Set to `true` for debug logging
 
-### 3. Start the Application
+### 3. Create Docker Network
 
-Start the Docker containers:
+Create a Docker network named `pzero` that will be used by all services:
 
 ```bash
-docker compose up
+docker network create pzero
+```
+
+### 4. Start the Golang Proxy
+
+Navigate to the golang-proxy directory and start the Docker containers:
+
+```bash
+cd packages/golang-proxy
+docker compose up -d
 ```
 
 This will start the proxy server and make it available through the OpenZiti network.
 
-### 4. Get the Enrollment JWT
+### 5. Start the SFDC Server
+
+In a new terminal, navigate to the b2b examples directory and start the SFDC server:
+
+```bash
+cd examples/b2b
+docker compose up -d
+```
+
+This will start the SFDC server and connect it to the `pzero` network.
+
+### 6. Get the Enrollment JWT
 
 1. Go to the OpenZiti Admin Console: https://ziti-controller.incmix.com:1280/zac/
 2. Login with credentials:
    - Username: `admin`
    - Password: `admin`
 3. Navigate to the **Identities** page
-4. Click on the identity for `golang-proxy` (or the appropriate identity name)
+4. Click on the identity for `simple-client2` (or the appropriate identity name)
 5. Click **Download Enrollment JWT**
 
-### 5. Add JWT to Ziti Desktop App
+### 7. Add JWT to Ziti Desktop App
 
 1. Open the Ziti desktop edge app that was downloaded in step 1
 2. Add the downloaded JWT file
    - This is a one-time step; skip if the JWT has already been added previously
 3. Click on **Enroll**
 
-### 6. Enable Ziti Connection
+### 8. Enable Ziti Connection
 
 1. Click the **Turn Ziti On** button
 2. Allow VPN permissions when prompted by your system
 3. Wait for the status to change to **Connected**
 
-### 7. Test the Connection
+### 9. Test the Application
 
-Once the Ziti connection is established, test the proxy service by making a POST request to `/proxy`:
+In a new terminal, navigate to the SFDC example frontend and start the development server:
 
 ```bash
-curl -X POST http://golang-proxy.ziti:8080/proxy \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "http://your-target-service:port/path",
-    "method": "GET",
-    "headers": {
-      "Accept": "application/json"
-    }
-  }'
+cd examples/b2b/packages/sfdc-example
+pnpm dev
 ```
 
-Replace `your-target-service:port/path` with the actual service endpoint you want to proxy to (must be in the `ALLOWED_DOMAINS` list).
+This will start the frontend application, which you can use to test the complete setup through the proxy and OpenZiti network.
 
-### 8. Verify Success
+**Note:** OpenZiti can be disabled for testing by setting `VITE_USE_PROXY=false` in the `sfdc-example` environment file. This allows you to test the application without going through the OpenZiti network.
 
-If the setup is working correctly, you should receive a JSON response:
+### 10. Verify Success
 
-```json
-{
-  "success": true,
-  "message": "Request completed successfully",
-  "data": {
-    "statusCode": 200,
-    "body": "{...response from target server...}"
-  }
-}
-```
+If the setup is working correctly, you should be able to:
 
-This confirms that the proxy is running correctly behind the OpenZiti network.
+- Access the frontend application running on the development server
+- Make requests through the proxy to the SFDC server
+- See all services communicating through the OpenZiti network
 
-## API Usage
-
-The proxy accepts POST requests to `/proxy` with a JSON body containing:
-
-- `url` (required): The target URL to proxy to
-- `method` (optional, defaults to GET): HTTP method
-- `headers` (optional): Map of headers to send with the request
-- `body` (optional): Request body for POST/PUT/PATCH requests
-
-See `EXAMPLE.md` in the `golang-proxy` directory for more detailed usage examples.
+This confirms that the proxy is running correctly behind the OpenZiti network and all services are properly connected.
 
 ## Troubleshooting
 
@@ -124,6 +121,6 @@ See `EXAMPLE.md` in the `golang-proxy` directory for more detailed usage example
 ## Additional Information
 
 - The proxy server runs on port 8080 within the Ziti network
-- The service is accessible through the hostname `golang-proxy.ziti` (or as configured in OpenZiti)
+- The service is accessible through the hostname `proxy.ziti:443` (or as configured in OpenZiti)
 - Target URLs must be in the `ALLOWED_DOMAINS` environment variable for security
 - This setup demonstrates a zero-trust networking approach using OpenZiti
