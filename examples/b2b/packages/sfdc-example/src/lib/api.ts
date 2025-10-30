@@ -41,7 +41,7 @@ function getBackendUrl(): string {
   return backendUrl;
 }
 /**
- * Get the backend URL from environment variables
+ * Get the proxy URL from environment variables
  */
 function getProxyUrl(): string {
   const proxyUrl = import.meta.env.VITE_PROXY_URL;
