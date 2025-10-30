@@ -65,9 +65,9 @@ This will start the SFDC server and connect it to the `pzero` network.
 ### 6. Get the Enrollment JWT
 
 1. Go to the OpenZiti Admin Console: https://ziti-controller.incmix.com:1280/zac/
-2. Login with credentials:
-   - Username: `admin`
-   - Password: `admin`
+2. Login with your provisioned credentials (e.g., from your secret manager).
+   - Username: `<admin-username>`
+   - Password: `<admin-password>`
 3. Navigate to the **Identities** page
 4. Click on the identity for `simple-client2` (or the appropriate identity name)
 5. Click **Download Enrollment JWT**
