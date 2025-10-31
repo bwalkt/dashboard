@@ -112,7 +112,7 @@ function headersToObject(headers: HeadersInit): Record<string, string> {
 /**
  * Serialize request body based on its type
  */
-function serializeBody(body: any, headers: Record<string, string>): { body: any; headers: Record<string, string> } {
+function serializeBody(body: any, headers: Record<string, string>, useProxy: boolean): { body: any; headers: Record<string, string> } {
   if (body === undefined) {
     return { body: undefined, headers };
   }
@@ -126,7 +126,14 @@ function serializeBody(body: any, headers: Record<string, string>): { body: any;
   }
 
   if (typeof body === "object") {
-    return { body: JSON.stringify(body), headers: updatedHeaders };
+    if (useProxy) {
+      // For proxy requests, return the plain object (will be JSON.stringify'd by createProxyFetchOptions)
+      return { body, headers: updatedHeaders };
+    } else {
+      // For direct requests, JSON.stringify and set Content-Type
+      updatedHeaders["Content-Type"] = "application/json";
+      return { body: JSON.stringify(body), headers: updatedHeaders };
+    }
   }
 
   return { body, headers: updatedHeaders };
@@ -284,7 +291,7 @@ export async function apiRequestWithoutProxy<T = any>(endpoint: string, options:
   const headersObj = headersToObject(headers);
 
   // Handle body serialization
-  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj);
+  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, false);
 
   // Prepare the request configuration
   const requestConfig: RequestInit = {
@@ -369,7 +376,7 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
   }
 
   // Handle body serialization
-  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj);
+  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, true);
 
   // Prepare the request configuration
   const requestConfig: ApiProxyRequestBody = {
