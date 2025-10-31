@@ -13,29 +13,24 @@ func (m *Middleware) HomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user is already authenticated from context
-	if user := r.Context().Value(userContextKey); user != nil {
-		// User is logged in, redirect to dashboard
-		http.Redirect(w, r, "/dashboard", http.StatusTemporaryRedirect)
-		return
-	}
-
-	// Show login page for unauthenticated users
+	// Simple welcome page (authentication removed)
 	html := `
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GitHub OAuth Demo</title>
+    <title>Welcome</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
-        .login-btn { background: #24292e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; }
-        .login-btn:hover { background: #1a1e22; }
     </style>
 </head>
 <body>
-    <h1>Welcome to GitHub OAuth Demo</h1>
-    <p>Please log in with your GitHub account to continue.</p>
-    <a href="/login" class="login-btn">Login with GitHub</a>
+    <h1>Welcome</h1>
+    <p>Authentication has been disabled. Use the public endpoints:</p>
+    <ul>
+      <li><a href="/test">GET /test</a></li>
+      <li>POST /proxy</li>
+      <li><a href="/dashboard">GET /dashboard</a></li>
+    </ul>
 </body>
 </html>
 `
@@ -45,33 +40,15 @@ func (m *Middleware) HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 // ProfileHandler handles GET /profile - returns current user profile
 func (m *Middleware) ProfileHandler(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value(userContextKey).(*User)
-	if user == nil {
-		m.JSONResponse(w, false, "User not found", nil)
-		return
-	}
-
-	m.JSONResponse(w, true, "Profile retrieved successfully", user)
+	// Authentication removed; return a generic profile payload
+	m.JSONResponse(w, true, "Profile retrieved successfully", map[string]interface{}{
+		"logged_in": false,
+		"user":      nil,
+	})
 }
 
 // DashboardHandler serves the protected dashboard page with user authentication
 func (m *Middleware) DashboardHandler(w http.ResponseWriter, r *http.Request) {
-	// Check for authentication from context first
-	var user *User
-	if contextUser := r.Context().Value(userContextKey); contextUser != nil {
-		user = contextUser.(*User)
-	}
-
-	// If no user in context, try to extract and verify user
-	if user == nil {
-		var err error
-		user, err = m.extractAndVerifyUser(r)
-		if err != nil || user == nil {
-			http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
-			return
-		}
-	}
-
 	html := `
 <!DOCTYPE html>
 <html>
@@ -88,19 +65,16 @@ func (m *Middleware) DashboardHandler(w http.ResponseWriter, r *http.Request) {
 <body>
     <div class="header">
         <h1>Dashboard</h1>
-        <a href="/logout" class="logout-btn">Logout</a>
     </div>
     
     <div class="card">
-        <h2>Welcome, ` + user.Username + `!</h2>
-        <p>You are successfully logged in with GitHub OAuth.</p>
+        <h2>Welcome!</h2>
+        <p>Authentication is disabled. This page is public.</p>
     </div>
     
     <div class="card">
         <h3>API Endpoints</h3>
         <ul>
-            <li><a href="/auth/me">GET /auth/me</a> - Get your profile information</li>
-            <li><strong>POST /auth/refresh</strong> - Refresh your access token (no access token required)</li>
             <li><a href="/test">GET /test</a> - Test endpoint</li>
             <li><strong>POST /proxy</strong> - Proxy HTTP requests to allowed domains</li>
         </ul>

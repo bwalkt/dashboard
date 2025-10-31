@@ -89,6 +89,27 @@ The SQLite database contains a `users` table with the following fields:
 
 ## Docker Support
 
+### Using Docker Compose (Recommended)
+
+Before running docker-compose, create the required external Docker network:
+
+```bash
+docker network create pzero
+```
+
+Then start the services:
+
+```bash
+docker-compose up -d
+```
+
+The services will be available on:
+
+- HTTP: `http://localhost:8080`
+- HTTPS: `https://localhost:8443`
+
+### Using Docker Directly
+
 Build and run with Docker:
 
 ```bash

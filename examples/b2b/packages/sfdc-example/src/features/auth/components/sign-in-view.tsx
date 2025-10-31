@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import GithubSignInButton from "./github-auth-button";
 
-export default function SignInViewPage(_props: { stars: number }) {
+export default function SignInViewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading } = useAuth();

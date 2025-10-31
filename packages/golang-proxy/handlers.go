@@ -4,11 +4,11 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -28,94 +28,94 @@ const (
 
 // Middleware holds authentication configuration and database connection
 type Middleware struct {
-	authConfig *AuthConfig
-	db         *Database
-	mu         sync.RWMutex
+	mu sync.RWMutex
 }
 
 // NewMiddleware creates a new middleware instance
-func NewMiddleware(authConfig *AuthConfig, db *Database) *Middleware {
-	return &Middleware{
-		authConfig: authConfig,
-		db:         db,
-	}
+func NewMiddleware() *Middleware {
+	return &Middleware{}
 }
 
 // extractAndVerifyUser extracts and verifies user authentication from request
 // First checks Authorization header, then cookies, verifies the token and returns the user from DB
 // Falls back to session lookup when no token is present
 // Returns nil user and error when no valid user is found
+// Authentication has been removed; this is now a no-op helper retained for
+// compatibility with existing handler signatures.
 func (m *Middleware) extractAndVerifyUser(r *http.Request) (*User, error) {
-	// Check for JWT token in Authorization header
-	authHeader := r.Header.Get("Authorization")
-	tokenString := m.authConfig.ExtractTokenFromHeader(authHeader)
-
-	// If no token in header, try cookies
-	if tokenString == "" {
-		cookies := make(map[string]string)
-		for _, cookie := range r.Cookies() {
-			cookies[cookie.Name] = cookie.Value
-		}
-		tokenString = m.authConfig.ExtractTokenFromCookies(cookies)
-	}
-
-	// If we have a token, verify it
-	if tokenString != "" {
-		payload, err := m.authConfig.VerifyAccessToken(tokenString)
-		if err == nil {
-			// Token is valid, get user from database
-			user, err := m.db.GetUserByID(payload.UserID)
-			if err == nil {
-				return user, nil
-			}
-		}
-	}
-
-	// Fallback to session-based auth
-	session, _ := m.authConfig.Store.Get(r, "auth-session")
-	userID, ok := session.Values["user_id"].(string)
-	if !ok {
-		return nil, http.ErrNoCookie // Use a standard error to indicate no valid auth
-	}
-
-	// Verify user exists in database
-	user, err := m.db.GetUserByID(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
+	return nil, nil
 }
 
 // AuthMiddleware validates JWT tokens and sessions, adding user info to request context
 func (m *Middleware) AuthMiddleware(next http.Handler) http.Handler {
+	// No authentication; pass through directly
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Extract and verify user authentication
-		user, err := m.extractAndVerifyUser(r)
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		// Attach user to request context
-		ctx := context.WithValue(r.Context(), userContextKey, user)
-		r = r.WithContext(ctx)
-
 		next.ServeHTTP(w, r)
 	})
 }
 
 // OptionalAuthMiddleware validates authentication but doesn't require it (for public routes)
 func (m *Middleware) OptionalAuthMiddleware(next http.Handler) http.Handler {
+	// No authentication; pass through directly
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Extract and verify user authentication (optional)
-		user, err := m.extractAndVerifyUser(r)
-		if err == nil && user != nil {
-			// Attach user to request context if found
-			ctx := context.WithValue(r.Context(), userContextKey, user)
-			r = r.WithContext(ctx)
+		next.ServeHTTP(w, r)
+	})
+}
+
+// CORSMiddleware handles CORS headers and preflight requests
+func (m *Middleware) CORSMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Get allowed origin from environment variable, default to http://localhost:1420
+		allowedOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
+		if allowedOrigin == "" {
+			allowedOrigin = "http://localhost:1420"
 		}
 
+		// Get the origin from the request
+		origin := r.Header.Get("Origin")
+
+		// Check if the origin is allowed
+		// Support multiple origins (comma-separated) or wildcard
+		allowedOrigins := strings.Split(allowedOrigin, ",")
+		for i := range allowedOrigins {
+			allowedOrigins[i] = strings.TrimSpace(allowedOrigins[i])
+		}
+
+		if allowedOrigin == "*" {
+			// Allow all origins (use with caution in production)
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		} else if origin != "" {
+			// Check if the request origin is in the allowed list
+			for _, allowed := range allowedOrigins {
+				if origin == allowed {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					break
+				}
+			}
+		}
+
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+		w.Header().Set("Access-Control-Max-Age", "3600") // Cache preflight for 1 hour
+
+		// Only allow credentials if origin was allowed and not using wildcard
+		// (browsers don't allow credentials with "*")
+		// Track if we set an origin to determine if we should set credentials
+		_, originHeaderSet := w.Header()["Access-Control-Allow-Origin"]
+		if originHeaderSet && allowedOrigin != "*" {
+			// Explicitly remove any existing value first, then set to ensure no duplicates
+			w.Header().Del("Access-Control-Allow-Credentials")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
+
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Continue with the next handler
 		next.ServeHTTP(w, r)
 	})
 }
@@ -169,34 +169,23 @@ func (m *Middleware) JSONResponse(w http.ResponseWriter, success bool, message s
 func (m *Middleware) SetupRoutes() http.Handler {
 	mux := http.NewServeMux()
 
-	// Register auth routes (matching vanilla server API)
-	mux.HandleFunc("/auth/login", m.AuthLoginHandler)
-	mux.HandleFunc("/auth/callback", m.authConfig.CallbackHandler(m.db))
-
-	// Protected auth routes
-	mux.Handle("/auth/me", m.AuthMiddleware(http.HandlerFunc(m.AuthMeHandler)))
-	// Refresh is a public POST endpoint relying only on refresh cookie
-	mux.HandleFunc("/auth/refresh", m.AuthRefreshHandler)
-	mux.Handle("/auth/logout", m.AuthMiddleware(http.HandlerFunc(m.AuthLogoutHandler)))
-
-	// Legacy routes for backward compatibility
-	mux.HandleFunc("/login", m.authConfig.LoginHandler)
-	mux.HandleFunc("/logout", m.authConfig.LogoutHandler)
+	// Authentication routes removed
 
 	// Test endpoint for health checks
 	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Test route works!"))
 	})
 
-	// Protected routes
-	mux.Handle("/dashboard", m.AuthMiddleware(http.HandlerFunc(m.DashboardHandler)))
-	mux.Handle("/profile", m.AuthMiddleware(http.HandlerFunc(m.ProfileHandler)))
+	// Public routes
+	mux.HandleFunc("/dashboard", m.DashboardHandler)
+	mux.HandleFunc("/profile", m.ProfileHandler)
 
-	// Proxy route (protected)
-	mux.Handle("/proxy", m.AuthMiddleware(http.HandlerFunc(m.ProxyHandler)))
+	// Proxy route (now public)
+	mux.HandleFunc("/proxy", m.ProxyHandler)
 
 	// Home page (catch-all for unmatched routes)
 	mux.HandleFunc("/", m.HomeHandler)
 
-	return mux
+	// Apply CORS middleware to all routes
+	return m.CORSMiddleware(mux)
 }

@@ -8,7 +8,12 @@ export function useTauriAuth() {
     error,
   } = useMutation({
     mutationFn: async () => {
-      const { authUrl } = await api.get<{ authUrl: string }>("/auth/login");
+      const { authUrl } = await api.get<{ authUrl: string }>("/auth/login", {
+        headers: {
+          "X-Client-Type": "tauri",
+        },
+        skipAuth: true,
+      });
       // Redirect to GitHub; backend callback will set cookies then redirect to app home
       window.location.href = authUrl;
       return { success: true };
