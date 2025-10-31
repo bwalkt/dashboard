@@ -3,6 +3,7 @@ import { User } from '@pzero/shared'
 import { useQuery } from '@tanstack/react-query'
 import React from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 
 const CallbackPage = () => {
   const [searchParams] = useSearchParams()
@@ -12,8 +13,12 @@ const CallbackPage = () => {
     queryFn: () => {
       const code = searchParams.get('code')
       const state = searchParams.get('state')
-
-      return api.get<{ user: User, accessToken: string, refreshToken: string, message: string }>(`/auth/callback?code=${code}&state=${state}`,
+      if (!code || !state) {
+        navigate('/auth/sign-in', { replace: true })
+        toast.error('Invalid auth state')
+        return null
+      }
+      return api.get<{ user: User, accessToken: string, refreshToken: string, message: string }>(`/auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`,
         { skipAuth: true }
       )
     },

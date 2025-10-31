@@ -60,10 +60,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "packages/**",
-        "examples/*/packages/**"
-      ],
+      "includes": ["packages/**", "examples/*/packages/**"],
       "formatter": {
         "enabled": false
       },
@@ -72,9 +69,7 @@
       }
     },
     {
-      "includes": [
-        "packages/server/**"
-      ],
+      "includes": ["packages/server/**"],
       "formatter": {
         "enabled": false
       },

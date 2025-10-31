@@ -63,9 +63,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.get("/auth/login", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const githuboAuth2 = fastify.githubOAuth2;
+      const githubOAuth2 = fastify.githubOAuth2;
       // Redirect to GitHub OAuth
-      const authUrl = await githuboAuth2.generateAuthorizationUri(request, reply);
+      const authUrl = await githubOAuth2.generateAuthorizationUri(request, reply);
 
       return reply.code(200).send({ authUrl });
     } catch (error) {
@@ -257,6 +257,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
       return reply.send({
         accessToken,
+        refreshToken: newRefreshToken,
         user,
       });
     } catch (error) {

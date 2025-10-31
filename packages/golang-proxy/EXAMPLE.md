@@ -170,7 +170,7 @@ Common errors:
 **Port Validation Rules:**
 
 - If the allowed domain includes a port (e.g., `pzero-sfdc-server:3000`), the target URL's port **must match exactly**.
-- If the allowed domain doesn't include a port (e.g., `pzero-sfdc-server`), any valid port (80, 443, 8080, 8443) is allowed.
+- If the allowed domain doesn't include a port (e.g., `pzero-sfdc-server`), any valid port (80, 443, 3000, 8080, 8443) is allowed.
 - For URLs without an explicit port, default ports are used (80 for HTTP, 443 for HTTPS).
 
 **Examples:**

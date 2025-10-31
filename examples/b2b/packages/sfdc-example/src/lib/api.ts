@@ -83,6 +83,117 @@ let isRefreshing = false;
 let refreshPromise: Promise<void> | null = null;
 
 /**
+ * Extract error message from a response, falling back to status text
+ */
+async function extractErrorMessage(response: Response): Promise<string> {
+  let errorMessage = `Request failed: ${response.status} ${response.statusText}`;
+  try {
+    const errorData = await response.json();
+    errorMessage = errorData.message || errorData.error || errorMessage;
+  } catch {
+    // If we can't parse the error response, use the default message
+  }
+  return errorMessage;
+}
+
+/**
+ * Convert HeadersInit to a plain object
+ */
+function headersToObject(headers: HeadersInit): Record<string, string> {
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries());
+  }
+  return (headers as Record<string, string>) || {};
+}
+
+/**
+ * Serialize request body based on its type
+ */
+function serializeBody(body: any, headers: Record<string, string>): { body: any; headers: Record<string, string> } {
+  if (body === undefined) {
+    return { body: undefined, headers };
+  }
+
+  const updatedHeaders = { ...headers };
+
+  if (body instanceof FormData) {
+    // Don't set Content-Type for FormData, let the browser set it with boundary
+    delete updatedHeaders["Content-Type"];
+    return { body, headers: updatedHeaders };
+  }
+
+  if (typeof body === "object") {
+    return { body: JSON.stringify(body), headers: updatedHeaders };
+  }
+
+  return { body, headers: updatedHeaders };
+}
+
+/**
+ * Parse a direct API response (non-proxy)
+ */
+async function parseDirectResponse<T>(response: Response): Promise<T> {
+  // Handle empty responses (e.g., 204 No Content)
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return {} as T;
+  }
+
+  // Parse JSON response
+  const contentType = response.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return await response.json();
+  }
+
+  // Return text response for non-JSON content
+  return (await response.text()) as T;
+}
+
+/**
+ * Parse a proxy API response
+ */
+async function parseProxyResponse<T>(response: Response): Promise<T> {
+  // Handle empty responses (e.g., 204 No Content)
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return {} as T;
+  }
+
+  const { data } = (await response.json()) as { data: { statusCode: number; body: string } };
+
+  // Parse JSON response
+  const contentType = response.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return JSON.parse(data.body) as T;
+  }
+
+  // Return text response for non-JSON content
+  return data.body as T;
+}
+
+type ApiProxyRequestBody = {
+  url: string;
+  method: string;
+  headers: HeadersInit;
+  body?: any;
+};
+
+/**
+ * Create fetch options for proxy requests
+ */
+function createProxyFetchOptions(requestConfig: ApiProxyRequestBody): RequestInit {
+  return {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestConfig),
+    credentials: "include",
+  };
+}
+
+/**
  * Attempt to refresh the authentication token
  */
 async function refreshToken(): Promise<void> {
@@ -123,24 +234,22 @@ async function refreshTokenWithProxy(): Promise<void> {
       if (!refreshToken) {
         throw new ApiError("Refresh token not found", 401, "Refresh token not found");
       }
-      const response = await fetch(`${getProxyUrl()}`, {
+      const requestConfig: ApiProxyRequestBody = {
+        url: `${getProxyTarget()}/auth/refresh`,
         method: "POST",
-        credentials: "include",
         headers: {
-          "Content-Type": "application/json",
+          Authorization: `Bearer ${refreshToken}`,
         },
-        body: JSON.stringify({
-          url: `${getProxyTarget()}/auth/refresh`,
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${refreshToken}`,
-          },
-        }),
-      });
+      };
+      const response = await fetch(getProxyUrl(), createProxyFetchOptions(requestConfig));
 
       if (!response.ok) {
         throw new ApiError("Token refresh failed", response.status, response.statusText, response);
       }
+      const { data } = (await response.json()) as { data: { statusCode: number; body: string } };
+      const { refreshToken: newRefreshToken, accessToken: newAccessToken } = JSON.parse(data.body) as { refreshToken: string; accessToken: string };
+      localStorage.setItem("refreshToken", newRefreshToken);
+      localStorage.setItem("accessToken", newAccessToken);
     } catch (error) {
       throw error;
     } finally {
@@ -171,28 +280,22 @@ export async function apiRequestWithoutProxy<T = any>(endpoint: string, options:
   // Construct the full URL
   const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
+  // Prepare headers as a plain object for serialization
+  const headersObj = headersToObject(headers);
+
+  // Handle body serialization
+  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj);
+
   // Prepare the request configuration
   const requestConfig: RequestInit = {
     ...defaultOptions,
     ...fetchOptions,
     headers: {
       ...defaultHeaders,
-      ...headers,
+      ...updatedHeaders,
     },
+    body: serializedBody,
   };
-
-  // Handle body serialization
-  if (body !== undefined) {
-    if (body instanceof FormData) {
-      // Don't set Content-Type for FormData, let the browser set it with boundary
-      delete (requestConfig.headers as Record<string, string>)["Content-Type"];
-      requestConfig.body = body;
-    } else if (typeof body === "object") {
-      requestConfig.body = JSON.stringify(body);
-    } else {
-      requestConfig.body = body;
-    }
-  }
 
   try {
     const response = await fetch(url, requestConfig);
@@ -207,70 +310,24 @@ export async function apiRequestWithoutProxy<T = any>(endpoint: string, options:
           const retryResponse = await fetch(url, requestConfig);
 
           if (!retryResponse.ok) {
-            let errorMessage = `Request failed: ${retryResponse.status} ${retryResponse.statusText}`;
-
-            try {
-              const errorData = await retryResponse.json();
-              errorMessage = errorData.message || errorData.error || errorMessage;
-            } catch {
-              // If we can't parse the error response, use the default message
-            }
-
+            const errorMessage = await extractErrorMessage(retryResponse);
             throw new ApiError(errorMessage, retryResponse.status, retryResponse.statusText, retryResponse);
           }
 
-          // Use the retry response for the rest of the function
-          const contentType = retryResponse.headers.get("content-type");
-          if (retryResponse.status === 204 || retryResponse.headers.get("content-length") === "0") {
-            return {} as T;
-          }
-
-          if (contentType && contentType.includes("application/json")) {
-            return await retryResponse.json();
-          }
-
-          return (await retryResponse.text()) as T;
+          return await parseDirectResponse<T>(retryResponse);
         } catch (refreshError) {
           // If refresh fails, throw the original 401 error
-          let errorMessage = `Request failed: ${response.status} ${response.statusText}`;
-
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorData.error || errorMessage;
-          } catch {
-            // If we can't parse the error response, use the default message
-          }
-
+          const errorMessage = await extractErrorMessage(response);
           throw new ApiError(errorMessage, response.status, response.statusText, response);
         }
       }
 
       // Handle other non-OK responses
-      let errorMessage = `Request failed: ${response.status} ${response.statusText}`;
-
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
-      } catch {
-        // If we can't parse the error response, use the default message
-      }
-
+      const errorMessage = await extractErrorMessage(response);
       throw new ApiError(errorMessage, response.status, response.statusText, response);
     }
 
-    // Handle empty responses (e.g., 204 No Content)
-    if (response.status === 204 || response.headers.get("content-length") === "0") {
-      return {} as T;
-    }
-
-    // Parse JSON response
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      return await response.json();
-    }
-
-    // Return text response for non-JSON content
-    return (await response.text()) as T;
+    return await parseDirectResponse<T>(response);
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
@@ -281,12 +338,6 @@ export async function apiRequestWithoutProxy<T = any>(endpoint: string, options:
   }
 }
 
-type ApiProxyRequestBody = {
-  url: string;
-  method: string;
-  headers: HeadersInit;
-  body?: any;
-};
 /**
  * Make an API request with standardized error handling and configuration
  *
@@ -300,47 +351,36 @@ type ApiProxyRequestBody = {
  * @param options - Request options including body, headers, and skipRefresh flag
  * @returns Promise resolving to the response data
  */
-export async function apiRequestWithProxy<T = any>(endpoint: string, options: ApiRequestOptions = { skipAuth: false }): Promise<T> {
-  const { baseUrl = getProxyTarget(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options;
+export async function apiRequestWithProxy<T = any>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
+  const { skipAuth = false, baseUrl = getProxyTarget(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options ?? {};
   const targetUrl = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
-
   const proxyUrl = getProxyUrl();
 
-  // Prepare the request configuration
-  const requestConfig: ApiProxyRequestBody = {
-    url: targetUrl,
-    method: fetchOptions.method ?? "GET",
-    headers: headers,
-    body: body,
-  };
+  // Convert headers to plain object for manipulation
+  let headersObj = headersToObject(headers);
 
+  // Add authorization header if token exists and auth is not skipped
   const accessToken = localStorage.getItem("accessToken");
-  if (accessToken && !options.skipAuth) {
-    requestConfig.headers = {
-      ...requestConfig.headers,
+  if (accessToken && !skipAuth) {
+    headersObj = {
+      ...headersObj,
       Authorization: `Bearer ${accessToken}`,
     };
   }
 
   // Handle body serialization
-  if (body !== undefined) {
-    if (body instanceof FormData) {
-      // Don't set Content-Type for FormData, let the browser set it with boundary
-      delete (requestConfig.headers as Record<string, string>)["Content-Type"];
-      requestConfig.body = body;
-    } else if (typeof body === "object") {
-      requestConfig.body = JSON.stringify(body);
-    } else {
-      requestConfig.body = body;
-    }
-  }
+  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj);
+
+  // Prepare the request configuration
+  const requestConfig: ApiProxyRequestBody = {
+    url: targetUrl,
+    method: fetchOptions.method ?? "GET",
+    headers: updatedHeaders,
+    body: serializedBody,
+  };
 
   try {
-    const response = await fetch(proxyUrl, {
-      method: "post",
-      body: JSON.stringify(requestConfig),
-      credentials: "include",
-    });
+    const response = await fetch(proxyUrl, createProxyFetchOptions(requestConfig));
 
     // Handle non-OK responses
     if (!response.ok) {
@@ -348,83 +388,36 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options: Ap
       if (response.status === 401 && !skipRefresh && !targetUrl.includes("/auth/refresh")) {
         try {
           await refreshTokenWithProxy();
+          // Update authorization header with fresh token
+          const freshAccessToken = localStorage.getItem("accessToken");
+          if (freshAccessToken) {
+            requestConfig.headers = {
+              ...requestConfig.headers,
+              Authorization: `Bearer ${freshAccessToken}`,
+            };
+          }
           // Retry the original request after successful refresh
-          const retryResponse = await fetch(proxyUrl, {
-            method: "post",
-            body: JSON.stringify(requestConfig),
-            credentials: "include",
-          });
+          const retryResponse = await fetch(proxyUrl, createProxyFetchOptions(requestConfig));
 
           if (!retryResponse.ok) {
-            let errorMessage = `Request failed: ${retryResponse.status} ${retryResponse.statusText}`;
-
-            try {
-              const errorData = await retryResponse.json();
-              errorMessage = errorData.message || errorData.error || errorMessage;
-            } catch {
-              // If we can't parse the error response, use the default message
-            }
-
+            const errorMessage = await extractErrorMessage(retryResponse);
             throw new ApiError(errorMessage, retryResponse.status, retryResponse.statusText, retryResponse);
           }
 
-          // Use the retry response for the rest of the function
-          const contentType = retryResponse.headers.get("content-type");
-          if (retryResponse.status === 204 || retryResponse.headers.get("content-length") === "0") {
-            return {} as T;
-          }
-
-          if (contentType && contentType.includes("application/json")) {
-            const { data } = (await retryResponse.json()) as { data: { statusCode: number; body: string } };
-            return JSON.parse(data.body) as T;
-          }
-
-          const { data } = (await retryResponse.json()) as { data: { statusCode: number; body: string } };
-          return data.body as T;
+          return await parseProxyResponse<T>(retryResponse);
         } catch (refreshError) {
           // If refresh fails, throw the original 401 error
-          let errorMessage = `Request failed: ${response.status} ${response.statusText}`;
-
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorData.error || errorMessage;
-          } catch {
-            // If we can't parse the error response, use the default message
-          }
-
+          const errorMessage = await extractErrorMessage(response);
           throw new ApiError(errorMessage, response.status, response.statusText, response);
         }
       }
 
       // Handle other non-OK responses
-      let errorMessage = `Request failed: ${response.status} ${response.statusText}`;
-
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
-      } catch {
-        // If we can't parse the error response, use the default message
-      }
-
+      const errorMessage = await extractErrorMessage(response);
       throw new ApiError(errorMessage, response.status, response.statusText, response);
     }
 
-    // Handle empty responses (e.g., 204 No Content)
-    if (response.status === 204 || response.headers.get("content-length") === "0") {
-      return {} as T;
-    }
-
-    // Parse JSON response
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      const { data } = (await response.json()) as { data: { statusCode: number; body: string } };
-      console.log(data);
-      return JSON.parse(data.body) as T;
-    }
-
-    // Return text response for non-JSON content
-    const { data } = (await response.json()) as { data: { statusCode: number; body: string } };
-    return data.body as T;
+    return await parseProxyResponse<T>(response);
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
@@ -437,32 +430,10 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options: Ap
 
 const apiRequest = import.meta.env.VITE_USE_PROXY === "true" ? apiRequestWithProxy : apiRequestWithoutProxy;
 
-/**
- * Convenience methods for common HTTP methods
- */
 export const api = {
-  /**
-   * GET request
-   */
   get: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, "method" | "body">) => apiRequest<T>(endpoint, { ...options, method: "GET" }),
-
-  /**
-   * POST request
-   */
   post: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "POST", body }),
-
-  /**
-   * PUT request
-   */
   put: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "PUT", body }),
-
-  /**
-   * PATCH request
-   */
   patch: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "PATCH", body }),
-
-  /**
-   * DELETE request
-   */
   delete: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, "method" | "body">) => apiRequest<T>(endpoint, { ...options, method: "DELETE" }),
 };
