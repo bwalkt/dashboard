@@ -1,30 +1,3 @@
-CREATE OR REPLACE FUNCTION pzero.get_info (table_name text, schema_name text DEFAULT 'pzero') returns jsonb AS $$
-    var stmt = `SELECT
-    tc.table_schema,
-    tc.constraint_name,
-    tc.table_name,
-    kcu.column_name,
-    ccu.table_schema AS foreign_table_schema,
-    ccu.table_name AS foreign_table_name,
-    ccu.column_name AS foreign_column_name
-    FROM information_schema.table_constraints AS tc
-    JOIN information_schema.key_column_usage AS kcu
-        ON tc.constraint_name = kcu.constraint_name
-        AND tc.table_schema = kcu.table_schema
-    JOIN information_schema.constraint_column_usage AS ccu
-        ON ccu.constraint_name = tc.constraint_name
-    WHERE tc.constraint_type = 'FOREIGN KEY'
-        AND tc.table_schema='${schema_name}'
-        AND tc.table_name='${table_name}'`;
-    var recs= plv8.execute(`select ${schema_name}.get_records($1, $2)`, stmt, ['']);
-    for (var i = 0; i < recs.length; i++) {
-        var rec = recs[i]['get_records'];
-        plv8.elog(INFO, `rec: ${rec}`);
-        recs[i] = rec;
-    }
-    return recs;
-$$ language plv8 immutable strict;
-
 CREATE OR REPLACE FUNCTION is_valid_url (url text) returns boolean AS $$
     if (!!!url) {
         return false;
@@ -40,101 +13,29 @@ CREATE OR REPLACE FUNCTION is_valid_url (url text) returns boolean AS $$
     return regex.test(url);
 $$ language plv8 immutable strict;
 
-CREATE OR REPLACE FUNCTION pzero.get_records_internal (stmt text) returns setof jsonb -- Or setof json
-AS $$
-  try {
-    var users = plv8.execute(stmt);
-    var len = users.length;
-    for (var i = 0; i < len; i++) {
-        // You can modify the objects here if needed
-        plv8.return_next(users[i]); // Return each object as a row
-    }
-  } exception (err) {
-    plv8.elog(ERROR, err);
-  }
-$$ language plv8;
-
-CREATE OR REPLACE FUNCTION pzero.get_records (stmt text, columns TEXT[]) returns setof jsonb AS $$
-try {
-
-    var recs = plv8.execute('select pzero.get_records_internal($1)', stmt);
-    plv8.elog(INFO, `recs: ${recs.length}`);
-    var len = recs.length;
-    var results = new Array(len);
-    plv8.elog(INFO, `recs: ${recs.length}`);
-    var notColumns = columns.length === 0 || !!!columns[0];
-    var singleton = columns.length === 1 && !!columns[0];
-    var col = singleton && columns[0] ? columns[0] : null;
-    plv8.elog(INFO, `notColumns: ${notColumns}`);
-    plv8.elog(INFO, `singleton: ${singleton}`);
-    for (var i = 0; i < len; i++) {
-        results[i] = {};
-        plv8.elog(INFO, `i: ${i}`);
-        var rec= recs[i]['get_records_internal'];
-
-        plv8.elog(INFO, `notColumns: ${notColumns}`);
-
-        if (singleton) {
-            results[i] = col ? rec[col] : rec[Object.keys(rec)[0]];
-            continue;
-        }
-        plv8.elog(INFO,`columns 138: ${columns.length}`);
-        if (notColumns) {
-            results[i] = rec;
-            continue;
-        }
-        for (var j = 0; j < columns.length; j++) {
-            plv8.elog(INFO, `column: ${rec[columns[j]]} ${columns[j]}`);
-            results[i][columns[j]] = rec[columns[j]];
-        }
-    }
-} exception (err) {
-    plv8.elog(ERROR, err);
-    return `ERROR: ${err}`;
-} finally {
-    plv8.elog(INFO, `returning #150: ${results.length}`);
-}
-plv8.elog(INFO, `returning #153: ${results}`);
-return results;
-$$ language plv8;
-
-SELECT
-  pzero.get_info ('auth', 'pzero');
-
-CREATE OR REPLACE FUNCTION incmix.check_table_exists (table_name text, schema_name text DEFAULT 'pzero') returns boolean AS $$
-    var  stmt = `SELECT 1 FROM pg_tables WHERE schemaname = ${schema_name} AND tablename = ${table_name}`;
-    try {
-        var result = plv8.execute(stmt);
-        if (result && result.length > 0) {
-            return true;
-        }
-    } exception (err) {
-        plv8.elog(ERROR, err);
-        return false;
-    }
-    return false;
-$$ language plv8 immutable strict;
-
-CREATE OR REPLACE FUNCTION getcolumnno (
+CREATE OR REPLACE FUNCTION get_column_no (
   table_name text,
   column_name text,
   schema_name text DEFAULT 'pzero'
 ) returns integer AS $$
-    var stmt = `SELECT ordinal_position FROM information_schema.columns WHERE table_schema = $3 AND table_name = $1 AND column_name = $2`;
+    if (!!!table_name || !!!column_name) {
+        throw 'table_name and column_name are required';
+    }
+    var ordinalName = `ordinal_${schema_name}_${table_name}`
+    if (plv8[ordinalName] && plv8[ordinalName][column_name]) {
+        return plv8[ordinalName][column_name];
+    }
+    if (!plv8[ordinalName]) {
+        plv8[ordinalName] = {};
+    }
+    var stmt = `SELECT ordinal_position as pos FROM information_schema.columns WHERE table_schema = $3 AND table_name = $1 AND column_name = $2`;
     var result = plv8.execute(stmt, table_name, column_name, schema_name);
     if (result.length > 0) {
-        return result[0]['ordinal_position'];
+        plv8[ordinalName][column_name] = result[0]['pos'];
+        return result[0]['pos'];
     }
+    throw `Column ${column_name} not found in table ${schema_name}.${table_name}`;
     return -1;
-$$ language plv8 immutable strict;
-
-CREATE OR REPLACE FUNCTION pzero.generate_uuid (table_name text, id bigint, c_at times) returns uuid AS $$
-    var result = plv8.execute('SELECT mmn from mmn AS m WHERE m.table_name = $1', table_name);
-    if (result.length === 0) {
-        throw `No MMN found for table: ${table_name}`;
-    }
-    var mmn = result[0]['mmn'];
-    return uuid[0]['uuid'];
 $$ language plv8 immutable strict;
 
 CREATE OR REPLACE FUNCTION jsonb_diff (a jsonb, b jsonb) returns jsonb AS $$
@@ -206,18 +107,46 @@ $$ language plv8 immutable strict;
 --    }
 --  }
 --}
-CREATE OR REPLACE FUNCTION get_country_name (country_id smallint) returns text AS $$
-        plv8.elog(NOTICE, 'Initializing country cache...');
-        const data = plv8.execute("SELECT id, name FROM country_codes");
-        plv8.country_cache = {}; // Create the cache object.
-        for (let i = 0; i < data.length; i++) {
-            plv8.country_cache[data[i].id] = data[i].name; // Populate the cache.
-        }
+--CREATE OR REPLACE FUNCTION get_country_name (country_id smallint) returns text AS $$
+--        plv8.elog(NOTICE, 'Initializing country cache...');
+--        const data = plv8.execute("SELECT id, name FROM country_codes");
+--        plv8.country_cache = {}; // Create the cache object.
+--        for (let i = 0; i < data.length; i++) {
+--            plv8.country_cache[data[i].id] = data[i].name; // Populate the cache.
+--        }
+--    }
+--    // Return the value from the cache.
+--    return plv8.country_cache[country_id];
+--$$ language plv8 immutable;
+function pzero.get_mmn (table_name text) returns text AS $$
+    if plv8.mmn_cache === undefined {
+        plv8.mmn_cache = {};
     }
+    if (plv8.mmn_cache[table_name]) {
+        return plv8.mmn_cache[table_name];
+    }
+    var result = plv8.execute("SELECT mmn from pzero.mmn where table_name = $1", [table_name]);
+    if (result.length === 0) {
+        throw `No MMN found for table: ${table_name}`;
+    }
+    plv8.mmn_cache[table_name] = result[0]['mmn'];
+    return result[0]['mmn'];
+$$ language plv8 immutable strict;
 
-    // Return the value from the cache.
-    return plv8.country_cache[country_id];
-$$ language plv8 immutable;
+function pzero.get_table_name (mmn text) returns text AS $$
+    if (plv8.mmn_table_cache === undefined) {
+        plv8.mmn_table_cache = {};
+    }
+    if (plv8.mmn_table_cache[mmn]) {
+        return plv8.mmn_table_cache[mmn];
+    }
+    var result = plv8.execute("SELECT table_name from pzero.mmn where mmn = $1", [mmn]);
+    if (result.length === 0) {
+        throw `No table found for mmn: ${mmn}`;
+    }
+    plv8.mmn_table_cache[mmn] = result[0]['table_name'];
+    return result[0]['table_name'];    
+$$ language plv8 immutable strict;
 
 CREATE OR REPLACE FUNCTION pzero.audit_trigger_plv8 () returns trigger language plv8 AS $$
     var txid = plv8.execute("SELECT txid_current()")[0].txid_current;
@@ -258,8 +187,7 @@ CREATE OR REPLACE FUNCTION pzero.audit_trigger_plv8 () returns trigger language 
             }
             delete data.diff;
         }
-    }
-    
+    }  
     if (!c_by) {
         throw `Missing Audit field - c_by`
     }
@@ -269,21 +197,28 @@ CREATE OR REPLACE FUNCTION pzero.audit_trigger_plv8 () returns trigger language 
             result = plv8.execute("select pzero.gen_monotonic_id() as id");
             id = result[0]['id']
             newRow.id = id;
-        } exception() {
+        } catch() {
             throw 'Unable to gen id'
         }
     }
     // Insert into txns table if not exists
-    result = plv8.execute("SELECT mmn from pzero.mmn where table_name = $1", [tableName]);
-    var mmn = result[0]['mmn'];
-    if (!mn) {
-        throw 'mneumonic not defined';
-    }
-    if (TD.event === 'INSERT' && !newRow.id) {
-        newRow.id = pzero.gen_monotonic_id(mmn);
-    } else {
-        if (newRow.id !=== oldRow.id) {
-            throw 'Ids do not match'
+    var mmn = pzero.get_mmn (tableName);
+    if (TD.event === 'INSERT') {
+        var insertOk = false;
+        while (!insertOk) {
+            try {
+                if (!newRow.id) {
+                    newRow.id = pzero.gen_monotonic_id();
+                }
+                var rowExists = plv8.execute("SELECT 1 FROM " + tableName + " WHERE id = $1", [newRow.id]);
+                if (rowExists.length > 0) {
+                    newRow.id = pzero.gen_monotonic_id();
+                } else {
+                    insertOk = true;
+                }
+            } catch (err) {
+                plv8.elog(WARNING, 'Insert conflict, retrying: ' + err);
+            }
         }
     }
     plv8.execute("INSERT INTO pzero.txns (id, c_by, c_at) VALUES ($1, $2, NOW()) ON CONFLICT (txid) DO NOTHING", [txid, c_by]);
@@ -295,27 +230,21 @@ CREATE OR REPLACE FUNCTION pzero.audit_trigger_plv8 () returns trigger language 
         );
         return TD.new; // For DELETE triggers, return the new row
     }
-
-    if (TD.event === 'INSERT' || TD.event === 'UPDATE') {
+    if ((TD.event === 'INSERT') || (TD.event === 'UPDATE')) {
         continue;
     } else {
         throw `Unsupported event type: ${TD.event}`;
     }
     for (var colName in newRow) {
         if ((auditColumns.indexOf(colName.toLowerCase()) !== -1) && newRow.hasOwnProperty(colName)) {
-            var colValue = String(newRow[colName]);
-            if (colName === 'loc') {
-                if (diffAddress) {
-
-                }
-            }
+            var colNo = getColumnNo (tableName, colName, 'pzero');
             var colValue = String(newRow[colName]);
             if (diffs[colName]) {
                 colValue = JSON.stringify(diffs[colName]);
             }
             plv8.execute(
-                "INSERT INTO pzero.audits (txn_id, mmn, rowid, cname, cvalue) VALUES ($1, $2, $3, $4, $5)",
-                [txid, mmn, id, colName, colValue]
+                "INSERT INTO pzero.audits (txn_id, mmn, rowid, cno, cval ) VALUES ($1, $2, $3, $4, $5)",
+                [txid, mmn, id, colNo, colValue]
             );
         }
     }
@@ -341,7 +270,7 @@ CREATE OR REPLACE FUNCTION pzero.audit_threads_trigger_plv8 () returns trigger l
         result = plv8.execute("select pzero.gen_monotonic_id() as id");
         id = result[0]['id']
         newRow.id = id;
-    } exception() {
+    } catch() {
         plv8.elog('Unable to gen id');
         throw 'Unable to gen id'
     }
@@ -351,8 +280,87 @@ CREATE OR REPLACE FUNCTION pzero.audit_threads_trigger_plv8 () returns trigger l
     return newRow;
 $$;
 
+function pzero.relations_lookup_plv8 (relation intger) returns jsonb AS $$
+    if (plv8.relations_cache === undefined) {
+        plv8.relationships = {
+            'parent_child': 'parent_child',
+            'peer': 'peer',
+            'related_object': 'related_object',
+            'admined_by': 'admined_by',
+            'member': 'member',
+            'billing_to': 'billing_to',
+            'owned_by': 'owned_by',
+            'created_by': 'created_by',
+            'linked_object': 'linked_object',
+            'root_object': 'root_object',
+            'replaced_object': 'replaced_object',
+            'site_admin': 'site_admin',
+            'super_admin': 'super_admin'
+        }
+        var relationships = plv8.relationships;
+        plv8.relations_cache = {};
+        plv8.reverse_relations_cache = {};
+
+        for (var i = 0; i <= Object.keys(relationships).length; i++) {
+            var key = 1 << i;
+            var relation = relationships[Object.keys(relationships)[i]];
+            plv8.relations_cache[key] = relation;
+            plv8.reverse_relations_cache[relation] = key;
+        }
+    }
+$$ language plv8 immutable strict;
+
+function pzero.check_relations_plv8 () returns trigger language plv8 AS $$
+    var newRow = TD.new; // Available for INSERT and UPDATE
+    var oldRow = TD.old; // Available for UPDATE
+    if (TD.event === 'DELETE') {
+        throw 'Cannot delete relationship records';
+    }
+    if (TD.event === 'UPDATE') {
+        if (oldRow.uuid1 !== newRow.uuid1 || oldRow.uuid2 !== newRow.uuid2) {
+            throw 'Cannot modify parent_id, child_id, or relation_type of existing relationship';
+        }
+    }
+    if (TD.event !== 'INSERT') {
+        const uuid1_parts = newRow.uuid1.split('-');
+        const uuid2_parts = newRow.uuid2.split('-');
+        if (uuid1_parts.length !== 2 || uuid2_parts.length !== 2) {
+            throw 'Invalid UUID format for uuid1 or uuid2';
+        }
+        var mmn1 = uuid1_parts[0];
+        var mmn2 = uuid2_parts[0];
+        var table1 = pzero.get_table_name(mmn1);
+        var table2 = pzero.get_table_name(mmn2);
+        if (!table1 || !table2) {
+            throw 'Unable to resolve table names from MMNs';
+        }
+    }
+    var parent_id = newRow.parent_id;
+    var child_id = newRow.child_id;
+    var relation_type = newRow.relation_type;
+    if (!parent_id || !child_id || !relation_type) {
+        throw 'parent_id, child_id, and relation_type are required';
+    }
+    var result = plv8.execute("SELECT 1 FROM pzero.relations WHERE parent_id = $1 AND child_id = $2 AND relation_type = $3", [child_id, parent_id, relation_type]);
+    if (result.length > 0) {
+        throw 'Cyclic relationship detected';
+    }
+    return newRow;
+$$;
+
+CREATE FUNCTION pzero.check_relations_trigger () returns trigger AS $$
+BEGIN
+    PERFORM pzero.check_relations_plv8(); -- Calls check_relations_plv8
+    PERFORM pzero.audit_trigger_plv8(); -- Calls audit_trigger_plv8
+        -- ... other logic or function calls
+    RETURN NEW; -- Or OLD, or NULL depending on trigger type
+END;
+$$ language plpgsql;
+
 CREATE OR REPLACE FUNCTION pzero.create_triggers_plv8 () returns void AS $$
-  var tables = ['pzero.devices', 'pzero.endpoints', 'pzero.active_sessions', 'pzero.orgs', 'pzero.auth', 'pzero.users', 'pzero.relations'];
+  CREATE TRIGGER pzero.trigger_check_relations BEFORE INSERT OR UPDATE ON pzero.relations
+        FOR EACH ROW EXECUTE FUNCTION pzero.check_relations_trigger();
+  var tables = ['pzero.all_devices', 'pzero.all_endpoints', 'pzero.all_sessions', 'pzero.all_orgs', 'pzero.all_auth', 'pzero.all_users'];
   // Define a name for the new trigger.
   for (var i = 0; i < tables.length; i++) {
     var target_table = tables[i];

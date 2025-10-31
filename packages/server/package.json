@@ -17,7 +17,10 @@
     "migrate": "node-pg-migrate",
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
-    "migrate:create": "node-pg-migrate create --migration-file-language sql"
+    "migrate:create": "node-pg-migrate create --migration-file-language sql",
+    "docker:down": "docker compose down --remove-orphans",
+    "docker:up": "docker compose up -d",
+    "docker:postgres": "docker compose up -d pzero-postgres"
   },
   "keywords": [],
   "author": "",
