@@ -118,7 +118,10 @@ CREATE TYPE pzero.endpoint_status AS enum(
 );
 
 CREATE TYPE pzero.dir_status AS enum('ACTIVE', 'INACTIVE', 'DELETED', 'CORRUPTED');
-
+CREATE TYPE pzero.from_to AS (
+  "from" timestamptz,
+  "to" timestamptz
+);
 CREATE TYPE pzero.org_status AS enum(
   'ACTIVE',
   'INACTIVE',
@@ -132,7 +135,7 @@ CREATE TYPE pzero.org_status AS enum(
   'DELETED'
 );
 
-CREATE TYPE pzero.subscriber_tier_level AS enum('FREE', 'ENTERPRISE');
+CREATE TYPE pzero.subscriber_tier_level AS enum('FREE', 'PAID-BASIC', 'PAID-ENTERPRISE');
 
 CREATE DOMAIN pzero.url AS text CHECK (
   value ~ '^(https?|ftp)://(-\.)?([^\s/?\.#-]+\.?)+(/[^\s]*)?$'
@@ -421,7 +424,8 @@ CREATE TABLE pzero.all_orgs (
   PRIMARY KEY (id, is_act),
   UNIQUE (name, is_act),
   UNIQUE (website, is_act),
-  UNIQUE (handle, is_act)
+  UNIQUE (handle, is_act),
+  trial_period pzero.from_to
 )
 PARTITION BY
   list (is_act);
