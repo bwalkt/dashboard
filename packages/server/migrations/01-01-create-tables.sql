@@ -494,62 +494,62 @@ CREATE INDEX idx_threads_root ON pzero.all_threads (root_id, c_at);
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_auth', 'A');
+  ('all_auth', 'A');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_users', 'U');
+  ('all_users', 'U');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_orgs', 'O');
+  ('all_orgs', 'O');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_sessions', 'S');
+  ('all_sessions', 'S');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_devices', 'D');
+  ('all_devices', 'D');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_endpoints', 'E');
+  ('all_endpoints', 'E');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_files', 'F');
+  ('all_files', 'F');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_dirs', 'DR');
+  ('all_dirs', 'DR');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_relations', 'R');
+  ('all_relations', 'R');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_audits', 'AD');
+  ('all_audits', 'AD');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_thread_heads', 'TH');
+  'all_thread_heads', 'TH');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('pzero.all_threads', 'T');
+  ('all_threads', 'T');
 
 -- Down Migration
 DROP TABLE IF EXISTS pzero.endpoints;
