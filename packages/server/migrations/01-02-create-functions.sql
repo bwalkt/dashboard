@@ -156,23 +156,48 @@ CREATE OR REPLACE FUNCTION pzero.audit_trigger_plpython () returns trigger AS $$
 import plpy
 import json
 
-txid = plpy.execute("SELECT txid_current()")[0]['txid_current']
-table_name = TD['table_name']
+
+if TD['event'] not in ['INSERT', 'UPDATE']:
+    raise Exception(f"Unsupported event type: {TD['event']}")
+
+append_only_tables = ['txns', 'all_audits']
+auth_tables = ['auth', 'users']
 old_row = TD.get('old')  # Available for UPDATE and DELETE
 new_row = TD.get('new')  # Available for INSERT and UPDATE
-audit_columns = ['id', 'c_by', 'c_at', 'u_by', 'u_at', 'is_del', 'last_seen']
+table_name = TD['table_name']
+schema_name = table_name.split('.')[0] if '.' in table_name else 'pzero'
+table_only_name = table_name.split('.')[1] if '.' in table_name else table_name
+
+if (table_only_name in append_only_tables):
+    if TD['event'] == 'UPDATE':
+        plpy.error(f'Only INSERT allowed on append-only table {table_name}')
+        raise Exception(f'Only INSERT allowed on append-only table {table_name}')
+    else:
+        return new_row
+
+txid = plpy.execute("SELECT txid_current()")[0]['txid_current']
+
+excludedaudit_columns = ['id', 'c_by', 'c_at', 'u_by', 'u_at', 'is_del', 'last_seen']
 is_del_column = 'is_del'
 c_by = new_row.get('c_by') if new_row else None
 diffs = {}
+id_val = new_row.get('id') if new_row else None
+is_act = new_row.get('is_act') if new_row else None
 
-if TD['event'] == 'DELETE':
-    raise Exception('cannot delete record')
-
-if old_row and new_row and new_row.get('u_by'):
-    c_by = new_row['u_by']
-
-if old_row and new_row and old_row.get('id') != new_row.get('id'):
-    raise Exception('id for table not mutable')
+if TD['event'] == 'UPDATE':
+    if old_row.get('id') != new_row.get('id') or old_row.get('id') is None or new_row.get('id') is None:
+        plpy.error(f'ID for table {table_name} is not mutable')
+        raise Exception(f'ID for table {table_name} is not mutable')
+    if new_row.get('u_by'):
+        c_by = new_row['u_by']
+else:
+    if not id_val:
+        try:
+            result = plpy.execute("select pzero.gen_monotonic_id() as id")
+            id_val = result[0]['id']
+            new_row['id'] = id_val
+        except:
+            raise Exception('Unable to gen id')
 
 data = new_row.get('data') if new_row else None
 if data:
@@ -193,94 +218,46 @@ if data:
 
 if not c_by:
     raise Exception('Missing Audit field - c_by')
-
-id_val = new_row.get('id') if new_row else None
-if not id_val:
-    try:
-        result = plpy.execute("select pzero.gen_monotonic_id() as id")
-        id_val = result[0]['id']
-        new_row['id'] = id_val
-    except:
-        raise Exception('Unable to gen id')
+user_exists = plpy.execute("SELECT is_act FROM pzero.all_auth WHERE id = $1", [c_by])
+if len(user_exists) == 0:
+    raise Exception(f'c_by user {c_by} does not exist')
+user_is_act = user_exists[0]['is_act']
+if not user_is_act and (auth_tables.count(table_only_name) == 0):
+    raise Exception(f'c_by user {c_by} is not active')
+if table_only_name == 'txns':
+    return new_row
 
 # Get MMN for the table
 mmn = plpy.execute(f"SELECT pzero.get_mmn('{table_name}') as mmn")[0]['mmn']
-
-if TD['event'] == 'INSERT':
-    insert_ok = False
-    while not insert_ok:
-        try:
-            if not new_row.get('id'):
-                result = plpy.execute("SELECT pzero.gen_monotonic_id() as id")
-                new_row['id'] = result[0]['id']
-            
-            row_exists = plpy.execute(f"SELECT 1 FROM {table_name} WHERE id = $1", [new_row['id']])
-            if len(row_exists) > 0:
-                result = plpy.execute("SELECT pzero.gen_monotonic_id() as id")
-                new_row['id'] = result[0]['id']
-            else:
-                insert_ok = True
-        except Exception as err:
-            plpy.warning(f'Insert conflict, retrying: {err}')
+if mmn is None:
+    raise Exception(f'Unable to resolve MMN for table {table_name}')
+if table_only_name == 'all_audits':
+    return new_row
 
 plpy.execute("INSERT INTO pzero.txns (id, c_by, c_at) VALUES ($1, $2, NOW()) ON CONFLICT (txid) DO NOTHING", [txid, c_by])
 
 if new_row and new_row.get('is_del'):
     # If the is_del column is set to true, log a deletion
+    # get column no for is_del
+    is_del_col_no = plpy.execute(f"SELECT get_column_no('{table_name}', 'is_del', '{schema_name}') as cno")[0]['cno']
     plpy.execute(
-        "INSERT INTO pzero.audits (txn_id, mmn, row_id, col_name, new_val, is_del) VALUES ($1, $2, $3, $4, $5, TRUE)",
-        [txid, mmn, old_row['id'], is_del_column, 'TRUE', True]
+        f"INSERT INTO '{schema_name}'.all_audits (txn_id, mmn, row_id, cno, cval, is_del) VALUES ($1, $2, $3, $4, $5, TRUE)",
+        [txid, mmn, old_row['id'], is_del_col_no, 'TRUE', True]
     )
-    return 'OK'
-
-if TD['event'] not in ['INSERT', 'UPDATE']:
-    raise Exception(f"Unsupported event type: {TD['event']}")
+    return  new_row
 
 for col_name in new_row:
-    if col_name.lower() in audit_columns:
-        col_no = plpy.execute(f"SELECT get_column_no('{table_name}', '{col_name}', 'pzero') as cno")[0]['cno']
+    if col_name.lower() not in excluded_audit_columns:
+        col_no = plpy.execute(f"SELECT get_column_no('{table_name}', '{col_name}', '{schema_name}') as cno")[0]['cno']
         col_value = str(new_row[col_name])
         if col_name in diffs:
             col_value = json.dumps(diffs[col_name])
-        
         plpy.execute(
-            "INSERT INTO pzero.audits (txn_id, mmn, rowid, cno, cval) VALUES ($1, $2, $3, $4, $5)",
+            f"INSERT INTO '{schema_name}'.all_audits (txn_id, mmn, rowid, cno, cval) VALUES ($1, $2, $3, $4, $5)",
             [txid, mmn, id_val, col_no, col_value]
         )
 
-return 'OK'
-$$ language plpython3u;
-
-CREATE OR REPLACE FUNCTION pzero.audit_threads_trigger_plpython () returns trigger AS $$
-import plpy
-import json
-
-txid = plpy.execute("SELECT txid_current()")[0]['txid_current']
-table_name = TD['table_name']
-
-if TD['event'] in ['UPDATE', 'DELETE']:
-    plpy.error('Update or Delete on threads not allowed')
-    raise Exception('Update or Delete on threads not allowed')
-
-new_row = TD['new']  # Available for INSERT and UPDATE
-data = new_row.get('data')
-if data:
-    data = json.loads(data) if isinstance(data, str) else data
-    if 'meta' in data:
-        del data['meta']
-
-try:
-    result = plpy.execute("select pzero.gen_monotonic_id() as id")
-    id_val = result[0]['id']
-    new_row['id'] = id_val
-except:
-    plpy.error('Unable to gen id')
-    raise Exception('Unable to gen id')
-
-if not new_row.get('root_id'):
-    new_row['root_id'] = id_val
-
-return 'OK'
+return new_row
 $$ language plpython3u;
 
 CREATE OR REPLACE FUNCTION pzero.relations_lookup_plpython (relation integer) returns jsonb AS $$
@@ -324,11 +301,28 @@ old_row = TD.get('old')  # Available for UPDATE
 if TD['event'] == 'DELETE':
     raise Exception('Cannot delete relationship records')
 
+uuid1 = new_row.get('uuid1')
+uuid2 = new_row.get('uuid2')
+relation = new_row.get('relation')
+
+if not uuid1 or not uuid2 or not relation:
+    raise Exception('uuid1, uuid2, and relation are required')
+
+if relation  == None or relation < 1 or relation > (1 << 15):
+    raise Exception('Invalid relation type')
+
+result = plpy.execute(
+    "SELECT 1 FROM pzero.relations WHERE uuid2 = $1 AND  uuid1 = $2 AND relation = $3",
+    [uuid1, uuid2, relation]
+)
+if len(result) > 0:
+    raise Exception('Cyclic relationship detected')
+
 if TD['event'] == 'UPDATE':
     if old_row['uuid1'] != new_row['uuid1'] or old_row['uuid2'] != new_row['uuid2']:
         raise Exception('Cannot modify uuid1 or uuid2')
 
-if TD['event'] != 'INSERT':
+if TD['event'] == 'INSERT':
     uuid1_parts = new_row['uuid1'].split('-')
     uuid2_parts = new_row['uuid2'].split('-')
     if len(uuid1_parts) != 2 or len(uuid2_parts) != 2:
@@ -341,21 +335,6 @@ if TD['event'] != 'INSERT':
     
     if not table1 or not table2:
         raise Exception('Unable to resolve table names from MMNs')
-
-parent_id = new_row.get('parent_id')
-child_id = new_row.get('child_id')
-relation_type = new_row.get('relation_type')
-
-if not parent_id or not child_id or not relation_type:
-    raise Exception('parent_id, child_id, and relation_type are required')
-
-result = plpy.execute(
-    "SELECT 1 FROM pzero.relations WHERE parent_id = $1 AND child_id = $2 AND relation_type = $3",
-    [child_id, parent_id, relation_type]
-)
-
-if len(result) > 0:
-    raise Exception('Cyclic relationship detected')
 
 return 'OK'
 $$ language plpython3u;
@@ -378,24 +357,18 @@ plpy.execute("""
     FOR EACH ROW EXECUTE FUNCTION pzero.check_relations_trigger()
 """)
 
-tables = ['pzero.all_devices', 'pzero.all_endpoints', 'pzero.all_sessions', 'pzero.all_orgs', 'pzero.all_auth', 'pzero.all_users',  'pzero.all_thread_heads', 'pzero.all_threads']
+tables = ['pzero.all_devices', 'pzero.all_endpoints', 'pzero.all_sessions', 'pzero.all_orgs', 'pzero.all_auth', 'pzero.all_users',  'pzero.all_thread_heads', 'pzero.all_threads', 'pzero.txns', 'pzero.all_audits']
 
 for target_table in tables:
     trigger_name = f"audit_trigger_{target_table.replace('.', '_').replace('pzero_', '')}"
     sql = f"""
         CREATE TRIGGER {trigger_name}
-        BEFORE INSERT OR UPDATE  ON {target_table}
+        BEFORE INSERT OR UPDATE OR DELETE ON {target_table}
         FOR EACH ROW EXECUTE FUNCTION pzero.audit_trigger_plpython()
     """
     plpy.execute(sql)
     plpy.notice(f'Created trigger {trigger_name} on table {target_table}')
 
-# Create special trigger for threads  
-sql = """
-    CREATE TRIGGER audit_trigger_threads
-    BEFORE INSERT OR UPDATE OR DELETE ON pzero.threads
-    FOR EACH ROW EXECUTE FUNCTION pzero.audit_threads_trigger_plpython()
-"""
 plpy.execute(sql)
 plpy.notice('Created trigger pzero.audit_trigger_threads on table pzero.threads')
 $$ language plpython3u;
