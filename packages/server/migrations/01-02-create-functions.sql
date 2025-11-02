@@ -115,7 +115,7 @@ $$ language plpython3u immutable strict;
 --    }
 --    // Return the value from the cache.
 --    return plv8.country_cache[country_id];
---$$ language plv8 immutable;
+--$$ language plpythonimmutable;
 CREATE OR REPLACE FUNCTION pzero.get_mmn (table_name text) returns text AS $$
 import plpy
 
@@ -152,7 +152,7 @@ GD['mmn_table_cache'][mmn] = result[0]['table_name']
 return result[0]['table_name']
 $$ language plpython3u immutable strict;
 
-CREATE OR REPLACE FUNCTION pzero.audit_trigger_plv8 () returns trigger AS $$
+CREATE OR REPLACE FUNCTION pzero.audit_trigger_plpython() returns trigger AS $$
 import plpy
 import json
 
@@ -251,7 +251,7 @@ for col_name in new_row:
 return 'OK'
 $$ language plpython3u;
 
-CREATE OR REPLACE FUNCTION pzero.audit_threads_trigger_plv8 () returns trigger AS $$
+CREATE OR REPLACE FUNCTION pzero.audit_threads_trigger_plpython() returns trigger AS $$
 import plpy
 import json
 
@@ -283,7 +283,7 @@ if not new_row.get('root_id'):
 return 'OK'
 $$ language plpython3u;
 
-CREATE OR REPLACE FUNCTION pzero.relations_lookup_plv8 (relation integer) returns jsonb AS $$
+CREATE OR REPLACE FUNCTION pzero.relations_lookup_plpython(relation integer) returns jsonb AS $$
 import json
 
 if 'relations_cache' not in GD:
@@ -315,7 +315,7 @@ if relation in GD['relations_cache']:
 return json.dumps(None)
 $$ language plpython3u immutable strict;
 
-CREATE OR REPLACE FUNCTION pzero.check_relations_plv8 () returns trigger AS $$
+CREATE OR REPLACE FUNCTION pzero.check_relations_plpython() returns trigger AS $$
 import plpy
 
 new_row = TD['new']  # Available for INSERT and UPDATE
@@ -362,43 +362,42 @@ $$ language plpython3u;
 
 CREATE FUNCTION pzero.check_relations_trigger () returns trigger AS $$
 BEGIN
-    PERFORM pzero.check_relations_plv8(); -- Calls check_relations_plv8
-    PERFORM pzero.audit_trigger_plv8(); -- Calls audit_trigger_plv8
+    PERFORM pzero.check_relations_plpython(); -- Calls check_relations_plpython
+    PERFORM pzero.audit_trigger_plpython(); -- Calls audit_trigger_plpython
         -- ... other logic or function calls
     RETURN NEW; -- Or OLD, or NULL depending on trigger type
 END;
 $$ language plpgsql;
 
-CREATE OR REPLACE FUNCTION pzero.create_triggers_plv8 () returns void AS $$
+CREATE OR REPLACE FUNCTION pzero.create_triggers_plpython() returns void AS $$
 import plpy
 
 # Create trigger for relations
 plpy.execute("""
-    CREATE TRIGGER pzero.trigger_check_relations BEFORE INSERT OR UPDATE ON pzero.relations
+    CREATE TRIGGER trigger_check_relations BEFORE INSERT OR UPDATE ON pzero.relations
     FOR EACH ROW EXECUTE FUNCTION pzero.check_relations_trigger()
 """)
 
-tables = ['pzero.all_devices', 'pzero.all_endpoints', 'pzero.all_sessions', 'pzero.all_orgs', 'pzero.all_auth', 'pzero.all_users']
+tables = ['pzero.all_devices', 'pzero.all_endpoints', 'pzero.all_sessions', 'pzero.all_orgs', 'pzero.all_auth', 'pzero.all_users',  'pzero.all_thread_heads', 'pzero.all_threads']
 
 for target_table in tables:
-    trigger_name = f"pzero.audit_trigger_{target_table.replace('.', '_')}"
+    trigger_name = f"audit_trigger_{target_table.replace('.', '_').replace('pzero_', '')}"
     sql = f"""
         CREATE TRIGGER {trigger_name}
-        BEFORE INSERT OR UPDATE OR DELETE ON {target_table}
-        FOR EACH ROW EXECUTE FUNCTION pzero.audit_trigger_plv8()
+        BEFORE INSERT OR UPDATE  ON {target_table}
+        FOR EACH ROW EXECUTE FUNCTION pzero.audit_trigger_plpython()
     """
     plpy.execute(sql)
     plpy.notice(f'Created trigger {trigger_name} on table {target_table}')
 
-# Create trigger for threads
+# Create special trigger for threads  
 sql = """
-    CREATE TRIGGER pzero.audit_trigger_threads
+    CREATE TRIGGER audit_trigger_threads
     BEFORE INSERT OR UPDATE OR DELETE ON pzero.threads
-    FOR EACH ROW EXECUTE FUNCTION pzero.audit_threads_trigger_plv8()
+    FOR EACH ROW EXECUTE FUNCTION pzero.audit_threads_trigger_plpython()
 """
 plpy.execute(sql)
 plpy.notice('Created trigger pzero.audit_trigger_threads on table pzero.threads')
 $$ language plpython3u;
 
-SELECT
-  pzero.create_triggers_plv8 ();
+SELECT pzero.create_triggers_plpython();
