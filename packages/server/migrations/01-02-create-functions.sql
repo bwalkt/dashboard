@@ -152,7 +152,7 @@ GD['mmn_table_cache'][mmn] = result[0]['table_name']
 return result[0]['table_name']
 $$ language plpython3u immutable strict;
 
-CREATE OR REPLACE FUNCTION pzero.audit_trigger_plpython() returns trigger AS $$
+CREATE OR REPLACE FUNCTION pzero.audit_trigger_plpython () returns trigger AS $$
 import plpy
 import json
 
@@ -251,7 +251,7 @@ for col_name in new_row:
 return 'OK'
 $$ language plpython3u;
 
-CREATE OR REPLACE FUNCTION pzero.audit_threads_trigger_plpython() returns trigger AS $$
+CREATE OR REPLACE FUNCTION pzero.audit_threads_trigger_plpython () returns trigger AS $$
 import plpy
 import json
 
@@ -283,7 +283,7 @@ if not new_row.get('root_id'):
 return 'OK'
 $$ language plpython3u;
 
-CREATE OR REPLACE FUNCTION pzero.relations_lookup_plpython(relation integer) returns jsonb AS $$
+CREATE OR REPLACE FUNCTION pzero.relations_lookup_plpython (relation integer) returns jsonb AS $$
 import json
 
 if 'relations_cache' not in GD:
@@ -315,7 +315,7 @@ if relation in GD['relations_cache']:
 return json.dumps(None)
 $$ language plpython3u immutable strict;
 
-CREATE OR REPLACE FUNCTION pzero.check_relations_plpython() returns trigger AS $$
+CREATE OR REPLACE FUNCTION pzero.check_relations_plpython () returns trigger AS $$
 import plpy
 
 new_row = TD['new']  # Available for INSERT and UPDATE
@@ -369,7 +369,7 @@ BEGIN
 END;
 $$ language plpgsql;
 
-CREATE OR REPLACE FUNCTION pzero.create_triggers_plpython() returns void AS $$
+CREATE OR REPLACE FUNCTION pzero.create_triggers_plpython () returns void AS $$
 import plpy
 
 # Create trigger for relations
@@ -400,4 +400,5 @@ plpy.execute(sql)
 plpy.notice('Created trigger pzero.audit_trigger_threads on table pzero.threads')
 $$ language plpython3u;
 
-SELECT pzero.create_triggers_plpython();
+SELECT
+  pzero.create_triggers_plpython ();
