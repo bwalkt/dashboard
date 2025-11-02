@@ -54,6 +54,8 @@ CREATE DOMAIN pzero.email AS text CHECK (
 
 CREATE DOMAIN pzero.valid_handle AS varchar(25) NOT NULL CHECK (value ~* '^[A-Za-z0-9._\-]+$');
 
+CREATE DOMAIN pzero.valid_org_handle AS varchar(10) NOT NULL CHECK (value ~* '^[A-Za-z0-9._\-]+$');
+
 CREATE DOMAIN pzero.valid_col_name AS varchar(100) NOT NULL CHECK (value ~* '^[A-Za-z0-9_]+$');
 
 CREATE DOMAIN pzero.domain AS text CHECK (
@@ -389,6 +391,16 @@ CREATE TABLE pzero.all_users (
 PARTITION BY
   list (is_act);
 
+CREATE TABLE pzero.all_groups (
+  LIKE pzero.id_base_table including defaults including constraints,
+  tags TEXT[],
+  access_policy smallint NOT NULL DEFAULT 0, -- 0 private, 1 - internal, 3 - public collab 4 - public
+  add_policy smallint NOT NULL DEFAULT 0, -- 1 - shareable, 2 - discoverable, 4 - explicit invitation
+  PRIMARY KEY (id, is_act)
+)
+PARTITION BY
+  list (is_act);
+
 -- Indexes will be created automatically by event trigger
 CREATE TABLE pzero.all_orgs (
   LIKE pzero.id_base_loc_table including defaults including constraints,
@@ -396,14 +408,20 @@ CREATE TABLE pzero.all_orgs (
   favicon text,
   whitelisted_domains pzero.domain[],
   blacklisted_domains pzero.domain[],
+  whitelisted_emails pzero.email[],
+  blacklisted_emails pzero.email[],
+  handle pzero.valid_org_handle NOT NULL,
+  tags TEXT[],
   headers pzero.key_values,
   variables pzero.key_values,
   status pzero.org_status,
   subscriber_tier_level pzero.subscriber_tier_level DEFAULT 'FREE',
   subscriber_tier_expiry timestamptz,
+  multi_tenant boolean DEFAULT TRUE,
   PRIMARY KEY (id, is_act),
   UNIQUE (name, is_act),
-  UNIQUE (website, is_act)
+  UNIQUE (website, is_act),
+  UNIQUE (handle, is_act)
 )
 PARTITION BY
   list (is_act);
@@ -439,6 +457,10 @@ CREATE TABLE pzero.all_endpoints (
   methods pzero.method[] NOT NULL,
   headers pzero.key_values,
   variables pzero.key_values,
+  tags TEXT[],
+  nh smallint NOT NULL DEFAULT 0,
+  access_policy smallint NOT NULL DEFAULT 0, -- 0 private, 1 - internal, 3 - public collab 4 - public
+  add_policy smallint NOT NULL DEFAULT 0, -- 1 - shareable, 2 - discoverable, 4 - explicit invitation
   PRIMARY KEY (id, is_act),
   UNIQUE (url, is_act)
 )
@@ -500,7 +522,9 @@ INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_users', 'U');
-
+INSERT INTO pzero.mmn (table_name, mmn)
+VALUES
+  ('all_groups', 'G');
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
@@ -544,7 +568,7 @@ VALUES
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  'all_thread_heads', 'TH');
+  ('all_thread_heads', 'TH');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
