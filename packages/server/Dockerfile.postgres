@@ -48,8 +48,6 @@ RUN git clone https://github.com/pksunkara/pgx_ulid.git /tmp/pgx_ulid && \
     cd / && \
     rm -rf /tmp/pgx_ulid
 
-# Configure PostgreSQL to preload the pgx_ulid extension
-RUN echo "shared_preload_libraries = 'pgx_ulid'" >> /usr/share/postgresql/postgresql.conf.sample
-
 # The init-db.sql script will be mounted via docker-compose
 # and will run automatically on first database initialization
+# Note: shared_preload_libraries is configured via docker-compose.yml command

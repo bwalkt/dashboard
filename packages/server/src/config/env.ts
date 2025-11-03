@@ -9,6 +9,9 @@ if (
 ) {
   dotenv.config();
 }
+const serverUrl = process.env.SERVER_BASE_URL || "http://localhost:8090";
+// remove port
+const domain = serverUrl.replace(/^https?:\/\//, "").replace(/\/$/, "").split(":")[0];
 
 export const config: EnvironmentConfig = {
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
@@ -30,6 +33,7 @@ export const config: EnvironmentConfig = {
   SIGNALWIRE_PHONE_NUMBER: process.env.SIGNALWIRE_PHONE_NUMBER || "",
   OAUTH_REDIRECT_URL: process.env.OAUTH_REDIRECT_URL || "http://localhost:1420",
   SERVER_BASE_URL: process.env.SERVER_BASE_URL || "http://localhost:8090",
+  DOMAIN: domain,
 };
 
 /**

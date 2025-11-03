@@ -39,4 +39,5 @@ export interface EnvironmentConfig {
   PORT?: number;
   OAUTH_REDIRECT_URL: string;
   SERVER_BASE_URL?: string;
+  DOMIAIN?: string;
 }

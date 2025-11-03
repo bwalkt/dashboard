@@ -26,7 +26,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      domain: "localhost",
+      domain: process.env.DOMAIN,
       path: "/",
       maxAge: 3600, // 1 hour
     },
@@ -43,7 +43,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         tokenPath: "/login/oauth/access_token",
       },
     },
-    callbackUri: "http://localhost:8080/auth/callback",
+    callbackUri: `${process.env.SERVER_BASE_URL}/auth/callback`,
     scope: ["user:email"],
   });
 
@@ -63,15 +63,13 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         // Store state in session or cookie for validation
         // For simplicity, we'll use a cookie
         // Debug: Log the state being set
-
         reply.setCookie("oauth_state", state, {
           httpOnly: true,
-          secure: false, // Set to false for development (HTTP)
-          sameSite: "lax", // Use lax for same-site requests
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
           maxAge: 600000, // 10 minutes
           path: "/",
         });
-
         const githuboAuth2 = fastify.githubOAuth2;
         // Redirect to GitHub OAuth
         const authUrl = await githuboAuth2.generateAuthorizationUri(
