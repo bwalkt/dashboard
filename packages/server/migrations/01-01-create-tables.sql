@@ -473,7 +473,7 @@ PARTITION BY
 CREATE TABLE pzero.all_dirs (
   LIKE pzero.id_base_table including defaults including constraints,
   status pzero.dir_status,
-  PRIMARY KEY (id, is_act),
+  PRIMARY KEY (id, is_act)
 )
 PARTITION BY
   list (is_act);
@@ -487,7 +487,7 @@ CREATE TABLE pzero.all_files (
   file_type pzero.file_type NOT NULL,
   file_size bigint NOT NULL, -- rounded off by 100
   file_unit pzero.file_unit NOT NULL,
-  PRIMARY KEY (id, is_act),
+  PRIMARY KEY (id, is_act)
 )
 PARTITION BY
   list (is_act);
