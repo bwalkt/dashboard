@@ -9,15 +9,18 @@ import {
   Preview,
   Section,
   Text,
-} from '@react-email/components'
-import { Tailwind } from '@react-email/tailwind'
+} from "@react-email/components";
+import { Tailwind } from "@react-email/tailwind";
 
 interface VerificationEmailProps {
-  name?: string
-  verificationLink: string
+  name?: string;
+  verificationLink: string;
 }
 
-export const VerificationEmail = ({ name = 'User', verificationLink }: VerificationEmailProps) => {
+export const VerificationEmail = ({
+  name = "User",
+  verificationLink,
+}: VerificationEmailProps) => {
   return (
     <Html>
       <Head />
@@ -29,10 +32,13 @@ export const VerificationEmail = ({ name = 'User', verificationLink }: Verificat
               Verify Your Email Address
             </Heading>
 
-            <Text className="text-gray-800 text-base leading-relaxed mx-10 my-4">Hello {name},</Text>
+            <Text className="text-gray-800 text-base leading-relaxed mx-10 my-4">
+              Hello {name},
+            </Text>
 
             <Text className="text-gray-800 text-base leading-relaxed mx-10 my-4">
-              Thank you for signing up! Please verify your email address by clicking the button below:
+              Thank you for signing up! Please verify your email address by
+              clicking the button below:
             </Text>
 
             <Section className="text-center my-8">
@@ -45,10 +51,14 @@ export const VerificationEmail = ({ name = 'User', verificationLink }: Verificat
             </Section>
 
             <Text className="text-gray-800 text-base leading-relaxed mx-10 my-4">
-              If the button doesn't work, you can copy and paste this link into your browser:
+              If the button doesn't work, you can copy and paste this link into
+              your browser:
             </Text>
 
-            <Link href={verificationLink} className="text-blue-600 text-sm underline mx-10 block break-all">
+            <Link
+              href={verificationLink}
+              className="text-blue-600 text-sm underline mx-10 block break-all"
+            >
               {verificationLink}
             </Link>
 
@@ -62,14 +72,15 @@ export const VerificationEmail = ({ name = 'User', verificationLink }: Verificat
 
             <Section className="mt-10 pt-5 border-t border-gray-200">
               <Text className="text-gray-500 text-sm text-center mx-10">
-                This is an automated email from P-Zero. Please do not reply to this email.
+                This is an automated email from P-Zero. Please do not reply to
+                this email.
               </Text>
             </Section>
           </Container>
         </Body>
       </Tailwind>
     </Html>
-  )
-}
+  );
+};
 
-export default VerificationEmail
+export default VerificationEmail;

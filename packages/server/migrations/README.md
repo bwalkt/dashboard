@@ -5,6 +5,7 @@ This directory contains SQL migration files for the database schema.
 ## Migration File Naming
 
 Migrations use a sequential naming convention:
+
 - `01-create-users-table.sql`
 - `02-add-column-to-users.sql`
 - `03-create-sessions-table.sql`
@@ -16,10 +17,7 @@ Each SQL migration file has two sections:
 
 ```sql
 -- Up Migration
-CREATE TABLE example (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL
-);
+CREATE TABLE example (id SERIAL PRIMARY KEY, name TEXT NOT NULL);
 
 -- Down Migration
 DROP TABLE IF EXISTS example;
@@ -47,15 +45,16 @@ pnpm migrate:create add-new-feature
 ## Creating New Migrations
 
 1. Create a new file with the next sequential number:
+
    ```bash
    touch migrations/02-your-migration-name.sql
    ```
 
 2. Add the migration SQL:
+
    ```sql
    -- Up Migration
    -- Your schema changes here
-
    -- Down Migration
    -- Revert changes here
    ```
