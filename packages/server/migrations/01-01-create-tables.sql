@@ -118,10 +118,9 @@ CREATE TYPE pzero.endpoint_status AS enum(
 );
 
 CREATE TYPE pzero.dir_status AS enum('ACTIVE', 'INACTIVE', 'DELETED', 'CORRUPTED');
-CREATE TYPE pzero.from_to AS (
-  "from" timestamptz,
-  "to" timestamptz
-);
+
+CREATE TYPE pzero.from_to AS ("from" timestamptz, "to" timestamptz);
+
 CREATE TYPE pzero.org_status AS enum(
   'ACTIVE',
   'INACTIVE',
@@ -526,9 +525,12 @@ INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_users', 'U');
-INSERT INTO pzero.mmn (table_name, mmn)
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
 VALUES
   ('all_groups', 'G');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES

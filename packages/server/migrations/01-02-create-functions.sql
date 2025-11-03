@@ -471,11 +471,6 @@ $$ language plpython3u;
 
 CREATE OR REPLACE FUNCTION pzero.migrate_org () returns trigger AS $$
 import plpy
-import json
-
-# Constants
-MULTI_TENANT_SCHEMAS = ['pzero']  # Add more schemas as needed
-SINGLE_TENANT_PREFIX = 'org_'
 
 # Get row data
 new_row = TD.get('new')
@@ -486,168 +481,125 @@ event = TD['event']
 if event not in ['INSERT', 'UPDATE']:
     return new_row
 
-# Check if this is a multi_tenant change
-if event == 'UPDATE':
-    old_multi_tenant = old_row.get('multi_tenant', True) if old_row else True
-    new_multi_tenant = new_row.get('multi_tenant', True)
-    
-    # If multi_tenant hasn't changed, nothing to do
-    if old_multi_tenant == new_multi_tenant:
-        return new_row
-    
-    org_id = new_row.get('id')
-    org_handle = new_row.get('handle')
-    
-    if not org_id or not org_handle:
-        plpy.error('Organization must have ID and handle for migration')
-        raise ValueError('Missing org ID or handle')
-    
-    # Migration from multi-tenant to single-tenant
-    if old_multi_tenant and not new_multi_tenant:
-        plpy.notice(f'Migrating org {org_handle} (ID: {org_id}) to single-tenant mode')
-        
-        # Create dedicated schema for this org
-        schema_name = f"{SINGLE_TENANT_PREFIX}{org_handle.lower().replace('-', '_')}"
-        
-        try:
-            # Create schema if it doesn't exist
-            plpy.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
-            plpy.notice(f'Created schema {schema_name} for org {org_handle}')
-            
-            # Create necessary tables in the new schema by copying structure
-            tables_to_migrate = [
-                'all_auth', 'all_users', 'all_sessions', 'all_devices',
-                'all_endpoints', 'all_threads', 'all_thread_heads'
-            ]
-            
-            for table in tables_to_migrate:
-                try:
-                    # Create table structure in new schema
-                    plpy.execute(f"""
-                        CREATE TABLE IF NOT EXISTS {schema_name}.{table} 
-                        (LIKE pzero.{table} INCLUDING ALL)
-                    """)
-                    plpy.notice(f'Created table {schema_name}.{table}')
-                    
-                    # Migrate existing data for this org
-                    # This assumes there's an org_id column or relation to identify org data
-                    # Adjust the WHERE clause based on your actual schema
-                    plpy.execute(f"""
-                        INSERT INTO {schema_name}.{table}
-                        SELECT * FROM pzero.{table}
-                        WHERE id IN (
-                            SELECT uuid2 FROM pzero.relations 
-                            WHERE uuid1 = '{org_id}' 
-                            AND relation = (SELECT 1)  -- Adjust based on your relation types
-                        )
-                        ON CONFLICT DO NOTHING
-                    """)
-                    
-                except plpy.SPIError as e:
-                    plpy.warning(f'Error migrating table {table}: {e}')
-                    continue
-            
-            # Store schema mapping in org data
-            if new_row.get('data'):
-                data = json.loads(new_row['data']) if isinstance(new_row['data'], str) else new_row['data']
-            else:
-                data = {}
-            
-            data['dedicated_schema'] = schema_name
-            new_row['data'] = json.dumps(data)
-            
-            plpy.notice(f'Successfully migrated org {org_handle} to single-tenant mode')
-            
-        except plpy.SPIError as e:
-            plpy.error(f'Failed to create single-tenant schema: {e}')
-            raise
-    
-    # Migration from single-tenant to multi-tenant
-    elif not old_multi_tenant and new_multi_tenant:
-        plpy.notice(f'Migrating org {org_handle} (ID: {org_id}) back to multi-tenant mode')
-        
-        # Get the dedicated schema name
-        if old_row.get('data'):
-            data = json.loads(old_row['data']) if isinstance(old_row['data'], str) else old_row['data']
-            schema_name = data.get('dedicated_schema')
-            
-            if schema_name:
-                try:
-                    # Migrate data back to shared schema
-                    tables_to_migrate = [
-                        'all_auth', 'all_users', 'all_sessions', 'all_devices',
-                        'all_endpoints', 'all_threads', 'all_thread_heads'
-                    ]
-                    
-                    for table in tables_to_migrate:
-                        try:
-                            # Move data back to pzero schema
-                            plpy.execute(f"""
-                                INSERT INTO pzero.{table}
-                                SELECT * FROM {schema_name}.{table}
-                                ON CONFLICT DO NOTHING
-                            """)
-                            plpy.notice(f'Migrated data from {schema_name}.{table} to pzero.{table}')
-                            
-                        except plpy.SPIError as e:
-                            plpy.warning(f'Error migrating table {table} back: {e}')
-                            continue
-                    
-                    # Optionally drop the dedicated schema (or keep for backup)
-                    # plpy.execute(f"DROP SCHEMA {schema_name} CASCADE")
-                    plpy.notice(f'Schema {schema_name} retained for backup (not dropped)')
-                    
-                    # Remove schema mapping from org data
-                    if new_row.get('data'):
-                        data = json.loads(new_row['data']) if isinstance(new_row['data'], str) else new_row['data']
-                        if 'dedicated_schema' in data:
-                            del data['dedicated_schema']
-                        new_row['data'] = json.dumps(data) if data else None
-                    
-                except plpy.SPIError as e:
-                    plpy.error(f'Failed to migrate back to multi-tenant: {e}')
-                    raise
-            else:
-                plpy.warning('No dedicated schema found for single-tenant org')
+# Tables to create in dedicated schema for non-multi-tenant orgs
+DEDICATED_TABLES = [
+    'all_endpoints', 'all_sessions', 'txns', 
+    'all_audits', 'all_threads', 'all_thread_heads'
+]
 
-elif event == 'INSERT':
-    # For new orgs with multi_tenant = false, set up single-tenant immediately
-    if not new_row.get('multi_tenant', True):
-        org_id = new_row.get('id')
-        org_handle = new_row.get('handle')
+def sanitize_handle(handle):
+    """Sanitize handle to be a valid schema name"""
+    if not handle:
+        return None
+    # Replace any non-alphanumeric characters with underscores
+    # PostgreSQL schema names must start with letter or underscore
+    sanitized = ''.join(c if c.isalnum() or c == '_' else '_' for c in handle.lower())
+    # Ensure it starts with a letter or underscore
+    if sanitized and sanitized[0].isdigit():
+        sanitized = '_' + sanitized
+    return sanitized
+
+def create_schema_and_tables(schema_name):
+    """Create schema and required tables"""
+    try:
+        # Create schema if it doesn't exist
+        plpy.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"')
+        plpy.notice(f'Created/verified schema "{schema_name}"')
         
-        if org_handle:
-            schema_name = f"{SINGLE_TENANT_PREFIX}{org_handle.lower().replace('-', '_')}"
-            
+        # Create tables in the new schema
+        for table in DEDICATED_TABLES:
             try:
-                plpy.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
-                plpy.notice(f'Created schema {schema_name} for new single-tenant org {org_handle}')
+                # Create table with same structure as pzero schema
+                plpy.execute(f'''
+                    CREATE TABLE IF NOT EXISTS "{schema_name}".{table} 
+                    (LIKE pzero.{table} INCLUDING ALL)
+                ''')
+                plpy.notice(f'Created/verified table "{schema_name}".{table}')
                 
-                # Create tables in the new schema
-                tables_to_create = [
-                    'all_auth', 'all_users', 'all_sessions', 'all_devices',
-                    'all_endpoints', 'all_threads', 'all_thread_heads'
-                ]
-                
-                for table in tables_to_create:
-                    plpy.execute(f"""
-                        CREATE TABLE IF NOT EXISTS {schema_name}.{table} 
-                        (LIKE pzero.{table} INCLUDING ALL)
-                    """)
-                    plpy.notice(f'Created table {schema_name}.{table}')
-                
-                # Store schema mapping
-                if new_row.get('data'):
-                    data = json.loads(new_row['data']) if isinstance(new_row['data'], str) else new_row['data']
-                else:
-                    data = {}
-                
-                data['dedicated_schema'] = schema_name
-                new_row['data'] = json.dumps(data)
+                # Create partitions if the source table is partitioned
+                if table in ['all_endpoints', 'all_sessions', 'all_threads', 'all_thread_heads']:
+                    # Create partitions for is_act values
+                    for is_act in ['true', 'false']:
+                        partition_name = f'{table}_{is_act}'
+                        try:
+                            plpy.execute(f'''
+                                CREATE TABLE IF NOT EXISTS "{schema_name}".{partition_name}
+                                PARTITION OF "{schema_name}".{table}
+                                FOR VALUES IN ({is_act})
+                            ''')
+                        except plpy.SPIError:
+                            pass  # Partition might already exist
                 
             except plpy.SPIError as e:
-                plpy.error(f'Failed to create single-tenant schema for new org: {e}')
+                plpy.warning(f'Error creating table {table}: {e}')
                 raise
+                
+    except plpy.SPIError as e:
+        plpy.error(f'Failed to create schema and tables: {e}')
+        raise
+
+# Handle INSERT event
+if event == 'INSERT':
+    multi_tenant = new_row.get('multi_tenant', True)
+    handle = new_row.get('handle')
+    
+    # If not multi-tenant, create dedicated schema
+    if not multi_tenant and handle:
+        schema_name = sanitize_handle(handle)
+        if schema_name:
+            plpy.notice(f'Creating dedicated schema for new org with handle: {handle}')
+            create_schema_and_tables(schema_name)
+        else:
+            plpy.error(f'Invalid handle for schema creation: {handle}')
+
+# Handle UPDATE event
+elif event == 'UPDATE':
+    old_multi_tenant = old_row.get('multi_tenant', True) if old_row else True
+    new_multi_tenant = new_row.get('multi_tenant', True)
+    old_handle = old_row.get('handle') if old_row else None
+    new_handle = new_row.get('handle')
+    
+    # Case 1: Handle changed for non-multi-tenant org (rename schema)
+    if not new_multi_tenant and old_handle != new_handle:
+        old_schema = sanitize_handle(old_handle) if old_handle else None
+        new_schema = sanitize_handle(new_handle) if new_handle else None
+        
+        if old_schema and new_schema and old_schema != new_schema:
+            # Check if old schema exists and rename it
+            schema_exists = plpy.execute(f"""
+                SELECT 1 FROM information_schema.schemata 
+                WHERE schema_name = '{old_schema}'
+            """)
+            
+            if schema_exists:
+                try:
+                    plpy.execute(f'ALTER SCHEMA "{old_schema}" RENAME TO "{new_schema}"')
+                    plpy.notice(f'Renamed schema from "{old_schema}" to "{new_schema}"')
+                except plpy.SPIError as e:
+                    # If rename fails, create new schema and warn about old one
+                    plpy.warning(f'Could not rename schema: {e}')
+                    plpy.notice(f'Creating new schema "{new_schema}" (old schema "{old_schema}" remains)')
+                    create_schema_and_tables(new_schema)
+            else:
+                # Old schema doesn't exist, just create new one
+                create_schema_and_tables(new_schema)
+    
+    # Case 2: Changed from multi-tenant to single-tenant
+    elif old_multi_tenant and not new_multi_tenant:
+        schema_name = sanitize_handle(new_handle)
+        if schema_name:
+            plpy.notice(f'Org changed to single-tenant mode, creating dedicated schema: {schema_name}')
+            create_schema_and_tables(schema_name)
+        else:
+            plpy.error(f'Invalid handle for schema creation: {new_handle}')
+    
+    # Case 3: Changed from single-tenant to multi-tenant
+    elif not old_multi_tenant and new_multi_tenant:
+        old_schema = sanitize_handle(old_handle)
+        if old_schema:
+            plpy.notice(f'Org changed to multi-tenant mode')
+            plpy.notice(f'Schema "{old_schema}" retained for backup (migration of data to be done separately)')
+            # Note: Actual data migration will be handled separately as mentioned
 
 return new_row
 $$ language plpython3u;
@@ -709,6 +661,22 @@ for target_table in tables:
             # Continue with other triggers
         else:
             plpy.notice(f'Trigger {trigger_name} already exists')
+
+# Create migrate_org trigger for all_orgs table
+try:
+    plpy.execute("""
+        CREATE TRIGGER trigger_migrate_org
+        AFTER INSERT OR UPDATE ON pzero.all_orgs
+        FOR EACH ROW EXECUTE FUNCTION pzero.migrate_org()
+    """)
+    triggers_created.append('trigger_migrate_org')
+    plpy.notice('Created trigger trigger_migrate_org on table pzero.all_orgs')
+    
+except plpy.SPIError as e:
+    if 'already exists' not in str(e).lower():
+        plpy.error(f'Failed to create migrate_org trigger: {e}')
+        raise
+    plpy.notice('Trigger trigger_migrate_org already exists')
 
 plpy.notice(f'Successfully created/verified {len(triggers_created)} triggers')
 $$ language plpython3u;
