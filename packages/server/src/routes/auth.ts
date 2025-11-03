@@ -67,7 +67,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
-          maxAge: 600000, // 10 minutes
+          maxAge: 600, // 10 minutes
           path: "/",
         });
         const githuboAuth2 = fastify.githubOAuth2;
