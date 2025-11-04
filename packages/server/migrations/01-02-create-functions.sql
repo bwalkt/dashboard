@@ -189,6 +189,7 @@ new_row = TD.get('new')  # Available for INSERT and UPDATE
 table_name = TD['table_name']
 schema_name = table_name.split('.')[0] if '.' in table_name else 'pzero'
 table_only_name = table_name.split('.')[1] if '.' in table_name else table_name
+auth_insert = False
 
 # Check append-only constraint
 if table_only_name in APPEND_ONLY_TABLES:
@@ -232,11 +233,9 @@ else:  # INSERT
                 result = plpy.execute("SELECT pzero.gen_monotonic_id() as id")
                 new_row['id'] = result[0]['id']
                 id_val = new_row['id']
-                plpy.notice(f'Debug: table_only_name="{table_only_name}" (length: {len(table_only_name)})')
-                plpy.notice(f'Debug: repr(table_only_name)={repr(table_only_name)}')
-                plpy.notice(f'Debug: "auth" in table_only_name = {"auth" in table_only_name}')
                 if  'auth' in table_only_name:
                     c_by = id_val
+                    auth_insert = True
                     plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
                 # Check for existing ID
                 check_stmt = plpy.prepare(f"SELECT 1 FROM {table_name} WHERE id = $1 LIMIT 1", ["text"])
@@ -284,28 +283,28 @@ if data:
         del data['diff']
 
 if not c_by:
-    if  'auth' in table_only_name:
+    if  'auth' in table_only_name and id_val and TD['event'] == 'INSERT':
         c_by = id_val
+        auth_insert = True
         plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
     else:
         raise Exception('Missing Audit field - c_by ' + str(table_name) + '  ' + str(table_only_name))
 # Validate user with prepared statement
 try:
-    user_check = plpy.prepare("SELECT is_act FROM pzero.all_auth WHERE id = $1 LIMIT 1", ["text"])
-    user_exists = plpy.execute(user_check, [c_by])
-    
-    if not user_exists or len(user_exists) == 0:
-        plpy.error(f'c_by user {c_by} does not exist')
-        raise ValueError(f'c_by user {c_by} does not exist')
-    
-    user_is_act = user_exists[0]['is_act']
-    if not user_is_act and table_only_name not in AUTH_TABLES:
-        plpy.error(f'c_by user {c_by} is not active')
-        raise ValueError(f'c_by user {c_by} is not active')
+    if not auth_insert:
+        user_check = plpy.prepare("SELECT is_act FROM pzero.all_auth WHERE id = $1::pzero.id LIMIT 1", ["text"])
+        user_exists = plpy.execute(user_check, [c_by])
+        if not user_exists or len(user_exists) == 0:
+            plpy.error(f'c_by user {c_by} does not exist')
+            raise ValueError(f'c_by user {c_by} does not exist')
+            user_is_act = user_exists[0]['is_act']
+            if not user_is_act and table_only_name not in AUTH_TABLES:
+                plpy.error(f'c_by user {c_by} is not active')
+                raise ValueError(f'c_by user {c_by} is not active')
 except plpy.SPIError as e:
     plpy.error(f'Database error checking user: {e}')
     raise
-if APPEND_ONLY_TABLES.contains(table_only_name):
+if table_only_name in APPEND_ONLY_TABLES:
     return new_row
 
 # Get MMN for the table with error handling
@@ -321,7 +320,6 @@ try:
 except Exception as e:
     plpy.error(f'Failed to get MMN: {e}')
     raise
-
 
 # Log transaction with prepared statement
 try:
