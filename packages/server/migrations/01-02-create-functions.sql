@@ -216,7 +216,7 @@ if TD['event'] == 'UPDATE':
     # Validate ID immutability
     if old_row.get('id') != new_row.get('id') or old_row.get('id') is None or new_row.get('id') is None:
         plpy.error(f'ID for table {table_name} is not mutable')
-        return 'SKIP'
+        raise ValueError('ID is immutable and cannot be changed')
     if new_row.get('u_by'):
         c_by = new_row['u_by']
 else:  # INSERT
@@ -231,7 +231,9 @@ else:  # INSERT
                 result = plpy.execute("SELECT pzero.gen_monotonic_id() as id")
                 new_row['id'] = result[0]['id']
                 id_val = new_row['id']
-                
+                if table_only_name == 'all_auth' or table_only_name == 'auth':
+                    c_by = id_val
+                    plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
                 # Check for existing ID
                 check_stmt = plpy.prepare(f"SELECT 1 FROM {table_name} WHERE id = $1 LIMIT 1", ["text"])
                 row_exists = plpy.execute(check_stmt, id_val)
@@ -278,7 +280,7 @@ if data:
         del data['diff']
 
 if not c_by:
-    raise Exception('Missing Audit field - c_by')
+    raise Exception(f'Missing Audit field - c_by {table_name}  {table_only_name}')
 # Validate user with prepared statement
 try:
     user_check = plpy.prepare("SELECT is_act FROM pzero.all_auth WHERE id = $1 LIMIT 1", ["text"])

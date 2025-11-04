@@ -262,6 +262,9 @@ BEGIN
                 partition_sql := format('CREATE TABLE %s.%s PARTITION OF %s FOR VALUES IN (FALSE)', 
                                       v_schema_name, partition_table_name, obj_name);
                 EXECUTE partition_sql;
+                partition_sql := format('CREATE TABLE %s.%s_false PARTITION OF %s FOR VALUES IN (FALSE)', 
+                                      v_schema_name, partition_table_name, obj_name);
+                EXECUTE partition_sql;
                 RAISE NOTICE 'Created partition table %.% for is_del = FALSE', v_schema_name, partition_table_name;
             END IF;
           END IF;
