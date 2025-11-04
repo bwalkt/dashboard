@@ -225,13 +225,17 @@ else:  # INSERT
         retry_count = 0
         insert_ok = False
         
+        plpy.notice(f'Debug: "auth" in table_only_name = {table_only_name} {id_val}')
         while not insert_ok and retry_count < MAX_RETRY_ATTEMPTS:
             try:
                 # Generate new ID
                 result = plpy.execute("SELECT pzero.gen_monotonic_id() as id")
                 new_row['id'] = result[0]['id']
                 id_val = new_row['id']
-                if table_only_name == 'all_auth' or table_only_name == 'auth':
+                plpy.notice(f'Debug: table_only_name="{table_only_name}" (length: {len(table_only_name)})')
+                plpy.notice(f'Debug: repr(table_only_name)={repr(table_only_name)}')
+                plpy.notice(f'Debug: "auth" in table_only_name = {"auth" in table_only_name}')
+                if  'auth' in table_only_name:
                     c_by = id_val
                     plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
                 # Check for existing ID
@@ -280,7 +284,11 @@ if data:
         del data['diff']
 
 if not c_by:
-    raise Exception(f'Missing Audit field - c_by {table_name}  {table_only_name}')
+    if  'auth' in table_only_name:
+        c_by = id_val
+        plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
+    else:
+        raise Exception('Missing Audit field - c_by ' + str(table_name) + '  ' + str(table_only_name))
 # Validate user with prepared statement
 try:
     user_check = plpy.prepare("SELECT is_act FROM pzero.all_auth WHERE id = $1 LIMIT 1", ["text"])
