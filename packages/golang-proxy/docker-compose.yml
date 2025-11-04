@@ -5,8 +5,8 @@ services:
       context: .
       dockerfile: ./Dockerfile
     container_name: golang-proxy
-    # ports:
-    #   - "8080:8080"
+    ports:
+      - "8080:8080"
     networks:
       - pzero
     environment:
@@ -17,30 +17,6 @@ services:
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
     restart: unless-stopped
 
-  caddy:
-    image: caddy:2-alpine
-    container_name: caddy
-    restart: unless-stopped
-    depends_on:
-      - golang-proxy
-    networks:
-      - pzero
-    ports:
-      - "8080:80"
-      - "8443:443"
-    environment:
-      - DOMAIN=${DOMAIN}
-      - ACME_EMAIL=${ACME_EMAIL}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - ./public.cert:/etc/caddy/ssl/public.cert
-      - ./private.key:/etc/caddy/ssl/private.key
-      - caddy_data:/data
-      - caddy_config:/config
-
 networks:
   pzero:
     external: true
-volumes:
-  caddy_data:
-  caddy_config:

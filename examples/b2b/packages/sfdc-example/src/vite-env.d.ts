@@ -5,6 +5,7 @@ interface ImportMetaEnv {
   readonly VITE_USE_PROXY: "true" | "false";
   readonly VITE_PROXY_URL: string;
   readonly VITE_PROXY_TARGET: string;
+  readonly VITE_OTEL_EXPORTER_URL?: string;
 }
 
 interface ImportMeta {

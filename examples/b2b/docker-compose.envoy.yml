@@ -105,7 +105,7 @@ services:
     volumes:
       - ./common/clickhouse/config.xml:/etc/clickhouse-server/config.xml
       - ./common/clickhouse/users.xml:/etc/clickhouse-server/users.xml
-      - ./common/clickhouse/custom-function.xml:/etc/clickhouse-server/custom-function.xml
+      - ./common/clickhouse/custom-function.xml:/etc/clickhouse-server/config.d/custom-function.xml
       - ./common/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
       - ./common/clickhouse/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
       - ./clickhouse:/var/lib/clickhouse/
@@ -206,8 +206,8 @@ services:
 
   pzero-sfdc-server-vanilla:
     build:
-      context: .
-      dockerfile: ./packages/sfdc-server-vanilla/Dockerfile
+      context: ./../..
+      dockerfile: ./examples/b2b/packages/sfdc-server-vanilla/Dockerfile
     container_name: pzero-sfdc-server-vanilla
     ports:
       - "3000:8080" # Internal port for direct access (optional)

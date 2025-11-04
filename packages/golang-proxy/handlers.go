@@ -96,7 +96,7 @@ func (m *Middleware) CORSMiddleware(next http.Handler) http.Handler {
 
 		// Set CORS headers
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, traceparent, tracestate")
 		w.Header().Set("Access-Control-Max-Age", "3600") // Cache preflight for 1 hour
 
 		// Only allow credentials if origin was allowed and not using wildcard
