@@ -19,15 +19,27 @@ CREATE OR REPLACE FUNCTION get_column_no (
 ) returns integer AS $$
 import plpy
 
+# Debug all available variables
+plpy.notice(f"Available globals: {list(globals().keys())}")
+plpy.notice(f"Available locals: {list(locals().keys())}")
+
+# Try to get parameters from globals
+table_name = globals().get('table_name')
+column_name = globals().get('column_name') 
+schema_name = globals().get('schema_name', 'pzero')
+
+# Debug parameters
+plpy.notice(f"get_column_no called with: table_name={repr(table_name)}, column_name={repr(column_name)}, schema_name={repr(schema_name)}")
+
 if not table_name or not column_name:
     raise ValueError('table_name and column_name are required')
 
 # Sanitize inputs
-table_name = table_name.strip()
-column_name = column_name.strip()
-schema_name = schema_name.strip()
+table_name_clean = table_name.strip()
+column_name_clean = column_name.strip()
+schema_name_clean = schema_name.strip()
 
-ordinal_name = f'ordinal_{schema_name}_{table_name}'
+ordinal_name = f'ordinal_{schema_name_clean}_{table_name_clean}'
 
 # Initialize cache if needed
 if 'cache' not in GD:
@@ -35,8 +47,8 @@ if 'cache' not in GD:
 
 # Check cache first
 cache = GD['cache']
-if ordinal_name in cache and column_name in cache[ordinal_name]:
-    return cache[ordinal_name][column_name]
+if ordinal_name in cache and column_name_clean in cache[ordinal_name]:
+    return cache[ordinal_name][column_name_clean]
 
 if ordinal_name not in cache:
     cache[ordinal_name] = {}
@@ -47,14 +59,14 @@ try:
         "SELECT ordinal_position as pos FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3",
         ["text", "text", "text"]
     )
-    result = plpy.execute(stmt, [schema_name, table_name, column_name])
+    result = plpy.execute(stmt, [schema_name_clean, table_name_clean, column_name_clean])
     
     if result and len(result) > 0:
         pos = result[0]['pos']
-        cache[ordinal_name][column_name] = pos
+        cache[ordinal_name][column_name_clean] = pos
         return pos
     else:
-        raise ValueError(f'Column {column_name} not found in table {schema_name}.{table_name}')
+        raise ValueError(f'Column {column_name_clean} not found in table {schema_name_clean}.{table_name_clean}')
 except Exception as e:
     plpy.error(f'Error getting column position: {e}')
     raise
@@ -141,7 +153,8 @@ if 'mmn_cache' not in GD:
 if table_name in GD['mmn_cache']:
     return GD['mmn_cache'][table_name]
 
-result = plpy.execute("SELECT mmn from pzero.mmn where table_name = $1", [table_name])
+stmt = plpy.prepare("SELECT mmn from pzero.mmn where table_name = $1", ["text"])
+result = plpy.execute(stmt, [table_name])
 
 if len(result) == 0:
     raise Exception(f'No MMN found for table: {table_name}')
@@ -186,15 +199,49 @@ if TD['event'] not in ['INSERT', 'UPDATE']:
 # Get row data
 old_row = TD.get('old')  # Available for UPDATE and DELETE
 new_row = TD.get('new')  # Available for INSERT and UPDATE
-table_name = TD['table_name']
-schema_name = table_name.split('.')[0] if '.' in table_name else 'pzero'
-table_only_name = table_name.split('.')[1] if '.' in table_name else table_name
+# Get the parent partitioned table name (not the partition)
+relid = TD['relid']
+# First check if this is a partition and get the parent table
+parent_query = plpy.execute(f"""
+    SELECT 
+        pn.nspname as parent_schema, 
+        pc.relname as parent_table,
+        cn.nspname as child_schema,
+        cc.relname as child_table
+    FROM pg_inherits pi
+    JOIN pg_class pc ON pi.inhparent = pc.oid
+    JOIN pg_namespace pn ON pc.relnamespace = pn.oid
+    JOIN pg_class cc ON pi.inhrelid = cc.oid  
+    JOIN pg_namespace cn ON cc.relnamespace = cn.oid
+    WHERE pi.inhrelid = {relid}
+""")
+
+if parent_query:
+    # This is a partition, use the parent table
+    schema_name = parent_query[0]['parent_schema']
+    table_only_name = parent_query[0]['parent_table']
+    full_table_name = f"{schema_name}.{table_only_name}"
+    actual_partition = f"{parent_query[0]['child_schema']}.{parent_query[0]['child_table']}"
+    plpy.notice(f"Using parent table: {full_table_name} (triggered from partition: {actual_partition})")
+else:
+    # Not a partition, use the table itself
+    table_info = plpy.execute(f"SELECT nspname as schema_name, relname as table_name FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.oid = {relid}")
+    if table_info:
+        schema_name = table_info[0]['schema_name']
+        table_only_name = table_info[0]['table_name']
+        full_table_name = f"{schema_name}.{table_only_name}"
+    else:
+        # Fallback to TD values
+        full_table_name = TD['table_name']
+        schema_name = TD.get('table_schema', 'pzero')
+        table_only_name = full_table_name.split('.')[1] if '.' in full_table_name else full_table_name
+    plpy.notice(f"Processing table: {full_table_name} (relid: {relid})")
 auth_insert = False
 
 # Check append-only constraint
 if table_only_name in APPEND_ONLY_TABLES:
     if TD['event'] == 'UPDATE':
-        plpy.error(f'Table {table_name} is append-only, only INSERT allowed')
+        plpy.error(f'Table {full_table_name} is append-only, only INSERT allowed')
         raise
     else:
         return new_row
@@ -216,7 +263,7 @@ is_act = new_row.get('is_act') if new_row else None
 if TD['event'] == 'UPDATE':
     # Validate ID immutability
     if old_row.get('id') != new_row.get('id') or old_row.get('id') is None or new_row.get('id') is None:
-        plpy.error(f'ID for table {table_name} is not mutable')
+        plpy.error(f'ID for table {full_table_name} is not mutable')
         raise ValueError('ID is immutable and cannot be changed')
     if new_row.get('u_by'):
         c_by = new_row['u_by']
@@ -238,7 +285,8 @@ else:  # INSERT
                     auth_insert = True
                     plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
                 # Check for existing ID
-                check_stmt = plpy.prepare(f"SELECT 1 FROM {table_name} WHERE id = $1 LIMIT 1", ["text"])
+                check_sql = f"SELECT 1 FROM {full_table_name} WHERE id = $1 LIMIT 1"
+                check_stmt = plpy.prepare(check_sql, ["text"])
                 row_exists = plpy.execute(check_stmt, id_val)
                 
                 if row_exists and len(row_exists) > 0:
@@ -288,7 +336,7 @@ if not c_by:
         auth_insert = True
         plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
     else:
-        raise Exception('Missing Audit field - c_by ' + str(table_name) + '  ' + str(table_only_name))
+        raise Exception('Missing Audit field - c_by ' + str(full_table_name) + '  ' + str(table_only_name))
 # Validate user with prepared statement
 try:
     if not auth_insert:
@@ -309,7 +357,13 @@ if table_only_name in APPEND_ONLY_TABLES:
 
 # Get MMN for the table with error handling
 try:
-    mmn_result = plpy.execute(f"SELECT pzero.get_mmn('{table_only_name}') as mmn")
+    plpy.notice(f"Getting MMN for table: {table_only_name}")
+    plpy.notice(f"About to prepare MMN statement")
+    mmn_stmt = plpy.prepare("SELECT pzero.get_mmn($1) as mmn", ["text"])
+    plpy.notice(f"MMN statement prepared successfully")
+    plpy.notice(f"About to execute MMN statement with parameter: {table_only_name}")
+    mmn_result = plpy.execute(mmn_stmt, [table_only_name])
+    plpy.notice(f"MMN statement executed successfully")
     if not mmn_result or len(mmn_result) == 0:
         plpy.error(f'Unable to resolve MMN for table {table_only_name}')
         raise ValueError(f'No MMN found for table {table_only_name}')
@@ -319,11 +373,13 @@ try:
         raise ValueError(f'MMN is NULL for table {table_only_name}')
 except Exception as e:
     plpy.error(f'Failed to get MMN: {e}')
+    plpy.error(f'Exception type: {type(e)}')
+    plpy.error(f'Exception args: {e.args}')
     raise
 
 # Log transaction with prepared statement
 try:
-    txn_stmt = plpy.prepare("INSERT INTO pzero.txns (id, c_by, c_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO NOTHING", ["bigint", "text"])
+    txn_stmt = plpy.prepare("INSERT INTO pzero.txns (id, c_by, c_at) VALUES ($1, $2::pzero.id, NOW()) ON CONFLICT (id) DO NOTHING", ["bigint", "text"])
     plpy.execute(txn_stmt, [txid, c_by])
 except Exception as e:
     plpy.warning(f'Failed to log transaction: {e}')
@@ -332,11 +388,10 @@ except Exception as e:
 if new_row and new_row.get('is_del'):
     # If the is_del column is set to true, log a deletion
     # get column no for is_del
-    is_del_col_no = plpy.execute(f"SELECT get_column_no('{table_name}', 'is_del', '{schema_name}') as cno")[0]['cno']
-    plpy.execute(
-        f"INSERT INTO '{schema_name}'.all_audits (txn_id, mmn, row_id, cno, cval, is_del) VALUES ($1, $2, $3, $4, $5, TRUE)",
-        [txid, mmn, old_row['id'], is_del_col_no, 'TRUE', True]
-    )
+    is_del_col_no = plpy.execute(f"SELECT get_column_no('{table_only_name}', 'is_del', '{schema_name}') as cno")[0]['cno']
+    is_del_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, rowid, cno, cval, is_del) VALUES ($1, $2, $3, $4, $5, TRUE)"
+    is_del_audit_stmt = plpy.prepare(is_del_sql, ["bigint", "text", "pzero.id", "integer", "text"])
+    plpy.execute(is_del_audit_stmt, [txid, mmn, old_row['id'], is_del_col_no, 'TRUE'])
     return  new_row
 
 # Batch audit inserts for better performance
@@ -345,7 +400,10 @@ for col_name in new_row:
     if col_name.lower() not in EXCLUDED_AUDIT_COLUMNS:
         try:
             # Get column number with caching
-            col_no_result = plpy.execute(f"SELECT get_column_no('{table_name}', '{col_name}', '{schema_name}') as cno")
+            plpy.notice(f"Getting column number for: full_table_name={full_table_name}, col_name={col_name}, schema_name={schema_name}")
+            plpy.notice(f"Calling get_column_no with table_only_name={table_only_name}")
+            col_no_result = plpy.execute(f"SELECT get_column_no('{table_only_name}', '{col_name}', '{schema_name}') as cno")
+            plpy.notice(f"get_column_no executed successfully")
             if not col_no_result or len(col_no_result) == 0:
                 plpy.warning(f'Column {col_name} not found in schema')
                 continue
@@ -368,10 +426,8 @@ for col_name in new_row:
 # Execute batch insert with prepared statement
 if audit_inserts:
     try:
-        audit_stmt = plpy.prepare(
-            f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, rowid, cno, cval) VALUES ($1, $2, $3, $4, $5)",
-            ["bigint", "text", "text", "integer", "text"]
-        )
+        audit_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, row_id, cno, cval) VALUES ($1, $2, $3, $4, $5)"
+        audit_stmt = plpy.prepare(audit_sql, ["bigint", "text", "pzero.id", "integer", "text"])
         for audit_row in audit_inserts:
             plpy.execute(audit_stmt, audit_row)
     except Exception as e:
