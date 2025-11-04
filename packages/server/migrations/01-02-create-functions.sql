@@ -159,8 +159,8 @@ result = plpy.execute(stmt, [table_name])
 if len(result) == 0:
     raise Exception(f'No MMN found for table: {table_name}')
 
-GD['mmn_cache'][table_name] = result[0]['mmn']
-return result[0]['mmn']
+GD['mmn_cache'][table_name] = result[0]['mmn'].strip() if result[0]['mmn'] else None
+return GD['mmn_cache'][table_name]
 $$ language plpython3u immutable strict;
 
 CREATE OR REPLACE FUNCTION pzero.get_table_name (mmn text) returns text AS $$
@@ -239,12 +239,20 @@ else:
 auth_insert = False
 
 # Check append-only constraint
+plpy.notice(f"Checking append-only: table_only_name='{table_only_name}', in APPEND_ONLY_TABLES: {table_only_name in APPEND_ONLY_TABLES}")
 if table_only_name in APPEND_ONLY_TABLES:
+    plpy.notice(f"Table {table_only_name} is append-only, skipping audit processing for {TD['event']}")
     if TD['event'] == 'UPDATE':
         plpy.error(f'Table {full_table_name} is append-only, only INSERT allowed')
         raise
     else:
-        return new_row
+        # For append-only tables, skip all processing and return appropriate value
+        if TD.get('when') == 'AFTER':
+            plpy.notice("EARLY RETURN: Returning None for AFTER trigger on append-only table")
+            return None
+        else:
+            plpy.notice("EARLY RETURN: Returning MODIFY for BEFORE trigger on append-only table")
+            return "MODIFY"
 
 # Get transaction ID with error handling
 try:
@@ -367,7 +375,7 @@ try:
     if not mmn_result or len(mmn_result) == 0:
         plpy.error(f'Unable to resolve MMN for table {table_only_name}')
         raise ValueError(f'No MMN found for table {table_only_name}')
-    mmn = mmn_result[0]['mmn']
+    mmn = mmn_result[0]['mmn'].strip() if mmn_result[0]['mmn'] else None
     if mmn is None:
         plpy.error(f'MMN is NULL for table {table_only_name}')
         raise ValueError(f'MMN is NULL for table {table_only_name}')
@@ -389,8 +397,8 @@ if new_row and new_row.get('is_del'):
     # If the is_del column is set to true, log a deletion
     # get column no for is_del
     is_del_col_no = plpy.execute(f"SELECT get_column_no('{table_only_name}', 'is_del', '{schema_name}') as cno")[0]['cno']
-    is_del_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, rowid, cno, cval, is_del) VALUES ($1, $2, $3, $4, $5, TRUE)"
-    is_del_audit_stmt = plpy.prepare(is_del_sql, ["bigint", "text", "pzero.id", "integer", "text"])
+    is_del_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, rowid, cno, cval, is_del) VALUES ($1, $2, $3::pzero.id, $4, $5, TRUE)"
+    is_del_audit_stmt = plpy.prepare(is_del_sql, ["bigint", "text", "text", "integer", "text"])
     plpy.execute(is_del_audit_stmt, [txid, mmn, old_row['id'], is_del_col_no, 'TRUE'])
     return  new_row
 
@@ -417,7 +425,7 @@ for col_name in new_row:
             else:
                 continue  # Skip NULL values
             
-            audit_inserts.append((txid, mmn, id_val, col_no, col_value))
+            audit_inserts.append(( col_no, col_value))
             
         except Exception as e:
             plpy.warning(f'Failed to prepare audit for column {col_name}: {e}')
@@ -426,15 +434,26 @@ for col_name in new_row:
 # Execute batch insert with prepared statement
 if audit_inserts:
     try:
-        audit_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, row_id, cno, cval) VALUES ($1, $2, $3, $4, $5)"
-        audit_stmt = plpy.prepare(audit_sql, ["bigint", "text", "pzero.id", "integer", "text"])
+        id_str = str(id_val)
+        audit_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, row_id, cno, cval) VALUES ({txid}, {mmn}, {id_str}, $1, $2)"
+        audit_stmt = plpy.prepare(audit_sql, ["integer", "text"])
         for audit_row in audit_inserts:
+            plpy.notice(f"About to insert audit row: {audit_row}")
             plpy.execute(audit_stmt, audit_row)
     except Exception as e:
         plpy.error(f'Failed to insert audit records: {e}')
         raise
 
-return new_row
+plpy.notice(f"About to return new_row: {type(new_row)}")
+plpy.notice(f"Trigger timing: TD['when'] = {TD.get('when', 'NOT_FOUND')}")
+plpy.notice(f"Available TD keys: {list(TD.keys())}")
+# For AFTER triggers, return None. For BEFORE triggers, return "MODIFY".
+if TD.get('when') == 'AFTER':
+    plpy.notice("Returning None for AFTER trigger")
+    return None
+else:
+    plpy.notice(f"Returning 'MODIFY' for {TD.get('when', 'UNKNOWN')} trigger")
+    return "MODIFY"
 $$ language plpython3u;
 
 CREATE OR REPLACE FUNCTION pzero.relations_lookup_plpython (relation integer) returns jsonb AS $$
