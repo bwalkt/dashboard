@@ -377,7 +377,7 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
 
   // Handle body serialization
   const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, true);
-
+  console.log("updatedHeaders", updatedHeaders);
   // Prepare the request configuration
   const requestConfig: ApiProxyRequestBody = {
     url: targetUrl,

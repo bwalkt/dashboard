@@ -15,7 +15,16 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     origin: true, // Allow all origins in development - you can restrict this in production
     credentials: true, // Allow credentials (cookies, authorization headers)
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "x-client-type"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "x-client-type",
+      // OpenTelemetry trace context headers for distributed tracing
+      "traceparent",
+      "tracestate",
+    ],
     exposedHeaders: ["Content-Range", "X-Content-Range"],
     maxAge: 86400, // Cache preflight response for 1 day
     preflightContinue: false,

@@ -5,6 +5,18 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "*"
+          allowed_headers:
+            - "Content-Type"
+            - "X-Requested-With"
+            - "Accept"
+            - "Authorization" # If you use authentication
+            # OpenTelemetry trace context headers for distributed tracing
+            - "traceparent"
+            - "tracestate"
+
   prometheus:
     config:
       global:
