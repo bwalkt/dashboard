@@ -1,19 +1,19 @@
-import type { CreateUserData, GitHubUser, User } from '@pzero/shared'
-import { db } from '../config/database'
+import type { CreateUserData, GitHubUser, User } from "@pzero/shared";
+import { db } from "../config/database";
 
 export class UserService {
   /**
    * Get user by GitHub ID
    */
   public async getUserByGithubId(githubId: string): Promise<User | null> {
-    return db.getUserByGithubId(githubId)
+    return db.getUserByGithubId(githubId);
   }
 
   /**
    * Get user by internal ID
    */
   public async getUserById(id: number): Promise<User | null> {
-    return db.getUserById(id)
+    return db.getUserById(id);
   }
 
   /**
@@ -23,58 +23,61 @@ export class UserService {
     const userData: CreateUserData = {
       github_id: githubUser.id.toString(),
       name: githubUser.name || githubUser.login,
-      email: githubUser.email || '',
+      email: githubUser.email || "",
       avatar: githubUser.avatar_url,
-    }
+    };
 
-    return db.upsertUser(userData)
+    return db.upsertUser(userData);
   }
 
   /**
    * Create a new user
    */
   public async createUser(userData: CreateUserData): Promise<User> {
-    return db.createUser(userData)
+    return db.createUser(userData);
   }
 
   /**
    * Update user information
    */
-  public async updateUser(githubId: string, userData: Partial<CreateUserData>): Promise<User | null> {
-    return db.updateUser(githubId, userData)
+  public async updateUser(
+    githubId: string,
+    userData: Partial<CreateUserData>,
+  ): Promise<User | null> {
+    return db.updateUser(githubId, userData);
   }
 
   /**
    * Validate GitHub user data
    */
   public validateGitHubUser(githubUser: any): GitHubUser | null {
-    if (!githubUser || typeof githubUser !== 'object') {
-      return null
+    if (!githubUser || typeof githubUser !== "object") {
+      return null;
     }
 
-    const { id, login, name, email, avatar_url } = githubUser
+    const { id, login, name, email, avatar_url } = githubUser;
 
-    if (!id || !login || typeof login !== 'string') {
-      return null
+    if (!id || !login || typeof login !== "string") {
+      return null;
     }
 
     return {
       id: id.toString(),
       login,
       name: name || login,
-      email: email || '',
-      avatar_url: avatar_url || '',
-    }
+      email: email || "",
+      avatar_url: avatar_url || "",
+    };
   }
 
   /**
    * Sanitize user data for API responses
    */
-  public sanitizeUserForResponse(user: User): Omit<User, 'id'> {
-    const { id, ...sanitizedUser } = user
-    return sanitizedUser
+  public sanitizeUserForResponse(user: User): Omit<User, "id"> {
+    const { id, ...sanitizedUser } = user;
+    return sanitizedUser;
   }
 }
 
 // Export singleton instance
-export const userService = new UserService()
+export const userService = new UserService();

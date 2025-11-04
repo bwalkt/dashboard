@@ -9,3 +9,7 @@
 
 2. Use envoy or other gateway and use http2/3
 +[HTTP/2 fingerprinting reference](https://lwthiker.com/networks/2022/06/17/http2-fingerprinting.html)
+
+
+3. SAST
+https://gist.github.com/sttor/ba398d157a7ac3b3e42e18b4734bd1de

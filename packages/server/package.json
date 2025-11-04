@@ -7,6 +7,7 @@
   "scripts": {
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
+    "format": "prettier --write .",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "fastify start dist/index.js --port 8090",
@@ -16,7 +17,10 @@
     "migrate": "node-pg-migrate",
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
-    "migrate:create": "node-pg-migrate create --migration-file-language sql"
+    "migrate:create": "node-pg-migrate create --migration-file-language sql",
+    "docker:down": "docker compose down --remove-orphans",
+    "docker:up": "docker compose up -d",
+    "docker:postgres": "docker compose up -d pzero-postgres"
   },
   "keywords": [],
   "author": "",
@@ -49,7 +53,28 @@
     "@types/node-pg-migrate": "^2.3.1",
     "@types/pg": "^8.11.10",
     "@types/react": "^18.3.18",
+    "prettier": "catalog:",
+    "prettier-plugin-sql": "0.19.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "prettier": {
+    "plugins": [
+      "prettier-plugin-sql"
+    ],
+    "overrides": [
+      {
+        "files": [
+          "*.sql"
+        ],
+        "options": {
+          "language": "postgresql",
+          "keywordCase": "upper",
+          "identifierCase": "lower",
+          "dataTypeCase": "lower",
+          "functionCase": "lower"
+        }
+      }
+    ]
   }
 }
