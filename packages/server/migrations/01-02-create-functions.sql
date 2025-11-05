@@ -349,8 +349,7 @@ try:
 except Exception as e:
     plpy.error(f'Failed to log transaction: {e} {txid}')
     raise
-    # Continue processing even if transaction logging fails
-
+    
 # Get MMN for the table with error handling
 try:
     plpy.notice(f"Getting MMN for table: {table_only_name}")
