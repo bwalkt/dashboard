@@ -349,7 +349,7 @@ try:
 except Exception as e:
     plpy.error(f'Failed to log transaction: {e} {txid}')
     raise
-    
+
 # Get MMN for the table with error handling
 try:
     plpy.notice(f"Getting MMN for table: {table_only_name}")
@@ -486,20 +486,23 @@ if not all([uuid1, uuid2, relation is not None]):
 mm1, _, uuid1  = new_row['uuid1'].partition('_')
 mm2 , _, uuid2  = new_row['uuid2'].partition('_')
 
-table1 = plpy.execute(f"SELECT pzero.get_table_name('{mm1}') as table_name")[0]['table_name']
-table2 = plpy.execute(f"SELECT pzero.get_table_name('{mm2}') as table_name")[0]['table_name']
+table_stmt = plpy.prepare("SELECT pzero.get_table_name($1) as table_name", ["text"])
+table1 = plpy.execute(table_stmt, [mm1])[0]['table_name']
+table2 = plpy.execute(table_stmt, [mm2])[0]['table_name']
 if not table1 or not table2:
     raise Exception('Unable to resolve table names from MMNs')
 
-check_exits = plpy.execute (f"""
-        SELECT 1 FROM {schema_name}.{table1} t1
-        JOIN {schema_name}.{table2} t2 ON t1.id = $1 AND t2.id = $2
-        LIMIT 1
-    """, [uuid1, uuid2])
+check_sql = f"""
+    SELECT 1 FROM {schema_name}.{table1} t1
+    JOIN {schema_name}.{table2} t2 ON t1.id = $1 AND t2.id = $2
+    LIMIT 1
+"""
+check_stmt = plpy.prepare(check_sql, ["text", "text"])
+check_exists = plpy.execute(check_stmt, [uuid1, uuid2]))
+    
 if not check_exits or len(check_exits) == 0:
     plpy.error(f'One or both UUIDs do not exist: {uuid1}, {uuid2}')
     raise ValueError('One or both UUIDs do not exist')
-
 if TD['event'] == 'UPDATE':
     relation = new_row.get('relation')
     select_sql = f"SELECT 1 FROM {schema_name}.relations WHERE uuid1 = $1 AND uuid2 = $2  LIMIT 1"
@@ -512,7 +515,7 @@ if not isinstance(relation, int) or relation < 1 or relation > MAX_RELATION_VALU
     plpy.error(f'Invalid relation type: {relation}. Must be between 1 and {MAX_RELATION_VALUE}')
     raise ValueError(f'Invalid relation type: {relation}')
 
-return new
+return new_row
 $$ language plpython3u;
 
 CREATE OR REPLACE FUNCTION pzero.migrate_org () returns trigger AS $$
