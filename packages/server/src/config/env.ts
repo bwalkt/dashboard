@@ -11,7 +11,11 @@ if (
 }
 const serverUrl = process.env.SERVER_BASE_URL || "http://localhost:8090";
 // remove port
-const domain = serverUrl.replace(/^https?:\/\//, "").replace(/\/$/, "").split(":")[0];
+const domain =
+  serverUrl
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "")
+    .split(":")[0] || "localhost";
 
 export const config: EnvironmentConfig = {
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
