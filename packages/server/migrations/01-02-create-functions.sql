@@ -275,7 +275,7 @@ else:  # INSERT
         retry_count = 0
         insert_ok = False
         
-        plpy.notice(f'Debug: "auth" in table_only_name = {table_only_name} {id_val}')
+        plpy.notice(f'Debug: "auth" in table_only_name = {("auth" in table_only_name)} for table={table_only_name}, id_val={id_val}')
         while not insert_ok and retry_count < MAX_RETRY_ATTEMPTS:
             try:
                 # Generate new ID
