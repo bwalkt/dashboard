@@ -116,5 +116,10 @@
       "lineWidth": 120,
       "trailingCommas": "none"
     }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   }
 }

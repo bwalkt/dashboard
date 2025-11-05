@@ -1,9 +1,9 @@
-import { api } from '@/lib/api'
 import { User } from '@pzero/shared'
 import { useQuery } from '@tanstack/react-query'
 import React from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { api } from '@/lib/api'
 
 const CallbackPage = () => {
   const [searchParams] = useSearchParams()

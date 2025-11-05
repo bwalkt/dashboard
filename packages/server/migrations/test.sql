@@ -37,9 +37,6 @@ WHERE
 
 COMMIT;
 
--- add relations table entry
-INSERT INTO
-  pzero.relations (uuid1, uuid2, relation)
 INSERT INTO
   pzero.all_endpoints (name, url, methods)
 VALUES
@@ -49,6 +46,7 @@ VALUES
     ARRAY['GET', 'POST', 'PUT', 'DELETE']::pzero.method[]
   );
 
+-- add relations table entry
 INSERT INTO
   pzero.all_relations (uuid1, uuid2, relation)
 SELECT
