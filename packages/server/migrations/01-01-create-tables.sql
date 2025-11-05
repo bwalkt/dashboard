@@ -220,10 +220,11 @@ BEGIN
       bit_value integer;
       bitwise_index_sql text;
       c_at_col_exists integer;
+      c_id_col_exists integer;
       alter_sql text;
     BEGIN
       -- Remove 'all_' prefix to get partition table name
-      partition_table_name := substring(v_table_name from 5);
+      partition_table_name := regexp_replace(v_table_name, '^all_', '');
       
       -- Check for is_act and is_del columns
       SELECT 1 INTO is_act_col_exists FROM information_schema.columns 
@@ -231,14 +232,20 @@ BEGIN
       
       SELECT 1 INTO is_del_col_exists FROM information_schema.columns 
       WHERE table_schema = v_schema_name AND table_name = v_table_name AND column_name = 'is_del';
-      
+    
+      -- Check for id column
+      SELECT 1 INTO c_id_col_exists FROM information_schema.columns 
+      WHERE table_schema = v_schema_name AND table_name = v_table_name AND column_name = 'id';
+      if c_id_col_exists IS NOT NULL THEN
+        -- Create index on id column
       -- Check for c_at column
-      SELECT 1 INTO c_at_col_exists FROM information_schema.columns 
-      WHERE table_schema = v_schema_name AND table_name = v_table_name AND column_name = 'c_at';
+        SELECT 1 INTO c_at_col_exists FROM information_schema.columns 
+        WHERE table_schema = v_schema_name AND table_name = v_table_name AND column_name = 'c_at';
+      end if;
 
       begin
         -- Create index on c_at if it exists
-        IF NOT c_at_col_exists IS NOT NULL THEN
+        IF c_id_col_exists IS NOT NULL and NOT c_at_col_exists IS NOT NULL THEN
           alter_sql := format('ALTER TABLE %s.%s ADD COLUMN c_at BIGINT GENERATED ALWAYS AS (extract_epoch_from_uuid(id)) STORED', 
                                 v_schema_name, v_table_name);
           EXECUTE alter_sql;
@@ -261,12 +268,13 @@ BEGIN
                 partition_sql := format('CREATE TABLE %s.%s PARTITION OF %s FOR VALUES IN (TRUE)', 
                                       v_schema_name, partition_table_name, obj_name);
                 EXECUTE partition_sql;
-                partition_sql := format('CREATE TABLE %s.%s_false PARTITION OF %s FOR VALUES IN (FALSE)', 
+                RAISE NOTICE 'Created partition table %.% for is_act = TRUE', v_schema_name, partition_table_name;
+                partition_sql := format('CREATE TABLE %s.%s_inactive PARTITION OF %s FOR VALUES IN (FALSE)', 
                                       v_schema_name, partition_table_name, obj_name);
                 EXECUTE partition_sql;
                 RAISE NOTICE 'Created partition table %.% for is_act = TRUE', v_schema_name, partition_table_name;
             ELSIF is_del_col_exists IS NOT NULL THEN
-                partition_sql := format('CREATE TABLE %s.%s_true PARTITION OF %s FOR VALUES IN (TRUE)', 
+                partition_sql := format('CREATE TABLE %s.%s_deleted PARTITION OF %s FOR VALUES IN (TRUE)', 
                                       v_schema_name, partition_table_name, obj_name);
                 EXECUTE partition_sql;
                 partition_sql := format('CREATE TABLE %s.%s  PARTITION OF %s FOR VALUES IN (FALSE)', 
@@ -312,7 +320,7 @@ CREATE TABLE pzero.all_auth (
   password text,
   oauth_provider pzero.oauth_provider,
   oauth_id text,
-  email text NOT NULL,
+  email pzero.email NOT NULL,
   phone text,
   email_verified boolean NOT NULL DEFAULT FALSE,
   phone_verified boolean NOT NULL DEFAULT FALSE,
@@ -370,25 +378,22 @@ CREATE TABLE pzero.id_base_loc_table (id pzero.id NOT NULL DEFAULT pzero.gen_id 
 
 CREATE TABLE pzero.base_effective_table (eff_from timestamptz, eff_to timestamptz);
 
--- Note: Removed plv8-based trigger function for now
--- Can be re-added when plv8 extension is available
-CREATE INDEX idx_pzero_audits_row_id ON pzero.audits (mmn, row_id);
-
 CREATE TABLE pzero.all_audits (
-  id pzero.id NOT NULL DEFAULT pzero.gen_id (),
-  mmn pzero.mmn_type NOT NULL,
   txn_id bigint NOT NULL REFERENCES pzero.txns (id) ON DELETE CASCADE,
+  mmn pzero.mmn_type NOT NULL,
   row_id text, -- if null then it should be table alter
   cno smallint NOT NULL,
   cval text,
   is_del boolean DEFAULT FALSE,
   data pzero.data,
-  PRIMARY KEY (id, is_del)
+  PRIMARY KEY (txn_id, cno, is_del)
 )
 PARTITION BY
   list (is_del);
 
-CREATE INDEX idx_pzero_audits_txn_id ON pzero.audits (txn_id);
+CREATE INDEX idx_pzero_audits_row_id ON pzero.audits (mmn, row_id);
+
+CREATE INDEX idx_pzero_audits_row_id_cno ON pzero.audits (mmn, cno);
 
 CREATE TABLE pzero.all_users (
   LIKE pzero.loc_base_table including defaults including constraints,

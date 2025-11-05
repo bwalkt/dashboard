@@ -180,7 +180,6 @@ import plpy
 import json
 
 # Constants
-APPEND_ONLY_TABLES = frozenset(['txns', 'all_audits'])
 AUTH_TABLES = frozenset(['auth', 'users'])
 EXCLUDED_AUDIT_COLUMNS = frozenset(['id', 'c_by', 'c_at', 'u_by', 'u_at', 'is_del', 'last_seen'])
 MAX_RETRY_ATTEMPTS = 5
@@ -231,22 +230,6 @@ else:
         table_only_name = full_table_name.split('.')[1] if '.' in full_table_name else full_table_name
     plpy.notice(f"Processing table: {full_table_name} (relid: {relid})")
 auth_insert = False
-
-# Check append-only constraint
-plpy.notice(f"Checking append-only: table_only_name='{table_only_name}', in APPEND_ONLY_TABLES: {table_only_name in APPEND_ONLY_TABLES}")
-if table_only_name in APPEND_ONLY_TABLES:
-    plpy.notice(f"Table {table_only_name} is append-only, skipping audit processing for {TD['event']}")
-    if TD['event'] == 'UPDATE':
-        plpy.error(f'Table {full_table_name} is append-only, only INSERT allowed')
-        raise
-    else:
-        # For append-only tables, skip all processing and return appropriate value
-        if TD.get('when') == 'AFTER':
-            plpy.notice("EARLY RETURN: Returning None for AFTER trigger on append-only table")
-            return None
-        else:
-            plpy.notice("EARLY RETURN: Returning MODIFY for BEFORE trigger on append-only table")
-            return "MODIFY"
 
 # Get transaction ID with error handling
 plpy.notice(f"=== MAIN EXECUTION START === Table: {full_table_name}")
@@ -370,9 +353,6 @@ except Exception as e:
     raise
     # Continue processing even if transaction logging fails
 
-if table_only_name in APPEND_ONLY_TABLES:
-    return new_row
-
 # Get MMN for the table with error handling
 try:
     plpy.notice(f"Getting MMN for table: {table_only_name}")
@@ -447,14 +427,8 @@ if audit_inserts:
 
 plpy.notice(f"About to return new_row: {type(new_row)}")
 plpy.notice(f"New row keys: {list(new_row.keys()) if new_row else 'None'}")
-plpy.notice(f"Trigger timing: TD['when'] = {TD.get('when', 'NOT_FOUND')}")
-# Return "MODIFY" for BEFORE triggers to preserve modifications, None for AFTER triggers
-if TD.get('when') == 'BEFORE':
-    plpy.notice(f"Returning MODIFY for BEFORE trigger with modifications")
-    return "MODIFY"
-else:
-    plpy.notice(f"Returning None for AFTER trigger")
-    return None
+plpy.notice(f"Returning new_row for BEFORE trigger with modifications")
+return new_row
 $$ language plpython3u;
 
 CREATE OR REPLACE FUNCTION pzero.relations_lookup_plpython (relation integer) returns jsonb AS $$
@@ -558,8 +532,7 @@ if event not in ['INSERT', 'UPDATE']:
 
 # Tables to create in dedicated schema for non-multi-tenant orgs
 DEDICATED_TABLES = [
-    'all_endpoints', 'all_sessions', 'txns', 
-    'all_audits', 'all_threads', 'all_thread_heads'
+    'all_endpoints', 'all_sessions', 'all_threads', 'all_thread_heads'
 ]
 
 def sanitize_handle(handle):

@@ -140,50 +140,50 @@ The server will start on `http://localhost:8090`
 ### Environment Variables
 
 <<<<<<< HEAD
-| Variable               | Description                | Required                       |
+| Variable | Description | Required |
 | ---------------------- | -------------------------- | ------------------------------ |
-| `PORT`                 | Server port                | No (defaults to 8090)          |
-| `NODE_ENV`             | Node environment           | No (defaults to development)   |
-| `GITHUB_CLIENT_ID`     | GitHub OAuth Client ID     | Yes                            |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes                            |
-| `JWT_SECRET`           | JWT signing secret         | Yes                            |
-| `POSTGRES_HOST`        | PostgreSQL host            | No (defaults to localhost)     |
-| `POSTGRES_PORT`        | PostgreSQL port            | No (defaults to 5432)          |
-| `POSTGRES_USER`        | PostgreSQL username        | No (defaults to postgres)      |
-| `POSTGRES_PASSWORD`    | PostgreSQL password        | No (defaults to postgres)      |
-| `POSTGRES_DB`          | PostgreSQL database name   | No (defaults to pzero)         |
-| `REDIS_HOST`           | Redis host                 | No (defaults to localhost)     |
-| `REDIS_PORT`           | Redis port                 | No (defaults to 6379)          |
-| `BREVO_API_KEY`        | Brevo API key for email    | Yes                            |
-| `BREVO_SENDER_EMAIL`   | Sender email address       | Yes                            |
-| `BREVO_SENDER_NAME`    | Sender name                | No (defaults to P-Zero)        |
-| `OAUTH_REDIRECT_URL`   | OAuth callback URL         | Yes                            |
-| Variable               | Description                | Required                       |
-| `PORT`                 | Server port                | No (defaults to 8090)          |
-| `NODE_ENV`             | Node environment           | No (defaults to development)   |
-| `GITHUB_CLIENT_ID`     | GitHub OAuth Client ID     | Yes                            |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes                            |
-| `JWT_SECRET`           | JWT signing secret         | Yes                            |
-| `DATABASE_PATH`        | SQLite database path       | No (defaults to ./database.db) |
-| `OAUTH_REDIRECT_URL`   | OAuth callback URL         | Yes                            |
-| Variable               | Description                | Required                     |
+| `PORT` | Server port | No (defaults to 8090) |
+| `NODE_ENV` | Node environment | No (defaults to development) |
+| `GITHUB_CLIENT_ID` | GitHub OAuth Client ID | Yes |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes |
+| `JWT_SECRET` | JWT signing secret | Yes |
+| `POSTGRES_HOST` | PostgreSQL host | No (defaults to localhost) |
+| `POSTGRES_PORT` | PostgreSQL port | No (defaults to 5432) |
+| `POSTGRES_USER` | PostgreSQL username | No (defaults to postgres) |
+| `POSTGRES_PASSWORD` | PostgreSQL password | No (defaults to postgres) |
+| `POSTGRES_DB` | PostgreSQL database name | No (defaults to pzero) |
+| `REDIS_HOST` | Redis host | No (defaults to localhost) |
+| `REDIS_PORT` | Redis port | No (defaults to 6379) |
+| `BREVO_API_KEY` | Brevo API key for email | Yes |
+| `BREVO_SENDER_EMAIL` | Sender email address | Yes |
+| `BREVO_SENDER_NAME` | Sender name | No (defaults to P-Zero) |
+| `OAUTH_REDIRECT_URL` | OAuth callback URL | Yes |
+| Variable | Description | Required |
+| `PORT` | Server port | No (defaults to 8090) |
+| `NODE_ENV` | Node environment | No (defaults to development) |
+| `GITHUB_CLIENT_ID` | GitHub OAuth Client ID | Yes |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes |
+| `JWT_SECRET` | JWT signing secret | Yes |
+| `DATABASE_PATH` | SQLite database path | No (defaults to ./database.db) |
+| `OAUTH_REDIRECT_URL` | OAuth callback URL | Yes |
+| Variable | Description | Required |
 | ---------------------- | -------------------------- | ---------------------------- |
-| `PORT`                 | Server port                | No (defaults to 8090)        |
-| `NODE_ENV`             | Node environment           | No (defaults to development) |
-| `GITHUB_CLIENT_ID`     | GitHub OAuth Client ID     | Yes                          |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes                          |
-| `JWT_SECRET`           | JWT signing secret         | Yes                          |
-| `POSTGRES_HOST`        | PostgreSQL host            | No (defaults to localhost)   |
-| `POSTGRES_PORT`        | PostgreSQL port            | No (defaults to 5432)        |
-| `POSTGRES_USER`        | PostgreSQL username        | No (defaults to postgres)    |
-| `POSTGRES_PASSWORD`    | PostgreSQL password        | No (defaults to postgres)    |
-| `POSTGRES_DB`          | PostgreSQL database name   | No (defaults to pzero)       |
-| `REDIS_HOST`           | Redis host                 | No (defaults to localhost)   |
-| `REDIS_PORT`           | Redis port                 | No (defaults to 6379)        |
-| `BREVO_API_KEY`        | Brevo API key for email    | Yes                          |
-| `BREVO_SENDER_EMAIL`   | Sender email address       | Yes                          |
-| `BREVO_SENDER_NAME`    | Sender name                | No (defaults to P-Zero)      |
-| `OAUTH_REDIRECT_URL`   | OAuth callback URL         | Yes                          |
+| `PORT` | Server port | No (defaults to 8090) |
+| `NODE_ENV` | Node environment | No (defaults to development) |
+| `GITHUB_CLIENT_ID` | GitHub OAuth Client ID | Yes |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes |
+| `JWT_SECRET` | JWT signing secret | Yes |
+| `POSTGRES_HOST` | PostgreSQL host | No (defaults to localhost) |
+| `POSTGRES_PORT` | PostgreSQL port | No (defaults to 5432) |
+| `POSTGRES_USER` | PostgreSQL username | No (defaults to postgres) |
+| `POSTGRES_PASSWORD` | PostgreSQL password | No (defaults to postgres) |
+| `POSTGRES_DB` | PostgreSQL database name | No (defaults to pzero) |
+| `REDIS_HOST` | Redis host | No (defaults to localhost) |
+| `REDIS_PORT` | Redis port | No (defaults to 6379) |
+| `BREVO_API_KEY` | Brevo API key for email | Yes |
+| `BREVO_SENDER_EMAIL` | Sender email address | Yes |
+| `BREVO_SENDER_NAME` | Sender name | No (defaults to P-Zero) |
+| `OAUTH_REDIRECT_URL` | OAuth callback URL | Yes |
 
 ## 📁 Project Structure
 
