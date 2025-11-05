@@ -516,9 +516,9 @@ check_sql = f"""
     LIMIT 1
 """
 check_stmt = plpy.prepare(check_sql, ["text", "text"])
-check_exists = plpy.execute(check_stmt, [uuid1, uuid2]))
-    
-if not check_exits or len(check_exits) == 0:
+check_exists = plpy.execute(check_stmt, [uuid1, uuid2])
+
+if not check_exists or len(check_exists) == 0:
     plpy.error(f'One or both UUIDs do not exist: {uuid1}, {uuid2}')
     raise ValueError('One or both UUIDs do not exist')
 if TD['event'] == 'UPDATE':
