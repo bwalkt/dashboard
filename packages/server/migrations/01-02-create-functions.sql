@@ -19,11 +19,7 @@ CREATE OR REPLACE FUNCTION get_column_no (
 ) returns integer AS $$
 import plpy
 
-# Try to get parameters from globals
-table_name = globals().get('table_name')
-column_name = globals().get('column_name') 
-schema_name = globals().get('schema_name', 'pzero')
-
+# Validate required parameters
 if not table_name or not column_name:
     raise ValueError('table_name and column_name are required')
 
@@ -195,7 +191,7 @@ new_row = TD.get('new')  # Available for INSERT and UPDATE
 # Get the parent partitioned table name (not the partition)
 relid = TD['relid']
 # First check if this is a partition and get the parent table
-parent_query = plpy.execute(f"""
+parent_stmt = plpy.prepare("""
     SELECT 
         pn.nspname as parent_schema, 
         pc.relname as parent_table,
@@ -206,8 +202,9 @@ parent_query = plpy.execute(f"""
     JOIN pg_namespace pn ON pc.relnamespace = pn.oid
     JOIN pg_class cc ON pi.inhrelid = cc.oid  
     JOIN pg_namespace cn ON cc.relnamespace = cn.oid
-    WHERE pi.inhrelid = {relid}
-""")
+    WHERE pi.inhrelid = $1
+""", ["bigint"])
+parent_query = plpy.execute(parent_stmt, [relid])
 
 if parent_query:
     # This is a partition, use the parent table
@@ -218,7 +215,8 @@ if parent_query:
     plpy.notice(f"Using parent table: {full_table_name} (triggered from partition: {actual_partition})")
 else:
     # Not a partition, use the table itself
-    table_info = plpy.execute(f"SELECT nspname as schema_name, relname as table_name FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.oid = {relid}")
+    table_stmt = plpy.prepare("SELECT nspname as schema_name, relname as table_name FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.oid = $1", ["bigint"])
+    table_info = plpy.execute(table_stmt, [relid])
     if table_info:
         schema_name = table_info[0]['schema_name']
         table_only_name = table_info[0]['table_name']

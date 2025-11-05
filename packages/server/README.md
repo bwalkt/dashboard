@@ -139,7 +139,6 @@ The server will start on `http://localhost:8090`
 
 ### Environment Variables
 
-<<<<<<< HEAD
 | Variable | Description | Required |
 | ---------------------- | -------------------------- | ------------------------------ |
 | `PORT` | Server port | No (defaults to 8090) |
