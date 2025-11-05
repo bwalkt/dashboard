@@ -56,8 +56,14 @@ try:
         return pos
     else:
         raise ValueError(f'Column {column_name_clean} not found in table {schema_name_clean}.{table_name_clean}')
+except plpy.SPIError as spi_err:
+    plpy.error(f'Database error getting column position for {schema_name_clean}.{table_name_clean}.{column_name_clean}: {spi_err}')
+    raise
+except ValueError:
+    # Re-raise ValueError as-is (column not found)
+    raise
 except Exception as e:
-    plpy.error(f'Error getting column position: {e}')
+    plpy.error(f'Unexpected error getting column position for {schema_name_clean}.{table_name_clean}.{column_name_clean}: {e}')
     raise
 $$ language plpython3u immutable strict;
 
@@ -167,8 +173,8 @@ result = plpy.execute(stmt, [mmn])
 if len(result) == 0:
     raise Exception(f'No table found for mmn: {mmn}')
 
-GD['mmn_table_cache'][mmn] = result[0]['table_name']
-return result[0]['table_name']
+GD['mmn_table_cache'][mmn] = result[0]['table_name'].strip() if result[0]['table_name'] else None
+return GD['mmn_table_cache'][mmn]
 $$ language plpython3u immutable strict;
 
 CREATE OR REPLACE FUNCTION pzero.audit_trigger_plpython () returns trigger AS $$
@@ -215,17 +221,28 @@ if parent_query:
     plpy.notice(f"Using parent table: {full_table_name} (triggered from partition: {actual_partition})")
 else:
     # Not a partition, use the table itself
-    table_stmt = plpy.prepare("SELECT nspname as schema_name, relname as table_name FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.oid = $1", ["bigint"])
-    table_info = plpy.execute(table_stmt, [relid])
-    if table_info:
-        schema_name = table_info[0]['schema_name']
-        table_only_name = table_info[0]['table_name']
-        full_table_name = f"{schema_name}.{table_only_name}"
-    else:
-        # Fallback to TD values
+    try:
+        table_stmt = plpy.prepare("SELECT nspname as schema_name, relname as table_name FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.oid = $1", ["bigint"])
+        table_info = plpy.execute(table_stmt, [relid])
+        if table_info and len(table_info) > 0:
+            schema_name = table_info[0]['schema_name']
+            table_only_name = table_info[0]['table_name']
+            full_table_name = f"{schema_name}.{table_only_name}"
+            plpy.notice(f"Resolved table from relid {relid}: {full_table_name}")
+        else:
+            # Fallback to TD values when table lookup fails
+            plpy.warning(f"Failed to resolve table for relid {relid}, falling back to TD values")
+            full_table_name = TD['table_name']
+            schema_name = TD.get('table_schema', 'pzero')
+            table_only_name = full_table_name.split('.')[1] if '.' in full_table_name else full_table_name
+            plpy.notice(f"Using fallback table name: {full_table_name}")
+    except Exception as e:
+        # Fallback to TD values on any error
+        plpy.warning(f"Error resolving table for relid {relid}: {e}, falling back to TD values")
         full_table_name = TD['table_name']
         schema_name = TD.get('table_schema', 'pzero')
         table_only_name = full_table_name.split('.')[1] if '.' in full_table_name else full_table_name
+        plpy.notice(f"Using fallback table name: {full_table_name}")
     plpy.notice(f"Processing table: {full_table_name} (relid: {relid})")
 auth_insert = False
 
@@ -324,6 +341,7 @@ if not c_by:
         raise Exception('Missing Audit field - c_by ' + str(full_table_name) + '  ' + str(table_only_name))
 # Validate user with prepared statement
 try:
+    # Skip user validation for auth table inserts; c_by is the newly generated entity ID (bootstrapping case)
     if not auth_insert:
         user_check = plpy.prepare("SELECT is_act FROM pzero.all_auth WHERE id = $1::pzero.id LIMIT 1", ["text"])
         user_exists = plpy.execute(user_check, [str(c_by)])
