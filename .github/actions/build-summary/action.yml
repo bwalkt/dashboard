@@ -1,0 +1,45 @@
+name: 'Build Summary'
+description: 'Generates a build summary for GitHub step summary'
+
+inputs:
+  service:
+    description: 'Service name being built'
+    required: true
+  image_name:
+    description: 'Docker image name'
+    required: true
+  registry_url:
+    description: 'Docker registry URL'
+    required: true
+  image_tag:
+    description: 'Docker image tag'
+    required: true
+  event_name:
+    description: 'GitHub event name'
+    required: true
+  pr_number:
+    description: 'Pull request number (if applicable)'
+    required: false
+  image_id:
+    description: 'Docker image ID'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate build summary
+      shell: bash
+      run: |
+        echo "## Build Summary for ${{ inputs.service }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Service**: ${{ inputs.service }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Image**: ${{ inputs.registry_url }}/${{ inputs.image_name }}:${{ inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+
+        if [ "${{ inputs.event_name }}" = "pull_request" ]; then
+          echo "- **Status**: Build only (PR)" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- **Status**: Built and pushed" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ "${{ inputs.image_id }}" != "" ]; then
+          echo "- **Image ID**: ${{ inputs.image_id }}" >> $GITHUB_STEP_SUMMARY
+        fi

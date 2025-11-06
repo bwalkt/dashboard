@@ -1,14 +1,13 @@
 name: openziti
 services:
   golang-proxy:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
+    # Image from GitHub Container Registry
+    # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
+    # Or set GOLANG_PROXY_IMAGE to override the full image path
+    image: ${GOLANG_PROXY_IMAGE:-ghcr.io/${GITHUB_OWNER}/golang-proxy:latest}
     container_name: golang-proxy
     ports:
-      - "8080:8080"
-    networks:
-      - pzero
+      - "8282:8080"
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - DEBUG=${DEBUG:-false}
@@ -16,7 +15,3 @@ services:
       - CORS_ALLOWED_ORIGIN=${CORS_ALLOWED_ORIGIN}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
     restart: unless-stopped
-
-networks:
-  pzero:
-    external: true

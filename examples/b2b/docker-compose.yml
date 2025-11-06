@@ -2,9 +2,10 @@ name: pzero-b2b
 version: "3.9"
 services:
   pzero-sfdc-server:
-    build:
-      context: ./../..
-      dockerfile: ./examples/b2b/packages/sfdc-server-vanilla/Dockerfile
+    # Image from GitHub Container Registry
+    # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
+    # Or set SFDC_SERVER_IMAGE to override the full image path
+    image: ${SFDC_SERVER_IMAGE:-ghcr.io/${GITHUB_OWNER}/sfdc-server-vanilla:latest}
     container_name: pzero-sfdc-server
     ports:
       - "3000:3000" # Internal port for direct access (optional)
@@ -25,10 +26,4 @@ services:
       - DATABASE_PATH=${DATABASE_PATH:-./database.db}
       # OAuth Callback URL
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:1420}
-    networks:
-      - pzero
     restart: unless-stopped
-
-networks:
-  pzero:
-    external: true
