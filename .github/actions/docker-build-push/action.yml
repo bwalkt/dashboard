@@ -1,0 +1,141 @@
+name: 'Docker Build and Push'
+description: 'Builds a Docker image from a Dockerfile and pushes it to a Docker registry'
+
+inputs:
+  dockerfile:
+    description: 'Path to the Dockerfile (relative to repository root)'
+    required: true
+    default: 'Dockerfile'
+  context:
+    description: 'Build context path (relative to repository root)'
+    required: false
+    default: '.'
+  image-name:
+    description: 'Name of the Docker image (without tag)'
+    required: true
+  image-tags:
+    description: 'Comma-separated list of tags for the Docker image'
+    required: false
+    default: 'latest'
+  registry:
+    description: 'Docker registry URL'
+    required: false
+    default: 'registry.incmix.com'
+  registry-username:
+    description: 'Docker registry username (from secrets)'
+    required: true
+  registry-password:
+    description: 'Docker registry password (from secrets)'
+    required: true
+  push:
+    description: 'Whether to push the image to the registry'
+    required: false
+    default: 'true'
+  cache-from:
+    description: 'Comma-separated list of images to use as cache sources'
+    required: false
+  cache-to:
+    description: 'Cache destination (e.g., type=registry,ref=image:cache)'
+    required: false
+  build-args:
+    description: 'Comma-separated list of build arguments (key=value)'
+    required: false
+  labels:
+    description: 'Comma-separated list of labels (key=value)'
+    required: false
+  platforms:
+    description: 'Comma-separated list of platforms to build for'
+    required: false
+    default: 'linux/amd64'
+
+outputs:
+  image-digest:
+    description: 'Digest of the built image'
+    value: ${{ steps.build.outputs.digest }}
+  image-id:
+    description: 'ID of the built image'
+    value: ${{ steps.build.outputs.imageid }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: |
+          image=moby/buildkit:v0.13.0
+
+    - name: Log in to Docker Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ inputs.registry-username }}
+        password: ${{ inputs.registry-password }}
+
+    - name: Parse image tags
+      id: tags
+      run: |
+        # Parse comma-separated tags and format them for docker/metadata-action
+        IFS=',' read -ra TAGS <<< "${{ inputs.image-tags }}"
+        TAG_LIST=""
+        for tag in "${TAGS[@]}"; do
+          # Trim whitespace
+          tag=$(echo "$tag" | xargs)
+          if [ -n "$tag" ]; then
+            TAG_LIST="${TAG_LIST}type=raw,value=${tag}\n"
+          fi
+        done
+        # Remove trailing newline and store in output
+        TAG_LIST=$(echo -e "$TAG_LIST" | sed '$d')
+        echo "tags<<EOF" >> $GITHUB_OUTPUT
+        echo -e "$TAG_LIST" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ inputs.registry }}/${{ inputs.image-name }}
+        tags: ${{ steps.tags.outputs.tags }}
+
+    - name: Format and validate context paths
+      run: |
+        # Ensure context path is properly formatted
+        CONTEXT_PATH="${{ inputs.context }}"
+        DOCKERFILE_PATH="${{ inputs.dockerfile }}"
+
+        # Remove leading slash if present
+        CONTEXT_PATH="${CONTEXT_PATH#/}"
+        DOCKERFILE_PATH="${DOCKERFILE_PATH#/}"
+
+        # Ensure it starts with . if it's a relative path
+        if [[ "$CONTEXT_PATH" != .* ]] && [[ "$CONTEXT_PATH" != /* ]]; then
+          CONTEXT_PATH="./$CONTEXT_PATH"
+        fi
+
+        if [[ "$DOCKERFILE_PATH" != .* ]] && [[ "$DOCKERFILE_PATH" != /* ]]; then
+          DOCKERFILE_PATH="./$DOCKERFILE_PATH"
+        fi
+
+        # Store formatted paths for the build step
+        echo "CONTEXT_PATH=$CONTEXT_PATH" >> $GITHUB_ENV
+        echo "DOCKERFILE_PATH=$DOCKERFILE_PATH" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: ${{ env.CONTEXT_PATH }}
+        file: ${{ env.DOCKERFILE_PATH }}
+        push: ${{ inputs.push == 'true' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: ${{ inputs.cache-from }}
+        cache-to: ${{ inputs.cache-to }}
+        build-args: ${{ inputs.build-args }}
+        platforms: ${{ inputs.platforms }}
+        provenance: false
+        outputs: type=image
+        no-cache-filters: true
