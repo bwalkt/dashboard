@@ -276,6 +276,8 @@ else:  # INSERT
         insert_ok = False
 
         plpy.notice(f'Debug: "auth" in table_only_name = {("auth" in table_only_name)} for table={table_only_name}, id_val={id_val}')
+        check_sql = f"SELECT 1 FROM {full_table_name} WHERE id = $1 LIMIT 1"
+        check_stmt = plpy.prepare(check_sql, ["uuid"])
         while not insert_ok and retry_count < MAX_RETRY_ATTEMPTS:
             try:
                 # Generate new ID
@@ -287,8 +289,6 @@ else:  # INSERT
                     auth_insert = True
                     plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
                 # Check for existing ID
-                check_sql = f"SELECT 1 FROM {full_table_name} WHERE id = $1 LIMIT 1"
-                check_stmt = plpy.prepare(check_sql, ["uuid"])
                 row_exists = plpy.execute(check_stmt, [id_val])
                 
                 if row_exists and len(row_exists) > 0:
