@@ -390,15 +390,11 @@ except Exception as e:
     plpy.error(f'Exception args: {e.args}')
     raise
 
-if new_row and new_row.get('is_del'):
+
+if new_row and new_row.get('is_del') == True:
     # If the is_del column is set to true, log a deletion
-    # get column no for is_del
-    col_no_stmt = plpy.prepare("SELECT get_column_no($1, $2, $3) as cno", ["text", "text", "text"])
-    is_del_col_no = plpy.execute(f"SELECT get_column_no('{table_only_name}', 'is_del', '{schema_name}') as cno")[0]['cno']
-    is_del_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, rowid, cno, cval, is_del) VALUES ($1, $2, $3::pzero.id, $4, $5, TRUE)"
-    is_del_audit_stmt = plpy.prepare(is_del_sql, ["bigint", "text", "text", "integer", "text"])
-    plpy.execute(is_del_audit_stmt, [txid, mmn, old_row['id'], is_del_col_no, 'TRUE'])
-    return  new_row
+    plpy.execute(f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, row_id, is_del) VALUES ({txid}, '{mmn}', '{old_row['id']}', TRUE)")
+    return new_row
 
 # Batch audit inserts for better performance
 audit_inserts = []
