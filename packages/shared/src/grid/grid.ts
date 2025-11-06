@@ -419,23 +419,19 @@ function handleComplexSqrt(grid: number[][], expression: string): string | numbe
             }
         );
         
-        // Handle negative square roots
-        if (convertedExpression.includes('sqrt(') && convertedExpression.includes('-')) {
-            const result = eval(convertedExpression.replace(/sqrt\((-?\d+(?:\.\d+)?)\)/g, (match, num) => {
-                const value = parseFloat(num);
-                if (value < 0) {
-                    return Math.sqrt(Math.abs(value)) + 'i';
-                }
-                return Math.sqrt(value).toString();
-            }));
-            
-            if (typeof result === 'string' && result.includes('i')) {
-                return result;
+        const result = mathjsEvaluate(convertedExpression);
+        if (typeof result === 'object' && result !== null && 'im' in result) {
+            const re = Math.round((result.re ?? 0) * 1000) / 1000;
+            const im = Math.round((result.im ?? 0) * 1000) / 1000;
+            if (re === 0) {
+                return `${im}i`;
             }
+            return `${re} + ${im}i`;
+        }
+        if (typeof result === 'number') {
             return Math.round(result * 1000) / 1000;
         }
-        
-        return Math.round(eval(convertedExpression) * 1000) / 1000;
+        return result;
         
     } catch (error) {
         return 0;
