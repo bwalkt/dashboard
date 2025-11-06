@@ -10,9 +10,6 @@ services:
     volumes:
       - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
     command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
-    depends_on:
-      - pzero-sfdc-server-vanilla
-      - pzero-otel-collector
     restart: unless-stopped
     environment:
       - ENVOY_LOG_LEVEL=info
