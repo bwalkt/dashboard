@@ -230,8 +230,8 @@ function main() {
   Unique Mathematical Functions Used: ${allStats.uniqueFunctionsUsed.size}
   Total Generation Time: ${allStats.generationTime}ms
   ${options.evaluate ? `Total Evaluation Time: ${allStats.evaluationTime}ms` : ''}
-  Functions Per Second: ${(allStats.totalFunctions / (allStats.generationTime / 1000)).toFixed(2)}
-`);
+  Functions Per Second: ${allStats.generationTime > 0 ? (allStats.totalFunctions / (allStats.generationTime / 1000)).toFixed(2) : 'N/A (instant)'}
+ `);
 
         if (options.verbose) {
             console.log(`  Mathematical Functions Used: [${Array.from(allStats.uniqueFunctionsUsed).join(', ')}]`);
