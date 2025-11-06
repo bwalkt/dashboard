@@ -1,4 +1,5 @@
 name: openziti
+version: "3.9"
 services:
   golang-proxy:
     # Image from GitHub Container Registry
@@ -15,3 +16,10 @@ services:
       - CORS_ALLOWED_ORIGIN=${CORS_ALLOWED_ORIGIN}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
     restart: unless-stopped
+    volumes:
+      - 
+        type: bind
+        source: ./simple-server.json
+        target: ./simple-server.json
+        isDirectory: false
+        content: "json content"

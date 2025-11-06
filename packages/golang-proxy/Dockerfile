@@ -33,10 +33,6 @@ WORKDIR /app
 COPY --from=builder /app/main .
 RUN chmod +x main
 
-# Copy the Ziti configuration file
-COPY ./simple-server.json .
-
-
 # Create data directory for database
 RUN mkdir -p /app/data
 
@@ -44,4 +40,4 @@ RUN mkdir -p /app/data
 EXPOSE 8080
 
 # Run the application
-CMD ["./main", "simple-server.json", "simpleService"]
+CMD ["./main", "/app/data/simple-server.json", "simpleService"]
