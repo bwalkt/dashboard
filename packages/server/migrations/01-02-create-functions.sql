@@ -183,6 +183,7 @@ import json
 
 # Constants
 AUTH_TABLES = frozenset(['auth', 'users'])
+SKIP_USER_VALIDATION_TABLES = frozenset(['txns', 'all_audits'])  # Skip validation for internal audit tables
 EXCLUDED_AUDIT_COLUMNS = frozenset(['id', 'c_by', 'c_at', 'u_by', 'u_at', 'is_del', 'last_seen'])
 MAX_RETRY_ATTEMPTS = 5
 
@@ -318,19 +319,28 @@ else:  # INSERT
 data = new_row.get('data') if new_row else None
 if data:
     data = json.loads(data) if isinstance(data, str) else data
+    data_modified = False
+    
     if 'meta' in data:
         c_by = data['meta'].get('c_by', c_by)
         if 'u_by' in data['meta']:
             c_by = data['meta']['u_by']
         del data['meta']
-        if not data:
-            del new_row['data']
-    
+        data_modified = True
+        
     if 'diff' in data:
         diff_keys = data['diff'].keys()
         if diff_keys:
             diffs = dict(data['diff'])
         del data['diff']
+        data_modified = True
+    
+    # Update new_row with the modified data
+    if data_modified:
+        if not data:
+            del new_row['data']
+        else:
+            new_row['data'] = json.dumps(data)
 
 if not c_by:
     if  'auth' in table_only_name and id_val and TD['event'] == 'INSERT':
@@ -342,7 +352,8 @@ if not c_by:
 # Validate user with prepared statement
 try:
     # Skip user validation for auth table inserts; c_by is the newly generated entity ID (bootstrapping case)
-    if not auth_insert:
+    # Also skip for internal audit tables to avoid circular dependency during transaction logging
+    if not auth_insert and table_only_name not in SKIP_USER_VALIDATION_TABLES:
         user_check = plpy.prepare("SELECT is_act FROM pzero.all_auth WHERE id = $1::pzero.id LIMIT 1", ["text"])
         user_exists = plpy.execute(user_check, [str(c_by)])
         if not user_exists or len(user_exists) == 0:
@@ -399,7 +410,7 @@ if new_row and new_row.get('is_del') == True:
 # Batch audit inserts for better performance
 audit_inserts = []
 
-col_no_stmt = plpy.prepare(f"SELECT get_column_no({table_only_name}, $1, {schema_name}) as cno", [ "text", ])
+col_no_stmt = plpy.prepare(f"SELECT get_column_no('{table_only_name}', $1, '{schema_name}') as cno", ["text"])
 for col_name in new_row:
     if col_name.lower() not in EXCLUDED_AUDIT_COLUMNS:
         try:
@@ -440,8 +451,9 @@ if audit_inserts:
 
 plpy.notice(f"About to return new_row: {type(new_row)}")
 plpy.notice(f"New row keys: {list(new_row.keys()) if new_row else 'None'}")
-plpy.notice(f"Returning new_row for BEFORE trigger with modifications")
-return new_row
+plpy.notice(f"new_row['id'] = {new_row.get('id', 'NOT_SET')}")
+plpy.notice(f"Returning MODIFY for BEFORE trigger with modifications")
+return "MODIFY"
 $$ language plpython3u;
 
 CREATE OR REPLACE FUNCTION pzero.relations_lookup_plpython (relation integer) returns jsonb AS $$
@@ -698,10 +710,11 @@ except plpy.SPIError as e:
     plpy.notice('Trigger trigger_check_relations already exists')
 
 # Tables to add audit triggers to
+# Note: txns and all_audits tables excluded to prevent infinite recursion during audit logging
 tables = [
     'pzero.all_devices', 'pzero.all_endpoints', 'pzero.all_sessions', 
     'pzero.all_orgs', 'pzero.all_auth', 'pzero.all_users',  
-    'pzero.all_thread_heads', 'pzero.all_threads', 'pzero.txns', 'pzero.all_audits'
+    'pzero.all_thread_heads', 'pzero.all_threads'
 ]
 
 # Create audit triggers
