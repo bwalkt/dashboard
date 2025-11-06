@@ -1,18 +1,18 @@
 INSERT INTO
   pzero.all_auth (email)
 VALUES
-  ('test@example.com');
+  ('test@example2.com');
 
 INSERT INTO
   pzero.all_users (id, data, name)
 SELECT
   id,
   jsonb_build_object('meta', jsonb_build_object('c_by', id::text)) AS data,
-  'foo' AS name
+  'foo2' AS name
 FROM
   pzero.all_auth
 WHERE
-  email = 'test@example.com';
+  email = 'test@example2.com';
 
 BEGIN transaction;
 
@@ -20,7 +20,7 @@ UPDATE pzero.all_auth
 SET
   is_act = TRUE
 WHERE
-  email = 'test@example.com';
+  email = 'test@example1.com';
 
 UPDATE pzero.all_users
 SET
@@ -32,7 +32,7 @@ WHERE
     FROM
       pzero.all_auth
     WHERE
-      email = 'test@example.com'
+      email = 'test@example1.com'
   );
 
 COMMIT;
@@ -41,7 +41,7 @@ INSERT INTO
   pzero.all_endpoints (name, url, methods)
 VALUES
   (
-    'bwalk',
+    'bwalk1',
     'https://www.boardwalktech.com',
     ARRAY['GET', 'POST', 'PUT', 'DELETE']::pzero.method[]
   );
@@ -57,5 +57,5 @@ FROM
   pzero.all_users u,
   pzero.all_endpoints e
 WHERE
-  u.name = 'foo'
-  AND e.name = 'bwalk';
+  u.name = 'foo1'
+  AND e.name = 'bwalk1';

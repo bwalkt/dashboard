@@ -746,4 +746,4 @@ $$ language plpython3u;
 
 -- Commented out to prevent automatic execution during migration
 -- Triggers should be created manually after verifying all functions exist
--- SELECT pzero.create_triggers_plpython();
+SELECT pzero.create_triggers_plpython();
