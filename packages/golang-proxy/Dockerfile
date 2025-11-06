@@ -40,4 +40,4 @@ RUN mkdir -p /app/data
 EXPOSE 8080
 
 # Run the application
-CMD ["./main", "/app/data/simple-server.json", "simpleService"]
+CMD ["./main", "./simple-server.json", "simpleService"]

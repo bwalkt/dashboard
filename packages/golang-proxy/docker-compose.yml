@@ -17,9 +17,6 @@ services:
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
     restart: unless-stopped
     volumes:
-      - 
-        type: bind
+      - type: bind
         source: ./simple-server.json
         target: ./simple-server.json
-        isDirectory: false
-        content: "json content"
