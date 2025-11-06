@@ -15,6 +15,14 @@ CREATE EXTENSION if NOT EXISTS postgis;
 
 CREATE SCHEMA if NOT EXISTS pzero;
 
+CREATE DOMAIN pzero.uuid AS uuid;
+
+CREATE DOMAIN pzero.id AS pzero.uuid;
+
+CREATE DOMAIN pzero.iid AS pzero.id;
+
+CREATE DOMAIN pzero.data AS jsonb;
+
 CREATE TABLE IF NOT EXISTS pzero.global_vars (name text PRIMARY KEY, value text);
 
 INSERT INTO
@@ -25,21 +33,9 @@ ON CONFLICT (name) DO UPDATE
 SET
   value = excluded.value;
 
-CREATE DOMAIN pzero.uuid AS ulid;
-
-CREATE DOMAIN pzero.id AS pzero.uuid;
-
-CREATE DOMAIN pzero.iid AS pzero.id;
-
-CREATE DOMAIN pzero.data AS jsonb;
-
 -- Create ULID generation functions using pgx_ulid extension
-CREATE OR REPLACE FUNCTION pzero.gen_ulid () returns pzero.uuid AS $$
-    SELECT gen_ulid()::pzero.uuid;
-$$ language sql volatile;
-
-CREATE OR REPLACE FUNCTION pzero.gen_monotonic_id () returns pzero.uuid AS $$
-    SELECT gen_monotonic_ulid()::pzero.uuid;
+CREATE OR REPLACE FUNCTION pzero.gen_id () returns pzero.id AS $$
+    SELECT uuidv7()::pzero.uuid;
 $$ language sql volatile;
 
 CREATE OR REPLACE FUNCTION pzero.is_valid_email (text) returns boolean AS $$
@@ -58,8 +54,8 @@ CREATE DOMAIN pzero.valid_org_handle AS varchar(10) NOT NULL CHECK (value ~* '^[
 
 CREATE DOMAIN pzero.valid_col_name AS varchar(100) NOT NULL CHECK (value ~* '^[A-Za-z0-9_]+$');
 
-CREATE DOMAIN pzero.domain AS text CHECK (
-  value ~ '^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
+CREATE domain pzero.domain AS text CHECK (
+  value ~ '^(https?://)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
 );
 
 CREATE TYPE pzero.address AS (
@@ -181,6 +177,13 @@ CREATE TABLE pzero.mmn (
   table_name pzero.valid_handle UNIQUE
 );
 
+-- Create immutable wrapper function for extracting epoch from UUIDv7
+CREATE OR REPLACE FUNCTION extract_epoch_from_uuid (uuid) returns bigint AS $$
+BEGIN 
+  RETURN EXTRACT(EPOCH FROM uuid_extract_timestamp($1)); 
+END; 
+$$ language plpgsql immutable;
+
 CREATE OR REPLACE FUNCTION pzero.create_tables_post () returns event_trigger AS $$
 DECLARE
     obj_name text;
@@ -216,10 +219,11 @@ BEGIN
       bit_value integer;
       bitwise_index_sql text;
       c_at_col_exists integer;
+      c_id_col_exists integer;
       alter_sql text;
     BEGIN
       -- Remove 'all_' prefix to get partition table name
-      partition_table_name := substring(v_table_name from 5);
+      partition_table_name := regexp_replace(v_table_name, '^all_', '');
       
       -- Check for is_act and is_del columns
       SELECT 1 INTO is_act_col_exists FROM information_schema.columns 
@@ -227,21 +231,27 @@ BEGIN
       
       SELECT 1 INTO is_del_col_exists FROM information_schema.columns 
       WHERE table_schema = v_schema_name AND table_name = v_table_name AND column_name = 'is_del';
-      
+    
+      -- Check for id column
+      SELECT 1 INTO c_id_col_exists FROM information_schema.columns 
+      WHERE table_schema = v_schema_name AND table_name = v_table_name AND column_name = 'id';
+      if c_id_col_exists IS NOT NULL THEN
+        -- Create index on id column
       -- Check for c_at column
-      SELECT 1 INTO c_at_col_exists FROM information_schema.columns 
-      WHERE table_schema = v_schema_name AND table_name = v_table_name AND column_name = 'c_at';
+        SELECT 1 INTO c_at_col_exists FROM information_schema.columns 
+        WHERE table_schema = v_schema_name AND table_name = v_table_name AND column_name = 'c_at';
+      end if;
 
       begin
         -- Create index on c_at if it exists
-        IF NOT c_at_col_exists IS NOT NULL THEN
-          alter_sql := format('ALTER TABLE %s.%s ADD COLUMN c_at TIMESTAMPTZ GENERATED ALWAYS AS (id::timestamp AT TIME ZONE ''UTC'') STORED', 
+        IF c_id_col_exists IS NOT NULL and NOT c_at_col_exists IS NOT NULL THEN
+          alter_sql := format('ALTER TABLE %s.%s ADD COLUMN c_at BIGINT GENERATED ALWAYS AS (extract_epoch_from_uuid(id)) STORED', 
                                 v_schema_name, v_table_name);
           EXECUTE alter_sql;
           RAISE NOTICE 'Alter table %.%: %', v_schema_name, v_table_name, alter_sql;
         END IF;
       exception when others then
-        RAISE WARNING 'Error adding column c_at for %.%: %', v_schema_name, v_table_name, SQLERRM;
+        RAISE EXCEPTION 'Error adding column c_at for %.%: %', v_schema_name, v_table_name, SQLERRM;
       end;
 
       -- Check if partition table already exists
@@ -258,8 +268,15 @@ BEGIN
                                       v_schema_name, partition_table_name, obj_name);
                 EXECUTE partition_sql;
                 RAISE NOTICE 'Created partition table %.% for is_act = TRUE', v_schema_name, partition_table_name;
+                partition_sql := format('CREATE TABLE %s.%s_inactive PARTITION OF %s FOR VALUES IN (FALSE)', 
+                                      v_schema_name, partition_table_name, obj_name);
+                EXECUTE partition_sql;
+                RAISE NOTICE 'Created partition table %.% for is_act = TRUE', v_schema_name, partition_table_name;
             ELSIF is_del_col_exists IS NOT NULL THEN
-                partition_sql := format('CREATE TABLE %s.%s PARTITION OF %s FOR VALUES IN (FALSE)', 
+                partition_sql := format('CREATE TABLE %s.%s_deleted PARTITION OF %s FOR VALUES IN (TRUE)', 
+                                      v_schema_name, partition_table_name, obj_name);
+                EXECUTE partition_sql;
+                partition_sql := format('CREATE TABLE %s.%s  PARTITION OF %s FOR VALUES IN (FALSE)', 
                                       v_schema_name, partition_table_name, obj_name);
                 EXECUTE partition_sql;
                 RAISE NOTICE 'Created partition table %.% for is_del = FALSE', v_schema_name, partition_table_name;
@@ -298,11 +315,11 @@ CREATE EVENT TRIGGER on_table_creation_trigger ON ddl_command_end WHEN tag IN ('
 EXECUTE function pzero.create_tables_post ();
 
 CREATE TABLE pzero.all_auth (
-  id pzero.id NOT NULL DEFAULT pzero.gen_monotonic_id (),
+  id pzero.id NOT NULL DEFAULT pzero.gen_id (),
   password text,
   oauth_provider pzero.oauth_provider,
   oauth_id text,
-  email text NOT NULL,
+  email pzero.email NOT NULL,
   phone text,
   email_verified boolean NOT NULL DEFAULT FALSE,
   phone_verified boolean NOT NULL DEFAULT FALSE,
@@ -318,11 +335,11 @@ PARTITION BY
 CREATE INDEX idx_pzero_auth_email ON pzero.auth USING gin (email gin_trgm_ops);
 
 CREATE TABLE pzero.all_relations (
-  id pzero.id NOT NULL DEFAULT pzero.gen_monotonic_id (),
-  uuid1 pzero.uuid NOT NULL,
-  uuid2 pzero.uuid NOT NULL,
+  id pzero.id NOT NULL DEFAULT pzero.gen_id (),
+  uuid1 text NOT NULL,
+  uuid2 text NOT NULL,
   relation smallint NOT NULL,
-  is_act boolean DEFAULT FALSE,
+  is_act boolean DEFAULT TRUE,
   data pzero.data,
   PRIMARY KEY (uuid1, uuid2, is_act)
 )
@@ -335,7 +352,11 @@ CREATE INDEX idx_pzero_relations_uuid2 ON pzero.relations (uuid2);
 CREATE TABLE pzero.txns (
   id bigint PRIMARY KEY NOT NULL,
   c_by pzero.id NOT NULL,
-  c_at timestamptz NOT NULL DEFAULT now()
+  c_at bigint NOT NULL DEFAULT extract(
+    epoch
+    FROM
+      now()
+  )::bigint
 );
 
 CREATE INDEX idx_pzero_txns_c_at_by ON pzero.txns (c_by, c_at);
@@ -348,37 +369,30 @@ CREATE TABLE pzero.base_table (
   is_act boolean NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE pzero.id_base_table (
-  id pzero.id NOT NULL DEFAULT pzero.gen_monotonic_id ()
-) inherits (pzero.base_table);
+CREATE TABLE pzero.id_base_table (id pzero.id NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.base_table);
 
 CREATE TABLE pzero.loc_base_table (loc pzero.location) inherits (pzero.base_table);
 
-CREATE TABLE pzero.id_base_loc_table (
-  id pzero.id NOT NULL DEFAULT pzero.gen_monotonic_id ()
-) inherits (pzero.loc_base_table);
+CREATE TABLE pzero.id_base_loc_table (id pzero.id NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.loc_base_table);
 
 CREATE TABLE pzero.base_effective_table (eff_from timestamptz, eff_to timestamptz);
 
--- Note: Removed plv8-based trigger function for now
--- Can be re-added when plv8 extension is available
 CREATE TABLE pzero.all_audits (
-  id pzero.id NOT NULL DEFAULT pzero.gen_monotonic_id (),
-  mmn pzero.mmn_type NOT NULL,
   txn_id bigint NOT NULL REFERENCES pzero.txns (id) ON DELETE CASCADE,
-  row_id pzero.id, -- if null then it should be table alter
-  cno smallint NOT NULL,
+  mmn pzero.mmn_type NOT NULL,
+  row_id text, -- if null then it should be table alter
+  cno smallint, -- if null and is_del = true, only valid
   cval text,
   is_del boolean DEFAULT FALSE,
   data pzero.data,
-  PRIMARY KEY (id, is_del)
+  PRIMARY KEY (txn_id, cno, is_del)
 )
 PARTITION BY
   list (is_del);
 
 CREATE INDEX idx_pzero_audits_row_id ON pzero.audits (mmn, row_id);
 
-CREATE INDEX idx_pzero_audits_txn_id ON pzero.audits (txn_id);
+CREATE INDEX idx_pzero_audits_row_id_cno ON pzero.audits (mmn, cno);
 
 CREATE TABLE pzero.all_users (
   LIKE pzero.loc_base_table including defaults including constraints,

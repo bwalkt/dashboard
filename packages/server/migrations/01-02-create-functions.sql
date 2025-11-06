@@ -19,15 +19,16 @@ CREATE OR REPLACE FUNCTION get_column_no (
 ) returns integer AS $$
 import plpy
 
+# Validate required parameters
 if not table_name or not column_name:
     raise ValueError('table_name and column_name are required')
 
 # Sanitize inputs
-table_name = table_name.strip()
-column_name = column_name.strip()
-schema_name = schema_name.strip()
+table_name_clean = table_name.strip()
+column_name_clean = column_name.strip()
+schema_name_clean = schema_name.strip()
 
-ordinal_name = f'ordinal_{schema_name}_{table_name}'
+ordinal_name = f'ordinal_{schema_name_clean}_{table_name_clean}'
 
 # Initialize cache if needed
 if 'cache' not in GD:
@@ -35,8 +36,8 @@ if 'cache' not in GD:
 
 # Check cache first
 cache = GD['cache']
-if ordinal_name in cache and column_name in cache[ordinal_name]:
-    return cache[ordinal_name][column_name]
+if ordinal_name in cache and column_name_clean in cache[ordinal_name]:
+    return cache[ordinal_name][column_name_clean]
 
 if ordinal_name not in cache:
     cache[ordinal_name] = {}
@@ -47,16 +48,22 @@ try:
         "SELECT ordinal_position as pos FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3",
         ["text", "text", "text"]
     )
-    result = plpy.execute(stmt, [schema_name, table_name, column_name])
+    result = plpy.execute(stmt, [schema_name_clean, table_name_clean, column_name_clean])
     
     if result and len(result) > 0:
         pos = result[0]['pos']
-        cache[ordinal_name][column_name] = pos
+        cache[ordinal_name][column_name_clean] = pos
         return pos
     else:
-        raise ValueError(f'Column {column_name} not found in table {schema_name}.{table_name}')
+        raise ValueError(f'Column {column_name_clean} not found in table {schema_name_clean}.{table_name_clean}')
+except plpy.SPIError as spi_err:
+    plpy.error(f'Database error getting column position for {schema_name_clean}.{table_name_clean}.{column_name_clean}: {spi_err}')
+    raise
+except ValueError:
+    # Re-raise ValueError as-is (column not found)
+    raise
 except Exception as e:
-    plpy.error(f'Error getting column position: {e}')
+    plpy.error(f'Unexpected error getting column position for {schema_name_clean}.{table_name_clean}.{column_name_clean}: {e}')
     raise
 $$ language plpython3u immutable strict;
 
@@ -141,13 +148,14 @@ if 'mmn_cache' not in GD:
 if table_name in GD['mmn_cache']:
     return GD['mmn_cache'][table_name]
 
-result = plpy.execute("SELECT mmn from pzero.mmn where table_name = $1", [table_name])
+stmt = plpy.prepare("SELECT mmn from pzero.mmn where table_name = $1", ["text"])
+result = plpy.execute(stmt, [table_name])
 
 if len(result) == 0:
     raise Exception(f'No MMN found for table: {table_name}')
 
-GD['mmn_cache'][table_name] = result[0]['mmn']
-return result[0]['mmn']
+GD['mmn_cache'][table_name] = result[0]['mmn'].strip() if result[0]['mmn'] else None
+return GD['mmn_cache'][table_name]
 $$ language plpython3u immutable strict;
 
 CREATE OR REPLACE FUNCTION pzero.get_table_name (mmn text) returns text AS $$
@@ -159,13 +167,14 @@ if 'mmn_table_cache' not in GD:
 if mmn in GD['mmn_table_cache']:
     return GD['mmn_table_cache'][mmn]
 
-result = plpy.execute("SELECT table_name from pzero.mmn where mmn = $1", [mmn])
+stmt = plpy.prepare("SELECT table_name from pzero.mmn where mmn = $1", ["text"])
+result = plpy.execute(stmt, [mmn])
 
 if len(result) == 0:
     raise Exception(f'No table found for mmn: {mmn}')
 
-GD['mmn_table_cache'][mmn] = result[0]['table_name']
-return result[0]['table_name']
+GD['mmn_table_cache'][mmn] = result[0]['table_name'].strip() if result[0]['table_name'] else None
+return GD['mmn_table_cache'][mmn]
 $$ language plpython3u immutable strict;
 
 CREATE OR REPLACE FUNCTION pzero.audit_trigger_plpython () returns trigger AS $$
@@ -173,8 +182,8 @@ import plpy
 import json
 
 # Constants
-APPEND_ONLY_TABLES = frozenset(['txns', 'all_audits'])
 AUTH_TABLES = frozenset(['auth', 'users'])
+SKIP_USER_VALIDATION_TABLES = frozenset(['txns', 'all_audits'])  # Skip validation for internal audit tables
 EXCLUDED_AUDIT_COLUMNS = frozenset(['id', 'c_by', 'c_at', 'u_by', 'u_at', 'is_del', 'last_seen'])
 MAX_RETRY_ATTEMPTS = 5
 
@@ -186,21 +195,63 @@ if TD['event'] not in ['INSERT', 'UPDATE']:
 # Get row data
 old_row = TD.get('old')  # Available for UPDATE and DELETE
 new_row = TD.get('new')  # Available for INSERT and UPDATE
-table_name = TD['table_name']
-schema_name = table_name.split('.')[0] if '.' in table_name else 'pzero'
-table_only_name = table_name.split('.')[1] if '.' in table_name else table_name
+# Get the parent partitioned table name (not the partition)
+relid = TD['relid']
+# First check if this is a partition and get the parent table
+parent_stmt = plpy.prepare("""
+    SELECT 
+        pn.nspname as parent_schema, 
+        pc.relname as parent_table,
+        cn.nspname as child_schema,
+        cc.relname as child_table
+    FROM pg_inherits pi
+    JOIN pg_class pc ON pi.inhparent = pc.oid
+    JOIN pg_namespace pn ON pc.relnamespace = pn.oid
+    JOIN pg_class cc ON pi.inhrelid = cc.oid  
+    JOIN pg_namespace cn ON cc.relnamespace = cn.oid
+    WHERE pi.inhrelid = $1
+""", ["bigint"])
+parent_query = plpy.execute(parent_stmt, [relid])
 
-# Check append-only constraint
-if table_only_name in APPEND_ONLY_TABLES:
-    if TD['event'] == 'UPDATE':
-        plpy.error(f'Table {table_name} is append-only, only INSERT allowed')
-        raise
-    else:
-        return new_row
+if parent_query:
+    # This is a partition, use the parent table
+    schema_name = parent_query[0]['parent_schema']
+    table_only_name = parent_query[0]['parent_table']
+    full_table_name = f"{schema_name}.{table_only_name}"
+    actual_partition = f"{parent_query[0]['child_schema']}.{parent_query[0]['child_table']}"
+    plpy.notice(f"Using parent table: {full_table_name} (triggered from partition: {actual_partition})")
+else:
+    # Not a partition, use the table itself
+    try:
+        table_stmt = plpy.prepare("SELECT nspname as schema_name, relname as table_name FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.oid = $1", ["bigint"])
+        table_info = plpy.execute(table_stmt, [relid])
+        if table_info and len(table_info) > 0:
+            schema_name = table_info[0]['schema_name']
+            table_only_name = table_info[0]['table_name']
+            full_table_name = f"{schema_name}.{table_only_name}"
+            plpy.notice(f"Resolved table from relid {relid}: {full_table_name}")
+        else:
+            # Fallback to TD values when table lookup fails
+            plpy.warning(f"Failed to resolve table for relid {relid}, falling back to TD values")
+            full_table_name = TD['table_name']
+            schema_name = TD.get('table_schema', 'pzero')
+            table_only_name = full_table_name.split('.')[1] if '.' in full_table_name else full_table_name
+            plpy.notice(f"Using fallback table name: {full_table_name}")
+    except Exception as e:
+        # Fallback to TD values on any error
+        plpy.warning(f"Error resolving table for relid {relid}: {e}, falling back to TD values")
+        full_table_name = TD['table_name']
+        schema_name = TD.get('table_schema', 'pzero')
+        table_only_name = full_table_name.split('.')[1] if '.' in full_table_name else full_table_name
+        plpy.notice(f"Using fallback table name: {full_table_name}")
+    plpy.notice(f"Processing table: {full_table_name} (relid: {relid})")
+auth_insert = False
 
 # Get transaction ID with error handling
+plpy.notice(f"=== MAIN EXECUTION START === Table: {full_table_name}")
 try:
     txid = plpy.execute("SELECT txid_current()")[0]['txid_current']
+    plpy.notice(f"Got transaction ID: {txid}")
 except Exception as e:
     plpy.error(f'Failed to get transaction ID: {e}')
     raise
@@ -215,8 +266,8 @@ is_act = new_row.get('is_act') if new_row else None
 if TD['event'] == 'UPDATE':
     # Validate ID immutability
     if old_row.get('id') != new_row.get('id') or old_row.get('id') is None or new_row.get('id') is None:
-        plpy.error(f'ID for table {table_name} is not mutable')
-        return 'SKIP'
+        plpy.error(f'ID for table {full_table_name} is not mutable')
+        raise ValueError('ID is immutable and cannot be changed')
     if new_row.get('u_by'):
         c_by = new_row['u_by']
 else:  # INSERT
@@ -224,17 +275,22 @@ else:  # INSERT
     if not id_val:
         retry_count = 0
         insert_ok = False
-        
+
+        plpy.notice(f'Debug: "auth" in table_only_name = {("auth" in table_only_name)} for table={table_only_name}, id_val={id_val}')
+        check_sql = f"SELECT 1 FROM {full_table_name} WHERE id = $1 LIMIT 1"
+        check_stmt = plpy.prepare(check_sql, ["uuid"])
         while not insert_ok and retry_count < MAX_RETRY_ATTEMPTS:
             try:
                 # Generate new ID
-                result = plpy.execute("SELECT pzero.gen_monotonic_id() as id")
+                result = plpy.execute("SELECT pzero.gen_id() as id")
                 new_row['id'] = result[0]['id']
                 id_val = new_row['id']
-                
+                if  'auth' in table_only_name:
+                    c_by = id_val
+                    auth_insert = True
+                    plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
                 # Check for existing ID
-                check_stmt = plpy.prepare(f"SELECT 1 FROM {table_name} WHERE id = $1 LIMIT 1", ["text"])
-                row_exists = plpy.execute(check_stmt, id_val)
+                row_exists = plpy.execute(check_stmt, [id_val])
                 
                 if row_exists and len(row_exists) > 0:
                     # ID collision, will retry
@@ -263,81 +319,103 @@ else:  # INSERT
 data = new_row.get('data') if new_row else None
 if data:
     data = json.loads(data) if isinstance(data, str) else data
+    data_modified = False
+    
     if 'meta' in data:
         c_by = data['meta'].get('c_by', c_by)
         if 'u_by' in data['meta']:
             c_by = data['meta']['u_by']
         del data['meta']
-        if not data:
-            del new_row['data']
-    
+        data_modified = True
+        
     if 'diff' in data:
         diff_keys = data['diff'].keys()
         if diff_keys:
             diffs = dict(data['diff'])
         del data['diff']
+        data_modified = True
+    
+    # Update new_row with the modified data
+    if data_modified:
+        if not data:
+            del new_row['data']
+        else:
+            new_row['data'] = json.dumps(data)
 
 if not c_by:
-    raise Exception('Missing Audit field - c_by')
+    if  'auth' in table_only_name and id_val and TD['event'] == 'INSERT':
+        c_by = id_val
+        auth_insert = True
+        plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
+    else:
+        raise Exception('Missing Audit field - c_by ' + str(full_table_name) + '  ' + str(table_only_name))
 # Validate user with prepared statement
 try:
-    user_check = plpy.prepare("SELECT is_act FROM pzero.all_auth WHERE id = $1 LIMIT 1", ["text"])
-    user_exists = plpy.execute(user_check, [c_by])
-    
-    if not user_exists or len(user_exists) == 0:
-        plpy.error(f'c_by user {c_by} does not exist')
-        raise ValueError(f'c_by user {c_by} does not exist')
-    
-    user_is_act = user_exists[0]['is_act']
-    if not user_is_act and table_only_name not in AUTH_TABLES:
-        plpy.error(f'c_by user {c_by} is not active')
-        raise ValueError(f'c_by user {c_by} is not active')
+    # Skip user validation for auth table inserts; c_by is the newly generated entity ID (bootstrapping case)
+    # Also skip for internal audit tables to avoid circular dependency during transaction logging
+    if not auth_insert and table_only_name not in SKIP_USER_VALIDATION_TABLES:
+        user_check = plpy.prepare("SELECT is_act FROM pzero.all_auth WHERE id = $1::pzero.id LIMIT 1", ["text"])
+        user_exists = plpy.execute(user_check, [str(c_by)])
+        if not user_exists or len(user_exists) == 0:
+            plpy.error(f'c_by user {c_by} does not exist')
+            raise ValueError(f'c_by user {c_by} does not exist')
+        user_is_act = user_exists[0]['is_act']
+        if not user_is_act and table_only_name not in AUTH_TABLES:
+            plpy.error(f'c_by user {c_by} is not active')
+            raise ValueError(f'c_by user {c_by} is not active')
 except plpy.SPIError as e:
     plpy.error(f'Database error checking user: {e}')
     raise
-if APPEND_ONLY_TABLES.contains(table_only_name):
-    return new_row
+
+plpy.notice("Reached transaction logging section")
+# Log transaction with prepared statement (must happen before append-only check)
+try:
+    plpy.notice(f"About to log transaction: txid={txid}, c_by={c_by}")
+    txn_sql = f"INSERT INTO {schema_name}.txns (id, c_by, c_at) VALUES ($1, $2::pzero.id, EXTRACT(EPOCH FROM NOW())) ON CONFLICT (id) DO NOTHING"
+    txn_stmt = plpy.prepare(txn_sql, ["bigint", "text"])
+    plpy.execute(txn_stmt, [txid, str(c_by)])
+    plpy.notice(f"Successfully logged transaction {txid}")
+except Exception as e:
+    plpy.error(f'Failed to log transaction: {e} {txid}')
+    raise
 
 # Get MMN for the table with error handling
 try:
-    mmn_result = plpy.execute(f"SELECT pzero.get_mmn('{table_only_name}') as mmn")
+    plpy.notice(f"Getting MMN for table: {table_only_name}")
+    plpy.notice(f"About to prepare MMN statement")
+    mmn_stmt = plpy.prepare("SELECT pzero.get_mmn($1) as mmn", ["text"])
+    plpy.notice(f"MMN statement prepared successfully")
+    plpy.notice(f"About to execute MMN statement with parameter: {table_only_name}")
+    mmn_result = plpy.execute(mmn_stmt, [table_only_name])
+    plpy.notice(f"MMN statement executed successfully")
     if not mmn_result or len(mmn_result) == 0:
         plpy.error(f'Unable to resolve MMN for table {table_only_name}')
         raise ValueError(f'No MMN found for table {table_only_name}')
-    mmn = mmn_result[0]['mmn']
+    mmn = mmn_result[0]['mmn'].strip() if mmn_result[0]['mmn'] else None
     if mmn is None:
         plpy.error(f'MMN is NULL for table {table_only_name}')
         raise ValueError(f'MMN is NULL for table {table_only_name}')
 except Exception as e:
     plpy.error(f'Failed to get MMN: {e}')
+    plpy.error(f'Exception type: {type(e)}')
+    plpy.error(f'Exception args: {e.args}')
     raise
 
 
-# Log transaction with prepared statement
-try:
-    txn_stmt = plpy.prepare("INSERT INTO pzero.txns (id, c_by, c_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO NOTHING", ["bigint", "text"])
-    plpy.execute(txn_stmt, [txid, c_by])
-except Exception as e:
-    plpy.warning(f'Failed to log transaction: {e}')
-    # Continue processing even if transaction logging fails
-
-if new_row and new_row.get('is_del'):
+if new_row and new_row.get('is_del') == True:
     # If the is_del column is set to true, log a deletion
-    # get column no for is_del
-    is_del_col_no = plpy.execute(f"SELECT get_column_no('{table_name}', 'is_del', '{schema_name}') as cno")[0]['cno']
-    plpy.execute(
-        f"INSERT INTO '{schema_name}'.all_audits (txn_id, mmn, row_id, cno, cval, is_del) VALUES ($1, $2, $3, $4, $5, TRUE)",
-        [txid, mmn, old_row['id'], is_del_col_no, 'TRUE', True]
-    )
-    return  new_row
+    plpy.execute(f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, row_id, is_del) VALUES ({txid}, '{mmn}', '{old_row['id']}', TRUE)")
+    return new_row
 
 # Batch audit inserts for better performance
 audit_inserts = []
+
+col_no_stmt = plpy.prepare(f"SELECT get_column_no('{table_only_name}', $1, '{schema_name}') as cno", ["text"])
 for col_name in new_row:
     if col_name.lower() not in EXCLUDED_AUDIT_COLUMNS:
         try:
             # Get column number with caching
-            col_no_result = plpy.execute(f"SELECT get_column_no('{table_name}', '{col_name}', '{schema_name}') as cno")
+            col_no_result = plpy.execute(col_no_stmt, [ col_name])
             if not col_no_result or len(col_no_result) == 0:
                 plpy.warning(f'Column {col_name} not found in schema')
                 continue
@@ -351,7 +429,7 @@ for col_name in new_row:
             else:
                 continue  # Skip NULL values
             
-            audit_inserts.append((txid, mmn, id_val, col_no, col_value))
+            audit_inserts.append(( col_no, col_value))
             
         except Exception as e:
             plpy.warning(f'Failed to prepare audit for column {col_name}: {e}')
@@ -360,17 +438,22 @@ for col_name in new_row:
 # Execute batch insert with prepared statement
 if audit_inserts:
     try:
-        audit_stmt = plpy.prepare(
-            f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, rowid, cno, cval) VALUES ($1, $2, $3, $4, $5)",
-            ["bigint", "text", "text", "integer", "text"]
-        )
+        id_str = str(id_val)
+        audit_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, row_id, cno, cval) VALUES ({txid}, '{mmn}', '{id_str}', $1, $2)"
+        audit_stmt = plpy.prepare(audit_sql, ["integer", "text"])
         for audit_row in audit_inserts:
-            plpy.execute(audit_stmt, audit_row)
+            plpy.notice(f"About to insert audit row: {audit_row}")
+            plpy.execute(audit_stmt, [audit_row[0], audit_row[1]])
+        plpy.notice(f"Successfully inserted {len(audit_inserts)} audit records for row {id_str}")
     except Exception as e:
-        plpy.error(f'Failed to insert audit records: {e}')
-        raise
+        plpy.warning(f'Failed to insert audit records: {e}')
 
-return new_row
+
+plpy.notice(f"About to return new_row: {type(new_row)}")
+plpy.notice(f"New row keys: {list(new_row.keys()) if new_row else 'None'}")
+plpy.notice(f"new_row['id'] = {new_row.get('id', 'NOT_SET')}")
+plpy.notice(f"Returning MODIFY for BEFORE trigger with modifications")
+return "MODIFY"
 $$ language plpython3u;
 
 CREATE OR REPLACE FUNCTION pzero.relations_lookup_plpython (relation integer) returns jsonb AS $$
@@ -405,7 +488,7 @@ if relation in GD['relations_cache']:
 return json.dumps(None)
 $$ language plpython3u immutable strict;
 
-CREATE OR REPLACE FUNCTION pzero.check_relations_plpython () returns trigger AS $$
+CREATE OR REPLACE FUNCTION pzero.check_relations_plpython (schema_name text DEFAULT 'pzero') returns trigger AS $$
 import plpy
 
 # Constants
@@ -428,45 +511,39 @@ if not all([uuid1, uuid2, relation is not None]):
     plpy.error('Missing required fields: uuid1, uuid2, and relation are all required')
     raise ValueError('Missing required fields')
 
+mm1, _, uuid1  = new_row['uuid1'].partition('_')
+mm2 , _, uuid2  = new_row['uuid2'].partition('_')
+
+table_stmt = plpy.prepare("SELECT pzero.get_table_name($1) as table_name", ["text"])
+table1 = plpy.execute(table_stmt, [mm1])[0]['table_name']
+table2 = plpy.execute(table_stmt, [mm2])[0]['table_name']
+if not table1 or not table2:
+    raise Exception('Unable to resolve table names from MMNs')
+
+check_sql = f"""
+    SELECT 1 FROM {schema_name}.{table1} t1
+    JOIN {schema_name}.{table2} t2 ON t1.id = $1 AND t2.id = $2
+    LIMIT 1
+"""
+check_stmt = plpy.prepare(check_sql, ["text", "text"])
+check_exists = plpy.execute(check_stmt, [uuid1, uuid2])
+
+if not check_exists or len(check_exists) == 0:
+    plpy.error(f'One or both UUIDs do not exist: {uuid1}, {uuid2}')
+    raise ValueError('One or both UUIDs do not exist')
+if TD['event'] == 'UPDATE':
+    relation = new_row.get('relation')
+    select_sql = f"SELECT 1 FROM {schema_name}.relations WHERE uuid1 = $1 AND uuid2 = $2  LIMIT 1"
+    relation_exists = plpy.execute(select_sql, [uuid1, uuid2])
+    if not relation_exists or len(relation_exists) == 0:
+        plpy.error(f'Relation does not exist for UPDATE between {uuid1} and {uuid2}')
+        raise ValueError('Relation does not exist for UPDATE')
 # Validate relation value
 if not isinstance(relation, int) or relation < 1 or relation > MAX_RELATION_VALUE:
     plpy.error(f'Invalid relation type: {relation}. Must be between 1 and {MAX_RELATION_VALUE}')
     raise ValueError(f'Invalid relation type: {relation}')
 
-# Check for cyclic relationships with prepared statement
-try:
-    cycle_check = plpy.prepare(
-        "SELECT 1 FROM pzero.relations WHERE uuid2 = $1 AND uuid1 = $2 AND relation = $3 LIMIT 1",
-        ["text", "text", "integer"]
-    )
-    result = plpy.execute(cycle_check, [uuid1, uuid2, relation])
-    
-    if result and len(result) > 0:
-        plpy.error(f'Cyclic relationship detected between {uuid1} and {uuid2}')
-        raise ValueError('Cyclic relationship detected')
-except plpy.SPIError as e:
-    plpy.error(f'Database error checking for cycles: {e}')
-    raise
-
-if TD['event'] == 'UPDATE':
-    if old_row['uuid1'] != new_row['uuid1'] or old_row['uuid2'] != new_row['uuid2']:
-        raise Exception('Cannot modify uuid1 or uuid2')
-
-if TD['event'] == 'INSERT':
-    uuid1_parts = new_row['uuid1'].split('-')
-    uuid2_parts = new_row['uuid2'].split('-')
-    if len(uuid1_parts) != 2 or len(uuid2_parts) != 2:
-        raise Exception('Invalid UUID format for uuid1 or uuid2')
-    
-    mmn1 = uuid1_parts[0]
-    mmn2 = uuid2_parts[0]
-    table1 = plpy.execute(f"SELECT pzero.get_table_name('{mmn1}') as table_name")[0]['table_name']
-    table2 = plpy.execute(f"SELECT pzero.get_table_name('{mmn2}') as table_name")[0]['table_name']
-    
-    if not table1 or not table2:
-        raise Exception('Unable to resolve table names from MMNs')
-
-return 'OK'
+return new_row
 $$ language plpython3u;
 
 CREATE OR REPLACE FUNCTION pzero.migrate_org () returns trigger AS $$
@@ -483,8 +560,7 @@ if event not in ['INSERT', 'UPDATE']:
 
 # Tables to create in dedicated schema for non-multi-tenant orgs
 DEDICATED_TABLES = [
-    'all_endpoints', 'all_sessions', 'txns', 
-    'all_audits', 'all_threads', 'all_thread_heads'
+    'all_endpoints', 'all_sessions', 'all_threads', 'all_thread_heads'
 ]
 
 def sanitize_handle(handle):
@@ -500,9 +576,8 @@ def sanitize_handle(handle):
     return sanitized
 
 def create_schema_and_tables(schema_name):
-    """Create schema and required tables"""
     try:
-        # Create schema if it doesn't exist
+        # Create schema if it does not exist
         plpy.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"')
         plpy.notice(f'Created/verified schema "{schema_name}"')
         
@@ -581,7 +656,7 @@ elif event == 'UPDATE':
                     plpy.notice(f'Creating new schema "{new_schema}" (old schema "{old_schema}" remains)')
                     create_schema_and_tables(new_schema)
             else:
-                # Old schema doesn't exist, just create new one
+                # Old schema does not exist, just create new one
                 create_schema_and_tables(new_schema)
     
     # Case 2: Changed from multi-tenant to single-tenant
@@ -635,10 +710,11 @@ except plpy.SPIError as e:
     plpy.notice('Trigger trigger_check_relations already exists')
 
 # Tables to add audit triggers to
+# Note: txns and all_audits tables excluded to prevent infinite recursion during audit logging
 tables = [
     'pzero.all_devices', 'pzero.all_endpoints', 'pzero.all_sessions', 
     'pzero.all_orgs', 'pzero.all_auth', 'pzero.all_users',  
-    'pzero.all_thread_heads', 'pzero.all_threads', 'pzero.txns', 'pzero.all_audits'
+    'pzero.all_thread_heads', 'pzero.all_threads'
 ]
 
 # Create audit triggers
@@ -681,5 +757,6 @@ except plpy.SPIError as e:
 plpy.notice(f'Successfully created/verified {len(triggers_created)} triggers')
 $$ language plpython3u;
 
-SELECT
-  pzero.create_triggers_plpython ();
+-- Commented out to prevent automatic execution during migration
+-- Triggers should be created manually after verifying all functions exist
+SELECT pzero.create_triggers_plpython();

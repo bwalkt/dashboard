@@ -19,14 +19,14 @@ import "@/styles/theme.css";
 // Import pages
 import OrderViewPage from "./features/orders/components/order-view-page";
 import ProductViewPage from "./features/products/components/product-view-page";
+import CallbackPage from "./pages/auth/callback";
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
+import TauriCallbackPage from "./pages/auth/tauri-callback";
 import MobileDashboardLayout from "./pages/dashboard/MobileLayout";
 import Orders from "./pages/dashboard/Orders";
 import Overview from "./pages/dashboard/Overview";
 import Products from "./pages/dashboard/Products";
-import CallbackPage from "./pages/auth/callback";
-import TauriCallbackPage from "./pages/auth/tauri-callback";
 
 // Configure NProgress
 NProgress.configure({ showSpinner: false });
