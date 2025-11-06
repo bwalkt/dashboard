@@ -189,8 +189,17 @@ function main() {
                 let result = evaluate(grid, { expression: func.expression });
                 let evalTime = Date.now() - evalStart;
                 
-                // Regenerate if result is 0 or infinity
-                while (result === 0 || !isFinite(result)) {
+                // Check if result should trigger regeneration
+                const shouldRegenerate = (r: any) => {
+                    // Don't regenerate for "1 + 0i" or similar valid complex results
+                    if (typeof r === 'string' && r.includes('+ 0i')) {
+                        return false;
+                    }
+                    // Regenerate for 0 or infinity
+                    return r === 0 || (typeof r === 'number' && !isFinite(r));
+                };
+                
+                while (shouldRegenerate(result)) {
                     console.log(`  ⚠️  Result was ${result}, regenerating function...`);
                     func = genFunction(randomComplexity, options.size);
                     result = evaluate(grid, { expression: func.expression });

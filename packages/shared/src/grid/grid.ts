@@ -1,4 +1,5 @@
 import { evaluate as mathjsEvaluate, randomInt } from 'mathjs'
+import { Math1 } from '../math/math1.js'
 
 export function genGrid(size: number = 10) {
   const min = Math.ceil(Math.random() * 100) || 1
@@ -105,7 +106,22 @@ const MATH_FUNCTIONS: MathFunction[] = [
     { name: 're', params: 1, example: 're(complex)' },
     { name: 'im', params: 1, example: 'im(complex)' },
     { name: 'conj', params: 1, example: 'conj(complex)' },
-    { name: 'arg', params: 1, example: 'arg(complex)' }
+    { name: 'arg', params: 1, example: 'arg(complex)' },
+    
+    // Matrix operations (special handling required)
+    { name: 'matrix.sumRow', params: -1, example: 'matrix.sumRow(grid, index)' },
+    { name: 'matrix.avgCol', params: -1, example: 'matrix.avgCol(grid, index)' },
+    { name: 'matrix.medianRow', params: -1, example: 'matrix.medianRow(grid, index)' },
+    { name: 'matrix.stdDevCol', params: -1, example: 'matrix.stdDevCol(grid, index)' },
+    { name: 'matrix.randomFunc', params: -1, example: 'matrix.randomFunc(grid)' },
+    
+    // TS-Stats operations (special handling required)
+    { name: 'tsStats.average', params: -2, example: 'tsStats.average(numbers)' },
+    { name: 'tsStats.median', params: -2, example: 'tsStats.median(numbers)' },
+    { name: 'tsStats.mode', params: -2, example: 'tsStats.mode(numbers)' },
+    { name: 'tsStats.variance', params: -2, example: 'tsStats.variance(numbers)' },
+    { name: 'tsStats.correlation', params: -2, example: 'tsStats.correlation(arr1, arr2)' },
+    { name: 'tsStats.randomStatsFunc', params: -2, example: 'tsStats.randomStatsFunc(numbers)' }
 ];
 
 /**
@@ -192,11 +208,53 @@ export function genFunction(complexity: number = 1, size: number = 10) {
         
         // At deeper levels, prefer simpler functions to avoid over-complexity
         if (depth > 2) {
-            availableFunctions = MATH_FUNCTIONS.filter(f => f.params <= 2);
+            availableFunctions = MATH_FUNCTIONS.filter(f => f.params >= 0 && f.params <= 2);
         }
         
         const mathFunc = availableFunctions[Math.floor(Math.random() * availableFunctions.length)];
         usedFunctions.push(mathFunc.name);
+        
+        // Handle special function types
+        if (mathFunc.params < 0) {
+            // Matrix operations (params = -1)
+            if (mathFunc.params === -1) {
+                const rowOrCol = Math.floor(Math.random() * size);
+                // Matrix operations work on the entire grid, so we need to track grid usage
+                // Add a representative cell to indicate grid usage
+                usedCells.push({ row: rowOrCol, col: 0 });
+                if (mathFunc.name === 'matrix.randomFunc') {
+                    return `${mathFunc.name}(grid)`;
+                }
+                return `${mathFunc.name}(grid, ${rowOrCol})`;
+            }
+            // TS-Stats operations (params = -2)
+            else if (mathFunc.params === -2) {
+                // Generate array of cell references
+                const numCells = 3 + Math.floor(Math.random() * 5); // 3-7 cells
+                const cells = [];
+                for (let j = 0; j < numCells; j++) {
+                    const cell = {
+                        row: Math.floor(Math.random() * size),
+                        col: Math.floor(Math.random() * size)
+                    };
+                    usedCells.push(cell);
+                    cells.push(`grid[${cell.row}][${cell.col}]`);
+                }
+                if (mathFunc.name === 'tsStats.correlation') {
+                    const cells2 = [];
+                    for (let j = 0; j < numCells; j++) {
+                        const cell = {
+                            row: Math.floor(Math.random() * size),
+                            col: Math.floor(Math.random() * size)
+                        };
+                        usedCells.push(cell);
+                        cells2.push(`grid[${cell.row}][${cell.col}]`);
+                    }
+                    return `${mathFunc.name}([${cells.join(', ')}], [${cells2.join(', ')}])`;
+                }
+                return `${mathFunc.name}([${cells.join(', ')}])`;
+            }
+        }
         
         const params: string[] = [];
         
@@ -282,6 +340,16 @@ export function genFunction(complexity: number = 1, size: number = 10) {
 
 export function evaluate(grid: number[][], func: { expression: string }): number | string {
     try {
+        // Handle matrix operations
+        if (func.expression.includes('matrix.')) {
+            return handleMatrixOperations(grid, func.expression)
+        }
+        
+        // Handle ts-stats operations
+        if (func.expression.includes('tsStats.')) {
+            return handleTsStatsOperations(grid, func.expression)
+        }
+        
         // Handle special expressions first
         if (func.expression.includes('inch to cm')) {
             return handleUnitConversion(grid, func.expression)
@@ -436,5 +504,121 @@ function handleComplexSqrt(grid: number[][], expression: string): string | numbe
     } catch (error) {
         return 0;
     }
+}
+
+function handleMatrixOperations(grid: number[][], expression: string): number | string {
+    try {
+        const math1 = new Math1();
+        
+        // Extract function name and parameters
+        if (expression.includes('matrix.randomFunc(grid)')) {
+            const result = math1.randomFunc(grid);
+            return typeof result.result === 'function' ? result.result().value || 0 : 0;
+        }
+        
+        // Extract row/col index from expressions like matrix.sumRow(grid, 3)
+        const indexMatch = expression.match(/matrix\.(\w+)\(grid,\s*(\d+)\)/);
+        if (indexMatch) {
+            const operation = indexMatch[1];
+            const index = parseInt(indexMatch[2]);
+            
+            switch (operation) {
+                case 'sumRow':
+                    return (math1 as any).sumRow(grid, index);
+                case 'sumCol':
+                    return (math1 as any).sumCol(grid, index);
+                case 'avgRow':
+                    return (math1 as any).avgRow(grid, index);
+                case 'avgCol':
+                    return (math1 as any).avgCol(grid, index);
+                case 'medianRow':
+                    return (math1 as any).medianRow(grid, index);
+                case 'medianCol':
+                    return (math1 as any).medianCol(grid, index);
+                case 'stdDevRow':
+                    return (math1 as any).stdDevRow(grid, index);
+                case 'stdDevCol':
+                    return (math1 as any).stdDevCol(grid, index);
+                default:
+                    return 0;
+            }
+        }
+        
+        return 0;
+    } catch (error) {
+        return 0;
+    }
+}
+
+function handleTsStatsOperations(grid: number[][], expression: string): number | string {
+    try {
+        const math1 = new Math1();
+        
+        // Handle randomStatsFunc
+        if (expression.includes('tsStats.randomStatsFunc')) {
+            const arrayMatch = expression.match(/tsStats\.randomStatsFunc\(\[([^\]]+)\]\)/);
+            if (arrayMatch) {
+                const values = extractGridValues(grid, arrayMatch[1]);
+                const result = math1.randomStatsFunc(values);
+                return typeof result.result === 'function' ? result.result().value || 0 : 0;
+            }
+        }
+        
+        // Handle correlation
+        if (expression.includes('tsStats.correlation')) {
+            const corrMatch = expression.match(/tsStats\.correlation\(\[([^\]]+)\],\s*\[([^\]]+)\]\)/);
+            if (corrMatch) {
+                const values1 = extractGridValues(grid, corrMatch[1]);
+                const values2 = extractGridValues(grid, corrMatch[2]);
+                const result = math1.statsCorrelation(values1, values2);
+                return typeof result === 'number' ? result : 0;
+            }
+        }
+        
+        // Handle other stats functions
+        const statsMatch = expression.match(/tsStats\.(\w+)\(\[([^\]]+)\]\)/);
+        if (statsMatch) {
+            const operation = statsMatch[1];
+            const values = extractGridValues(grid, statsMatch[2]);
+            
+            switch (operation) {
+                case 'average':
+                    return math1.statsAverage(values);
+                case 'median':
+                    return math1.statsMedian(values);
+                case 'mode':
+                    const mode = math1.statsMode(values);
+                    return Array.isArray(mode) && mode.length > 0 ? mode[0] : 0;
+                case 'variance':
+                    return math1.statsVariance(values);
+                default:
+                    return 0;
+            }
+        }
+        
+        return 0;
+    } catch (error) {
+        return 0;
+    }
+}
+
+function extractGridValues(grid: number[][], cellString: string): number[] {
+    const values: number[] = [];
+    const cellRefs = cellString.match(/grid\[(\d+)\]\[(\d+)\]/g);
+    
+    if (cellRefs) {
+        for (const cellRef of cellRefs) {
+            const match = cellRef.match(/grid\[(\d+)\]\[(\d+)\]/);
+            if (match) {
+                const row = parseInt(match[1]);
+                const col = parseInt(match[2]);
+                if (row < grid.length && col < grid[row].length) {
+                    values.push(grid[row][col]);
+                }
+            }
+        }
+    }
+    
+    return values;
 }
 
