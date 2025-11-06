@@ -274,7 +274,7 @@ else:  # INSERT
     if not id_val:
         retry_count = 0
         insert_ok = False
-        
+
         plpy.notice(f'Debug: "auth" in table_only_name = {("auth" in table_only_name)} for table={table_only_name}, id_val={id_val}')
         while not insert_ok and retry_count < MAX_RETRY_ATTEMPTS:
             try:
@@ -393,6 +393,7 @@ except Exception as e:
 if new_row and new_row.get('is_del'):
     # If the is_del column is set to true, log a deletion
     # get column no for is_del
+    col_no_stmt = plpy.prepare("SELECT get_column_no($1, $2, $3) as cno", ["text", "text", "text"])
     is_del_col_no = plpy.execute(f"SELECT get_column_no('{table_only_name}', 'is_del', '{schema_name}') as cno")[0]['cno']
     is_del_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, rowid, cno, cval, is_del) VALUES ($1, $2, $3::pzero.id, $4, $5, TRUE)"
     is_del_audit_stmt = plpy.prepare(is_del_sql, ["bigint", "text", "text", "integer", "text"])
@@ -401,12 +402,13 @@ if new_row and new_row.get('is_del'):
 
 # Batch audit inserts for better performance
 audit_inserts = []
+
+col_no_stmt = plpy.prepare(f"SELECT get_column_no({table_only_name}, $1, {schema_name}) as cno", [ "text", ])
 for col_name in new_row:
     if col_name.lower() not in EXCLUDED_AUDIT_COLUMNS:
         try:
             # Get column number with caching
-
-            col_no_result = plpy.execute(f"SELECT get_column_no('{table_only_name}', '{col_name}', '{schema_name}') as cno")
+            col_no_result = plpy.execute(col_no_stmt, [ col_name])
             if not col_no_result or len(col_no_result) == 0:
                 plpy.warning(f'Column {col_name} not found in schema')
                 continue

@@ -382,7 +382,7 @@ CREATE TABLE pzero.all_audits (
   txn_id bigint NOT NULL REFERENCES pzero.txns (id) ON DELETE CASCADE,
   mmn pzero.mmn_type NOT NULL,
   row_id text, -- if null then it should be table alter
-  cno smallint NOT NULL,
+  cno smallint, -- if null and is_del = true, only valid
   cval text,
   is_del boolean DEFAULT FALSE,
   data pzero.data,
