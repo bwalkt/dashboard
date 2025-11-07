@@ -1,4 +1,3 @@
-import { avg, corelation, extrema, harmonicMean, median, mode, percentile, range, stdDev, variance } from 'ts-stats'
 import { Ripple } from '../utils/ripple.js'
 import { Utils } from '../utils/utils.js'
 import { LinearAlgebra } from './linearAlgebra.js'
@@ -1396,7 +1395,7 @@ export class Math1 {
   statsAverage(numbers: number[]): number | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = avg(numbers)
+      const result = this._stats.mean(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -1406,7 +1405,7 @@ export class Math1 {
   statsMedian(numbers: number[]): number | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = median(numbers)
+      const result = this._stats.median(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -1416,19 +1415,12 @@ export class Math1 {
   statsMode(numbers: number[]): number[] | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = mode(numbers)
+      const result = this._stats.mode(numbers)
       if (Array.isArray(result)) {
-        return result.filter((item): item is number => typeof item === 'number')
-      } else if (typeof result === 'number') {
-        return [result]
-      } else if (typeof result === 'string' && result.includes('No mode found')) {
-        // ts-stats returns an error string when no mode is found
-        return []
+        return result // Return empty array if no mode, or array with modes
       }
       return 'calculation error'
     } catch (error) {
-      // ts-stats mode throws an error when no mode is found
-      // Return an empty array to indicate no mode
       return []
     }
   }
@@ -1436,7 +1428,7 @@ export class Math1 {
   statsStandardDeviation(numbers: number[]): number | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = stdDev(numbers)
+      const result = this._stats.stdDev(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -1446,7 +1438,7 @@ export class Math1 {
   statsVariance(numbers: number[]): number | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = variance(numbers)
+      const result = this._stats.variance(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -1457,7 +1449,7 @@ export class Math1 {
     if (numbers.length === 0) return 'empty array'
     if (numbers.some(n => n <= 0)) return 'invalid input (non-positive values)'
     try {
-      const result = harmonicMean(numbers)
+      const result = this._stats.harmonicMean(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -1467,7 +1459,7 @@ export class Math1 {
   statsRange(numbers: number[]): number | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = range(numbers)
+      const result = this._stats.range(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -1477,16 +1469,11 @@ export class Math1 {
   statsExtrema(numbers: number[]): { min: number; max: number } | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = extrema(numbers)
-      // ts-stats extrema returns an array [min, max]
-      if (Array.isArray(result) && result.length >= 2 && 
-          typeof result[0] === 'number' && typeof result[1] === 'number') {
-        return {
-          min: this.roundResult(result[0]),
-          max: this.roundResult(result[1])
-        }
+      const result = this._stats.extrema(numbers)
+      return {
+        min: this.roundResult(result.min),
+        max: this.roundResult(result.max)
       }
-      return 'calculation error'
     } catch (error) {
       return 'calculation error'
     }
@@ -1496,7 +1483,7 @@ export class Math1 {
     if (numbers.length === 0) return 'empty array'
     if (p < 0 || p > 100) return 'percentile must be between 0 and 100'
     try {
-      const result = percentile(numbers, p)
+      const result = this._stats.percentile(numbers, p)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -1507,7 +1494,7 @@ export class Math1 {
     if (arr1.length === 0 || arr2.length === 0) return 'empty array'
     if (arr1.length !== arr2.length) return 'arrays must have same length'
     try {
-      const result = corelation(arr1, arr2)
+      const result = this._stats.correlation(arr1, arr2)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'

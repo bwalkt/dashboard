@@ -54,7 +54,7 @@ CREATE DOMAIN pzero.valid_org_handle AS varchar(10) NOT NULL CHECK (value ~* '^[
 
 CREATE DOMAIN pzero.valid_col_name AS varchar(100) NOT NULL CHECK (value ~* '^[A-Za-z0-9_]+$');
 
-CREATE domain pzero.domain AS text CHECK (
+CREATE DOMAIN pzero.domain AS text CHECK (
   value ~ '^(https?://)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
 );
 

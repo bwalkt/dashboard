@@ -1,4 +1,3 @@
-import { avg, corelation, extrema, harmonicMean, median, mode, percentile, range, stdDev, variance } from 'ts-stats'
 
 export class StatisticalFunctions {
   private roundResult(value: number, decimals: number = 3): number {
@@ -12,32 +11,59 @@ export class StatisticalFunctions {
 
   median(data: number[]): number {
     if (data.length === 0) return 0
-    const medianValue = median(data)
-    return this.roundResult(typeof medianValue === 'number' ? medianValue : 0)
+    const sorted = [...data].sort((a, b) => a - b)
+    const middle = Math.floor(sorted.length / 2)
+    
+    if (sorted.length % 2 === 0) {
+      return this.roundResult((sorted[middle - 1] + sorted[middle]) / 2)
+    } else {
+      return this.roundResult(sorted[middle])
+    }
   }
 
   mode(data: number[]): number[] {
     if (data.length === 0) return []
-    const modeValue = mode(data)
-    return Array.isArray(modeValue) ? modeValue : []
+    
+    const frequency: { [key: number]: number } = {}
+    let maxFreq = 0
+    
+    for (const val of data) {
+      frequency[val] = (frequency[val] || 0) + 1
+      maxFreq = Math.max(maxFreq, frequency[val])
+    }
+    
+    if (maxFreq === 1) return [] // No mode if all values appear once
+    
+    const modes: number[] = []
+    for (const [val, freq] of Object.entries(frequency)) {
+      if (freq === maxFreq) {
+        modes.push(Number(val))
+      }
+    }
+    
+    return modes.sort((a, b) => a - b)
   }
 
   variance(data: number[]): number {
     if (data.length === 0) return 0
-    const varianceValue = variance(data)
-    return this.roundResult(typeof varianceValue === 'number' ? varianceValue : 0)
+    const mean = this.mean(data)
+    const sumSquaredDiffs = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0)
+    return this.roundResult(sumSquaredDiffs / data.length)
   }
 
   stdDev(data: number[]): number {
     if (data.length === 0) return 0
-    const stdDevValue = stdDev(data)
-    return this.roundResult(typeof stdDevValue === 'number' ? stdDevValue : 0)
+    return this.roundResult(Math.sqrt(this.variance(data)))
   }
 
   harmonicMean(data: number[]): number {
     if (data.length === 0) return 0
-    const hmValue = harmonicMean(data)
-    return this.roundResult(typeof hmValue === 'number' && hmValue !== null ? hmValue : 0)
+    
+    // Check for zero or negative values
+    if (data.some(val => val <= 0)) return 0
+    
+    const reciprocalSum = data.reduce((sum, val) => sum + (1 / val), 0)
+    return this.roundResult(data.length / reciprocalSum)
   }
 
   geometricMean(data: number[]): number {
@@ -48,14 +74,26 @@ export class StatisticalFunctions {
 
   range(data: number[]): number {
     if (data.length === 0) return 0
-    const rangeValue = range(data)
-    return this.roundResult(typeof rangeValue === 'number' ? rangeValue : 0)
+    const { min, max } = this.extrema(data)
+    return this.roundResult(max - min)
   }
 
   percentile(data: number[], p: number): number {
     if (data.length === 0) return 0
-    const percentileValue = percentile(data, p)
-    return this.roundResult(typeof percentileValue === 'number' ? percentileValue : 0)
+    if (p < 0 || p > 100) return 0
+    
+    const sorted = [...data].sort((a, b) => a - b)
+    const index = (p / 100) * (sorted.length - 1)
+    
+    if (Number.isInteger(index)) {
+      return this.roundResult(sorted[index])
+    } else {
+      const lower = Math.floor(index)
+      const upper = Math.ceil(index)
+      const weight = index - lower
+      
+      return this.roundResult(sorted[lower] * (1 - weight) + sorted[upper] * weight)
+    }
   }
 
   covariance(x: number[], y: number[]): number {
@@ -74,8 +112,26 @@ export class StatisticalFunctions {
 
   correlation(x: number[], y: number[]): number {
     if (x.length !== y.length || x.length === 0) return 0
-    const correlationValue = corelation(x, y)
-    return this.roundResult(typeof correlationValue === 'number' ? correlationValue : 0)
+    
+    const meanX = this.mean(x)
+    const meanY = this.mean(y)
+    
+    let numerator = 0
+    let sumXSquared = 0
+    let sumYSquared = 0
+    
+    for (let i = 0; i < x.length; i++) {
+      const diffX = x[i] - meanX
+      const diffY = y[i] - meanY
+      numerator += diffX * diffY
+      sumXSquared += diffX * diffX
+      sumYSquared += diffY * diffY
+    }
+    
+    const denominator = Math.sqrt(sumXSquared * sumYSquared)
+    if (denominator === 0) return 0
+    
+    return this.roundResult(numerator / denominator)
   }
 
   skewness(data: number[]): number {
@@ -177,6 +233,25 @@ export class StatisticalFunctions {
     return {
       lower: this.roundResult(mean - margin),
       upper: this.roundResult(mean + margin)
+    }
+  }
+
+  extrema(data: number[]): { min: number, max: number } {
+    if (data.length === 0) {
+      return { min: 0, max: 0 }
+    }
+    
+    let min = data[0]
+    let max = data[0]
+    
+    for (const val of data) {
+      if (val < min) min = val
+      if (val > max) max = val
+    }
+    
+    return {
+      min: this.roundResult(min),
+      max: this.roundResult(max)
     }
   }
 
