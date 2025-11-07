@@ -211,13 +211,29 @@ async function refreshToken(): Promise<void> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        throw new ApiError("Refresh token not found", 401, "Refresh token not found");
+      }
       const response = await fetch(`${getBackendUrl()}/auth/refresh`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${refreshToken}`,
+        },
         credentials: "include",
       });
 
       if (!response.ok) {
         throw new ApiError("Token refresh failed", response.status, response.statusText, response);
+      }
+
+      // Parse response and store tokens in localStorage
+      const responseData = await response.json();
+      if (responseData.refreshToken) {
+        localStorage.setItem("refreshToken", responseData.refreshToken);
+      }
+      if (responseData.accessToken) {
+        localStorage.setItem("accessToken", responseData.accessToken);
       }
     } catch (error) {
       throw error;
@@ -282,13 +298,22 @@ async function refreshTokenWithProxy(): Promise<void> {
  * @returns Promise resolving to the response data
  */
 export async function apiRequestWithoutProxy<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options;
+  const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, skipAuth = false, ...fetchOptions } = options;
 
   // Construct the full URL
   const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
   // Prepare headers as a plain object for serialization
-  const headersObj = headersToObject(headers);
+  let headersObj = headersToObject(headers);
+
+  // Add authorization header if token exists and auth is not skipped
+  const accessToken = localStorage.getItem("accessToken");
+  if (accessToken && !skipAuth) {
+    headersObj = {
+      ...headersObj,
+      Authorization: `Bearer ${accessToken}`,
+    };
+  }
 
   // Handle body serialization
   const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, false);
@@ -313,6 +338,18 @@ export async function apiRequestWithoutProxy<T = any>(endpoint: string, options:
       if (response.status === 401 && !skipRefresh && !url.includes("/auth/refresh")) {
         try {
           await refreshToken();
+          // Update authorization header with fresh token
+          const freshAccessToken = localStorage.getItem("accessToken");
+          if (freshAccessToken && !skipAuth) {
+            const updatedHeaders = {
+              ...headersObj,
+              Authorization: `Bearer ${freshAccessToken}`,
+            };
+            requestConfig.headers = {
+              ...defaultHeaders,
+              ...updatedHeaders,
+            };
+          }
           // Retry the original request after successful refresh
           const retryResponse = await fetch(url, requestConfig);
 
