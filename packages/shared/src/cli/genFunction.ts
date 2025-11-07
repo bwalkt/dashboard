@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { genFunction, genGrid, evaluate } from '../grid/grid.js';
+import { evaluate, genFunction, genGrid } from '../grid/grid.js';
 
 const MIN_COMPLEXITY = 1;
 const MAX_COMPLEXITY = 4;

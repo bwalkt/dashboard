@@ -1,4 +1,4 @@
-import type { Location } from './location'
+import type { Location } from './location.js'
 export type NetworkLog = {
   id?: string
   url?: string

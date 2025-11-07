@@ -1,5 +1,5 @@
-import { uuid } from '../uuid'
-import type { IPAddress, Location } from './location'
+import { uuid } from '../uuid.js'
+import type { IPAddress, Location } from './location.js'
 export const actorStatuses = {
   active: 'active',
   inactive: 'inactive',

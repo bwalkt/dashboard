@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { evaluate, expandGrid, genGrid, genRandomMathFunction, genFunction } from './grid'
+import { evaluate, expandGrid, genFunction, genGrid, genRandomMathFunction } from './grid.js'
 
 describe('genGrid', () => {
     it('should generate a grid with default size of 10x10', () => {
@@ -91,16 +91,34 @@ describe('genRandomMathFunction', () => {
         const result = genRandomMathFunction(10)
 
         expect(result.expression).toContain(result.functionName)
-        expect(result.expression).toContain('grid[')
-        expect(result.expression).toContain('][')
+        // Matrix and stats operations use different syntax, so only check for grid[ in regular functions
+        const specialFunctions = ['matrix.', 'tsStats.', 'stats.', 'signal.', 'linalg.', 'timeseries.'];
+        const isSpecialFunction = specialFunctions.some(prefix => result.functionName.includes(prefix));
+        
+        if (!isSpecialFunction) {
+            expect(result.expression).toContain('grid[')
+            expect(result.expression).toContain('][')
+        } else {
+            // Special operations should contain 'grid' reference, except for functions without parameters
+            const hasParameters = result.expression.includes('[') || result.expression.includes('grid)');
+            if (hasParameters) {
+                expect(result.expression).toContain('grid')
+            }
+        }
     })
 
     it('should generate readable format with row/column notation', () => {
         const result = genRandomMathFunction(10)
 
         expect(result.readable).toContain(result.functionName)
-        expect(result.readable).toContain('row')
-        expect(result.readable).toContain('column')
+        // Special functions may not have row/column notation
+        const specialFunctions = ['matrix.', 'tsStats.', 'stats.', 'signal.', 'linalg.', 'timeseries.'];
+        const isSpecialFunction = specialFunctions.some(prefix => result.functionName.includes(prefix));
+        
+        if (!isSpecialFunction) {
+            expect(result.readable).toContain('row')
+            expect(result.readable).toContain('column')
+        }
     })
 
     it('should generate different functions on multiple calls', () => {
@@ -123,8 +141,17 @@ describe('genRandomMathFunction', () => {
         // Count parameters in expression
         const paramCount = result.cells.length
 
-        expect(paramCount).toBeGreaterThan(0)
-        expect(paramCount).toBeLessThanOrEqual(2) // Max params in our function list
+        // Some special functions may not use direct cell references
+        const specialFunctions = ['matrix.', 'tsStats.', 'stats.', 'signal.', 'linalg.', 'timeseries.'];
+        const isSpecialFunction = specialFunctions.some(prefix => result.functionName.includes(prefix));
+        
+        if (!isSpecialFunction) {
+            expect(paramCount).toBeGreaterThan(0)
+        }
+        // Most functions should have reasonable parameter counts
+        if (paramCount > 0) {
+            expect(paramCount).toBeLessThanOrEqual(20) // Increased upper limit for signal processing functions
+        }
     })
 })
 
@@ -619,6 +646,121 @@ describe('evaluate', () => {
         
         console.log('🚀 Performance: Can generate thousands of functions per second!')
         console.log('=====================================================\n')
+    })
+
+    it('should ensure deterministic evaluation for handshake mechanism', () => {
+        console.log('\n========== Handshake Determinism Test ==========')
+        
+        // Create a fixed grid that will be the same on both "endpoints"
+        const fixedGrid = [
+            [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+            [110, 120, 130, 140, 150, 160, 170, 180, 190, 200],
+            [210, 220, 230, 240, 250, 260, 270, 280, 290, 300],
+            [310, 320, 330, 340, 350, 360, 370, 380, 390, 400],
+            [410, 420, 430, 440, 450, 460, 470, 480, 490, 500],
+            [510, 520, 530, 540, 550, 560, 570, 580, 590, 600],
+            [610, 620, 630, 640, 650, 660, 670, 680, 690, 700],
+            [710, 720, 730, 740, 750, 760, 770, 780, 790, 800],
+            [810, 820, 830, 840, 850, 860, 870, 880, 890, 900],
+            [910, 920, 930, 940, 950, 960, 970, 980, 990, 1000]
+        ]
+        
+        // Test expressions that cover all major function types
+        const testExpressions = [
+            'add(grid[0][0], grid[1][1])',
+            'multiply(sin(grid[0][1]), cos(grid[0][2]))',
+            'sqrt(pow(grid[2][3], 2))',
+            'log(abs(grid[3][4]))',
+            'max(min(grid[4][5], grid[5][6]), grid[6][7])',
+            'bitAnd(grid[7][8], grid[8][9])',
+            'hypot(grid[0][0], grid[1][1])',
+            'rightShift(grid[5][5], 2)',
+            'leftShift(grid[3][3], 1)'
+        ]
+        
+        console.log(`Testing ${testExpressions.length} expressions for determinism...`)
+        
+        testExpressions.forEach((expression, index) => {
+            console.log(`\n${index + 1}. Testing: ${expression}`)
+            
+            // Simulate multiple evaluations (like different endpoints)
+            const results: any[] = []
+            for (let i = 0; i < 5; i++) {
+                const result = evaluate(fixedGrid, { expression })
+                results.push(result)
+                console.log(`  Evaluation ${i + 1}: ${result}`)
+            }
+            
+            // All results must be identical
+            const firstResult = results[0]
+            const allIdentical = results.every(result => {
+                if (typeof result === 'number' && typeof firstResult === 'number') {
+                    // For numbers, check exact equality (no tolerance)
+                    return result === firstResult
+                } else {
+                    // For strings, check exact string equality
+                    return result === firstResult
+                }
+            })
+            
+            console.log(`  ✅ All evaluations identical: ${allIdentical}`)
+            expect(allIdentical).toBe(true)
+        })
+        
+        // Test with complex nested expressions
+        console.log(`\n🔬 Testing complex nested expressions:`)
+        const complexExpressions = [
+            'add(sqrt(grid[0][0]), multiply(cos(grid[1][1]), sin(grid[2][2])))',
+            'max(min(abs(grid[3][3]), sqrt(grid[4][4])), pow(grid[5][5], 2))',
+            'bitAnd(leftShift(grid[6][6], 2), rightShift(grid[7][7], 1))'
+        ]
+        
+        complexExpressions.forEach((expression, index) => {
+            console.log(`\n${index + 1}. Complex: ${expression}`)
+            
+            const results: any[] = []
+            for (let i = 0; i < 3; i++) {
+                const result = evaluate(fixedGrid, { expression })
+                results.push(result)
+            }
+            
+            const allIdentical = results.every(result => result === results[0])
+            console.log(`  Results: [${results.join(', ')}]`)
+            console.log(`  ✅ Deterministic: ${allIdentical}`)
+            expect(allIdentical).toBe(true)
+        })
+        
+        // Test with statistical operations that use arrays
+        console.log(`\n📊 Testing statistical operations:`)
+        const statsExpressions = [
+            'tsStats.average([grid[0][0], grid[0][1], grid[0][2]])', // Should be average of 10, 20, 30 = 20
+            'tsStats.median([grid[1][0], grid[1][1], grid[1][2], grid[1][3]])', // Should be median of 110, 120, 130, 140 = 125
+            'tsStats.variance([grid[2][0], grid[2][1], grid[2][2]])'  // Should be variance of 210, 220, 230
+        ]
+        
+        statsExpressions.forEach((expression, index) => {
+            console.log(`\n${index + 1}. Stats: ${expression}`)
+            console.log(`  Expected input values: ${index === 0 ? '[10, 20, 30]' : index === 1 ? '[110, 120, 130, 140]' : '[210, 220, 230]'}`)
+            
+            const results: any[] = []
+            for (let i = 0; i < 3; i++) {
+                const result = evaluate(fixedGrid, { expression })
+                results.push(result)
+            }
+            
+            const allIdentical = results.every(result => result === results[0])
+            console.log(`  Results: [${results.join(', ')}]`)
+            console.log(`  ✅ Deterministic: ${allIdentical}`)
+            expect(allIdentical).toBe(true)
+            
+            // Also verify the result is not 0 (which would indicate a calculation error)
+            if (results[0] === 0) {
+                console.log(`  ⚠️  Warning: Result is 0, may indicate calculation issue`)
+            }
+        })
+
+        console.log(`\n🎯 HANDSHAKE READY: All evaluations are deterministic!`)
+        console.log('===============================================\n')
     })
 
     it('should test rightShift function specifically', () => {

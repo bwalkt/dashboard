@@ -1,1 +1,6 @@
+export * from './linearAlgebra'
 export * from './math1'
+export * from './matrixOperations'
+export * from './signalProcessing'
+export * from './statisticalFunctions'
+export * from './timeSeries'
