@@ -7,8 +7,8 @@ services:
     # Or set GOLANG_PROXY_IMAGE to override the full image path
     image: ${GOLANG_PROXY_IMAGE:-ghcr.io/${GITHUB_OWNER}/golang-proxy:latest}
     container_name: golang-proxy
-    ports:
-      - "8282:8080"
+    # ports:
+    #   - "8282:8080"
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - DEBUG=${DEBUG:-false}
