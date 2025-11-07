@@ -924,12 +924,14 @@ export class Math1 {
 
   vectorLength(vector: number[]): number {
     const sumOfSquares = vector.reduce((sum, val) => sum + val * val, 0)
-    return this.roundResult(Math.sqrt(sumOfSquares))
+    return Math.sqrt(sumOfSquares)
   }
 
   vectorNormalize(vector: number[]): number[] {
-    const length = this.vectorLength(vector)
-    if (length === 0) return vector
+    const length = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0))
+    if (length <= Number.EPSILON) {
+      return vector.map(() => 0)
+    }
     return vector.map(val => this.roundResult(val / length))
   }
 
@@ -1075,7 +1077,8 @@ export class Math1 {
     // Scott's rule for bandwidth if not provided
     const stdDev = this.statsStandardDeviation(data)
     const numStdDev = typeof stdDev === 'number' ? stdDev : 1
-    const h = bandwidth || (1.06 * numStdDev * Math.pow(n, -0.2))
+    const rawBandwidth = bandwidth ?? (1.06 * numStdDev * Math.pow(n, -0.2))
+    const h = rawBandwidth > Number.EPSILON ? rawBandwidth : 1e-6
     
     // Gaussian kernel
     const gaussianKernel = (u: number) => {
