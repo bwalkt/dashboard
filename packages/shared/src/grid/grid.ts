@@ -819,24 +819,106 @@ function handleTsStatsOperations(grid: number[][], expression: string): number |
     }
 }
 
-function extractGridValues(grid: number[][], cellString: string): number[] {
-    const values: number[] = [];
-    const cellRefs = cellString.match(/grid\[(\d+)\]\[(\d+)\]/g);
+function extractFunctionParameters(expression: string, functionPrefix: string): { functionName: string; parameters: string } | null {
+    const regex = new RegExp(`${functionPrefix.replace('.', '\\.')}\\.(\\w+)\\(`, 'g');
+    const match = regex.exec(expression);
     
-    if (cellRefs) {
-        for (const cellRef of cellRefs) {
-            const match = cellRef.match(/grid\[(\d+)\]\[(\d+)\]/);
-            if (match) {
-                const row = parseInt(match[1]);
-                const col = parseInt(match[2]);
-                if (row < grid.length && col < grid[row].length) {
-                    values.push(grid[row][col]);
-                }
+    if (!match) return null;
+    
+    const functionName = match[1];
+    const startIndex = match.index + match[0].length;
+    let parenCount = 1;
+    let currentIndex = startIndex;
+    
+    while (currentIndex < expression.length && parenCount > 0) {
+        const char = expression[currentIndex];
+        if (char === '(') {
+            parenCount++;
+        } else if (char === ')') {
+            parenCount--;
+        }
+        currentIndex++;
+    }
+    
+    if (parenCount === 0) {
+        const parameters = expression.substring(startIndex, currentIndex - 1);
+        return { functionName, parameters };
+    }
+    
+    return null;
+}
+
+function evaluateNestedExpression(grid: number[][], expression: string): number {
+    try {
+        const result = evaluate(grid, { expression });
+        return typeof result === 'number' ? result : 0;
+    } catch {
+        return 0;
+    }
+}
+
+function extractGridValues(grid: number[][], paramString: string): number[] {
+    const values: number[] = [];
+    
+    // Remove array brackets if present
+    const cleanParams = paramString.replace(/^\[|\]$/g, '');
+    
+    // Split by commas, but be careful about commas inside nested function calls
+    const params = splitParameterString(cleanParams);
+    
+    for (const param of params) {
+        const trimmedParam = param.trim();
+        
+        // Check if it's a direct grid reference
+        const gridMatch = trimmedParam.match(/^grid\[(\d+)\]\[(\d+)\]$/);
+        if (gridMatch) {
+            const row = parseInt(gridMatch[1]);
+            const col = parseInt(gridMatch[2]);
+            if (row < grid.length && col < grid[row].length) {
+                values.push(grid[row][col]);
             }
+        }
+        // Check if it's a nested function call that needs evaluation
+        else if (trimmedParam.includes('(') && trimmedParam.includes(')')) {
+            const nestedResult = evaluateNestedExpression(grid, trimmedParam);
+            values.push(nestedResult);
         }
     }
     
     return values;
+}
+
+function splitParameterString(paramString: string): string[] {
+    const params: string[] = [];
+    let currentParam = '';
+    let parenLevel = 0;
+    let bracketLevel = 0;
+    
+    for (let i = 0; i < paramString.length; i++) {
+        const char = paramString[i];
+        
+        if (char === '(') {
+            parenLevel++;
+        } else if (char === ')') {
+            parenLevel--;
+        } else if (char === '[') {
+            bracketLevel++;
+        } else if (char === ']') {
+            bracketLevel--;
+        } else if (char === ',' && parenLevel === 0 && bracketLevel === 0) {
+            params.push(currentParam.trim());
+            currentParam = '';
+            continue;
+        }
+        
+        currentParam += char;
+    }
+    
+    if (currentParam.trim()) {
+        params.push(currentParam.trim());
+    }
+    
+    return params;
 }
 
 // Create a shared Math1 instance to ensure the modules are marked as used
@@ -845,12 +927,12 @@ const sharedMath1 = new Math1();
 function handleStatsOperations(grid: number[][], expression: string): number | string {
     try {
         
-        // Extract function name and parameters
-        const match = expression.match(/stats\.(\w+)\(([^)]+)\)/);
-        if (!match) return 0;
+        // Extract function name and parameters using balanced parenthesis parser
+        const parsed = extractFunctionParameters(expression, 'stats');
+        if (!parsed) return 0;
         
-        const operation = match[1];
-        const params = match[2];
+        const operation = parsed.functionName;
+        const params = parsed.parameters;
         
         if (params.includes('[') && params.includes(']')) {
             // Array parameter
@@ -897,12 +979,12 @@ function handleStatsOperations(grid: number[][], expression: string): number | s
 
 function handleSignalOperations(grid: number[][], expression: string): number | string {
     try {
-        // Extract function name and parameters
-        const match = expression.match(/signal\.(\w+)\(([^)]+)\)/);
-        if (!match) return 0;
+        // Extract function name and parameters using balanced parenthesis parser
+        const parsed = extractFunctionParameters(expression, 'signal');
+        if (!parsed) return 0;
         
-        const operation = match[1];
-        const params = match[2];
+        const operation = parsed.functionName;
+        const params = parsed.parameters;
         
         if (params.includes('[') && params.includes(']')) {
             const values = extractGridValues(grid, params);
@@ -959,12 +1041,12 @@ function handleLinearAlgebraOperations(grid: number[][], expression: string): nu
 
 function handleTimeSeriesOperations(grid: number[][], expression: string): number | string {
     try {
-        // Extract function name and parameters
-        const match = expression.match(/timeseries\.(\w+)\(([^)]+)\)/);
-        if (!match) return 0;
+        // Extract function name and parameters using balanced parenthesis parser
+        const parsed = extractFunctionParameters(expression, 'timeseries');
+        if (!parsed) return 0;
         
-        const operation = match[1];
-        const params = match[2];
+        const operation = parsed.functionName;
+        const params = parsed.parameters;
         
         if (params.includes('[') && params.includes(']')) {
             const values = extractGridValues(grid, params);
