@@ -187,6 +187,30 @@ describe('gridShorthand utilities', () => {
         });
     });
     
+    describe('edge cases', () => {
+        it('should handle empty expressions without NaN', () => {
+            const empty = '';
+            
+            // Test analyzeGridCompaction with empty string
+            const stats = analyzeGridCompaction(empty);
+            expect(stats.originalLength).toBe(0);
+            expect(stats.compactLength).toBe(0);
+            expect(stats.savedBytes).toBe(0);
+            expect(stats.savedPercentage).toBe(0); // Should be 0, not NaN
+            expect(stats.referenceCount).toBe(0);
+            expect(isNaN(stats.savedPercentage)).toBe(false);
+        });
+        
+        it('should handle expressions with no grid references', () => {
+            const expr = 'add(1, 2, 3)'; // No grid references
+            
+            const stats = analyzeGridCompaction(expr);
+            expect(stats.savedBytes).toBe(0);
+            expect(stats.referenceCount).toBe(0);
+            expect(stats.savedPercentage).toBe(0);
+        });
+    });
+    
     describe('real-world space savings', () => {
         it('should significantly reduce the long expression from the image', () => {
             const longExpr = `timeseries.changePointDetection([hypot(linalg.qrDecomposition(grid), floor(grid[0][3])), timeseries.differencing([grid[2][3], cosh(grid[3][3]), grid[2][3], timeseries.holtWinters([grid[2][1], grid[4][0], grid[1][2], grid[4][1], grid[3][2], grid[2][0], grid[0][1], grid[0][3], grid[3][3], grid[4][2], grid[3][1], grid[1][3], grid[4][2], grid[3][3], grid[0][0]]), tanh(grid[1][0]), asec(grid[0][1]), linalg.qrDecomposition(grid), grid[3][0], cos(grid[4][1])], 2), stats.mean([grid[2][3], grid[1][2], grid[3][2], tsStats.median([grid[0][1], grid[1][0], grid[0][2]]), grid[1][0], grid[4][3]]), matrix.sumRow(grid, 2), grid[2][1], atan(signal.lowPassFilter([grid[4][2], grid[3][0], grid[0][0], grid[4][1], grid[2][0], grid[2][3], grid[3][0], grid[4][1], grid[1][0], grid[2][2], grid[2][0], grid[1][1], grid[4][1]], 0.45)), grid[2][4], grid[3][2]], 5)`;

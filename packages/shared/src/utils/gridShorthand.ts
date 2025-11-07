@@ -46,12 +46,16 @@ export interface GridReferenceStats {
 export function analyzeGridCompaction(expression: string): GridReferenceStats {
     const compact = toCompactGrid(expression);
     const referenceCount = (expression.match(/grid\[\d+\]\[\d+\]/g) || []).length;
+    const originalLength = expression.length;
+    const savedBytes = originalLength - compact.length;
+    // Avoid NaN for empty expressions
+    const savedPercentage = originalLength === 0 ? 0 : (savedBytes / originalLength) * 100;
     
     return {
-        originalLength: expression.length,
+        originalLength,
         compactLength: compact.length,
-        savedBytes: expression.length - compact.length,
-        savedPercentage: ((expression.length - compact.length) / expression.length) * 100,
+        savedBytes,
+        savedPercentage,
         referenceCount
     };
 }

@@ -10,8 +10,10 @@ const FUNCTION_SHORTCUTS: Record<string, string> = {
     // Statistical functions
     'stats.mean': 's.m',
     'stats.median': 's.md',
+    'stats.mode': 's.mo',
     'stats.variance': 's.v',
     'stats.standardDeviation': 's.sd',
+    'stats.zScore': 's.zs',
     'stats.harmonicMean': 's.hm',
     'stats.geometricMean': 's.gm',
     'stats.correlation': 's.cor',
@@ -235,6 +237,7 @@ export interface FunctionCompactionStats {
  */
 export function analyzeFunctionCompaction(expression: string): FunctionCompactionStats {
     const compact = toCompactFunctions(expression);
+    const originalLength = expression.length;
     
     // Count how many functions were replaced
     let functionReplacements = 0;
@@ -246,11 +249,15 @@ export function analyzeFunctionCompaction(expression: string): FunctionCompactio
         }
     }
     
+    const savedBytes = originalLength - compact.length;
+    // Avoid NaN for empty expressions
+    const savedPercentage = originalLength === 0 ? 0 : (savedBytes / originalLength) * 100;
+    
     return {
-        originalLength: expression.length,
+        originalLength,
         compactLength: compact.length,
-        savedBytes: expression.length - compact.length,
-        savedPercentage: ((expression.length - compact.length) / expression.length) * 100,
+        savedBytes,
+        savedPercentage,
         functionReplacements
     };
 }
@@ -269,14 +276,18 @@ export function analyzeFullCompaction(expression: string): {
     const gridOnly = gridToCompact(expression);
     const functionsOnly = toCompactFunctions(expression);
     const fullCompact = toFullCompact(expression);
+    const original = expression.length;
+    const totalSaved = original - fullCompact.length;
+    // Avoid NaN for empty expressions
+    const totalPercentage = original === 0 ? 0 : (totalSaved / original) * 100;
     
     return {
-        original: expression.length,
+        original,
         gridOnly: gridOnly.length,
         functionsOnly: functionsOnly.length,
         fullCompact: fullCompact.length,
-        totalSaved: expression.length - fullCompact.length,
-        totalPercentage: ((expression.length - fullCompact.length) / expression.length) * 100
+        totalSaved,
+        totalPercentage
     };
 }
 

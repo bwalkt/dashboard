@@ -94,13 +94,15 @@ export function prepareFunctionHeader(
     }
     
     // Generate hash from ORIGINAL expression (for validation consistency)
-    const hash = hashExpression(expression);
+    const hash = mergedConfig.includeHash ? hashExpression(expression) : '';
     
     // Build header components
     const headerParts: string[] = [];
     
-    // Always include hash for validation
-    headerParts.push(`hash:${hash}`);
+    // Include hash if configured
+    if (mergedConfig.includeHash) {
+        headerParts.push(`hash:${hash}`);
+    }
     headerParts.push(`len:${expressionLength}`);
     
     // Indicate if compact format is used
@@ -130,8 +132,10 @@ export function prepareFunctionHeader(
         headerParts.push(`expr:${truncated}`);
         headerParts.push('truncated:true');
     } else {
-        // Only hash, no expression
-        headerParts.push('truncated:full');
+        // No expression included
+        if (mergedConfig.includeHash) {
+            headerParts.push('truncated:full');
+        }
     }
     
     const headerValue = headerParts.join(';');

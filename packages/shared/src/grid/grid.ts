@@ -552,7 +552,7 @@ export function genFunction(complexity?: number, size?: number) {
                 original: expression.length,
                 compact: compactExpression.length,
                 savedBytes: expression.length - compactExpression.length,
-                savedPercentage: ((expression.length - compactExpression.length) / expression.length * 100)
+                savedPercentage: expression.length === 0 ? 0 : ((expression.length - compactExpression.length) / expression.length * 100)
             }
         }
     };

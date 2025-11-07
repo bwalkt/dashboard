@@ -102,11 +102,47 @@ describe('functionHeader utilities', () => {
             expect(result.isValid).toBe(true);
             expect(result.hash).toHaveLength(64);
             expect(result.length).toBe(longExpr.length);
-            // Since the expression is extremely long (2100+ chars), it should be truncated
-            if (longExpr.length > 8000) {
-                expect(result.truncated).toBeDefined();
-            }
+            // Since the expression is long (1926 chars) but compacts well, 
+            // it should NOT be truncated by default (fits in 8KB header limit)
+            expect(result.truncated).toBeUndefined();
             expect(result.headerValue.length).toBeLessThan(8192); // Should fit in header
+        });
+        
+        it('should truncate when header size limit is exceeded', () => {
+            const longExpr = `timeseries.changePointDetection([hypot(linalg.qrDecomposition(grid), floor(grid[0][3])), timeseries.differencing([grid[2][3], cosh(grid[3][3]), grid[2][3]], 2)])`;
+            
+            // Force truncation by setting a limit between the non-truncated and truncated sizes
+            const result = prepareFunctionHeader(longExpr, {
+                maxHeaderLength: 160, // Between 151 (truncated) and 167 (full)
+                truncateAt: 30  // Smaller truncation to ensure it fits
+            });
+            
+            // With this limit, it should truncate but still be valid
+            expect(result.isValid).toBe(true);
+            expect(result.truncated).toBeDefined();
+            expect(result.truncated!.length).toBeLessThanOrEqual(33); // 30 + "..."
+            expect(result.headerValue).toContain('truncated:true');
+            expect(result.headerValue.length).toBeLessThanOrEqual(160);
+        });
+        
+        it('should respect includeHash configuration', () => {
+            const expr = 'sin(grid[0][0])';
+            
+            // Test with hash disabled
+            const resultNoHash = prepareFunctionHeader(expr, { includeHash: false });
+            
+            expect(resultNoHash.isValid).toBe(true);
+            expect(resultNoHash.headerValue).not.toContain('hash:');
+            expect(resultNoHash.headerValue).toContain(`len:${expr.length}`);
+            expect(resultNoHash.headerValue).toContain(`expr:`);
+            expect(resultNoHash.hash).toBe(''); // Empty hash when disabled
+            
+            // Test with hash enabled (default)
+            const resultWithHash = prepareFunctionHeader(expr);
+            
+            expect(resultWithHash.isValid).toBe(true);
+            expect(resultWithHash.headerValue).toContain('hash:');
+            expect(resultWithHash.hash).toHaveLength(64);
         });
         
         it('should demonstrate significant space savings with compact grid format', () => {

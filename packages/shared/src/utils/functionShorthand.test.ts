@@ -188,4 +188,37 @@ describe('functionShorthand utilities', () => {
             expect(restored).toBe(longExpr);
         });
     });
+    
+    describe('edge cases', () => {
+        it('should handle empty expressions without NaN', () => {
+            const empty = '';
+            
+            // Test analyzeFunctionCompaction with empty string
+            const functionStats = analyzeFunctionCompaction(empty);
+            expect(functionStats.originalLength).toBe(0);
+            expect(functionStats.compactLength).toBe(0);
+            expect(functionStats.savedBytes).toBe(0);
+            expect(functionStats.savedPercentage).toBe(0); // Should be 0, not NaN
+            expect(functionStats.functionReplacements).toBe(0);
+            expect(isNaN(functionStats.savedPercentage)).toBe(false);
+            
+            // Test analyzeFullCompaction with empty string
+            const fullStats = analyzeFullCompaction(empty);
+            expect(fullStats.original).toBe(0);
+            expect(fullStats.totalSaved).toBe(0);
+            expect(fullStats.totalPercentage).toBe(0); // Should be 0, not NaN
+            expect(isNaN(fullStats.totalPercentage)).toBe(false);
+        });
+        
+        it('should handle expressions with no compactable content', () => {
+            const expr = 'add(1, 2, 3)'; // No grid references or compactable functions
+            
+            const functionStats = analyzeFunctionCompaction(expr);
+            expect(functionStats.savedBytes).toBe(0);
+            expect(functionStats.functionReplacements).toBe(0);
+            
+            const fullStats = analyzeFullCompaction(expr);
+            expect(fullStats.totalSaved).toBe(0);
+        });
+    });
 });
