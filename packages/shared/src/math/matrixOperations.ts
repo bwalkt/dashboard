@@ -88,6 +88,10 @@ export class MatrixOperations {
       return 'singular matrix'
     }
     
+    if (n === 1) {
+      return [[this.roundResult(1 / det)]]
+    }
+    
     if (n === 2) {
       return [
         [this.roundResult(matrix[1][1] / det), this.roundResult(-matrix[0][1] / det)],

@@ -71,12 +71,6 @@ export class LinearAlgebra {
     if (m === 0) return 'empty matrix'
     const n = matrix[0].length
     
-    // Simplified SVD for demonstration
-    // In practice, you'd use a more sophisticated algorithm
-    const U: number[][] = []
-    const S: number[] = []
-    const V: number[][] = []
-    
     // Calculate A^T * A
     const AtA = this.matrixMultiply(this.matrixTranspose(matrix), matrix)
     
@@ -88,28 +82,14 @@ export class LinearAlgebra {
     if (typeof eigenvals === 'string') return eigenvals
     
     // Singular values are square roots of eigenvalues
+    const S: number[] = []
     for (const eigenval of eigenvals) {
       if (eigenval >= 0) {
         S.push(this.roundResult(Math.sqrt(eigenval)))
       }
     }
     
-    // Sort singular values in descending order
-    S.sort((a, b) => b - a)
-    
-    // For a complete implementation, we'd calculate U and V matrices
-    // This is a placeholder structure
-    for (let i = 0; i < m; i++) {
-      U[i] = new Array(m).fill(0)
-      U[i][i] = 1
-    }
-    
-    for (let i = 0; i < n; i++) {
-      V[i] = new Array(n).fill(0)
-      V[i][i] = 1
-    }
-    
-    return { U, S, V }
+    return 'svd not implemented'
   }
 
   private matrixMultiply(a: number[][], b: number[][]): number[][] | string {

@@ -115,8 +115,10 @@ export class SignalProcessing {
     const freqBin = sampleRate / n
     
     // Apply filter in frequency domain
+    // FFT bins: 0 to n/2 are positive frequencies, n/2+1 to n-1 are negative frequencies
     for (let i = 0; i < n; i++) {
-      const freq = i * freqBin
+      const freqIndex = i <= n / 2 ? i : n - i
+      const freq = freqIndex * freqBin
       if (freq > cutoffFreq) {
         real[i] = 0
         imaginary[i] = 0
@@ -136,8 +138,10 @@ export class SignalProcessing {
     const freqBin = sampleRate / n
     
     // Apply filter in frequency domain
+    // FFT bins: 0 to n/2 are positive frequencies, n/2+1 to n-1 are negative frequencies
     for (let i = 0; i < n; i++) {
-      const freq = i * freqBin
+      const freqIndex = i <= n / 2 ? i : n - i
+      const freq = freqIndex * freqBin
       if (freq < cutoffFreq) {
         real[i] = 0
         imaginary[i] = 0
@@ -157,8 +161,10 @@ export class SignalProcessing {
     const freqBin = sampleRate / n
     
     // Apply filter in frequency domain
+    // FFT bins: 0 to n/2 are positive frequencies, n/2+1 to n-1 are negative frequencies
     for (let i = 0; i < n; i++) {
-      const freq = i * freqBin
+      const freqIndex = i <= n / 2 ? i : n - i
+      const freq = freqIndex * freqBin
       if (freq < lowFreq || freq > highFreq) {
         real[i] = 0
         imaginary[i] = 0

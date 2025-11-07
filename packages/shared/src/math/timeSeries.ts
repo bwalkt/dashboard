@@ -198,7 +198,7 @@ export class TimeSeries {
     const ssTotal = data.reduce((sum, val) => sum + Math.pow(val - meanY, 2), 0)
     const predicted = x.map(xi => slope * xi + (sumY - slope * sumX) / n)
     const ssResidual = data.reduce((sum, val, i) => sum + Math.pow(val - predicted[i], 2), 0)
-    const rSquared = 1 - ssResidual / ssTotal
+    const rSquared = ssTotal === 0 ? 0 : 1 - ssResidual / ssTotal
     
     return {
       direction: slope > 0.01 ? 'increasing' : slope < -0.01 ? 'decreasing' : 'stable',

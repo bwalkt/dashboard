@@ -23,6 +23,36 @@ export function expandGrid(grid: number[][], newSize: number) {
     return grid;
 }
 
+export function getSubgrid(matrix: number[][], size: number): number[][] {
+    const rows = matrix.length;
+    const cols = matrix[0]?.length || 0;
+    
+    // Validate size
+    if (size <= 0 || size > Math.min(rows, cols)) {
+        throw new Error(`Size must be between 1 and ${Math.min(rows, cols)}`);
+    }
+    
+    // Random starting position
+    const startRow = Math.floor(Math.random() * rows);
+    const startCol = Math.floor(Math.random() * cols);
+    
+    // Create subgrid with rotation (wrap around if necessary)
+    const subgrid: number[][] = [];
+    
+    for (let i = 0; i < size; i++) {
+        const row: number[] = [];
+        for (let j = 0; j < size; j++) {
+            // Use modulo to wrap around if we exceed boundaries
+            const sourceRow = (startRow + i) % rows;
+            const sourceCol = (startCol + j) % cols;
+            row.push(matrix[sourceRow][sourceCol]);
+        }
+        subgrid.push(row);
+    }
+    
+    return subgrid;
+}
+
 interface MathFunction {
     name: string;
     params: number; // number of parameters
@@ -245,6 +275,35 @@ export function genFunction(complexity: number = 1, size: number = 10) {
     const usedFunctions: string[] = [];
     const usedCells: Array<{row: number, col: number}> = [];
     
+    /**
+     * Helper function to generate parameter arrays for complex functions
+     * Reduces code duplication across different function families
+     */
+    function generateParameterArray(
+        numCells: number,
+        depth: number,
+        maxDepth: number,
+        nestingProbability: number,
+        generateSubExpressionFn: (d: number, max: number) => string,
+        usedCellsArray: Array<{row: number, col: number}>,
+        gridSize: number
+    ): string[] {
+        const params: string[] = [];
+        for (let j = 0; j < numCells; j++) {
+            if (Math.random() < nestingProbability && depth < maxDepth - 1) {
+                params.push(generateSubExpressionFn(depth + 1, maxDepth));
+            } else {
+                const cell = {
+                    row: Math.floor(Math.random() * gridSize),
+                    col: Math.floor(Math.random() * gridSize)
+                };
+                usedCellsArray.push(cell);
+                params.push(`grid[${cell.row}][${cell.col}]`);
+            }
+        }
+        return params;
+    }
+    
     function generateSubExpression(depth: number, maxDepth: number): string {
         if (depth >= maxDepth) {
             // At max depth, use a simple grid reference
@@ -281,36 +340,10 @@ export function genFunction(complexity: number = 1, size: number = 10) {
             else if (mathFunc.params === -2) {
                 // Generate array of cell references or nested expressions for true complexity
                 const numCells = 3 + Math.floor(Math.random() * 5); // 3-7 cells
-                const params = [];
-                for (let j = 0; j < numCells; j++) {
-                    // 40% chance to use nested expression if not at max depth
-                    if (Math.random() < 0.4 && depth < maxDepth - 1) {
-                        params.push(generateSubExpression(depth + 1, maxDepth));
-                    } else {
-                        const cell = {
-                            row: Math.floor(Math.random() * size),
-                            col: Math.floor(Math.random() * size)
-                        };
-                        usedCells.push(cell);
-                        params.push(`grid[${cell.row}][${cell.col}]`);
-                    }
-                }
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
                 
                 if (mathFunc.name === 'tsStats.correlation') {
-                    const params2 = [];
-                    for (let j = 0; j < numCells; j++) {
-                        // 40% chance to use nested expression if not at max depth
-                        if (Math.random() < 0.4 && depth < maxDepth - 1) {
-                            params2.push(generateSubExpression(depth + 1, maxDepth));
-                        } else {
-                            const cell = {
-                                row: Math.floor(Math.random() * size),
-                                col: Math.floor(Math.random() * size)
-                            };
-                            usedCells.push(cell);
-                            params2.push(`grid[${cell.row}][${cell.col}]`);
-                        }
-                    }
+                    const params2 = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
                     return `${mathFunc.name}([${params.join(', ')}], [${params2.join(', ')}])`;
                 }
                 return `${mathFunc.name}([${params.join(', ')}])`;
@@ -318,35 +351,9 @@ export function genFunction(complexity: number = 1, size: number = 10) {
             // StatisticalFunctions operations (params = -3)
             else if (mathFunc.params === -3) {
                 const numCells = 4 + Math.floor(Math.random() * 6); // 4-9 cells
-                const params = [];
-                for (let j = 0; j < numCells; j++) {
-                    // 40% chance to use nested expression if not at max depth
-                    if (Math.random() < 0.4 && depth < maxDepth - 1) {
-                        params.push(generateSubExpression(depth + 1, maxDepth));
-                    } else {
-                        const cell = {
-                            row: Math.floor(Math.random() * size),
-                            col: Math.floor(Math.random() * size)
-                        };
-                        usedCells.push(cell);
-                        params.push(`grid[${cell.row}][${cell.col}]`);
-                    }
-                }
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
                 if (mathFunc.name === 'stats.covariance' || mathFunc.name === 'stats.correlation') {
-                    const params2 = [];
-                    for (let j = 0; j < numCells; j++) {
-                        // 40% chance to use nested expression if not at max depth
-                        if (Math.random() < 0.4 && depth < maxDepth - 1) {
-                            params2.push(generateSubExpression(depth + 1, maxDepth));
-                        } else {
-                            const cell = {
-                                row: Math.floor(Math.random() * size),
-                                col: Math.floor(Math.random() * size)
-                            };
-                            usedCells.push(cell);
-                            params2.push(`grid[${cell.row}][${cell.col}]`);
-                        }
-                    }
+                    const params2 = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
                     return `${mathFunc.name}([${params.join(', ')}], [${params2.join(', ')}])`;
                 }
                 if (mathFunc.name === 'stats.percentile') {
@@ -362,20 +369,7 @@ export function genFunction(complexity: number = 1, size: number = 10) {
             // SignalProcessing operations (params = -4)
             else if (mathFunc.params === -4) {
                 const numCells = 8 + Math.floor(Math.random() * 8); // 8-15 cells for signals
-                const params = [];
-                for (let j = 0; j < numCells; j++) {
-                    // 30% chance to use nested expression if not at max depth (lower chance for signal processing due to complexity)
-                    if (Math.random() < 0.3 && depth < maxDepth - 1) {
-                        params.push(generateSubExpression(depth + 1, maxDepth));
-                    } else {
-                        const cell = {
-                            row: Math.floor(Math.random() * size),
-                            col: Math.floor(Math.random() * size)
-                        };
-                        usedCells.push(cell);
-                        params.push(`grid[${cell.row}][${cell.col}]`);
-                    }
-                }
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.3, generateSubExpression, usedCells, size);
                 
                 if (mathFunc.name === 'signal.fft' || mathFunc.name === 'signal.ifft') {
                     const halfSize = Math.floor(numCells / 2);
@@ -423,20 +417,7 @@ export function genFunction(complexity: number = 1, size: number = 10) {
             // TimeSeries operations (params = -6)
             else if (mathFunc.params === -6) {
                 const numCells = 6 + Math.floor(Math.random() * 10); // 6-15 cells for time series
-                const params = [];
-                for (let j = 0; j < numCells; j++) {
-                    // 30% chance to use nested expression if not at max depth (lower chance for time series due to complexity)
-                    if (Math.random() < 0.3 && depth < maxDepth - 1) {
-                        params.push(generateSubExpression(depth + 1, maxDepth));
-                    } else {
-                        const cell = {
-                            row: Math.floor(Math.random() * size),
-                            col: Math.floor(Math.random() * size)
-                        };
-                        usedCells.push(cell);
-                        params.push(`grid[${cell.row}][${cell.col}]`);
-                    }
-                }
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.3, generateSubExpression, usedCells, size);
                 
                 if (mathFunc.name === 'timeseries.movingAverage') {
                     const windowSize = 3 + Math.floor(Math.random() * 5); // 3-7
