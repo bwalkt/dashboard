@@ -774,7 +774,7 @@ export class Math1 {
     const colValues = matrix.map(row => row[colIndex] || 0)
     
     if (colValues.some(val => val === 0)) {
-      return this.avgCol(matrix, colIndex)
+      return 'undefined (zero value)'
     }
     
     const sumOfReciprocals = colValues.reduce((sum, val) => sum + (1 / val), 0)
