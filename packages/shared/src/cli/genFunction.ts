@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { genFunction, genGrid, evaluate } from '../grid/grid.js';
+import { evaluate, genFunction, genGrid } from '../grid/grid.js';
 
 const MIN_COMPLEXITY = 1;
 const MAX_COMPLEXITY = 4;
@@ -18,7 +18,7 @@ function parseArgs(): CLIOptions {
     const args = process.argv.slice(2);
     const options: CLIOptions = {
         count: 1,
-        size: 10,
+        size: 5,
         evaluate: false,
         verbose: false,
         stats: false,

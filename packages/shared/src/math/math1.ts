@@ -1,10 +1,26 @@
-import { Ripple } from '../utils/ripple'
-import { Utils } from '../utils/utils'
-import { avg, median, mode, stdDev, variance, harmonicMean, range, extrema, percentile, corelation } from 'ts-stats'
+import { Ripple } from '../utils/ripple.js'
+import { Utils } from '../utils/utils.js'
+import { LinearAlgebra } from './linearAlgebra.js'
+import { MatrixOperations } from './matrixOperations.js'
+import { SignalProcessing } from './signalProcessing.js'
+import { StatisticalFunctions } from './statisticalFunctions.js'
+import { TimeSeries } from './timeSeries.js'
 
 export class Math1 {
   private utils: Utils = new Utils()
+  private matrixOps: MatrixOperations = new MatrixOperations()
+  private _stats: StatisticalFunctions = new StatisticalFunctions()
+  private _timeSeries: TimeSeries = new TimeSeries()
+  private _signal: SignalProcessing = new SignalProcessing()
+  private _linearAlgebra: LinearAlgebra = new LinearAlgebra()
   public cuboidId: number = 0
+
+  // Public getters for accessing the private instances
+  public get stats() { return this._stats }
+  public get signal() { return this._signal }
+  public get linearAlgebra() { return this._linearAlgebra }
+  public get timeSeries() { return this._timeSeries }
+  public get matrix() { return this.matrixOps }
 
   init(cuboidId: number): void {
     this.cuboidId = cuboidId
@@ -98,12 +114,27 @@ export class Math1 {
       'cosCol', 'tanCol', 'sqrtSumRow', 'sqrtSumCol', 'hypotRow', 'hypotCol',
       'varianceRow', 'varianceCol', 'percentileRow', 'percentileCol', 
       'harmonicMeanRow', 'harmonicMeanCol', 'rangeRow', 'rangeCol',
-      'chainFunction', 'compositeFunction', 'transformFunction'
+      'chainFunction', 'compositeFunction', 'transformFunction',
+      'matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'
     ]
 
     const randomOp = operations[Math.floor(Math.random() * operations.length)]
     
-    // Handle complex function factories
+    // Handle matrix-based operations that don't need index
+    if (['matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(randomOp)) {
+      switch (randomOp) {
+        case 'matrixOperation':
+          return { operation: 'matrixOperation', result: this.createMatrixOperationFunction(matrix) }
+        case 'vectorOperation':
+          return { operation: 'vectorOperation', result: this.createVectorOperationFunction(matrix) }
+        case 'statisticalAnalysis':
+          return { operation: 'statisticalAnalysis', result: this.createStatisticalAnalysisFunction(matrix) }
+        case 'linearAlgebraOperation':
+          return { operation: 'linearAlgebraOperation', result: this.createLinearAlgebraFunction(matrix) }
+      }
+    }
+
+    // Handle function factories that require targetIdx
     if (['chainFunction', 'compositeFunction', 'transformFunction'].includes(randomOp)) {
       const targetIdx = Math.max(
         0,
@@ -749,7 +780,7 @@ export class Math1 {
     const colValues = matrix.map(row => row[colIndex] || 0)
     
     if (colValues.some(val => val === 0)) {
-      return this.avgCol(matrix, colIndex)
+      return 'undefined (zero value)'
     }
     
     const sumOfReciprocals = colValues.reduce((sum, val) => sum + (1 / val), 0)
@@ -778,6 +809,448 @@ export class Math1 {
     if (result === 0) return 0.1
     if (!isFinite(result)) return this.varianceCol(matrix, colIndex)
     return result
+  }
+
+  // Linear Algebra Functions from science.js
+  matrixMultiply(a: number[][], b: number[][]): number[][] | string {
+    return this.matrixOps.matrixMultiply(a, b)
+  }
+
+  matrixMultiply_OLD(a: number[][], b: number[][]): number[][] | string {
+    const m = a.length
+    if (m === 0) return 'empty matrix'
+    const n = b[0]?.length || 0
+    const p = b.length
+    
+    if (p !== a[0].length) {
+      return `dimension mismatch: ${a[0].length} != ${p}`
+    }
+    
+    const result: number[][] = []
+    for (let i = 0; i < m; i++) {
+      result[i] = []
+      for (let j = 0; j < n; j++) {
+        let sum = 0
+        for (let k = 0; k < p; k++) {
+          sum += a[i][k] * b[k][j]
+        }
+        result[i][j] = this.roundResult(sum)
+      }
+    }
+    return result
+  }
+
+  matrixTranspose(matrix: number[][]): number[][] {
+    return this.matrixOps.matrixTranspose(matrix)
+  }
+
+  matrixTranspose_OLD(matrix: number[][]): number[][] {
+    if (matrix.length === 0) return []
+    const rows = matrix.length
+    const cols = matrix[0].length
+    const result: number[][] = []
+    
+    for (let j = 0; j < cols; j++) {
+      result[j] = []
+      for (let i = 0; i < rows; i++) {
+        result[j][i] = matrix[i][j]
+      }
+    }
+    return result
+  }
+
+  matrixDeterminant(matrix: number[][]): number | string {
+    return this.matrixOps.matrixDeterminant(matrix)
+  }
+
+  matrixDeterminant_OLD(matrix: number[][]): number | string {
+    const n = matrix.length
+    if (n === 0) return 'empty matrix'
+    if (n !== matrix[0].length) return 'not square matrix'
+    if (n > 10) return 'matrix too large for cofactor expansion'
+    
+    if (n === 1) return matrix[0][0]
+    if (n === 2) {
+      return this.roundResult(matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0])
+    }
+    
+    let det = 0
+    for (let j = 0; j < n; j++) {
+      const minor = this.getMinor(matrix, 0, j)
+      const cofactor = Math.pow(-1, j) * matrix[0][j]
+      const minorDet = this.matrixDeterminant(minor)
+      if (typeof minorDet === 'number') {
+        det += cofactor * minorDet
+      }
+    }
+    return this.roundResult(det)
+  }
+
+  private getMinor(matrix: number[][], row: number, col: number): number[][] {
+    const n = matrix.length
+    const minor: number[][] = []
+    
+    for (let i = 0; i < n; i++) {
+      if (i === row) continue
+      const minorRow: number[] = []
+      for (let j = 0; j < n; j++) {
+        if (j === col) continue
+        minorRow.push(matrix[i][j])
+      }
+      minor.push(minorRow)
+    }
+    return minor
+  }
+
+  dotProduct(a: number[], b: number[]): number | string {
+    if (a.length !== b.length) return 'vectors must have same length'
+    let sum = 0
+    for (let i = 0; i < a.length; i++) {
+      sum += a[i] * b[i]
+    }
+    return this.roundResult(sum)
+  }
+
+  crossProduct(a: number[], b: number[]): number[] | string {
+    if (a.length !== 3 || b.length !== 3) {
+      return 'cross product only defined for 3D vectors'
+    }
+    return [
+      this.roundResult(a[1] * b[2] - a[2] * b[1]),
+      this.roundResult(a[2] * b[0] - a[0] * b[2]),
+      this.roundResult(a[0] * b[1] - a[1] * b[0])
+    ]
+  }
+
+  vectorLength(vector: number[]): number {
+    const sumOfSquares = vector.reduce((sum, val) => sum + val * val, 0)
+    return Math.sqrt(sumOfSquares)
+  }
+
+  vectorNormalize(vector: number[]): number[] {
+    const length = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0))
+    if (length <= Number.EPSILON) {
+      return vector.map(() => 0)
+    }
+    return vector.map(val => this.roundResult(val / length))
+  }
+
+  matrixInverse(matrix: number[][]): number[][] | string {
+    const n = matrix.length
+    if (n === 0) return 'empty matrix'
+    if (n !== matrix[0].length) return 'not square matrix'
+    
+    const det = this.matrixDeterminant(matrix)
+    if (typeof det !== 'number' || det === 0) {
+      return 'matrix is singular'
+    }
+    
+    if (n === 2) {
+      return [
+        [this.roundResult(matrix[1][1] / det), this.roundResult(-matrix[0][1] / det)],
+        [this.roundResult(-matrix[1][0] / det), this.roundResult(matrix[0][0] / det)]
+      ]
+    }
+    
+    // For larger matrices, use Gauss-Jordan elimination
+    return this.gaussJordanInverse(matrix)
+  }
+
+  private gaussJordanInverse(matrix: number[][]): number[][] | string {
+    const n = matrix.length
+    // Create augmented matrix [A | I]
+    const augmented: number[][] = []
+    
+    for (let i = 0; i < n; i++) {
+      augmented[i] = [...matrix[i]]
+      for (let j = 0; j < n; j++) {
+        augmented[i].push(i === j ? 1 : 0)
+      }
+    }
+    
+    // Forward elimination
+    for (let i = 0; i < n; i++) {
+      // Find pivot
+      let maxRow = i
+      for (let k = i + 1; k < n; k++) {
+        if (Math.abs(augmented[k][i]) > Math.abs(augmented[maxRow][i])) {
+          maxRow = k
+        }
+      }
+      
+      // Swap rows
+      [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]]
+      
+      // Check for singular matrix
+      if (Math.abs(augmented[i][i]) < 1e-10) return 'matrix is singular or numerically unstable'
+      
+      // Scale pivot row
+      const pivot = augmented[i][i]
+      for (let j = 0; j < 2 * n; j++) {
+        augmented[i][j] /= pivot
+      }
+      
+      // Eliminate column
+      for (let k = 0; k < n; k++) {
+        if (k !== i) {
+          const factor = augmented[k][i]
+          for (let j = 0; j < 2 * n; j++) {
+            augmented[k][j] -= factor * augmented[i][j]
+          }
+        }
+      }
+    }
+    
+    // Extract inverse from augmented matrix
+    const inverse: number[][] = []
+    for (let i = 0; i < n; i++) {
+      inverse[i] = []
+      for (let j = 0; j < n; j++) {
+        inverse[i][j] = this.roundResult(augmented[i][j + n])
+      }
+    }
+    
+    return inverse
+  }
+
+  // Advanced Statistics Functions from science.js
+  loessSmoothing(x: number[], y: number[], bandwidth: number = 0.3): number[] | string {
+    if (x.length !== y.length) return 'x and y must have same length'
+    if (x.length < 3) return 'need at least 3 points'
+    
+    const n = x.length
+    const smoothed: number[] = []
+    
+    for (let i = 0; i < n; i++) {
+      // Calculate weights using tricube kernel
+      const weights: number[] = []
+      const distances: number[] = []
+      
+      for (let j = 0; j < n; j++) {
+        distances.push(Math.abs(x[j] - x[i]))
+      }
+      
+      const sortedDistances = [...distances].sort((a, b) => a - b)
+      const h = sortedDistances[Math.max(0, Math.floor(bandwidth * n) - 1)] || sortedDistances[n - 1]
+      
+      for (let j = 0; j < n; j++) {
+        const u = distances[j] / h
+        if (u < 1) {
+          // Tricube weight function
+          weights.push(Math.pow(1 - Math.pow(u, 3), 3))
+        } else {
+          weights.push(0)
+        }
+      }
+      
+      // Weighted linear regression
+      let sumW = 0, sumWX = 0, sumWY = 0, sumWXX = 0, sumWXY = 0
+      
+      for (let j = 0; j < n; j++) {
+        const w = weights[j]
+        sumW += w
+        sumWX += w * x[j]
+        sumWY += w * y[j]
+        sumWXX += w * x[j] * x[j]
+        sumWXY += w * x[j] * y[j]
+      }
+      
+      if (sumW === 0) {
+        smoothed.push(y[i])
+      } else {
+        const meanX = sumWX / sumW
+        const meanY = sumWY / sumW
+        const denominator = sumWXX - sumW * meanX * meanX
+        const slope = denominator !== 0 ? (sumWXY - sumW * meanX * meanY) / denominator : 0
+        const intercept = meanY - slope * meanX
+        smoothed.push(this.roundResult(slope * x[i] + intercept))
+      }
+    }
+    
+    return smoothed
+  }
+
+  kernelDensityEstimation(data: number[], bandwidth?: number): (x: number) => number {
+    const n = data.length
+    if (n === 0) return () => 0
+    
+    // Scott's rule for bandwidth if not provided
+    const stdDev = this.statsStandardDeviation(data)
+    const numStdDev = typeof stdDev === 'number' ? stdDev : 1
+    const rawBandwidth = bandwidth ?? (1.06 * numStdDev * Math.pow(n, -0.2))
+    const h = rawBandwidth > Number.EPSILON ? rawBandwidth : 1e-6
+    
+    // Gaussian kernel
+    const gaussianKernel = (u: number) => {
+      return Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
+    }
+    
+    return (x: number) => {
+      let sum = 0
+      for (let i = 0; i < n; i++) {
+        const u = (x - data[i]) / h
+        sum += gaussianKernel(u)
+      }
+      return this.roundResult(sum / (n * h))
+    }
+  }
+
+  kMeansClustering(data: number[][], k: number, maxIters: number = 100): {
+    clusters: number[][]
+    centroids: number[][]
+    assignments: number[]
+  } | string {
+    if (data.length === 0) return 'empty data'
+    if (k <= 0 || k > data.length) return 'invalid k value'
+    
+    const n = data.length
+    const d = data[0].length
+    
+    // Initialize centroids randomly
+    const centroids: number[][] = []
+    const used = new Set<number>()
+    
+    while (centroids.length < k) {
+      const idx = Math.floor(Math.random() * n)
+      if (!used.has(idx)) {
+        used.add(idx)
+        centroids.push([...data[idx]])
+      }
+    }
+    
+    let assignments = new Array(n).fill(-1)
+    let changed = true
+    let iter = 0
+    
+    while (changed && iter < maxIters) {
+      changed = false
+      
+      // Assign points to nearest centroid
+      for (let i = 0; i < n; i++) {
+        let minDist = Infinity
+        let closestCentroid = -1
+        
+        for (let j = 0; j < k; j++) {
+          let dist = 0
+          for (let dim = 0; dim < d; dim++) {
+            dist += Math.pow(data[i][dim] - centroids[j][dim], 2)
+          }
+          dist = Math.sqrt(dist)
+          
+          if (dist < minDist) {
+            minDist = dist
+            closestCentroid = j
+          }
+        }
+        
+        if (assignments[i] !== closestCentroid) {
+          assignments[i] = closestCentroid
+          changed = true
+        }
+      }
+      
+      // Update centroids
+      for (let j = 0; j < k; j++) {
+        const clusterPoints = data.filter((_, idx) => assignments[idx] === j)
+        
+        if (clusterPoints.length > 0) {
+          for (let dim = 0; dim < d; dim++) {
+            let sum = 0
+            for (const point of clusterPoints) {
+              sum += point[dim]
+            }
+            centroids[j][dim] = this.roundResult(sum / clusterPoints.length)
+          }
+        }
+      }
+      
+      iter++
+    }
+    
+    // Create cluster arrays
+    const clusters: number[][] = []
+    for (let j = 0; j < k; j++) {
+      clusters[j] = []
+    }
+    
+    for (let i = 0; i < n; i++) {
+      const clusterIndex = assignments[i]
+      if (clusterIndex >= 0 && clusterIndex < k) {
+        clusters[clusterIndex].push(i)
+      }
+    }
+    
+    return { clusters, centroids, assignments }
+  }
+
+  interquartileRange(numbers: number[]): number | string {
+    if (numbers.length === 0) return 'empty array'
+    
+    const q1 = this.statsPercentile(numbers, 25)
+    const q3 = this.statsPercentile(numbers, 75)
+    
+    if (typeof q1 === 'number' && typeof q3 === 'number') {
+      return this.roundResult(q3 - q1)
+    }
+    return 'calculation error'
+  }
+
+  movingAverage(data: number[], windowSize: number): number[] {
+    return this._timeSeries.movingAverage(data, windowSize)
+  }
+
+  movingAverage_OLD(data: number[], windowSize: number): number[] {
+    if (windowSize <= 0 || windowSize > data.length) return data
+    
+    const result: number[] = []
+    for (let i = 0; i < data.length - windowSize + 1; i++) {
+      let sum = 0
+      for (let j = 0; j < windowSize; j++) {
+        sum += data[i + j]
+      }
+      result.push(this.roundResult(sum / windowSize))
+    }
+    return result
+  }
+
+  exponentialSmoothing(data: number[], alpha: number = 0.3): number[] {
+    return this._timeSeries.exponentialSmoothing(data, alpha)
+  }
+
+  exponentialSmoothing_OLD(data: number[], alpha: number = 0.3): number[] {
+    if (data.length === 0) return []
+    if (alpha <= 0 || alpha > 1) alpha = 0.3
+    
+    const result: number[] = [data[0]]
+    
+    for (let i = 1; i < data.length; i++) {
+      const smoothed = alpha * data[i] + (1 - alpha) * result[i - 1]
+      result.push(this.roundResult(smoothed))
+    }
+    
+    return result
+  }
+
+  autocorrelation(data: number[], lag: number): number | string {
+    if (data.length === 0) return 'empty array'
+    if (lag >= data.length) return 'lag too large'
+    
+    const mean = data.reduce((sum, val) => sum + val, 0) / data.length
+    
+    let numerator = 0
+    let denominator = 0
+    
+    for (let i = 0; i < data.length - lag; i++) {
+      numerator += (data[i] - mean) * (data[i + lag] - mean)
+    }
+    
+    for (let i = 0; i < data.length; i++) {
+      denominator += Math.pow(data[i] - mean, 2)
+    }
+    
+    if (denominator === 0) return 'no variance'
+    
+    return this.roundResult(numerator / denominator)
   }
 
   generateRandomNumbers(count: number, min: number = 0, max: number = 100): number[] {
@@ -934,7 +1407,7 @@ export class Math1 {
   statsAverage(numbers: number[]): number | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = avg(numbers)
+      const result = this._stats.mean(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -944,7 +1417,7 @@ export class Math1 {
   statsMedian(numbers: number[]): number | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = median(numbers)
+      const result = this._stats.median(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -954,19 +1427,12 @@ export class Math1 {
   statsMode(numbers: number[]): number[] | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = mode(numbers)
+      const result = this._stats.mode(numbers)
       if (Array.isArray(result)) {
-        return result.filter((item): item is number => typeof item === 'number')
-      } else if (typeof result === 'number') {
-        return [result]
-      } else if (typeof result === 'string' && result.includes('No mode found')) {
-        // ts-stats returns an error string when no mode is found
-        return []
+        return result // Return empty array if no mode, or array with modes
       }
       return 'calculation error'
     } catch (error) {
-      // ts-stats mode throws an error when no mode is found
-      // Return an empty array to indicate no mode
       return []
     }
   }
@@ -974,7 +1440,7 @@ export class Math1 {
   statsStandardDeviation(numbers: number[]): number | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = stdDev(numbers)
+      const result = this._stats.stdDev(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -984,7 +1450,7 @@ export class Math1 {
   statsVariance(numbers: number[]): number | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = variance(numbers)
+      const result = this._stats.variance(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -995,7 +1461,7 @@ export class Math1 {
     if (numbers.length === 0) return 'empty array'
     if (numbers.some(n => n <= 0)) return 'invalid input (non-positive values)'
     try {
-      const result = harmonicMean(numbers)
+      const result = this._stats.harmonicMean(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -1005,7 +1471,7 @@ export class Math1 {
   statsRange(numbers: number[]): number | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = range(numbers)
+      const result = this._stats.range(numbers)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -1015,16 +1481,11 @@ export class Math1 {
   statsExtrema(numbers: number[]): { min: number; max: number } | string {
     if (numbers.length === 0) return 'empty array'
     try {
-      const result = extrema(numbers)
-      // ts-stats extrema returns an array [min, max]
-      if (Array.isArray(result) && result.length >= 2 && 
-          typeof result[0] === 'number' && typeof result[1] === 'number') {
-        return {
-          min: this.roundResult(result[0]),
-          max: this.roundResult(result[1])
-        }
+      const result = this._stats.extrema(numbers)
+      return {
+        min: this.roundResult(result.min),
+        max: this.roundResult(result.max)
       }
-      return 'calculation error'
     } catch (error) {
       return 'calculation error'
     }
@@ -1034,7 +1495,7 @@ export class Math1 {
     if (numbers.length === 0) return 'empty array'
     if (p < 0 || p > 100) return 'percentile must be between 0 and 100'
     try {
-      const result = percentile(numbers, p)
+      const result = this._stats.percentile(numbers, p)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -1045,7 +1506,7 @@ export class Math1 {
     if (arr1.length === 0 || arr2.length === 0) return 'empty array'
     if (arr1.length !== arr2.length) return 'arrays must have same length'
     try {
-      const result = corelation(arr1, arr2)
+      const result = this._stats.correlation(arr1, arr2)
       return typeof result === 'number' ? this.roundResult(result) : 'calculation error'
     } catch (error) {
       return 'calculation error'
@@ -1316,6 +1777,519 @@ export class Math1 {
     }
 
     return { uniform, normal, exponential }
+  }
+
+  createMatrixOperationFunction(matrix: number[][]): Function {
+    const operations = ['multiply', 'transpose', 'determinant', 'inverse', 'eigenvalue']
+    const selectedOp = operations[Math.floor(Math.random() * operations.length)]
+    
+    return (inputMatrix?: number[][]) => {
+      const workMatrix = inputMatrix || matrix
+      
+      switch (selectedOp) {
+        case 'multiply':
+          // Create a random compatible matrix for multiplication
+          const cols = workMatrix[0]?.length || 1
+          const randomMatrix: number[][] = []
+          for (let i = 0; i < cols; i++) {
+            randomMatrix[i] = []
+            for (let j = 0; j < 2; j++) {
+              randomMatrix[i][j] = Math.floor(Math.random() * 10)
+            }
+          }
+          const result = this.matrixMultiply(workMatrix, randomMatrix)
+          return {
+            operation: 'matrix multiplication',
+            result: typeof result === 'string' ? result : result,
+            dimensions: typeof result === 'string' ? null : `${result.length}x${result[0].length}`
+          }
+          
+        case 'transpose':
+          const transposed = this.matrixTranspose(workMatrix)
+          return {
+            operation: 'matrix transpose',
+            result: transposed,
+            dimensions: `${transposed.length}x${transposed[0]?.length || 0}`
+          }
+          
+        case 'determinant':
+          // Use a square submatrix if necessary
+          const size = Math.min(workMatrix.length, workMatrix[0]?.length || 0, 3)
+          const squareMatrix: number[][] = []
+          for (let i = 0; i < size; i++) {
+            squareMatrix[i] = workMatrix[i].slice(0, size)
+          }
+          const det = this.matrixDeterminant(squareMatrix)
+          return {
+            operation: 'matrix determinant',
+            result: det,
+            matrixSize: size
+          }
+          
+        case 'inverse':
+          // Use a square submatrix
+          const invSize = Math.min(workMatrix.length, workMatrix[0]?.length || 0, 3)
+          const invMatrix: number[][] = []
+          for (let i = 0; i < invSize; i++) {
+            invMatrix[i] = workMatrix[i].slice(0, invSize)
+          }
+          const inverse = this.matrixInverse(invMatrix)
+          return {
+            operation: 'matrix inverse',
+            result: inverse,
+            success: typeof inverse !== 'string'
+          }
+          
+        case 'eigenvalue':
+          // Simple power iteration for dominant eigenvalue
+          const eigSize = Math.min(workMatrix.length, workMatrix[0]?.length || 0)
+          const eigMatrix: number[][] = []
+          for (let i = 0; i < eigSize; i++) {
+            eigMatrix[i] = workMatrix[i].slice(0, eigSize)
+          }
+          
+          let v = new Array(eigSize).fill(1)
+          let eigenvalue = 0
+          
+          for (let iter = 0; iter < 20; iter++) {
+            const Av: number[] = []
+            for (let i = 0; i < eigSize; i++) {
+              let sum = 0
+              for (let j = 0; j < eigSize; j++) {
+                sum += eigMatrix[i][j] * v[j]
+              }
+              Av.push(sum)
+            }
+            
+            eigenvalue = Math.sqrt(Av.reduce((sum, val) => sum + val * val, 0))
+            v = Av.map(val => val / eigenvalue)
+          }
+          
+          return {
+            operation: 'dominant eigenvalue',
+            result: this.roundResult(eigenvalue),
+            iterations: 20
+          }
+      }
+    }
+  }
+
+  createVectorOperationFunction(matrix: number[][]): Function {
+    const operations = ['dot', 'cross', 'normalize', 'projection', 'angle']
+    const selectedOp = operations[Math.floor(Math.random() * operations.length)]
+    
+    return (inputMatrix?: number[][]) => {
+      const workMatrix = inputMatrix || matrix
+      
+      // Extract two vectors from the matrix
+      const v1 = workMatrix[0] || [1, 0, 0]
+      const v2 = workMatrix[1] || workMatrix[0] || [0, 1, 0]
+      
+      switch (selectedOp) {
+        case 'dot':
+          const dot = this.dotProduct(v1.slice(0, 3), v2.slice(0, 3))
+          return {
+            operation: 'dot product',
+            result: dot,
+            vectors: { v1: v1.slice(0, 3), v2: v2.slice(0, 3) }
+          }
+          
+        case 'cross':
+          const cross = this.crossProduct(v1.slice(0, 3), v2.slice(0, 3))
+          return {
+            operation: 'cross product',
+            result: cross,
+            vectors: { v1: v1.slice(0, 3), v2: v2.slice(0, 3) }
+          }
+          
+        case 'normalize':
+          const normalized = this.vectorNormalize(v1)
+          return {
+            operation: 'vector normalization',
+            result: normalized,
+            originalLength: this.vectorLength(v1)
+          }
+          
+        case 'projection':
+          // Project v1 onto v2
+          const dotProd = this.dotProduct(v1, v2)
+          const v2LengthSq = v2.reduce((sum, val) => sum + val * val, 0)
+          if (v2LengthSq === 0) {
+            return {
+              operation: 'vector projection',
+              result: 'cannot project onto zero vector'
+            }
+          }
+          const scalar = typeof dotProd === 'number' ? dotProd / v2LengthSq : 0
+          const projection = v2.map(val => this.roundResult(scalar * val))
+          return {
+            operation: 'vector projection',
+            result: projection,
+            scalar: this.roundResult(scalar)
+          }
+          
+        case 'angle':
+          const dot2 = this.dotProduct(v1, v2)
+          const len1 = this.vectorLength(v1)
+          const len2 = this.vectorLength(v2)
+          
+          if (len1 === 0 || len2 === 0 || typeof dot2 !== 'number') {
+            return {
+              operation: 'angle between vectors',
+              result: 'undefined (zero vector)'
+            }
+          }
+          
+          const cosAngle = dot2 / (len1 * len2)
+          const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle)))
+          
+          return {
+            operation: 'angle between vectors',
+            radians: this.roundResult(angle),
+            degrees: this.roundResult(angle * 180 / Math.PI)
+          }
+      }
+    }
+  }
+
+  createStatisticalAnalysisFunction(matrix: number[][]): Function {
+    const operations = ['loess', 'kde', 'kmeans', 'iqr', 'movingAverage', 'exponentialSmoothing', 'autocorrelation']
+    const selectedOp = operations[Math.floor(Math.random() * operations.length)]
+    
+    return (inputData?: number[][] | number[]) => {
+      let data: number[] = []
+      
+      if (Array.isArray(inputData)) {
+        if (Array.isArray(inputData[0])) {
+          data = (inputData as number[][])[0] || []
+        } else {
+          data = inputData as number[]
+        }
+      } else {
+        data = matrix[0] || []
+      }
+      
+      switch (selectedOp) {
+        case 'loess':
+          // Generate x values if not provided
+          const x = data.map((_, i) => i)
+          const loessSmoothed = this.loessSmoothing(x, data, 0.4)
+          return {
+            operation: 'LOESS smoothing',
+            result: loessSmoothed,
+            bandwidth: 0.4,
+            originalLength: data.length
+          }
+          
+        case 'kde':
+          const kde = this.kernelDensityEstimation(data)
+          const testPoints = [-2, -1, 0, 1, 2].map(z => {
+            const mean = data.reduce((s, v) => s + v, 0) / data.length
+            const std = Math.sqrt(data.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / data.length)
+            return mean + z * std
+          })
+          const density = testPoints.map(x => ({ x: this.roundResult(x), density: kde(x) }))
+          return {
+            operation: 'kernel density estimation',
+            result: density,
+            bandwidth: 'Scott\'s rule'
+          }
+          
+        case 'kmeans':
+          // Use matrix data for k-means
+          const kData = inputData && Array.isArray(inputData[0]) ? inputData as number[][] : matrix
+          const k = Math.min(3, Math.max(2, Math.floor(kData.length / 3)))
+          const clusters = this.kMeansClustering(kData, k)
+          return {
+            operation: 'k-means clustering',
+            result: clusters,
+            k: k
+          }
+          
+        case 'iqr':
+          const iqr = this.interquartileRange(data)
+          return {
+            operation: 'interquartile range',
+            result: iqr,
+            q1: this.statsPercentile(data, 25),
+            q3: this.statsPercentile(data, 75)
+          }
+          
+        case 'movingAverage':
+          const windowSize = Math.min(5, Math.max(2, Math.floor(data.length / 3)))
+          const ma = this.movingAverage(data, windowSize)
+          return {
+            operation: 'moving average',
+            result: ma,
+            windowSize: windowSize
+          }
+          
+        case 'exponentialSmoothing':
+          const alpha = 0.3
+          const expSmoothed = this.exponentialSmoothing(data, alpha)
+          return {
+            operation: 'exponential smoothing',
+            result: expSmoothed,
+            alpha: alpha
+          }
+          
+        case 'autocorrelation':
+          const lags = [1, 2, 3, 5].filter(lag => lag < data.length)
+          const correlations = lags.map(lag => ({
+            lag,
+            correlation: this.autocorrelation(data, lag)
+          }))
+          return {
+            operation: 'autocorrelation',
+            result: correlations,
+            dataLength: data.length
+          }
+      }
+    }
+  }
+
+  createLinearAlgebraFunction(matrix: number[][]): Function {
+    const operations = ['lu', 'qr', 'svd', 'cholesky', 'gram-schmidt']
+    const selectedOp = operations[Math.floor(Math.random() * operations.length)]
+    
+    return (inputMatrix?: number[][]) => {
+      const workMatrix = inputMatrix || matrix
+      
+      switch (selectedOp) {
+        case 'lu':
+          // Simple LU decomposition for demonstration
+          const n = Math.min(workMatrix.length, workMatrix[0]?.length || 0)
+          const A: number[][] = []
+          for (let i = 0; i < n; i++) {
+            A[i] = workMatrix[i].slice(0, n)
+          }
+          
+          const L: number[][] = Array(n).fill(null).map(() => Array(n).fill(0))
+          const U: number[][] = Array(n).fill(null).map(() => Array(n).fill(0))
+          
+          // Initialize L diagonal to 1
+          for (let i = 0; i < n; i++) {
+            L[i][i] = 1
+          }
+          
+          // Doolittle algorithm
+          for (let j = 0; j < n; j++) {
+            for (let i = 0; i <= j; i++) {
+              let sum = 0
+              for (let k = 0; k < i; k++) {
+                sum += L[i][k] * U[k][j]
+              }
+              U[i][j] = A[i][j] - sum
+            }
+            
+            for (let i = j + 1; i < n; i++) {
+              let sum = 0
+              for (let k = 0; k < j; k++) {
+                sum += L[i][k] * U[k][j]
+              }
+              if (U[j][j] === 0) {
+                return {
+                  operation: 'LU decomposition',
+                  error: 'matrix is singular or requires pivoting',
+                  size: n
+                }
+              }
+              L[i][j] = (A[i][j] - sum) / U[j][j]
+            }
+          }
+          
+          return {
+            operation: 'LU decomposition',
+            L: L.map(row => row.map(val => this.roundResult(val))),
+            U: U.map(row => row.map(val => this.roundResult(val))),
+            size: n
+          }
+          
+        case 'qr':
+          // Gram-Schmidt QR decomposition
+          const m = workMatrix.length
+          const n2 = workMatrix[0]?.length || 0
+          const Q: number[][] = []
+          const R: number[][] = Array(n2).fill(null).map(() => Array(n2).fill(0))
+          
+          // Copy columns of A
+          const cols: number[][] = []
+          for (let j = 0; j < n2; j++) {
+            cols[j] = []
+            for (let i = 0; i < m; i++) {
+              cols[j][i] = workMatrix[i][j]
+            }
+          }
+          
+          // Gram-Schmidt process
+          for (let j = 0; j < n2; j++) {
+            let v = [...cols[j]]
+            
+            for (let i = 0; i < j; i++) {
+              const dot = this.dotProduct(cols[j], Q[i])
+              R[i][j] = typeof dot === 'number' ? dot : 0
+              
+              for (let k = 0; k < m; k++) {
+                v[k] -= R[i][j] * Q[i][k]
+              }
+            }
+            
+            R[j][j] = this.vectorLength(v)
+            Q[j] = this.vectorNormalize(v)
+          }
+          
+          // Convert Q to matrix form
+          const Qmatrix: number[][] = []
+          for (let i = 0; i < m; i++) {
+            Qmatrix[i] = []
+            for (let j = 0; j < n2; j++) {
+              Qmatrix[i][j] = Q[j][i] || 0
+            }
+          }
+          
+          return {
+            operation: 'QR decomposition',
+            Q: Qmatrix.map(row => row.map(val => this.roundResult(val))),
+            R: R.map(row => row.map(val => this.roundResult(val))),
+            dimensions: `${m}x${n2}`
+          }
+          
+        case 'svd':
+          // Simplified SVD demonstration (power iteration for largest singular value)
+          const svdM = workMatrix.length
+          const svdN = workMatrix[0]?.length || 0
+          const minDim = Math.min(svdM, svdN)
+          
+          let u = new Array(svdM).fill(0).map(() => Math.random())
+          let v = new Array(svdN).fill(0).map(() => Math.random())
+          let sigma = 0
+          
+          // Power iteration
+          for (let iter = 0; iter < 20; iter++) {
+            // v = A^T u
+            const newV: number[] = []
+            for (let j = 0; j < svdN; j++) {
+              let sum = 0
+              for (let i = 0; i < svdM; i++) {
+                sum += workMatrix[i][j] * u[i]
+              }
+              newV.push(sum)
+            }
+            
+            const vNorm = this.vectorLength(newV)
+            v = newV.map(val => val / vNorm)
+            
+            // u = A v
+            const newU: number[] = []
+            for (let i = 0; i < svdM; i++) {
+              let sum = 0
+              for (let j = 0; j < svdN; j++) {
+                sum += workMatrix[i][j] * v[j]
+              }
+              newU.push(sum)
+            }
+            
+            sigma = this.vectorLength(newU)
+            u = newU.map(val => val / sigma)
+          }
+          
+          return {
+            operation: 'singular value decomposition (largest)',
+            largestSingularValue: this.roundResult(sigma),
+            leftVector: u.slice(0, 5).map(val => this.roundResult(val)),
+            rightVector: v.slice(0, 5).map(val => this.roundResult(val))
+          }
+          
+        case 'cholesky':
+          // Cholesky decomposition for positive definite matrices
+          const chN = Math.min(workMatrix.length, workMatrix[0]?.length || 0)
+          const chA: number[][] = []
+          
+          // Make symmetric positive definite matrix
+          for (let i = 0; i < chN; i++) {
+            chA[i] = []
+            for (let j = 0; j < chN; j++) {
+              if (i === j) {
+                chA[i][j] = Math.abs(workMatrix[i][j]) + chN
+              } else {
+                chA[i][j] = (workMatrix[i][j] + workMatrix[j][i]) / 2
+              }
+            }
+          }
+          
+          const chL: number[][] = Array(chN).fill(null).map(() => Array(chN).fill(0))
+          
+          for (let i = 0; i < chN; i++) {
+            for (let j = 0; j <= i; j++) {
+              let sum = 0
+              
+              if (i === j) {
+                for (let k = 0; k < j; k++) {
+                  sum += chL[j][k] * chL[j][k]
+                }
+                chL[j][j] = Math.sqrt(Math.max(0, chA[j][j] - sum))
+              } else {
+                for (let k = 0; k < j; k++) {
+                  sum += chL[i][k] * chL[j][k]
+                }
+                chL[i][j] = (chA[i][j] - sum) / (chL[j][j] || 1)
+              }
+            }
+          }
+          
+          return {
+            operation: 'Cholesky decomposition',
+            L: chL.map(row => row.map(val => this.roundResult(val))),
+            size: chN,
+            warning: 'input was modified to ensure positive definiteness',
+            modifiedMatrix: chA.map(row => row.map(val => this.roundResult(val)))
+          }
+          
+        case 'gram-schmidt':
+          // Orthogonalize matrix columns
+          const gsM = workMatrix.length
+          const gsN = workMatrix[0]?.length || 0
+          const orthogonal: number[][] = []
+          
+          for (let j = 0; j < gsN; j++) {
+            let v: number[] = []
+            for (let i = 0; i < gsM; i++) {
+              v.push(workMatrix[i][j])
+            }
+            
+            // Subtract projections onto previous vectors
+            for (let k = 0; k < j; k++) {
+              const dot = this.dotProduct(v, orthogonal[k])
+              const norm = this.dotProduct(orthogonal[k], orthogonal[k])
+              
+              if (typeof dot === 'number' && typeof norm === 'number' && norm !== 0) {
+                const scalar = dot / norm
+                for (let i = 0; i < gsM; i++) {
+                  v[i] -= scalar * orthogonal[k][i]
+                }
+              }
+            }
+            
+            orthogonal.push(this.vectorNormalize(v))
+          }
+          
+          // Convert to matrix form
+          const orthMatrix: number[][] = []
+          for (let i = 0; i < gsM; i++) {
+            orthMatrix[i] = []
+            for (let j = 0; j < gsN; j++) {
+              orthMatrix[i][j] = orthogonal[j][i] || 0
+            }
+          }
+          
+          return {
+            operation: 'Gram-Schmidt orthogonalization',
+            result: orthMatrix.map(row => row.map(val => this.roundResult(val))),
+            dimensions: `${gsM}x${gsN}`,
+            orthonormal: true
+          }
+      }
+    }
   }
 
   // Inverse cotangent function

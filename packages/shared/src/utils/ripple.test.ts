@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Ripple, Ripples } from './ripple'
+import { Ripple, Ripples } from './ripple.js'
 
 describe('Ripple', () => {
   let ripple: Ripple
