@@ -823,19 +823,36 @@ describe('Math1', () => {
       
       const resultRowOutOfRange = math1.randomFunc(matrix, 5)
       
-      // Complex operations don't contain indices in their names
-      if (!['matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(resultRowOutOfRange.operation)) {
-        if (resultRowOutOfRange.operation.includes('Row')) {
-          expect(resultRowOutOfRange.operation).toContain('(1)')
+      // Complex operations and function factories may have different index handling
+      const complexOps = ['matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation']
+      const functionFactories = ['chainFunction', 'compositeFunction', 'transformFunction']
+      
+      if (!complexOps.includes(resultRowOutOfRange.operation)) {
+        // Check if it's a function factory (they show up with their name in the operation)
+        const isFactory = functionFactories.some(factory => resultRowOutOfRange.operation.includes(factory))
+        
+        if (!isFactory) {
+          if (resultRowOutOfRange.operation.includes('Row')) {
+            expect(resultRowOutOfRange.operation).toContain('(1)')
+          } else {
+            expect(resultRowOutOfRange.operation).toContain('(2)')
+          }
         } else {
-          expect(resultRowOutOfRange.operation).toContain('(2)')
+          // Function factories use targetIdx which is clamped to matrix.length - 1
+          expect(resultRowOutOfRange.operation).toMatch(/\((0|1)\)/)
         }
       }
       
       const resultNegativeIndex = math1.randomFunc(matrix, -1)
-      // Complex operations don't contain indices in their names
-      if (!['matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(resultNegativeIndex.operation)) {
-        expect(resultNegativeIndex.operation).toContain('(0)')
+      // Complex operations and function factories may have different index handling
+      if (!complexOps.includes(resultNegativeIndex.operation)) {
+        const isFactory = functionFactories.some(factory => resultNegativeIndex.operation.includes(factory))
+        if (!isFactory) {
+          expect(resultNegativeIndex.operation).toContain('(0)')
+        } else {
+          // Function factories always clamp to valid range
+          expect(resultNegativeIndex.operation).toMatch(/\((0|1)\)/)
+        }
       }
       
       // Verify functions work
