@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { evaluate, genFunction, genGrid } from '../grid/grid.js';
+import { toFullVerbose } from '../utils/functionShorthand.js';
 
 const MIN_COMPLEXITY = 1;
 const MAX_COMPLEXITY = 4;
@@ -172,9 +173,14 @@ function main() {
 
         console.log(`\n🎯 Function ${i + 1}/${options.count} (Complexity: ${randomComplexity}):`);
         console.log(`  ID: ${func.id}`);
-        console.log(`  Expression: ${func.expression}`);
+        console.log(`  Expression: ${func.compactExpression}`);
+        console.log(`  Long Expression: ${toFullVerbose(func.compactExpression)}`);
+        if (func.metadata?.spaceSavings) {
+            console.log(`  Space saved: ${func.metadata.spaceSavings.savedBytes} bytes (${func.metadata.spaceSavings.savedPercentage.toFixed(1)}%)`);
+        }
         
         if (options.verbose) {
+            console.log(`  Verbose Expression: ${func.expression}`);
             console.log(`  Description: ${func.readable}`);
             console.log(`  Complexity: ${JSON.stringify(formatComplexity(func.complexity), null, 4)}`);
             console.log(`  Functions Used: [${func.functions.unique.join(', ')}]`);
@@ -208,7 +214,8 @@ function main() {
                     // Update function details after regeneration
                     console.log(`  🔄 New Function:`);
                     console.log(`  ID: ${func.id}`);
-                    console.log(`  Expression: ${func.expression}`);
+                    console.log(`  Expression: ${func.compactExpression}`);
+                    console.log(`  Long Expression: ${toFullVerbose(func.compactExpression)}`);
                 }
                 
                 allStats.evaluationTime += evalTime;
