@@ -1152,7 +1152,7 @@ function handleLinearAlgebraOperations(grid: number[][], expression: string): nu
                 return typeof svdResult === 'object' && svdResult.S && svdResult.S.length > 0 ? svdResult.S[0] : 0;
             case 'qrDecomposition': {
                 const qr = sharedMath1.linearAlgebra.qrDecomposition(subMatrix);
-                return qr && typeof qr === 'object' && qr.Q && qr.Q[0] ? qr.Q[0][0] : 0;
+                return qr && typeof qr === 'object' && qr.Q && qr.Q[0] && qr.Q[0][0] !== undefined ? qr.Q[0][0] : 0;
             }
             case 'luDecomposition': {
                 const lu = sharedMath1.linearAlgebra.luDecomposition(subMatrix);
