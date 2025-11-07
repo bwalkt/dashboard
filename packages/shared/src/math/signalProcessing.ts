@@ -110,6 +110,7 @@ export class SignalProcessing {
   lowPassFilter(signal: number[], cutoffFreq: number, sampleRate: number = 1): number[] {
     if (signal.length === 0) return []
     
+    const originalLength = signal.length
     const { real, imaginary } = this.fft(signal)
     const n = real.length
     const freqBin = sampleRate / n
@@ -127,12 +128,13 @@ export class SignalProcessing {
     
     // Inverse FFT to get filtered signal
     const filtered = this.ifft(real, imaginary)
-    return filtered.real
+    return filtered.real.slice(0, originalLength)
   }
 
   highPassFilter(signal: number[], cutoffFreq: number, sampleRate: number = 1): number[] {
     if (signal.length === 0) return []
     
+    const originalLength = signal.length
     const { real, imaginary } = this.fft(signal)
     const n = real.length
     const freqBin = sampleRate / n
@@ -150,12 +152,13 @@ export class SignalProcessing {
     
     // Inverse FFT to get filtered signal
     const filtered = this.ifft(real, imaginary)
-    return filtered.real
+    return filtered.real.slice(0, originalLength)
   }
 
   bandPassFilter(signal: number[], lowFreq: number, highFreq: number, sampleRate: number = 1): number[] {
     if (signal.length === 0) return []
     
+    const originalLength = signal.length
     const { real, imaginary } = this.fft(signal)
     const n = real.length
     const freqBin = sampleRate / n
@@ -173,7 +176,7 @@ export class SignalProcessing {
     
     // Inverse FFT to get filtered signal
     const filtered = this.ifft(real, imaginary)
-    return filtered.real
+    return filtered.real.slice(0, originalLength)
   }
 
   convolution(signal1: number[], signal2: number[]): number[] {
@@ -244,7 +247,8 @@ export class SignalProcessing {
   spectrogram(signal: number[], windowSize: number = 256, overlap: number = 0.5): number[][] {
     if (signal.length < windowSize) return []
     
-    const hopSize = Math.floor(windowSize * (1 - overlap))
+    const normalizedOverlap = Math.min(Math.max(overlap, 0), 0.999)
+    const hopSize = Math.max(1, Math.floor(windowSize * (1 - normalizedOverlap)))
     const window = this.windowFunction('hanning', windowSize)
     const spectrogram: number[][] = []
     
