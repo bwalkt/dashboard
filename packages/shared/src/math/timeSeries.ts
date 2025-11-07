@@ -139,6 +139,10 @@ export class TimeSeries {
   holtWinters(data: number[], alpha: number = 0.3, beta: number = 0.1, gamma: number = 0.1, period: number = 12, steps: number = 1): number[] {
     if (data.length < period * 2) return this.simpleLinearForecast(data, steps)
     
+    // Guard against zero values that would cause division by zero
+    const hasZeroValues = data.slice(0, period).some(val => val === 0)
+    if (hasZeroValues) return this.simpleLinearForecast(data, steps)
+    
     // Initialize
     const level: number[] = [data[0]]
     const trend: number[] = [(data[period] - data[0]) / period]
@@ -150,7 +154,14 @@ export class TimeSeries {
       const prevTrend = trend[trend.length - 1]
       const prevSeasonal = seasonal[i % period]
       
+      // Guard against zero seasonal component
+      if (prevSeasonal === 0) return this.simpleLinearForecast(data, steps)
+      
       const newLevel = alpha * (data[i] / prevSeasonal) + (1 - alpha) * (prevLevel + prevTrend)
+      
+      // Guard against zero level
+      if (newLevel === 0) return this.simpleLinearForecast(data, steps)
+      
       const newTrend = beta * (newLevel - prevLevel) + (1 - beta) * prevTrend
       const newSeasonal = gamma * (data[i] / newLevel) + (1 - gamma) * prevSeasonal
       
@@ -240,6 +251,10 @@ export class TimeSeries {
       const rightVar = rightSegment.reduce((sum, val) => sum + Math.pow(val - rightMean, 2), 0) / rightSegment.length
       
       const pooledStd = Math.sqrt((leftVar + rightVar) / 2)
+      
+      // Skip if both segments have zero variance
+      if (pooledStd === 0) continue
+      
       const tStatistic = Math.abs(leftMean - rightMean) / (pooledStd * Math.sqrt(2 / minSegmentLength))
       
       if (tStatistic > 2.5) {

@@ -110,7 +110,7 @@ export class LinearAlgebra {
         for (let k = 0; k < p; k++) {
           sum += a[i][k] * b[k][j]
         }
-        result[i][j] = this.roundResult(sum)
+        result[i][j] = sum
       }
     }
     return result
@@ -229,6 +229,10 @@ export class LinearAlgebra {
           L[k][j] = L[pivot][j]
           L[pivot][j] = temp
         }
+      }
+      
+      if (Math.abs(U[k][k]) < 1e-12) {
+        return 'singular matrix'
       }
       
       // Compute L and U

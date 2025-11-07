@@ -966,6 +966,38 @@ function handleStatsOperations(grid: number[][], expression: string): number | s
                 case 'outliers':
                     const outliers = sharedMath1.stats.outliers(values);
                     return outliers.length;
+                case 'percentile': {
+                    // Extract percentile value from params (second parameter)
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const percentile = parseFloat(paramList[1]);
+                        return sharedMath1.stats.percentile(values, percentile);
+                    }
+                    return 0;
+                }
+                case 'covariance':
+                case 'correlation': {
+                    // These require two arrays - extract both
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const values1 = extractGridValues(grid, paramList[0]);
+                        const values2 = extractGridValues(grid, paramList[1]);
+                        return operation === 'covariance' 
+                            ? sharedMath1.stats.covariance(values1, values2)
+                            : sharedMath1.stats.correlation(values1, values2);
+                    }
+                    return 0;
+                }
+                case 'zScore': {
+                    // Extract value and data array
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const value = evaluateNestedExpression(grid, paramList[0]);
+                        const data = extractGridValues(grid, paramList[1]);
+                        return sharedMath1.stats.zScore(value, data);
+                    }
+                    return 0;
+                }
                 default:
                     return 0;
             }
@@ -999,6 +1031,93 @@ function handleSignalOperations(grid: number[][], expression: string): number | 
                 case 'envelope':
                     const envelope = sharedMath1.signal.envelope(values);
                     return envelope && envelope.upper ? envelope.upper[0] || 0 : 0;
+                case 'fft': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const real = extractGridValues(grid, paramList[0]);
+                        const imag = extractGridValues(grid, paramList[1]);
+                        const result = sharedMath1.signal.fft(real, imag);
+                        return result && result.real ? result.real[0] || 0 : 0;
+                    }
+                    return 0;
+                }
+                case 'ifft': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const real = extractGridValues(grid, paramList[0]);
+                        const imag = extractGridValues(grid, paramList[1]);
+                        const result = sharedMath1.signal.ifft(real, imag);
+                        return result && result.real ? result.real[0] || 0 : 0;
+                    }
+                    return 0;
+                }
+                case 'lowPassFilter': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const cutoff = parseFloat(paramList[1]);
+                        const filtered = sharedMath1.signal.lowPassFilter(values, cutoff);
+                        return Array.isArray(filtered) && filtered.length > 0 ? filtered[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'highPassFilter': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const cutoff = parseFloat(paramList[1]);
+                        const filtered = sharedMath1.signal.highPassFilter(values, cutoff);
+                        return Array.isArray(filtered) && filtered.length > 0 ? filtered[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'bandPassFilter': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 3) {
+                        const lowCutoff = parseFloat(paramList[1]);
+                        const highCutoff = parseFloat(paramList[2]);
+                        const filtered = sharedMath1.signal.bandPassFilter(values, lowCutoff, highCutoff);
+                        return Array.isArray(filtered) && filtered.length > 0 ? filtered[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'convolution': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const signal1 = extractGridValues(grid, paramList[0]);
+                        const signal2 = extractGridValues(grid, paramList[1]);
+                        const result = sharedMath1.signal.convolution(signal1, signal2);
+                        return Array.isArray(result) && result.length > 0 ? result[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'crossCorrelation': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const signal1 = extractGridValues(grid, paramList[0]);
+                        const signal2 = extractGridValues(grid, paramList[1]);
+                        const result = sharedMath1.signal.crossCorrelation(signal1, signal2);
+                        return Array.isArray(result) && result.length > 0 ? result[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'windowFunction': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const type = paramList[1].replace(/['"]/g, '') as 'hamming' | 'hanning' | 'blackman' | 'rectangular';
+                        const length = values.length;
+                        const window = sharedMath1.signal.windowFunction(type, length);
+                        return Array.isArray(window) && window.length > 0 ? window[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'spectrogram': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const windowSize = parseInt(paramList[1]);
+                        const result = sharedMath1.signal.spectrogram(values, windowSize);
+                        return Array.isArray(result) && result.length > 0 && Array.isArray(result[0]) ? result[0][0] || 0 : 0;
+                    }
+                    return 0;
+                }
                 default:
                     return Math.abs(values[0] || 0); // Fallback
             }
@@ -1031,6 +1150,24 @@ function handleLinearAlgebraOperations(grid: number[][], expression: string): nu
             case 'svd':
                 const svdResult = sharedMath1.linearAlgebra.svd(subMatrix);
                 return typeof svdResult === 'object' && svdResult.S && svdResult.S.length > 0 ? svdResult.S[0] : 0;
+            case 'qrDecomposition': {
+                const qr = sharedMath1.linearAlgebra.qrDecomposition(subMatrix);
+                return qr && qr.Q && qr.Q[0] ? qr.Q[0][0] : 0;
+            }
+            case 'luDecomposition': {
+                const lu = sharedMath1.linearAlgebra.luDecomposition(subMatrix);
+                return lu && lu.L && lu.L[0] ? lu.L[0][0] : 0;
+            }
+            case 'choleskyDecomposition': {
+                const cholesky = sharedMath1.linearAlgebra.choleskyDecomposition(subMatrix);
+                return cholesky && cholesky[0] ? cholesky[0][0] : 0;
+            }
+            case 'solveLinearSystem': {
+                // Needs A and b - use submatrix as A and first column as b
+                const b = subMatrix.map(row => row[0]);
+                const solution = sharedMath1.linearAlgebra.solveLinearSystem(subMatrix, b);
+                return Array.isArray(solution) && solution.length > 0 ? solution[0] : 0;
+            }
             default:
                 return subMatrix[0][0] || 0; // Fallback
         }
@@ -1072,6 +1209,27 @@ function handleTimeSeriesOperations(grid: number[][], expression: string): numbe
                 case 'changePointDetection':
                     const changePoints = sharedMath1.timeSeries.changePointDetection(values, 3);
                     return Array.isArray(changePoints) ? changePoints.length : 0;
+                case 'seasonalDecomposition': {
+                    const paramList = splitParameterString(params);
+                    const period = paramList.length >= 2 ? parseFloat(paramList[1]) : 4;
+                    const decomp = sharedMath1.timeSeries.seasonalDecomposition(values, period);
+                    return decomp && decomp.trend ? decomp.trend[0] || 0 : 0;
+                }
+                case 'simpleLinearForecast': {
+                    const paramList = splitParameterString(params);
+                    const steps = paramList.length >= 2 ? parseFloat(paramList[1]) : 1;
+                    const forecast = sharedMath1.timeSeries.simpleLinearForecast(values, steps);
+                    return Array.isArray(forecast) && forecast.length > 0 ? forecast[0] : 0;
+                }
+                case 'holtWinters': {
+                    const paramList = splitParameterString(params);
+                    // Extract alpha, beta, gamma from params if available, use defaults otherwise
+                    const alpha = paramList.length >= 2 ? parseFloat(paramList[1]) : 0.3;
+                    const beta = paramList.length >= 3 ? parseFloat(paramList[2]) : 0.1;
+                    const gamma = paramList.length >= 4 ? parseFloat(paramList[3]) : 0.1;
+                    const hw = sharedMath1.timeSeries.holtWinters(values, alpha, beta, gamma);
+                    return Array.isArray(hw) && hw.length > 0 ? hw[0] : 0;
+                }
                 default:
                     return values[0] || 0; // Fallback
             }

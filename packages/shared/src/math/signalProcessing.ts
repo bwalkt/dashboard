@@ -200,6 +200,9 @@ export class SignalProcessing {
   }
 
   windowFunction(type: 'hamming' | 'hanning' | 'blackman' | 'rectangular', length: number): number[] {
+    if (length <= 0) return []
+    if (length === 1) return [1]
+    
     const window: number[] = []
     
     switch (type) {

@@ -120,8 +120,22 @@ export class Math1 {
 
     const randomOp = operations[Math.floor(Math.random() * operations.length)]
     
-    // Handle complex function factories
-    if (['chainFunction', 'compositeFunction', 'transformFunction', 'matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(randomOp)) {
+    // Handle matrix-based operations that don't need index
+    if (['matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(randomOp)) {
+      switch (randomOp) {
+        case 'matrixOperation':
+          return { operation: 'matrixOperation', result: this.createMatrixOperationFunction(matrix) }
+        case 'vectorOperation':
+          return { operation: 'vectorOperation', result: this.createVectorOperationFunction(matrix) }
+        case 'statisticalAnalysis':
+          return { operation: 'statisticalAnalysis', result: this.createStatisticalAnalysisFunction(matrix) }
+        case 'linearAlgebraOperation':
+          return { operation: 'linearAlgebraOperation', result: this.createLinearAlgebraFunction(matrix) }
+      }
+    }
+
+    // Handle function factories that require targetIdx
+    if (['chainFunction', 'compositeFunction', 'transformFunction'].includes(randomOp)) {
       const targetIdx = Math.max(
         0,
         Math.min(
@@ -136,14 +150,6 @@ export class Math1 {
           return { operation: `compositeFunction(${targetIdx})`, result: this.createCompositeFunction(matrix, targetIdx) }
         case 'transformFunction':
           return { operation: `transformFunction(${targetIdx})`, result: this.createTransformFunction(matrix, targetIdx) }
-        case 'matrixOperation':
-          return { operation: 'matrixOperation', result: this.createMatrixOperationFunction(matrix) }
-        case 'vectorOperation':
-          return { operation: 'vectorOperation', result: this.createVectorOperationFunction(matrix) }
-        case 'statisticalAnalysis':
-          return { operation: 'statisticalAnalysis', result: this.createStatisticalAnalysisFunction(matrix) }
-        case 'linearAlgebraOperation':
-          return { operation: 'linearAlgebraOperation', result: this.createLinearAlgebraFunction(matrix) }
       }
     }
 
@@ -861,6 +867,7 @@ export class Math1 {
     const n = matrix.length
     if (n === 0) return 'empty matrix'
     if (n !== matrix[0].length) return 'not square matrix'
+    if (n > 10) return 'matrix too large for cofactor expansion'
     
     if (n === 1) return matrix[0][0]
     if (n === 2) {
@@ -973,7 +980,7 @@ export class Math1 {
       [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]]
       
       // Check for singular matrix
-      if (augmented[i][i] === 0) return 'matrix is singular'
+      if (Math.abs(augmented[i][i]) < 1e-10) return 'matrix is singular or numerically unstable'
       
       // Scale pivot row
       const pivot = augmented[i][i]
@@ -1022,7 +1029,7 @@ export class Math1 {
       }
       
       const sortedDistances = [...distances].sort((a, b) => a - b)
-      const h = sortedDistances[Math.floor(bandwidth * n) - 1] || sortedDistances[n - 1]
+      const h = sortedDistances[Math.max(0, Math.floor(bandwidth * n) - 1)] || sortedDistances[n - 1]
       
       for (let j = 0; j < n; j++) {
         const u = distances[j] / h
@@ -1051,7 +1058,8 @@ export class Math1 {
       } else {
         const meanX = sumWX / sumW
         const meanY = sumWY / sumW
-        const slope = (sumWXY - sumW * meanX * meanY) / (sumWXX - sumW * meanX * meanX)
+        const denominator = sumWXX - sumW * meanX * meanX
+        const slope = denominator !== 0 ? (sumWXY - sumW * meanX * meanY) / denominator : 0
         const intercept = meanY - slope * meanX
         smoothed.push(this.roundResult(slope * x[i] + intercept))
       }
@@ -1066,7 +1074,8 @@ export class Math1 {
     
     // Scott's rule for bandwidth if not provided
     const stdDev = this.statsStandardDeviation(data)
-    const h = bandwidth || (1.06 * (typeof stdDev === 'number' ? stdDev : 1) * Math.pow(n, -0.2))
+    const numStdDev = typeof stdDev === 'number' ? stdDev : 1
+    const h = bandwidth || (1.06 * numStdDev * Math.pow(n, -0.2))
     
     // Gaussian kernel
     const gaussianKernel = (u: number) => {
@@ -2075,6 +2084,13 @@ export class Math1 {
               for (let k = 0; k < j; k++) {
                 sum += L[i][k] * U[k][j]
               }
+              if (U[j][j] === 0) {
+                return {
+                  operation: 'LU decomposition',
+                  error: 'matrix is singular or requires pivoting',
+                  size: n
+                }
+              }
               L[i][j] = (A[i][j] - sum) / U[j][j]
             }
           }
@@ -2222,7 +2238,8 @@ export class Math1 {
             operation: 'Cholesky decomposition',
             L: chL.map(row => row.map(val => this.roundResult(val))),
             size: chN,
-            note: 'matrix made positive definite'
+            warning: 'input was modified to ensure positive definiteness',
+            modifiedMatrix: chA.map(row => row.map(val => this.roundResult(val)))
           }
           
         case 'gram-schmidt':

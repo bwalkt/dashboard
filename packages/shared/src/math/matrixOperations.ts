@@ -49,7 +49,7 @@ export class MatrixOperations {
     
     if (n === 1) return matrix[0][0]
     if (n === 2) {
-      return this.roundResult(matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0])
+      return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
     }
     
     let det = 0
@@ -61,7 +61,7 @@ export class MatrixOperations {
         det += cofactor * minorDet
       }
     }
-    return this.roundResult(det)
+    return det
   }
 
   private getMinor(matrix: number[][], row: number, col: number): number[][] {
