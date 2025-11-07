@@ -1,4 +1,4 @@
-import { Ripple, Ripples } from './ripple'
+import { Ripple, Ripples } from './ripple.js'
 
 export class Utils {
   tokenize(s: string): string[] {

@@ -2,7 +2,7 @@ import browserTool from "browser-tool";
 
 export const info: any = browserTool.browser.getInfo();
 
-import type { ValueOf } from '../type'
+import type { ValueOf } from '../type.js'
 
 const Browsers = {
     chrome: 'chrome',

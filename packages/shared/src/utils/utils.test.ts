@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Ripple, Ripples } from './ripple'
-import { Utils } from './utils'
+import { Ripple, Ripples } from './ripple.js'
+import { Utils } from './utils.js'
 
 describe('Utils', () => {
   let utils: Utils

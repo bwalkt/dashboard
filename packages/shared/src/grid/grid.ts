@@ -1,7 +1,7 @@
 import { evaluate as mathjsEvaluate, randomInt } from 'mathjs'
 import { Math1 } from '../math/math1.js'
 
-export function genGrid(size: number = 10) {
+export function genGrid(size: number = 5) {
   const min = Math.ceil(Math.random() * 100) || 1
   const max = Math.ceil((min + Math.random()) * 1000)
   const grid = randomInt([size, size], min, max) as any
@@ -21,6 +21,36 @@ export function expandGrid(grid: number[][], newSize: number) {
     }
 
     return grid;
+}
+
+export function getSubgrid(matrix: number[][], size: number): number[][] {
+    const rows = matrix.length;
+    const cols = matrix[0]?.length || 0;
+    
+    // Validate size
+    if (size <= 0 || size > Math.min(rows, cols)) {
+        throw new Error(`Size must be between 1 and ${Math.min(rows, cols)}`);
+    }
+    
+    // Random starting position
+    const startRow = Math.floor(Math.random() * rows);
+    const startCol = Math.floor(Math.random() * cols);
+    
+    // Create subgrid with rotation (wrap around if necessary)
+    const subgrid: number[][] = [];
+    
+    for (let i = 0; i < size; i++) {
+        const row: number[] = [];
+        for (let j = 0; j < size; j++) {
+            // Use modulo to wrap around if we exceed boundaries
+            const sourceRow = (startRow + i) % rows;
+            const sourceCol = (startCol + j) % cols;
+            row.push(matrix[sourceRow][sourceCol]);
+        }
+        subgrid.push(row);
+    }
+    
+    return subgrid;
 }
 
 interface MathFunction {
@@ -113,7 +143,7 @@ const MATH_FUNCTIONS: MathFunction[] = [
     { name: 'matrix.avgCol', params: -1, example: 'matrix.avgCol(grid, index)' },
     { name: 'matrix.medianRow', params: -1, example: 'matrix.medianRow(grid, index)' },
     { name: 'matrix.stdDevCol', params: -1, example: 'matrix.stdDevCol(grid, index)' },
-    { name: 'matrix.randomFunc', params: -1, example: 'matrix.randomFunc(grid)' },
+    // Note: Removed matrix.randomFunc as it's non-deterministic
     
     // TS-Stats operations (special handling required)
     { name: 'tsStats.average', params: -2, example: 'tsStats.average(numbers)' },
@@ -121,7 +151,60 @@ const MATH_FUNCTIONS: MathFunction[] = [
     { name: 'tsStats.mode', params: -2, example: 'tsStats.mode(numbers)' },
     { name: 'tsStats.variance', params: -2, example: 'tsStats.variance(numbers)' },
     { name: 'tsStats.correlation', params: -2, example: 'tsStats.correlation(arr1, arr2)' },
-    { name: 'tsStats.randomStatsFunc', params: -2, example: 'tsStats.randomStatsFunc(numbers)' }
+    // Note: Removed tsStats.randomStatsFunc as it's non-deterministic
+
+    // StatisticalFunctions operations (special handling required)
+    { name: 'stats.mean', params: -3, example: 'stats.mean(numbers)' },
+    { name: 'stats.median', params: -3, example: 'stats.median(numbers)' },
+    { name: 'stats.mode', params: -3, example: 'stats.mode(numbers)' },
+    { name: 'stats.variance', params: -3, example: 'stats.variance(numbers)' },
+    { name: 'stats.stdDev', params: -3, example: 'stats.stdDev(numbers)' },
+    { name: 'stats.harmonicMean', params: -3, example: 'stats.harmonicMean(numbers)' },
+    { name: 'stats.geometricMean', params: -3, example: 'stats.geometricMean(numbers)' },
+    { name: 'stats.range', params: -3, example: 'stats.range(numbers)' },
+    { name: 'stats.percentile', params: -3, example: 'stats.percentile(numbers, p)' },
+    { name: 'stats.covariance', params: -3, example: 'stats.covariance(x, y)' },
+    { name: 'stats.correlation', params: -3, example: 'stats.correlation(x, y)' },
+    { name: 'stats.skewness', params: -3, example: 'stats.skewness(numbers)' },
+    { name: 'stats.kurtosis', params: -3, example: 'stats.kurtosis(numbers)' },
+    { name: 'stats.zScore', params: -3, example: 'stats.zScore(value, data)' },
+    { name: 'stats.quartiles', params: -3, example: 'stats.quartiles(numbers)' },
+    { name: 'stats.outliers', params: -3, example: 'stats.outliers(numbers)' },
+
+    // SignalProcessing operations (special handling required)  
+    { name: 'signal.fft', params: -4, example: 'signal.fft(real, imaginary)' },
+    { name: 'signal.ifft', params: -4, example: 'signal.ifft(real, imaginary)' },
+    { name: 'signal.powerSpectrum', params: -4, example: 'signal.powerSpectrum(signal)' },
+    { name: 'signal.lowPassFilter', params: -4, example: 'signal.lowPassFilter(signal, cutoff)' },
+    { name: 'signal.highPassFilter', params: -4, example: 'signal.highPassFilter(signal, cutoff)' },
+    { name: 'signal.bandPassFilter', params: -4, example: 'signal.bandPassFilter(signal, low, high)' },
+    { name: 'signal.convolution', params: -4, example: 'signal.convolution(signal1, signal2)' },
+    { name: 'signal.crossCorrelation', params: -4, example: 'signal.crossCorrelation(signal1, signal2)' },
+    { name: 'signal.windowFunction', params: -4, example: 'signal.windowFunction(type, length)' },
+    { name: 'signal.spectrogram', params: -4, example: 'signal.spectrogram(signal, windowSize)' },
+    { name: 'signal.peakDetection', params: -4, example: 'signal.peakDetection(signal, threshold)' },
+    { name: 'signal.envelope', params: -4, example: 'signal.envelope(signal)' },
+
+    // LinearAlgebra operations (special handling required)
+    { name: 'linalg.eigenvalues', params: -5, example: 'linalg.eigenvalues(matrix)' },
+    { name: 'linalg.svd', params: -5, example: 'linalg.svd(matrix)' },
+    { name: 'linalg.qrDecomposition', params: -5, example: 'linalg.qrDecomposition(matrix)' },
+    { name: 'linalg.luDecomposition', params: -5, example: 'linalg.luDecomposition(matrix)' },
+    { name: 'linalg.choleskyDecomposition', params: -5, example: 'linalg.choleskyDecomposition(matrix)' },
+    { name: 'linalg.norm', params: -5, example: 'linalg.norm(matrix, type)' },
+    { name: 'linalg.solveLinearSystem', params: -5, example: 'linalg.solveLinearSystem(A, b)' },
+
+    // TimeSeries operations (special handling required)
+    { name: 'timeseries.movingAverage', params: -6, example: 'timeseries.movingAverage(data, window)' },
+    { name: 'timeseries.exponentialSmoothing', params: -6, example: 'timeseries.exponentialSmoothing(data, alpha)' },
+    { name: 'timeseries.autocorrelation', params: -6, example: 'timeseries.autocorrelation(data, lag)' },
+    { name: 'timeseries.differencing', params: -6, example: 'timeseries.differencing(data, order)' },
+    { name: 'timeseries.seasonalDecomposition', params: -6, example: 'timeseries.seasonalDecomposition(data, period)' },
+    { name: 'timeseries.simpleLinearForecast', params: -6, example: 'timeseries.simpleLinearForecast(data, steps)' },
+    { name: 'timeseries.holtWinters', params: -6, example: 'timeseries.holtWinters(data, alpha, beta, gamma)' },
+    { name: 'timeseries.trendAnalysis', params: -6, example: 'timeseries.trendAnalysis(data)' },
+    { name: 'timeseries.detectAnomaly', params: -6, example: 'timeseries.detectAnomaly(data, threshold)' },
+    { name: 'timeseries.changePointDetection', params: -6, example: 'timeseries.changePointDetection(data, minSegment)' }
 ];
 
 /**
@@ -192,6 +275,35 @@ export function genFunction(complexity: number = 1, size: number = 10) {
     const usedFunctions: string[] = [];
     const usedCells: Array<{row: number, col: number}> = [];
     
+    /**
+     * Helper function to generate parameter arrays for complex functions
+     * Reduces code duplication across different function families
+     */
+    function generateParameterArray(
+        numCells: number,
+        depth: number,
+        maxDepth: number,
+        nestingProbability: number,
+        generateSubExpressionFn: (d: number, max: number) => string,
+        usedCellsArray: Array<{row: number, col: number}>,
+        gridSize: number
+    ): string[] {
+        const params: string[] = [];
+        for (let j = 0; j < numCells; j++) {
+            if (Math.random() < nestingProbability && depth < maxDepth - 1) {
+                params.push(generateSubExpressionFn(depth + 1, maxDepth));
+            } else {
+                const cell = {
+                    row: Math.floor(Math.random() * gridSize),
+                    col: Math.floor(Math.random() * gridSize)
+                };
+                usedCellsArray.push(cell);
+                params.push(`grid[${cell.row}][${cell.col}]`);
+            }
+        }
+        return params;
+    }
+    
     function generateSubExpression(depth: number, maxDepth: number): string {
         if (depth >= maxDepth) {
             // At max depth, use a simple grid reference
@@ -222,45 +334,137 @@ export function genFunction(complexity: number = 1, size: number = 10) {
                 // Matrix operations work on the entire grid, so we need to track grid usage
                 // Add a representative cell to indicate grid usage
                 usedCells.push({ row: rowOrCol, col: 0 });
-                if (mathFunc.name === 'matrix.randomFunc') {
-                    return `${mathFunc.name}(grid)`;
-                }
                 return `${mathFunc.name}(grid, ${rowOrCol})`;
             }
             // TS-Stats operations (params = -2)
             else if (mathFunc.params === -2) {
-                // Generate array of cell references
+                // Generate array of cell references or nested expressions for true complexity
                 const numCells = 3 + Math.floor(Math.random() * 5); // 3-7 cells
-                const cells = [];
-                for (let j = 0; j < numCells; j++) {
-                    const cell = {
-                        row: Math.floor(Math.random() * size),
-                        col: Math.floor(Math.random() * size)
-                    };
-                    usedCells.push(cell);
-                    cells.push(`grid[${cell.row}][${cell.col}]`);
-                }
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
+                
                 if (mathFunc.name === 'tsStats.correlation') {
-                    const cells2 = [];
-                    for (let j = 0; j < numCells; j++) {
-                        const cell = {
-                            row: Math.floor(Math.random() * size),
-                            col: Math.floor(Math.random() * size)
-                        };
-                        usedCells.push(cell);
-                        cells2.push(`grid[${cell.row}][${cell.col}]`);
-                    }
-                    return `${mathFunc.name}([${cells.join(', ')}], [${cells2.join(', ')}])`;
+                    const params2 = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
+                    return `${mathFunc.name}([${params.join(', ')}], [${params2.join(', ')}])`;
                 }
-                return `${mathFunc.name}([${cells.join(', ')}])`;
+                return `${mathFunc.name}([${params.join(', ')}])`;
+            }
+            // StatisticalFunctions operations (params = -3)
+            else if (mathFunc.params === -3) {
+                const numCells = 4 + Math.floor(Math.random() * 6); // 4-9 cells
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
+                if (mathFunc.name === 'stats.covariance' || mathFunc.name === 'stats.correlation') {
+                    const params2 = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
+                    return `${mathFunc.name}([${params.join(', ')}], [${params2.join(', ')}])`;
+                }
+                if (mathFunc.name === 'stats.percentile') {
+                    const percentile = 25 + Math.floor(Math.random() * 50); // 25-75th percentile
+                    return `${mathFunc.name}([${params.join(', ')}], ${percentile})`;
+                }
+                if (mathFunc.name === 'stats.zScore') {
+                    const value = params[0];
+                    return `${mathFunc.name}(${value}, [${params.join(', ')}])`;
+                }
+                return `${mathFunc.name}([${params.join(', ')}])`;
+            }
+            // SignalProcessing operations (params = -4)
+            else if (mathFunc.params === -4) {
+                const numCells = 8 + Math.floor(Math.random() * 8); // 8-15 cells for signals
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.3, generateSubExpression, usedCells, size);
+                
+                if (mathFunc.name === 'signal.fft' || mathFunc.name === 'signal.ifft') {
+                    const halfSize = Math.floor(numCells / 2);
+                    const real = params.slice(0, halfSize);
+                    const imag = params.slice(halfSize);
+                    return `${mathFunc.name}([${real.join(', ')}], [${imag.join(', ')}])`;
+                }
+                if (mathFunc.name === 'signal.convolution' || mathFunc.name === 'signal.crossCorrelation') {
+                    const halfSize = Math.floor(numCells / 2);
+                    const signal1 = params.slice(0, halfSize);
+                    const signal2 = params.slice(halfSize);
+                    return `${mathFunc.name}([${signal1.join(', ')}], [${signal2.join(', ')}])`;
+                }
+                if (mathFunc.name === 'signal.lowPassFilter' || mathFunc.name === 'signal.highPassFilter') {
+                    const cutoff = 0.1 + Math.random() * 0.4; // 0.1-0.5
+                    return `${mathFunc.name}([${params.join(', ')}], ${cutoff.toFixed(2)})`;
+                }
+                if (mathFunc.name === 'signal.bandPassFilter') {
+                    const lowFreq = 0.1 + Math.random() * 0.2;
+                    const highFreq = lowFreq + 0.1 + Math.random() * 0.2;
+                    return `${mathFunc.name}([${params.join(', ')}], ${lowFreq.toFixed(2)}, ${highFreq.toFixed(2)})`;
+                }
+                if (mathFunc.name === 'signal.windowFunction') {
+                    const types = ['hamming', 'hanning', 'blackman', 'rectangular'];
+                    const windowType = types[Math.floor(Math.random() * types.length)];
+                    return `${mathFunc.name}('${windowType}', ${numCells})`;
+                }
+                if (mathFunc.name === 'signal.spectrogram') {
+                    const windowSize = Math.pow(2, 3 + Math.floor(Math.random() * 3)); // 8, 16, 32
+                    return `${mathFunc.name}([${params.join(', ')}], ${windowSize})`;
+                }
+                if (mathFunc.name === 'signal.peakDetection') {
+                    const threshold = 0.3 + Math.random() * 0.4; // 0.3-0.7
+                    return `${mathFunc.name}([${params.join(', ')}], ${threshold.toFixed(2)})`;
+                }
+                return `${mathFunc.name}([${params.join(', ')}])`;
+            }
+            // LinearAlgebra operations (params = -5)
+            else if (mathFunc.params === -5) {
+                // Create matrix from grid
+                const matrixSize = 2 + Math.floor(Math.random() * 2); // 2x2 or 3x3
+                usedCells.push({ row: 0, col: 0 }); // Representative cell
+                return `${mathFunc.name}(grid)`;
+            }
+            // TimeSeries operations (params = -6)
+            else if (mathFunc.params === -6) {
+                const numCells = 6 + Math.floor(Math.random() * 10); // 6-15 cells for time series
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.3, generateSubExpression, usedCells, size);
+                
+                if (mathFunc.name === 'timeseries.movingAverage') {
+                    const windowSize = 3 + Math.floor(Math.random() * 5); // 3-7
+                    return `${mathFunc.name}([${params.join(', ')}], ${windowSize})`;
+                }
+                if (mathFunc.name === 'timeseries.exponentialSmoothing') {
+                    const alpha = 0.1 + Math.random() * 0.8; // 0.1-0.9
+                    return `${mathFunc.name}([${params.join(', ')}], ${alpha.toFixed(2)})`;
+                }
+                if (mathFunc.name === 'timeseries.autocorrelation') {
+                    const lag = 1 + Math.floor(Math.random() * 5); // 1-5
+                    return `${mathFunc.name}([${params.join(', ')}], ${lag})`;
+                }
+                if (mathFunc.name === 'timeseries.differencing') {
+                    const order = 1 + Math.floor(Math.random() * 2); // 1-2
+                    return `${mathFunc.name}([${params.join(', ')}], ${order})`;
+                }
+                if (mathFunc.name === 'timeseries.seasonalDecomposition') {
+                    const period = 4 + Math.floor(Math.random() * 8); // 4-11
+                    return `${mathFunc.name}([${params.join(', ')}], ${period})`;
+                }
+                if (mathFunc.name === 'timeseries.simpleLinearForecast') {
+                    const steps = 1 + Math.floor(Math.random() * 3); // 1-3
+                    return `${mathFunc.name}([${params.join(', ')}], ${steps})`;
+                }
+                if (mathFunc.name === 'timeseries.detectAnomaly') {
+                    const threshold = 1.5 + Math.random() * 2; // 1.5-3.5
+                    return `${mathFunc.name}([${params.join(', ')}], ${threshold.toFixed(1)})`;
+                }
+                if (mathFunc.name === 'timeseries.changePointDetection') {
+                    const minSegment = 3 + Math.floor(Math.random() * 5); // 3-7
+                    return `${mathFunc.name}([${params.join(', ')}], ${minSegment})`;
+                }
+                return `${mathFunc.name}([${params.join(', ')}])`;
             }
         }
         
         const params: string[] = [];
         
         for (let i = 0; i < mathFunc.params; i++) {
-            if (Math.random() < 0.6 && depth < maxDepth - 1) {
-                // 60% chance to nest another function (if not at max depth)
+            // For higher complexity levels, ensure more aggressive nesting
+            // Adjust probability based on current depth vs desired complexity
+            const nestingProbability = depth < maxDepth - 1 ? 
+                Math.min(0.8, 0.4 + (complexity * 0.15)) : 0;
+            
+            if (Math.random() < nestingProbability && depth < maxDepth - 1) {
+                // Nest another function to increase complexity
                 params.push(generateSubExpression(depth + 1, maxDepth));
             } else {
                 // Use a grid reference
@@ -350,6 +554,26 @@ export function evaluate(grid: number[][], func: { expression: string }): number
             return handleTsStatsOperations(grid, func.expression)
         }
         
+        // Handle stats operations
+        if (func.expression.includes('stats.')) {
+            return handleStatsOperations(grid, func.expression)
+        }
+        
+        // Handle signal processing operations
+        if (func.expression.includes('signal.')) {
+            return handleSignalOperations(grid, func.expression)
+        }
+        
+        // Handle linear algebra operations
+        if (func.expression.includes('linalg.')) {
+            return handleLinearAlgebraOperations(grid, func.expression)
+        }
+        
+        // Handle time series operations
+        if (func.expression.includes('timeseries.')) {
+            return handleTimeSeriesOperations(grid, func.expression)
+        }
+        
         // Handle special expressions first
         if (func.expression.includes('inch to cm')) {
             return handleUnitConversion(grid, func.expression)
@@ -378,10 +602,11 @@ export function evaluate(grid: number[][], func: { expression: string }): number
         );
         
         
-        // Use mathjs to evaluate the expression
+        // Use mathjs to evaluate the expression with deterministic scope
         const scope = { 
             grid, 
             pi: Math.PI,
+            e: Math.E,
             // Add missing bitwise shift functions
             rightShift: (a: number, b: number) => a >> b,
             leftShift: (a: number, b: number) => a << b
@@ -422,21 +647,24 @@ export function evaluate(grid: number[][], func: { expression: string }): number
 function generateAlternativeFunction(grid: number[][]): number {
     // Safe alternative functions that are unlikely to produce infinity
     const safeAlternatives = [
-        () => Math.abs(grid[0][0] % 100),  // Modulo to keep result small
-        () => Math.min(grid[0][0] || 1, 1000),  // Clamp to reasonable range
-        () => Math.sqrt(Math.abs(grid[0][0] || 4)),  // Safe square root
-        () => Math.ceil(Math.abs(grid[1][1] || 5) / 10),  // Division to reduce magnitude
-        () => Math.floor(Math.abs(grid[2][2] || 7) / 5),  // Another safe division
-        () => (grid[0][1] || 3) + (grid[1][0] || 2),  // Simple addition
-        () => Math.max(1, Math.abs(grid[0][0] || 1) % 50),  // Modulo with minimum
-        () => Math.round(Math.sin(Math.abs(grid[1][1] || 30) * Math.PI / 180) * 100) / 100,  // Safe trig
+        () => Math.abs((grid[0]?.[0] || 1) % 100),  // Modulo to keep result small
+        () => Math.min(grid[0]?.[0] || 1, 1000),  // Clamp to reasonable range
+        () => Math.sqrt(Math.abs(grid[0]?.[0] || 4)),  // Safe square root
+        () => Math.ceil(Math.abs(grid[1]?.[1] || 5) / 10),  // Division to reduce magnitude
+        () => Math.floor(Math.abs(grid[2]?.[2] || 7) / 5),  // Another safe division
+        () => (grid[0]?.[1] || 3) + (grid[1]?.[0] || 2),  // Simple addition
+        () => Math.max(1, Math.abs(grid[0]?.[0] || 1) % 50),  // Modulo with minimum
+        () => Math.round(Math.sin(Math.abs(grid[1]?.[1] || 30) * Math.PI / 180) * 100) / 100,  // Safe trig
     ];
     
-    const randomIndex = Math.floor(Math.random() * safeAlternatives.length);
+    // Use deterministic index based on grid content instead of Math.random()
+    const gridSum = grid.flat().reduce((sum, val) => sum + (val || 0), 0);
+    const deterministicIndex = Math.abs(gridSum) % safeAlternatives.length;
     try {
-        return Math.round(safeAlternatives[randomIndex]() * 1000) / 1000;
+        return Math.round(safeAlternatives[deterministicIndex]() * 1000) / 1000;
     } catch {
-        return Math.floor(Math.random() * 10) + 1;  // Fallback random number
+        // Deterministic fallback based on grid content instead of Math.random()
+        return Math.abs(gridSum % 10) + 1;
     }
 }
 
@@ -510,11 +738,6 @@ function handleMatrixOperations(grid: number[][], expression: string): number | 
     try {
         const math1 = new Math1();
         
-        // Extract function name and parameters
-        if (expression.includes('matrix.randomFunc(grid)')) {
-            const result = math1.randomFunc(grid);
-            return typeof result.result === 'function' ? result.result().value || 0 : 0;
-        }
         
         // Extract row/col index from expressions like matrix.sumRow(grid, 3)
         const indexMatch = expression.match(/matrix\.(\w+)\(grid,\s*(\d+)\)/);
@@ -554,15 +777,6 @@ function handleTsStatsOperations(grid: number[][], expression: string): number |
     try {
         const math1 = new Math1();
         
-        // Handle randomStatsFunc
-        if (expression.includes('tsStats.randomStatsFunc')) {
-            const arrayMatch = expression.match(/tsStats\.randomStatsFunc\(\[([^\]]+)\]\)/);
-            if (arrayMatch) {
-                const values = extractGridValues(grid, arrayMatch[1]);
-                const result = math1.randomStatsFunc(values);
-                return typeof result.result === 'function' ? result.result().value || 0 : 0;
-            }
-        }
         
         // Handle correlation
         if (expression.includes('tsStats.correlation')) {
@@ -583,14 +797,17 @@ function handleTsStatsOperations(grid: number[][], expression: string): number |
             
             switch (operation) {
                 case 'average':
-                    return math1.statsAverage(values);
+                    const avgResult = math1.statsAverage(values);
+                    return typeof avgResult === 'number' ? avgResult : 0;
                 case 'median':
-                    return math1.statsMedian(values);
+                    const medianResult = math1.statsMedian(values);
+                    return typeof medianResult === 'number' ? medianResult : 0;
                 case 'mode':
                     const mode = math1.statsMode(values);
                     return Array.isArray(mode) && mode.length > 0 ? mode[0] : 0;
                 case 'variance':
-                    return math1.statsVariance(values);
+                    const varianceResult = math1.statsVariance(values);
+                    return typeof varianceResult === 'number' ? varianceResult : 0;
                 default:
                     return 0;
             }
@@ -602,23 +819,425 @@ function handleTsStatsOperations(grid: number[][], expression: string): number |
     }
 }
 
-function extractGridValues(grid: number[][], cellString: string): number[] {
-    const values: number[] = [];
-    const cellRefs = cellString.match(/grid\[(\d+)\]\[(\d+)\]/g);
+function extractFunctionParameters(expression: string, functionPrefix: string): { functionName: string; parameters: string } | null {
+    const regex = new RegExp(`${functionPrefix.replace('.', '\\.')}\\.(\\w+)\\(`, 'g');
+    const match = regex.exec(expression);
     
-    if (cellRefs) {
-        for (const cellRef of cellRefs) {
-            const match = cellRef.match(/grid\[(\d+)\]\[(\d+)\]/);
-            if (match) {
-                const row = parseInt(match[1]);
-                const col = parseInt(match[2]);
-                if (row < grid.length && col < grid[row].length) {
-                    values.push(grid[row][col]);
-                }
+    if (!match) return null;
+    
+    const functionName = match[1];
+    const startIndex = match.index + match[0].length;
+    let parenCount = 1;
+    let currentIndex = startIndex;
+    
+    while (currentIndex < expression.length && parenCount > 0) {
+        const char = expression[currentIndex];
+        if (char === '(') {
+            parenCount++;
+        } else if (char === ')') {
+            parenCount--;
+        }
+        currentIndex++;
+    }
+    
+    if (parenCount === 0) {
+        const parameters = expression.substring(startIndex, currentIndex - 1);
+        return { functionName, parameters };
+    }
+    
+    return null;
+}
+
+function evaluateNestedExpression(grid: number[][], expression: string): number {
+    try {
+        const result = evaluate(grid, { expression });
+        return typeof result === 'number' ? result : 0;
+    } catch {
+        return 0;
+    }
+}
+
+function extractGridValues(grid: number[][], paramString: string): number[] {
+    const values: number[] = [];
+    
+    // Remove array brackets if present
+    const cleanParams = paramString.replace(/^\[|\]$/g, '');
+    
+    // Split by commas, but be careful about commas inside nested function calls
+    const params = splitParameterString(cleanParams);
+    
+    for (const param of params) {
+        const trimmedParam = param.trim();
+        
+        // Check if it's a direct grid reference
+        const gridMatch = trimmedParam.match(/^grid\[(\d+)\]\[(\d+)\]$/);
+        if (gridMatch) {
+            const row = parseInt(gridMatch[1]);
+            const col = parseInt(gridMatch[2]);
+            if (row < grid.length && col < grid[row].length) {
+                values.push(grid[row][col]);
             }
+        }
+        // Check if it's a nested function call that needs evaluation
+        else if (trimmedParam.includes('(') && trimmedParam.includes(')')) {
+            const nestedResult = evaluateNestedExpression(grid, trimmedParam);
+            values.push(nestedResult);
         }
     }
     
     return values;
+}
+
+function splitParameterString(paramString: string): string[] {
+    const params: string[] = [];
+    let currentParam = '';
+    let parenLevel = 0;
+    let bracketLevel = 0;
+    
+    for (let i = 0; i < paramString.length; i++) {
+        const char = paramString[i];
+        
+        if (char === '(') {
+            parenLevel++;
+        } else if (char === ')') {
+            parenLevel--;
+        } else if (char === '[') {
+            bracketLevel++;
+        } else if (char === ']') {
+            bracketLevel--;
+        } else if (char === ',' && parenLevel === 0 && bracketLevel === 0) {
+            params.push(currentParam.trim());
+            currentParam = '';
+            continue;
+        }
+        
+        currentParam += char;
+    }
+    
+    if (currentParam.trim()) {
+        params.push(currentParam.trim());
+    }
+    
+    return params;
+}
+
+// Create a shared Math1 instance to ensure the modules are marked as used
+const sharedMath1 = new Math1();
+
+function handleStatsOperations(grid: number[][], expression: string): number | string {
+    try {
+        
+        // Extract function name and parameters using balanced parenthesis parser
+        const parsed = extractFunctionParameters(expression, 'stats');
+        if (!parsed) return 0;
+        
+        const operation = parsed.functionName;
+        const params = parsed.parameters;
+        
+        if (params.includes('[') && params.includes(']')) {
+            // Array parameter
+            const values = extractGridValues(grid, params);
+            
+            switch (operation) {
+                case 'mean':
+                    return sharedMath1.stats.mean(values);
+                case 'median':
+                    return sharedMath1.stats.median(values);
+                case 'mode':
+                    const mode = sharedMath1.stats.mode(values);
+                    return Array.isArray(mode) && mode.length > 0 ? mode[0] : 0;
+                case 'variance':
+                    return sharedMath1.stats.variance(values);
+                case 'stdDev':
+                    return sharedMath1.stats.stdDev(values);
+                case 'harmonicMean':
+                    return sharedMath1.stats.harmonicMean(values);
+                case 'geometricMean':
+                    return sharedMath1.stats.geometricMean(values);
+                case 'range':
+                    return sharedMath1.stats.range(values);
+                case 'skewness':
+                    return sharedMath1.stats.skewness(values);
+                case 'kurtosis':
+                    return sharedMath1.stats.kurtosis(values);
+                case 'quartiles':
+                    const quartiles = sharedMath1.stats.quartiles(values);
+                    return quartiles.q2; // Return median
+                case 'outliers':
+                    const outliers = sharedMath1.stats.outliers(values);
+                    return outliers.length;
+                case 'percentile': {
+                    // Extract percentile value from params (second parameter)
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const percentile = parseFloat(paramList[1]);
+                        return sharedMath1.stats.percentile(values, percentile);
+                    }
+                    return 0;
+                }
+                case 'covariance':
+                case 'correlation': {
+                    // These require two arrays - extract both
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const values1 = extractGridValues(grid, paramList[0]);
+                        const values2 = extractGridValues(grid, paramList[1]);
+                        return operation === 'covariance' 
+                            ? sharedMath1.stats.covariance(values1, values2)
+                            : sharedMath1.stats.correlation(values1, values2);
+                    }
+                    return 0;
+                }
+                case 'zScore': {
+                    // Extract value and data array
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const value = evaluateNestedExpression(grid, paramList[0]);
+                        const data = extractGridValues(grid, paramList[1]);
+                        return sharedMath1.stats.zScore(value, data);
+                    }
+                    return 0;
+                }
+                default:
+                    return 0;
+            }
+        }
+        
+        return 0;
+    } catch (error) {
+        return 0;
+    }
+}
+
+function handleSignalOperations(grid: number[][], expression: string): number | string {
+    try {
+        // Extract function name and parameters using balanced parenthesis parser
+        const parsed = extractFunctionParameters(expression, 'signal');
+        if (!parsed) return 0;
+        
+        const operation = parsed.functionName;
+        const params = parsed.parameters;
+        
+        if (params.includes('[') && params.includes(']')) {
+            const values = extractGridValues(grid, params);
+            
+            switch (operation) {
+                case 'powerSpectrum':
+                    const spectrum = sharedMath1.signal.powerSpectrum(values);
+                    return Array.isArray(spectrum) && spectrum.length > 0 ? spectrum[0] : 0;
+                case 'peakDetection':
+                    const peaks = sharedMath1.signal.peakDetection(values, 0.5);
+                    return Array.isArray(peaks) ? peaks.length : 0;
+                case 'envelope':
+                    const envelope = sharedMath1.signal.envelope(values);
+                    return envelope && envelope.upper ? envelope.upper[0] || 0 : 0;
+                case 'fft': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const real = extractGridValues(grid, paramList[0]);
+                        const imag = extractGridValues(grid, paramList[1]);
+                        const result = sharedMath1.signal.fft(real, imag);
+                        return result && result.real ? result.real[0] || 0 : 0;
+                    }
+                    return 0;
+                }
+                case 'ifft': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const real = extractGridValues(grid, paramList[0]);
+                        const imag = extractGridValues(grid, paramList[1]);
+                        const result = sharedMath1.signal.ifft(real, imag);
+                        return result && result.real ? result.real[0] || 0 : 0;
+                    }
+                    return 0;
+                }
+                case 'lowPassFilter': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const cutoff = parseFloat(paramList[1]);
+                        const filtered = sharedMath1.signal.lowPassFilter(values, cutoff);
+                        return Array.isArray(filtered) && filtered.length > 0 ? filtered[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'highPassFilter': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const cutoff = parseFloat(paramList[1]);
+                        const filtered = sharedMath1.signal.highPassFilter(values, cutoff);
+                        return Array.isArray(filtered) && filtered.length > 0 ? filtered[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'bandPassFilter': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 3) {
+                        const lowCutoff = parseFloat(paramList[1]);
+                        const highCutoff = parseFloat(paramList[2]);
+                        const filtered = sharedMath1.signal.bandPassFilter(values, lowCutoff, highCutoff);
+                        return Array.isArray(filtered) && filtered.length > 0 ? filtered[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'convolution': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const signal1 = extractGridValues(grid, paramList[0]);
+                        const signal2 = extractGridValues(grid, paramList[1]);
+                        const result = sharedMath1.signal.convolution(signal1, signal2);
+                        return Array.isArray(result) && result.length > 0 ? result[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'crossCorrelation': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const signal1 = extractGridValues(grid, paramList[0]);
+                        const signal2 = extractGridValues(grid, paramList[1]);
+                        const result = sharedMath1.signal.crossCorrelation(signal1, signal2);
+                        return Array.isArray(result) && result.length > 0 ? result[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'windowFunction': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const type = paramList[1].replace(/['"]/g, '') as 'hamming' | 'hanning' | 'blackman' | 'rectangular';
+                        const length = values.length;
+                        const window = sharedMath1.signal.windowFunction(type, length);
+                        return Array.isArray(window) && window.length > 0 ? window[0] : 0;
+                    }
+                    return 0;
+                }
+                case 'spectrogram': {
+                    const paramList = splitParameterString(params);
+                    if (paramList.length >= 2) {
+                        const windowSize = parseInt(paramList[1]);
+                        const result = sharedMath1.signal.spectrogram(values, windowSize);
+                        return Array.isArray(result) && result.length > 0 && Array.isArray(result[0]) ? result[0][0] || 0 : 0;
+                    }
+                    return 0;
+                }
+                default:
+                    return Math.abs(values[0] || 0); // Fallback
+            }
+        }
+        
+        return 0;
+    } catch (error) {
+        return 0;
+    }
+}
+
+function handleLinearAlgebraOperations(grid: number[][], expression: string): number | string {
+    try {
+        // Extract function name
+        const match = expression.match(/linalg\.(\w+)\(([^)]+)\)/);
+        if (!match) return 0;
+        
+        const operation = match[1];
+        
+        // Create a submatrix from grid for linear algebra operations
+        const subMatrix = grid.slice(0, Math.min(3, grid.length))
+                              .map(row => row.slice(0, Math.min(3, row.length)));
+        
+        switch (operation) {
+            case 'eigenvalues':
+                const eigenvals = sharedMath1.linearAlgebra.eigenvalues(subMatrix);
+                return Array.isArray(eigenvals) && eigenvals.length > 0 ? eigenvals[0] : 0;
+            case 'norm':
+                return sharedMath1.linearAlgebra.norm(subMatrix);
+            case 'svd':
+                const svdResult = sharedMath1.linearAlgebra.svd(subMatrix);
+                return typeof svdResult === 'object' && svdResult.S && svdResult.S.length > 0 ? svdResult.S[0] : 0;
+            case 'qrDecomposition': {
+                const qr = sharedMath1.linearAlgebra.qrDecomposition(subMatrix);
+                return qr && qr.Q && qr.Q[0] ? qr.Q[0][0] : 0;
+            }
+            case 'luDecomposition': {
+                const lu = sharedMath1.linearAlgebra.luDecomposition(subMatrix);
+                return lu && lu.L && lu.L[0] ? lu.L[0][0] : 0;
+            }
+            case 'choleskyDecomposition': {
+                const cholesky = sharedMath1.linearAlgebra.choleskyDecomposition(subMatrix);
+                return cholesky && cholesky[0] ? cholesky[0][0] : 0;
+            }
+            case 'solveLinearSystem': {
+                // Needs A and b - use submatrix as A and first column as b
+                const b = subMatrix.map(row => row[0]);
+                const solution = sharedMath1.linearAlgebra.solveLinearSystem(subMatrix, b);
+                return Array.isArray(solution) && solution.length > 0 ? solution[0] : 0;
+            }
+            default:
+                return subMatrix[0][0] || 0; // Fallback
+        }
+    } catch (error) {
+        return 0;
+    }
+}
+
+function handleTimeSeriesOperations(grid: number[][], expression: string): number | string {
+    try {
+        // Extract function name and parameters using balanced parenthesis parser
+        const parsed = extractFunctionParameters(expression, 'timeseries');
+        if (!parsed) return 0;
+        
+        const operation = parsed.functionName;
+        const params = parsed.parameters;
+        
+        if (params.includes('[') && params.includes(']')) {
+            const values = extractGridValues(grid, params);
+            
+            switch (operation) {
+                case 'movingAverage':
+                    const movingAvg = sharedMath1.timeSeries.movingAverage(values, 3);
+                    return Array.isArray(movingAvg) && movingAvg.length > 0 ? movingAvg[0] : 0;
+                case 'exponentialSmoothing':
+                    const expSmooth = sharedMath1.timeSeries.exponentialSmoothing(values, 0.3);
+                    return Array.isArray(expSmooth) && expSmooth.length > 0 ? expSmooth[0] : 0;
+                case 'autocorrelation':
+                    return sharedMath1.timeSeries.autocorrelation(values, 1);
+                case 'differencing':
+                    const diff = sharedMath1.timeSeries.differencing(values, 1);
+                    return Array.isArray(diff) && diff.length > 0 ? diff[0] : 0;
+                case 'trendAnalysis':
+                    const trend = sharedMath1.timeSeries.trendAnalysis(values);
+                    return trend && typeof trend.changeRate === 'number' ? trend.changeRate : 0;
+                case 'detectAnomaly':
+                    const anomalies = sharedMath1.timeSeries.detectAnomaly(values, 2.0);
+                    return Array.isArray(anomalies) ? anomalies.length : 0;
+                case 'changePointDetection':
+                    const changePoints = sharedMath1.timeSeries.changePointDetection(values, 3);
+                    return Array.isArray(changePoints) ? changePoints.length : 0;
+                case 'seasonalDecomposition': {
+                    const paramList = splitParameterString(params);
+                    const period = paramList.length >= 2 ? parseFloat(paramList[1]) : 4;
+                    const decomp = sharedMath1.timeSeries.seasonalDecomposition(values, period);
+                    return decomp && decomp.trend ? decomp.trend[0] || 0 : 0;
+                }
+                case 'simpleLinearForecast': {
+                    const paramList = splitParameterString(params);
+                    const steps = paramList.length >= 2 ? parseFloat(paramList[1]) : 1;
+                    const forecast = sharedMath1.timeSeries.simpleLinearForecast(values, steps);
+                    return Array.isArray(forecast) && forecast.length > 0 ? forecast[0] : 0;
+                }
+                case 'holtWinters': {
+                    const paramList = splitParameterString(params);
+                    // Extract alpha, beta, gamma from params if available, use defaults otherwise
+                    const alpha = paramList.length >= 2 ? parseFloat(paramList[1]) : 0.3;
+                    const beta = paramList.length >= 3 ? parseFloat(paramList[2]) : 0.1;
+                    const gamma = paramList.length >= 4 ? parseFloat(paramList[3]) : 0.1;
+                    const hw = sharedMath1.timeSeries.holtWinters(values, alpha, beta, gamma);
+                    return Array.isArray(hw) && hw.length > 0 ? hw[0] : 0;
+                }
+                default:
+                    return values[0] || 0; // Fallback
+            }
+        }
+        
+        return 0;
+    } catch (error) {
+        return 0;
+    }
 }
 

@@ -1239,9 +1239,6 @@ importers:
       mathjs:
         specifier: ^14.8.1
         version: 14.9.1
-      ts-stats:
-        specifier: ^1.0.4
-        version: 1.0.4
       ulid:
         specifier: 3.0.1
         version: 3.0.1
@@ -7776,9 +7773,6 @@ packages:
   toidentifier@1.0.1:
     resolution: {integrity: sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==}
     engines: {node: '>=0.6'}
-
-  ts-stats@1.0.4:
-    resolution: {integrity: sha512-wlmEKU10Gt4kmVY2SgFnUWuJNLC/U6sVTjNfmV17IWtuka40KtaVRlPykklMSsxoxWgQYdcJ6JcY3QF/VfcRxg==}
 
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
@@ -15741,8 +15735,6 @@ snapshots:
   toad-cache@3.7.0: {}
 
   toidentifier@1.0.1: {}
-
-  ts-stats@1.0.4: {}
 
   tslib@2.8.1: {}
 

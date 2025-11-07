@@ -1,4 +1,4 @@
-import type { IPAddress, Location } from './location'
+import type { IPAddress, Location } from './location.js'
 export type PhysicalAddress = {
   street?: string
   city?: string

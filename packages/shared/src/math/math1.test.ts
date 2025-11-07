@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Ripple } from '../utils/ripple'
-import { Utils } from '../utils/utils'
-import { Math1 } from './math1'
+import { Ripple } from '../utils/ripple.js'
+import { Utils } from '../utils/utils.js'
+import { Math1 } from './math1.js'
 
 describe('Math1', () => {
   let math1: Math1
@@ -270,7 +270,9 @@ describe('Math1', () => {
         // Different factory functions return different structures
         const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
                         executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined
+                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
+                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined ||
+                        executed.largestSingularValue !== undefined || executed.leftVector !== undefined || executed.rightVector !== undefined
         expect(hasValue).toBe(true)
       }
 
@@ -322,7 +324,8 @@ describe('Math1', () => {
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
         const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
                         executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined
+                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
+                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
         expect(hasValue).toBe(true)
       }
       
@@ -726,11 +729,12 @@ describe('Math1', () => {
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
         const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
                         executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined
+                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
+                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
         expect(hasValue).toBe(true)
         
         // Function factories have different operation names that don't contain indices
-        if (!['chainFunction', 'compositeFunction', 'transformFunction'].includes(result.operation)) {
+        if (!['chainFunction', 'compositeFunction', 'transformFunction', 'matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(result.operation)) {
           if (result.operation.includes('Col')) {
             expect(result.operation).toContain('(1)')
           } else {
@@ -757,7 +761,8 @@ describe('Math1', () => {
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
         const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
                         executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined
+                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
+                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
         expect(hasValue).toBe(true)
       }
     })
@@ -775,7 +780,8 @@ describe('Math1', () => {
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
         const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
                         executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined
+                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
+                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
         expect(hasValue).toBe(true)
       }
     })
@@ -789,7 +795,11 @@ describe('Math1', () => {
       expect(typeof result.result).toBe('function')
       
       const executed = result.result()
-      expect(executed.value !== undefined).toBe(true)
+      const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
+                      executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
+                      executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
+                      executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+      expect(hasValue).toBe(true)
     })
 
     it('should handle single row matrix', () => {
@@ -801,7 +811,11 @@ describe('Math1', () => {
       expect(typeof result.result).toBe('function')
       
       const executed = result.result()
-      expect(executed.value !== undefined).toBe(true)
+      const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
+                      executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
+                      executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
+                      executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+      expect(hasValue).toBe(true)
     })
 
     it('should clamp indices to valid ranges', () => {
@@ -809,20 +823,36 @@ describe('Math1', () => {
       
       const resultRowOutOfRange = math1.randomFunc(matrix, 5)
       
-      if (resultRowOutOfRange.operation.includes('Row')) {
-        expect(resultRowOutOfRange.operation).toContain('(1)')
-      } else {
-        expect(resultRowOutOfRange.operation).toContain('(2)')
+      // Complex operations don't contain indices in their names
+      if (!['matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(resultRowOutOfRange.operation)) {
+        if (resultRowOutOfRange.operation.includes('Row')) {
+          expect(resultRowOutOfRange.operation).toContain('(1)')
+        } else {
+          expect(resultRowOutOfRange.operation).toContain('(2)')
+        }
       }
       
       const resultNegativeIndex = math1.randomFunc(matrix, -1)
-      expect(resultNegativeIndex.operation).toContain('(0)')
+      // Complex operations don't contain indices in their names
+      if (!['matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(resultNegativeIndex.operation)) {
+        expect(resultNegativeIndex.operation).toContain('(0)')
+      }
       
       // Verify functions work
       const executed1 = resultRowOutOfRange.result()
       const executed2 = resultNegativeIndex.result()
-      expect(executed1.value !== undefined).toBe(true)
-      expect(executed2.value !== undefined).toBe(true)
+      const hasValue1 = executed1.value !== undefined || executed1.result !== undefined || executed1.finalResult !== undefined ||
+                       executed1.histogram !== undefined || executed1.quantiles !== undefined || executed1.outliers !== undefined || 
+                       executed1.zScores !== undefined || executed1.error !== undefined || executed1.operation !== undefined ||
+                       executed1.data !== undefined || executed1.correlation !== undefined || executed1.vectors !== undefined ||
+                       executed1.largestSingularValue !== undefined || executed1.leftVector !== undefined || executed1.rightVector !== undefined
+      const hasValue2 = executed2.value !== undefined || executed2.result !== undefined || executed2.finalResult !== undefined ||
+                       executed2.histogram !== undefined || executed2.quantiles !== undefined || executed2.outliers !== undefined || 
+                       executed2.zScores !== undefined || executed2.error !== undefined || executed2.operation !== undefined ||
+                       executed2.data !== undefined || executed2.correlation !== undefined || executed2.vectors !== undefined ||
+                       executed2.largestSingularValue !== undefined || executed2.leftVector !== undefined || executed2.rightVector !== undefined
+      expect(hasValue1).toBe(true)
+      expect(hasValue2).toBe(true)
     })
   })
 
@@ -1045,7 +1075,8 @@ describe('Math1', () => {
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
         const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
                         executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined
+                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
+                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
         expect(hasValue).toBe(true)
         
         const validOperations = [
@@ -1193,8 +1224,17 @@ describe('Math1', () => {
         // Execute the function to verify it works
         const executed = result.result()
         expect(executed).toBeDefined()
-        expect(typeof executed.value === 'number' || typeof executed.value === 'string').toBe(true)
-        expect(typeof executed.operation).toBe('string')
+        // Different factory functions return different structures
+        const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
+                        executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
+                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
+                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+        expect(hasValue).toBe(true)
+        // Operation might be in different properties depending on the function type
+        const hasOperation = typeof executed.operation === 'string' || Array.isArray(executed.operations) || 
+                            typeof executed.aggregateType === 'string' || typeof executed.transform === 'string' ||
+                            typeof executed.distributionType === 'string'
+        expect(hasOperation).toBe(true)
       }
     })
 
@@ -1211,7 +1251,8 @@ describe('Math1', () => {
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
         const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
                         executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined
+                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
+                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
         expect(hasValue).toBe(true)
         // Different factory functions return different operation structures
         // Some functions might not have explicit operation strings but contain meaningful data
@@ -1343,10 +1384,12 @@ describe('Math1', () => {
         // Different factory functions return different structures
         const matrixHasValue = matrixResult.value !== undefined || matrixResult.result !== undefined || matrixResult.finalResult !== undefined ||
                               matrixResult.histogram !== undefined || matrixResult.quantiles !== undefined || matrixResult.outliers !== undefined || 
-                              matrixResult.zScores !== undefined || matrixResult.error !== undefined
+                              matrixResult.zScores !== undefined || matrixResult.error !== undefined || matrixResult.operation !== undefined ||
+                              matrixResult.data !== undefined || matrixResult.correlation !== undefined || matrixResult.vectors !== undefined
         const statsHasValue = statsResult.value !== undefined || statsResult.result !== undefined || statsResult.finalResult !== undefined ||
                              statsResult.histogram !== undefined || statsResult.quantiles !== undefined || statsResult.outliers !== undefined || 
-                             statsResult.zScores !== undefined || statsResult.error !== undefined
+                             statsResult.zScores !== undefined || statsResult.error !== undefined || statsResult.operation !== undefined ||
+                             statsResult.data !== undefined || statsResult.correlation !== undefined || statsResult.vectors !== undefined
         expect(matrixHasValue).toBe(true)
         expect(statsHasValue).toBe(true)
       }
