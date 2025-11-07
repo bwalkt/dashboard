@@ -1156,7 +1156,7 @@ function handleLinearAlgebraOperations(grid: number[][], expression: string): nu
             }
             case 'luDecomposition': {
                 const lu = sharedMath1.linearAlgebra.luDecomposition(subMatrix);
-                return lu && typeof lu === 'object' && lu.L && lu.L[0] ? lu.L[0][0] : 0;
+                return lu && typeof lu === 'object' && lu.L && lu.L[0] && lu.L[0][0] !== undefined ? lu.L[0][0] : 0;
             }
             case 'choleskyDecomposition': {
                 const cholesky = sharedMath1.linearAlgebra.choleskyDecomposition(subMatrix);
