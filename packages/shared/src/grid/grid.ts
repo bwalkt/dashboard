@@ -1,5 +1,6 @@
 import { evaluate as mathjsEvaluate, randomInt } from 'mathjs'
 import { Math1 } from '../math/math1.js'
+import { toFullCompact } from '../utils/functionShorthand.js'
 
 export function genGrid(size: number = 5) {
   const min = Math.ceil(Math.random() * 100) || 1
@@ -265,11 +266,16 @@ export function genRandomMathFunction(size: number = 10) {
  * @param size - Grid size for cell references (default=10)
  * @returns Complex function object with expression, metadata, and statistics
  */
-export function genFunction(complexity: number = 1, size: number = 10) {
+export function genFunction(complexity?: number, size?: number) {
     const startTime = Date.now();
     
+    // Use random defaults if not provided, then ensure they're properly typed
+    const actualComplexity = complexity !== undefined ? complexity : Math.floor(Math.random() * 5) + 1; // Random 1-5
+    const actualSize = size !== undefined ? size : Math.floor(Math.random() * 6) + 5; // Random 5-10
+    
     // Ensure complexity is at least 1
-    complexity = Math.max(1, complexity);
+    const finalComplexity = Math.max(1, actualComplexity);
+    const finalSize = actualSize;
     
     // Track function composition for statistics
     const usedFunctions: string[] = [];
@@ -308,8 +314,8 @@ export function genFunction(complexity: number = 1, size: number = 10) {
         if (depth >= maxDepth) {
             // At max depth, use a simple grid reference
             const cell = {
-                row: Math.floor(Math.random() * size),
-                col: Math.floor(Math.random() * size)
+                row: Math.floor(Math.random() * finalSize),
+                col: Math.floor(Math.random() * finalSize)
             };
             usedCells.push(cell);
             return `grid[${cell.row}][${cell.col}]`;
@@ -330,7 +336,7 @@ export function genFunction(complexity: number = 1, size: number = 10) {
         if (mathFunc.params < 0) {
             // Matrix operations (params = -1)
             if (mathFunc.params === -1) {
-                const rowOrCol = Math.floor(Math.random() * size);
+                const rowOrCol = Math.floor(Math.random() * finalSize);
                 // Matrix operations work on the entire grid, so we need to track grid usage
                 // Add a representative cell to indicate grid usage
                 usedCells.push({ row: rowOrCol, col: 0 });
@@ -340,10 +346,10 @@ export function genFunction(complexity: number = 1, size: number = 10) {
             else if (mathFunc.params === -2) {
                 // Generate array of cell references or nested expressions for true complexity
                 const numCells = 3 + Math.floor(Math.random() * 5); // 3-7 cells
-                const params = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, finalSize);
                 
                 if (mathFunc.name === 'tsStats.correlation') {
-                    const params2 = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
+                    const params2 = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, finalSize);
                     return `${mathFunc.name}([${params.join(', ')}], [${params2.join(', ')}])`;
                 }
                 return `${mathFunc.name}([${params.join(', ')}])`;
@@ -351,9 +357,9 @@ export function genFunction(complexity: number = 1, size: number = 10) {
             // StatisticalFunctions operations (params = -3)
             else if (mathFunc.params === -3) {
                 const numCells = 4 + Math.floor(Math.random() * 6); // 4-9 cells
-                const params = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, finalSize);
                 if (mathFunc.name === 'stats.covariance' || mathFunc.name === 'stats.correlation') {
-                    const params2 = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, size);
+                    const params2 = generateParameterArray(numCells, depth, maxDepth, 0.4, generateSubExpression, usedCells, finalSize);
                     return `${mathFunc.name}([${params.join(', ')}], [${params2.join(', ')}])`;
                 }
                 if (mathFunc.name === 'stats.percentile') {
@@ -369,7 +375,7 @@ export function genFunction(complexity: number = 1, size: number = 10) {
             // SignalProcessing operations (params = -4)
             else if (mathFunc.params === -4) {
                 const numCells = 8 + Math.floor(Math.random() * 8); // 8-15 cells for signals
-                const params = generateParameterArray(numCells, depth, maxDepth, 0.3, generateSubExpression, usedCells, size);
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.3, generateSubExpression, usedCells, finalSize);
                 
                 if (mathFunc.name === 'signal.fft' || mathFunc.name === 'signal.ifft') {
                     const halfSize = Math.floor(numCells / 2);
@@ -417,7 +423,7 @@ export function genFunction(complexity: number = 1, size: number = 10) {
             // TimeSeries operations (params = -6)
             else if (mathFunc.params === -6) {
                 const numCells = 6 + Math.floor(Math.random() * 10); // 6-15 cells for time series
-                const params = generateParameterArray(numCells, depth, maxDepth, 0.3, generateSubExpression, usedCells, size);
+                const params = generateParameterArray(numCells, depth, maxDepth, 0.3, generateSubExpression, usedCells, finalSize);
                 
                 if (mathFunc.name === 'timeseries.movingAverage') {
                     const windowSize = 3 + Math.floor(Math.random() * 5); // 3-7
@@ -461,7 +467,7 @@ export function genFunction(complexity: number = 1, size: number = 10) {
             // For higher complexity levels, ensure more aggressive nesting
             // Adjust probability based on current depth vs desired complexity
             const nestingProbability = depth < maxDepth - 1 ? 
-                Math.min(0.8, 0.4 + (complexity * 0.15)) : 0;
+                Math.min(0.8, 0.4 + (finalComplexity * 0.15)) : 0;
             
             if (Math.random() < nestingProbability && depth < maxDepth - 1) {
                 // Nest another function to increase complexity
@@ -469,8 +475,8 @@ export function genFunction(complexity: number = 1, size: number = 10) {
             } else {
                 // Use a grid reference
                 const cell = {
-                    row: Math.floor(Math.random() * size),
-                    col: Math.floor(Math.random() * size)
+                    row: Math.floor(Math.random() * finalSize),
+                    col: Math.floor(Math.random() * finalSize)
                 };
                 usedCells.push(cell);
                 params.push(`grid[${cell.row}][${cell.col}]`);
@@ -486,15 +492,15 @@ export function genFunction(complexity: number = 1, size: number = 10) {
     let expression: string;
     let maxDepth: number;
     
-    if (complexity === 1) {
+    if (finalComplexity === 1) {
         maxDepth = 1;
-    } else if (complexity === 2) {
+    } else if (finalComplexity === 2) {
         maxDepth = 2;
-    } else if (complexity === 3) {
+    } else if (finalComplexity === 3) {
         maxDepth = 3;
     } else {
         // For complexity 4+, use logarithmic scaling to prevent exponential explosion
-        maxDepth = Math.min(3 + Math.floor(Math.log2(complexity - 3)), 6);
+        maxDepth = Math.min(3 + Math.floor(Math.log2(finalComplexity - 3)), 6);
     }
     
     expression = generateSubExpression(0, maxDepth);
@@ -517,11 +523,15 @@ export function genFunction(complexity: number = 1, size: number = 10) {
     
     const endTime = Date.now();
     
+    // Generate compact version for display and transmission
+    const compactExpression = toFullCompact(expression).replace(/,\s/g, ',');
+    
     return {
         id: functionId,
-        expression,
+        expression, // Keep verbose for hash validation
+        compactExpression, // Compact for display and HTTP transmission
         complexity: {
-            level: complexity,
+            level: finalComplexity,
             actualDepth: maxDepth,
             functionCount: usedFunctions.length,
             uniqueFunctions: uniqueFunctions.length,
@@ -536,8 +546,14 @@ export function genFunction(complexity: number = 1, size: number = 10) {
         readable,
         metadata: {
             generationTime: endTime - startTime,
-            estimatedCombinations: Math.pow(MATH_FUNCTIONS.length, maxDepth) * Math.pow(size * size, usedCells.length),
-            timestamp: new Date().toISOString()
+            estimatedCombinations: Math.pow(MATH_FUNCTIONS.length, maxDepth) * Math.pow(finalSize * finalSize, usedCells.length),
+            timestamp: new Date().toISOString(),
+            spaceSavings: {
+                original: expression.length,
+                compact: compactExpression.length,
+                savedBytes: expression.length - compactExpression.length,
+                savedPercentage: ((expression.length - compactExpression.length) / expression.length * 100)
+            }
         }
     };
 }
@@ -583,8 +599,11 @@ export function evaluate(grid: number[][], func: { expression: string }): number
             return handleComplexSqrt(grid, func.expression)
         }
         
-        // Convert grid[row][col] syntax to subset(grid, index(row, col)) for mathjs
+        // Convert both grid[row][col] and g4.0 syntax to subset(grid, index(row, col)) for mathjs
         let convertedExpression = func.expression.replace(
+            /g(\d+)\.(\d+)/g, 
+            (match, row, col) => `grid[${parseInt(row) + 1}, ${parseInt(col) + 1}]`
+        ).replace(
             /grid\[(\d+)\]\[(\d+)\]/g, 
             (match, row, col) => `grid[${parseInt(row) + 1}, ${parseInt(col) + 1}]`
         );
@@ -687,23 +706,47 @@ function handleUnitConversion(grid: number[][], expression: string): string {
 }
 
 function hasNegativeValue(grid: number[][], expression: string): boolean {
-    const gridRefRegex = /grid\[(\d+)\]\[(\d+)\]/g;
+    // Check both compact (g4.0) and verbose (grid[4][0]) formats
+    const compactRegex = /g(\d+)\.(\d+)/g;
+    const verboseRegex = /grid\[(\d+)\]\[(\d+)\]/g;
+    
     let match;
     
-    while ((match = gridRefRegex.exec(expression)) !== null) {
+    // Check compact format
+    while ((match = compactRegex.exec(expression)) !== null) {
         const row = parseInt(match[1]);
         const col = parseInt(match[2]);
         if (row < grid.length && col < grid[row].length && grid[row][col] < 0) {
             return true;
         }
     }
+    
+    // Check verbose format
+    while ((match = verboseRegex.exec(expression)) !== null) {
+        const row = parseInt(match[1]);
+        const col = parseInt(match[2]);
+        if (row < grid.length && col < grid[row].length && grid[row][col] < 0) {
+            return true;
+        }
+    }
+    
     return false;
 }
 
 function handleComplexSqrt(grid: number[][], expression: string): string | number {
     try {
-        // Replace grid references with actual values
-        const convertedExpression = expression.replace(
+        // Replace grid references with actual values (both formats)
+        let convertedExpression = expression.replace(
+            /g(\d+)\.(\d+)/g, 
+            (match, row, col) => {
+                const r = parseInt(row);
+                const c = parseInt(col);
+                if (r < grid.length && c < grid[r].length) {
+                    return grid[r][c].toString();
+                }
+                return '0';
+            }
+        ).replace(
             /grid\[(\d+)\]\[(\d+)\]/g, 
             (match, row, col) => {
                 const r = parseInt(row);
