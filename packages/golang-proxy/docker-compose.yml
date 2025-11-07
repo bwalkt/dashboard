@@ -18,5 +18,8 @@ services:
     restart: unless-stopped
     volumes:
       - type: bind
-        source: simple-server.json
+        source: ./simple-server.json
         target: /app/simple-server.json
+        is_directory: false
+        content: |
+          {"test": "test"}
