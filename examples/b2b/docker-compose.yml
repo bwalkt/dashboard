@@ -27,3 +27,16 @@ services:
       # OAuth Callback URL
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:1420}
     restart: unless-stopped
+    volumes:
+      - type: bind
+        source: ./private.key
+        target: /app/src/keys/private.key
+        is_directory: false
+        content: |
+          private key content
+      - type: bind
+        source: ./certificate.crt
+        target: /app/src/keys/certificate.crt
+        is_directory: false
+        content: |
+          certificate content
