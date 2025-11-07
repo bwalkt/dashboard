@@ -1,7 +1,7 @@
 import { evaluate as mathjsEvaluate, randomInt } from 'mathjs'
 import { Math1 } from '../math/math1.js'
 
-export function genGrid(size: number = 10) {
+export function genGrid(size: number = 5) {
   const min = Math.ceil(Math.random() * 100) || 1
   const max = Math.ceil((min + Math.random()) * 1000)
   const grid = randomInt([size, size], min, max) as any

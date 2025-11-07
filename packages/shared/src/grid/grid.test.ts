@@ -3,7 +3,7 @@ import { evaluate, expandGrid, genFunction, genGrid, genRandomMathFunction } fro
 
 describe('genGrid', () => {
     it('should generate a grid with default size of 10x10', () => {
-        const grid = genGrid()
+        const grid = genGrid(10)
         expect(grid).toHaveLength(10)
         expect(grid[0]).toHaveLength(10)
     })

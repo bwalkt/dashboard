@@ -18,7 +18,7 @@ function parseArgs(): CLIOptions {
     const args = process.argv.slice(2);
     const options: CLIOptions = {
         count: 1,
-        size: 10,
+        size: 5,
         evaluate: false,
         verbose: false,
         stats: false,
