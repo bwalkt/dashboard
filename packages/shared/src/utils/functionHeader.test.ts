@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
+    FunctionRegistry, 
     hashExpression,
-    truncateExpression,
-    prepareFunctionHeader,
     parseFunctionHeader,
-    validateFunctionHeader,
-    FunctionRegistry
+    prepareFunctionHeader,
+    truncateExpression,
+    validateFunctionHeader
 } from './functionHeader.js';
 
 describe('functionHeader utilities', () => {

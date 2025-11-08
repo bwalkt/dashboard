@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
+import { toCompactFunctions, toFullCompact, toFullVerbose } from './functionShorthand.js';
 import { toCompactGrid, toVerboseGrid } from './gridShorthand.js';
-import { toFullCompact, toFullVerbose, toCompactFunctions } from './functionShorthand.js';
 
 /**
  * Configuration for function header validation

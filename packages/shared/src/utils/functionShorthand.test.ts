@@ -1,13 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
+    analyzeFullCompaction,
+    analyzeFunctionCompaction,
+    getFunctionShortcuts, 
+    hasCompactFunctions,
     toCompactFunctions,
-    toVerboseFunctions,
     toFullCompact,
     toFullVerbose,
-    analyzeFunctionCompaction,
-    analyzeFullCompaction,
-    hasCompactFunctions,
-    getFunctionShortcuts
+    toVerboseFunctions
 } from './functionShorthand.js';
 
 describe('functionShorthand utilities', () => {
