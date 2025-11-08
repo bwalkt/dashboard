@@ -1,14 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-    toCompactGrid,
-    toVerboseGrid,
     analyzeGridCompaction,
-    isValidCompactExpression,
-    isValidVerboseExpression,
-    extractGridReferences,
     batchToCompact,
     batchToVerbose,
-    smartCompact
+    extractGridReferences,
+    isValidCompactExpression,
+    isValidVerboseExpression,
+    smartCompact, 
+    toCompactGrid,
+    toVerboseGrid
 } from './gridShorthand.js';
 
 describe('gridShorthand utilities', () => {

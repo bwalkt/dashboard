@@ -2,15 +2,15 @@
  * Example integration showing how to use function headers in HTTP requests
  */
 
-import { 
-    prepareFunctionHeader, 
-    validateFunctionHeader, 
-    FunctionRegistry,
-    parseFunctionHeader 
-} from './functionHeader.js';
-import { toVerboseGrid } from './gridShorthand.js';
-import { toFullVerbose, toVerboseFunctions } from './functionShorthand.js';
 import { genFunction } from '../grid/grid.js';
+import { 
+    FunctionRegistry,
+    parseFunctionHeader, 
+    prepareFunctionHeader, 
+    validateFunctionHeader 
+} from './functionHeader.js';
+import { toFullVerbose, toVerboseFunctions } from './functionShorthand.js';
+import { toVerboseGrid } from './gridShorthand.js';
 
 // Server-side registry for storing full expressions
 const serverRegistry = new FunctionRegistry();
