@@ -10,18 +10,20 @@ import {
 
 describe('functionHeader utilities', () => {
     describe('hashExpression', () => {
-        it('should generate consistent hash for same expression', () => {
+        it('should generate consistent hash for same expression', async () => {
             const expr = 'sin(grid[0][0]) + cos(grid[1][1])';
-            const hash1 = hashExpression(expr);
-            const hash2 = hashExpression(expr);
+            const hash1 = await hashExpression(expr);
+            const hash2 = await hashExpression(expr);
             expect(hash1).toBe(hash2);
             expect(hash1).toHaveLength(64); // SHA256 produces 64 char hex
         });
         
-        it('should generate different hashes for different expressions', () => {
+        it('should generate different hashes for different expressions', async () => {
             const expr1 = 'sin(grid[0][0])';
             const expr2 = 'cos(grid[0][0])';
-            expect(hashExpression(expr1)).not.toBe(hashExpression(expr2));
+            const hash1 = await hashExpression(expr1);
+            const hash2 = await hashExpression(expr2);
+            expect(hash1).not.toBe(hash2);
         });
     });
     
@@ -47,9 +49,9 @@ describe('functionHeader utilities', () => {
     });
     
     describe('prepareFunctionHeader', () => {
-        it('should include full expression for short functions', () => {
+        it('should include full expression for short functions', async () => {
             const expr = 'sin(grid[0][0])';
-            const result = prepareFunctionHeader(expr);
+            const result = await prepareFunctionHeader(expr);
             
             expect(result.isValid).toBe(true);
             // By default, compact format is used, so expect compact version
@@ -60,9 +62,9 @@ describe('functionHeader utilities', () => {
             expect(result.truncated).toBeUndefined();
         });
         
-        it('should include full expression in verbose format when compact is disabled', () => {
+        it('should include full expression in verbose format when compact is disabled', async () => {
             const expr = 'sin(grid[0][0])';
-            const result = prepareFunctionHeader(expr, { useCompactGrid: false });
+            const result = await prepareFunctionHeader(expr, { useCompactGrid: false });
             
             expect(result.isValid).toBe(true);
             expect(result.headerValue).toContain(`expr:${expr}`);
@@ -72,9 +74,9 @@ describe('functionHeader utilities', () => {
             expect(result.truncated).toBeUndefined();
         });
         
-        it('should truncate very long expressions', () => {
+        it('should truncate very long expressions', async () => {
             const expr = 'x'.repeat(10000); // Very long expression
-            const result = prepareFunctionHeader(expr);
+            const result = await prepareFunctionHeader(expr);
             
             expect(result.isValid).toBe(true);
             expect(result.truncated).toBeDefined();
@@ -82,9 +84,9 @@ describe('functionHeader utilities', () => {
             expect(result.headerValue).toContain('truncated:true');
         });
         
-        it('should respect custom configuration', () => {
+        it('should respect custom configuration', async () => {
             const expr = 'sin(grid[0][0]) + cos(grid[1][1])';
-            const result = prepareFunctionHeader(expr, {
+            const result = await prepareFunctionHeader(expr, {
                 includeTruncated: false,
                 maxHeaderLength: 100
             });
@@ -94,10 +96,10 @@ describe('functionHeader utilities', () => {
             expect(result.headerValue).not.toContain('expr:');
         });
         
-        it('should handle extremely long expressions from the example', () => {
+        it('should handle extremely long expressions from the example', async () => {
             const longExpr = `timeseries.changePointDetection([hypot(linalg.qrDecomposition(grid), floor(grid[0][3])), timeseries.differencing([grid[2][3], cosh(grid[3][3]), grid[2][3], timeseries.holtWinters([grid[2][1], grid[4][0], grid[1][2], grid[4][1], grid[3][2], grid[2][0], grid[0][1], grid[0][3], grid[3][3], grid[4][2], grid[3][1], grid[1][3], grid[4][2], grid[3][3], grid[0][0]]), tanh(grid[1][0]), asec(grid[0][1]), linalg.qrDecomposition(grid), grid[3][0], cos(grid[4][1])], 2), stats.mean([grid[2][3], grid[1][2], grid[3][2], tsStats.median([grid[0][1], grid[1][0], grid[0][2]]), grid[1][0], grid[4][3]]), matrix.sumRow(grid, 2), grid[2][1], atan(signal.lowPassFilter([grid[4][2], grid[3][0], grid[0][0], grid[4][1], grid[2][0], grid[2][3], grid[3][0], grid[4][1], grid[1][0], grid[2][2], grid[2][0], grid[1][1], grid[4][1]], 0.45)), grid[2][4], grid[3][2], timeseries.autocorrelation([grid[4][4], round(grid[3][2]), grid[1][1], grid[2][0], grid[2][4], grid[1][0], grid[2][1], floor(grid[1][3])], 4), signal.powerSpectrum([grid[2][0], grid[0][2], grid[4][0], grid[4][1], grid[1][0], timeseries.changePointDetection([grid[0][4], grid[4][4], grid[4][4], grid[1][4], grid[2][4], grid[4][3], grid[4][4], grid[0][4], grid[4][4], grid[1][2], grid[3][0], grid[1][0], grid[4][4], grid[1][1], grid[2][0]], 5), stats.covariance([grid[3][0], grid[0][1], grid[2][1], grid[4][2], grid[3][3], grid[2][2], grid[1][2]], [grid[2][2], grid[1][0], grid[0][4], grid[0][3], grid[0][3], grid[4][2], grid[1][4]]), grid[3][3], timeseries.movingAverage([grid[3][2], grid[1][0], grid[3][2], grid[1][2], grid[3][0], grid[1][1], grid[4][4], grid[3][2], grid[3][0], grid[0][0], grid[2][1], grid[0][2], grid[0][2]], 7), grid[4][0], grid[3][1], grid[2][2], grid[4][0], grid[0][3], grid[2][4]]), grid[2][3], grid[2][0], grid[1][1], grid[2][1], signal.bandPassFilter([grid[1][2], grid[2][2], grid[3][3], grid[1][3], grid[4][2], grid[0][4], atan(grid[1][3])], 0.25, 0.44)], 5)`;
             
-            const result = prepareFunctionHeader(longExpr);
+            const result = await prepareFunctionHeader(longExpr);
             
             expect(result.isValid).toBe(true);
             expect(result.hash).toHaveLength(64);
@@ -108,11 +110,11 @@ describe('functionHeader utilities', () => {
             expect(result.headerValue.length).toBeLessThan(8192); // Should fit in header
         });
         
-        it('should truncate when header size limit is exceeded', () => {
+        it('should truncate when header size limit is exceeded', async () => {
             const longExpr = `timeseries.changePointDetection([hypot(linalg.qrDecomposition(grid), floor(grid[0][3])), timeseries.differencing([grid[2][3], cosh(grid[3][3]), grid[2][3]], 2)])`;
             
             // Force truncation by setting a limit between the non-truncated and truncated sizes
-            const result = prepareFunctionHeader(longExpr, {
+            const result = await prepareFunctionHeader(longExpr, {
                 maxHeaderLength: 160, // Between 151 (truncated) and 167 (full)
                 truncateAt: 30  // Smaller truncation to ensure it fits
             });
@@ -125,11 +127,11 @@ describe('functionHeader utilities', () => {
             expect(result.headerValue.length).toBeLessThanOrEqual(160);
         });
         
-        it('should respect includeHash configuration', () => {
+        it('should respect includeHash configuration', async () => {
             const expr = 'sin(grid[0][0])';
             
             // Test with hash disabled
-            const resultNoHash = prepareFunctionHeader(expr, { includeHash: false });
+            const resultNoHash = await prepareFunctionHeader(expr, { includeHash: false });
             
             expect(resultNoHash.isValid).toBe(true);
             expect(resultNoHash.headerValue).not.toContain('hash:');
@@ -138,18 +140,18 @@ describe('functionHeader utilities', () => {
             expect(resultNoHash.hash).toBe(''); // Empty hash when disabled
             
             // Test with hash enabled (default)
-            const resultWithHash = prepareFunctionHeader(expr);
+            const resultWithHash = await prepareFunctionHeader(expr);
             
             expect(resultWithHash.isValid).toBe(true);
             expect(resultWithHash.headerValue).toContain('hash:');
             expect(resultWithHash.hash).toHaveLength(64);
         });
         
-        it('should demonstrate significant space savings with compact grid format', () => {
+        it('should demonstrate significant space savings with compact grid format', async () => {
             const exprWithManyGridRefs = 'add(grid[4][0], multiply(grid[1][2], grid[3][3], grid[2][1], grid[0][4], grid[5][2]))';
             
-            const verboseResult = prepareFunctionHeader(exprWithManyGridRefs, { useCompactGrid: false, useCompactFunctions: false });
-            const compactResult = prepareFunctionHeader(exprWithManyGridRefs, { useCompactGrid: true, useCompactFunctions: false });
+            const verboseResult = await prepareFunctionHeader(exprWithManyGridRefs, { useCompactGrid: false, useCompactFunctions: false });
+            const compactResult = await prepareFunctionHeader(exprWithManyGridRefs, { useCompactGrid: true, useCompactFunctions: false });
             
             console.log('\n🎯 Space Savings Demo:');
             console.log(`Verbose header length: ${verboseResult.headerValue.length}`);
@@ -182,25 +184,25 @@ describe('functionHeader utilities', () => {
     });
     
     describe('validateFunctionHeader', () => {
-        it('should validate matching expressions', () => {
+        it('should validate matching expressions', async () => {
             const expr = 'sin(grid[0][0])';
-            const header = prepareFunctionHeader(expr);
-            const validation = validateFunctionHeader(expr, header.headerValue);
+            const header = await prepareFunctionHeader(expr);
+            const validation = await validateFunctionHeader(expr, header.headerValue);
             
             expect(validation.isValid).toBe(true);
         });
         
-        it('should reject mismatched expressions', () => {
+        it('should reject mismatched expressions', async () => {
             const expr = 'sin(grid[0][0])';
-            const header = prepareFunctionHeader(expr);
-            const validation = validateFunctionHeader('cos(grid[0][0])', header.headerValue);
+            const header = await prepareFunctionHeader(expr);
+            const validation = await validateFunctionHeader('cos(grid[0][0])', header.headerValue);
             
             expect(validation.isValid).toBe(false);
             expect(validation.reason).toBe('Hash mismatch');
         });
         
-        it('should detect missing hash', () => {
-            const validation = validateFunctionHeader('sin(x)', 'len:5;expr:sin(x)');
+        it('should detect missing hash', async () => {
+            const validation = await validateFunctionHeader('sin(x)', 'len:5;expr:sin(x)');
             
             expect(validation.isValid).toBe(false);
             expect(validation.reason).toBe('No hash in header');
@@ -214,21 +216,21 @@ describe('functionHeader utilities', () => {
             registry = new FunctionRegistry();
         });
         
-        it('should store and retrieve expressions by hash', () => {
+        it('should store and retrieve expressions by hash', async () => {
             const expr = 'sin(grid[0][0]) + cos(grid[1][1])';
-            const hash = registry.store(expr);
+            const hash = await registry.store(expr);
             
             expect(registry.has(hash)).toBe(true);
             expect(registry.get(hash)).toBe(expr);
             expect(registry.size).toBe(1);
         });
         
-        it('should handle multiple expressions', () => {
+        it('should handle multiple expressions', async () => {
             const expr1 = 'sin(x)';
             const expr2 = 'cos(x)';
             
-            const hash1 = registry.store(expr1);
-            const hash2 = registry.store(expr2);
+            const hash1 = await registry.store(expr1);
+            const hash2 = await registry.store(expr2);
             
             expect(hash1).not.toBe(hash2);
             expect(registry.size).toBe(2);
@@ -236,19 +238,19 @@ describe('functionHeader utilities', () => {
             expect(registry.get(hash2)).toBe(expr2);
         });
         
-        it('should clear all entries', () => {
-            registry.store('expr1');
-            registry.store('expr2');
+        it('should clear all entries', async () => {
+            await registry.store('expr1');
+            await registry.store('expr2');
             expect(registry.size).toBe(2);
             
             registry.clear();
             expect(registry.size).toBe(0);
         });
         
-        it('should not duplicate same expressions', () => {
+        it('should not duplicate same expressions', async () => {
             const expr = 'sin(x)';
-            const hash1 = registry.store(expr);
-            const hash2 = registry.store(expr);
+            const hash1 = await registry.store(expr);
+            const hash2 = await registry.store(expr);
             
             expect(hash1).toBe(hash2);
             expect(registry.size).toBe(1);

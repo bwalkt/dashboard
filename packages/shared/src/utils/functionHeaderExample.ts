@@ -18,12 +18,12 @@ const serverRegistry = new FunctionRegistry();
 /**
  * Example: Client-side function to send genFunction in HTTP header
  */
-export function sendFunctionRequest(expression: string): {
+export async function sendFunctionRequest(expression: string): Promise<{
     headers: Record<string, string>;
     body?: any;
-} {
+}> {
     // Prepare the function for header transmission
-    const headerResult = prepareFunctionHeader(expression, {
+    const headerResult = await prepareFunctionHeader(expression, {
         maxHeaderLength: 4096,  // Conservative limit for headers
         includeTruncated: true,
         truncateAt: 100
@@ -56,14 +56,14 @@ export function sendFunctionRequest(expression: string): {
 /**
  * Example: Server-side function to receive and validate genFunction
  */
-export function receiveFunctionRequest(
+export async function receiveFunctionRequest(
     headers: Record<string, string>,
     body?: any
-): {
+): Promise<{
     expression: string;
     isValid: boolean;
     hash: string;
-} {
+}> {
     const functionHeader = headers['X-Function-Expression'] || headers['x-function-expression'];
     
     if (!functionHeader) {
@@ -106,19 +106,19 @@ export function receiveFunctionRequest(
         }
         
         // Store for future use
-        serverRegistry.store(fullExpression);
+        await serverRegistry.store(fullExpression);
     }
     // 3. Check if full expression is in body
     else if (body?.fullExpression && typeof body.fullExpression === 'string') {
         const bodyExpression = body.fullExpression as string;
         // Validate it matches the hash
-        const validation = validateFunctionHeader(bodyExpression, functionHeader);
+        const validation = await validateFunctionHeader(bodyExpression, functionHeader);
         if (!validation.isValid) {
             throw new Error(`Expression validation failed: ${validation.reason}`);
         }
         fullExpression = bodyExpression;
         // Store for future use
-        serverRegistry.store(bodyExpression);
+        await serverRegistry.store(bodyExpression);
         console.log('✅ Using full expression from request body');
     }
     // 4. Only have truncated version
@@ -138,7 +138,7 @@ export function receiveFunctionRequest(
     }
     
     // Final validation
-    const validation = validateFunctionHeader(fullExpression, functionHeader);
+    const validation = await validateFunctionHeader(fullExpression, functionHeader);
     
     console.log('📥 Received function:');
     console.log(`  Hash: ${parsed.hash}`);
@@ -155,7 +155,7 @@ export function receiveFunctionRequest(
 /**
  * Example usage demonstrating the full flow
  */
-export function demonstrateUsage() {
+export async function demonstrateUsage() {
     console.log('🚀 Function Header Demo\n');
     console.log('=' .repeat(50));
     
@@ -170,13 +170,13 @@ export function demonstrateUsage() {
     
     // Simulate client sending the request
     console.log('\n🌐 CLIENT SIDE:');
-    const request = sendFunctionRequest(func.expression);
+    const request = await sendFunctionRequest(func.expression);
     
     console.log('\n' + '=' .repeat(50));
     
     // Simulate server receiving the request
     console.log('\n🖥️  SERVER SIDE:');
-    const received = receiveFunctionRequest(request.headers, request.body);
+    const received = await receiveFunctionRequest(request.headers, request.body);
     
     console.log('\n' + '=' .repeat(50));
     
@@ -184,7 +184,8 @@ export function demonstrateUsage() {
     console.log('\n✨ Verification:');
     console.log(`  Expressions match: ${received.expression === func.expression}`);
     console.log(`  Validation passed: ${received.isValid}`);
-    console.log(`  Hash verified: ${received.hash === prepareFunctionHeader(func.expression).hash}`);
+    const headerResult = await prepareFunctionHeader(func.expression);
+    console.log(`  Hash verified: ${received.hash === headerResult.hash}`);
     
     // Show registry stats
     console.log(`\n📊 Server Registry Stats:`);
@@ -197,10 +198,10 @@ export function demonstrateUsage() {
     const longExpr = 'sin(' + 'grid[0][0] + '.repeat(1000) + 'grid[0][0])';
     console.log(`  Expression length: ${longExpr.length} characters`);
     
-    const longRequest = sendFunctionRequest(longExpr);
+    const longRequest = await sendFunctionRequest(longExpr);
     console.log(`  Sent in body: ${!!longRequest.body}`);
     
-    const longReceived = receiveFunctionRequest(longRequest.headers, longRequest.body);
+    const longReceived = await receiveFunctionRequest(longRequest.headers, longRequest.body);
     console.log(`  Successfully received: ${longReceived.isValid}`);
     
     return {
@@ -212,5 +213,5 @@ export function demonstrateUsage() {
 
 // If running directly, demonstrate the usage
 if (import.meta.url === `file://${process.argv[1]}`) {
-    demonstrateUsage();
+    demonstrateUsage().catch(console.error);
 }
