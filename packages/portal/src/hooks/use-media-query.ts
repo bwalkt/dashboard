@@ -1,24 +1,19 @@
-import { useEffect, useState } from 'react'
+import * as React from "react"
 
-/**
- * Exposes reactive state indicating whether the viewport width is less than or equal to 768 pixels.
- *
- * @returns An object with `isOpen` that is `true` if the viewport width is less than or equal to 768 pixels, `false` otherwise.
- */
-export function useMediaQuery() {
-  const [isOpen, setIsOpen] = useState(false)
+export function useMediaQuery(query: string) {
+  const [value, setValue] = React.useState(false)
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 768px)')
-    setIsOpen(mediaQuery.matches)
-
-    const handler = (e: MediaQueryListEvent) => {
-      setIsOpen(e.matches)
+  React.useEffect(() => {
+    function onChange(event: MediaQueryListEvent) {
+      setValue(event.matches)
     }
 
-    mediaQuery.addEventListener('change', handler)
-    return () => mediaQuery.removeEventListener('change', handler)
-  }, [])
+    const result = matchMedia(query)
+    result.addEventListener("change", onChange)
+    setValue(result.matches)
 
-  return { isOpen }
+    return () => result.removeEventListener("change", onChange)
+  }, [query])
+
+  return value
 }

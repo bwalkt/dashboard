@@ -11,17 +11,17 @@ import 'nprogress/nprogress.css'
 import { NuqsAdapter } from 'nuqs/adapters/react'
 import { useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { PostHogProviderWrapper } from './posthog-provider'
 
 // Import all CSS styles
 import '@/styles/globals.css'
 import '@/styles/theme.css'
 
 // Import pages
-import AuthCallback from "./pages/auth/Callback";
-import SignIn from "./pages/auth/SignIn";
-import SignUp from "./pages/auth/SignUp";
-import MobileDashboardLayout from "./pages/dashboard/MobileLayout";
-import Overview from "./pages/dashboard/Overview";
+import SignIn from "../pages/auth/SignIn";
+import SignUp from "../pages/auth/SignUp";
+import MobileDashboardLayout from "../pages/dashboard/MobileLayout";
+import Overview from "../pages/dashboard/Overview";
 
 // Configure NProgress
 NProgress.configure({ showSpinner: false })
@@ -125,9 +125,11 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <NuqsAdapter>
-        <AppContent />
-      </NuqsAdapter>
+      <PostHogProviderWrapper>
+        <NuqsAdapter>
+          <AppContent />
+        </NuqsAdapter>
+      </PostHogProviderWrapper>
     </BrowserRouter>
   )
 }

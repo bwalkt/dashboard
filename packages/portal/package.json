@@ -73,6 +73,7 @@
     "nprogress": "catalog:",
     "nuqs": "catalog:",
     "postcss": "catalog:",
+    "posthog-js": "^1.290.0",
     "react": "catalog:",
     "react-day-picker": "catalog:",
     "react-dom": "catalog:",

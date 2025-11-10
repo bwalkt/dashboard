@@ -1,43 +1,39 @@
-/**
- * Format a date into an en-US locale string using sensible defaults.
- *
- * @param date - The date to format; may be a Date, an ISO date/time string, or a numeric timestamp. If falsy, an empty string is returned.
- * @param opts - Intl.DateTimeFormatOptions to customize the output. If not provided, `month` defaults to `"long"`, `day` to `"numeric"`, and `year` to `"numeric"`.
- * @returns The formatted date string for the en-US locale, or an empty string if the input is falsy or formatting fails.
- */
-export function formatDate(date: Date | string | number | undefined, opts: Intl.DateTimeFormatOptions = {}) {
-  if (!date) return ''
+import { format } from "date-fns";
 
-  try {
-    return new Intl.DateTimeFormat('en-US', {
-      month: opts.month ?? 'long',
-      day: opts.day ?? 'numeric',
-      year: opts.year ?? 'numeric',
-      ...opts,
-    }).format(new Date(date))
-  } catch (_err) {
-    return ''
+export function formatLatency(ms: number): string {
+  if (ms >= 1000) {
+    return (
+      new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }).format(ms / 1000) + "s"
+    );
   }
+
+  return (
+    new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(ms) +
+    "ms"
+  );
 }
 
-/**
- * Format a numeric amount as an en-US currency string.
- *
- * @param amount - The numeric amount to format; if `null` or `undefined`, returns `"$0.00"`.
- * @param currency - ISO 4217 currency code to use (defaults to `"USD"`).
- * @returns The amount formatted as a currency string for the `en-US` locale (e.g. `"$1,234.56"`); falls back to `"$<amount>.00"` using `toFixed(2)` if formatting fails.
- */
-export function formatCurrency(amount: number | undefined | null, currency: string = 'USD') {
-  if (amount === undefined || amount === null) return '$0.00'
+export function formatMilliseconds(value: number) {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(
+    value
+  );
+}
 
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount)
-  } catch (_err) {
-    return `$${amount.toFixed(2)}`
+export function formatDate(value: Date | string) {
+  return format(new Date(`${value}`), "LLL dd, y HH:mm");
+}
+
+export function formatCompactNumber(value: number) {
+  if (value >= 100 && value < 1000) {
+    return value.toString(); // Keep the number as is if it's in the hundreds
+  } else if (value >= 1000 && value < 1000000) {
+    return (value / 1000).toFixed(1) + "k"; // Convert to 'k' for thousands
+  } else if (value >= 1000000) {
+    return (value / 1000000).toFixed(1) + "M"; // Convert to 'M' for millions
+  } else {
+    return value.toString(); // Optionally handle numbers less than 100 if needed
   }
 }
