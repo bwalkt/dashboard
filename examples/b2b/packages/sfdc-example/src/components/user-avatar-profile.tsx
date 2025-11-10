@@ -1,4 +1,4 @@
-import { User } from "@pzero/shared";
+import { User } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface UserAvatarProfileProps {

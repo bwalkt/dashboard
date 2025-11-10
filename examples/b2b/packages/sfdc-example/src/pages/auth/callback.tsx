@@ -1,4 +1,4 @@
-import { User } from '@pzero/shared'
+import { User } from '@/types'
 import { useQuery } from '@tanstack/react-query'
 import React from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'

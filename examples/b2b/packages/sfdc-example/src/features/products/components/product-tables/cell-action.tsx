@@ -1,4 +1,4 @@
-import { Product } from "@pzero/shared";
+import { Product } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button";

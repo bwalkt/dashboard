@@ -1,4 +1,4 @@
-import { Product } from "@pzero/shared";
+import { Product } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 

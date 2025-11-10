@@ -24,11 +24,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@pzero/shared': path.resolve(__dirname, '../../../../packages/shared/src'),
     },
   },
   optimizeDeps: {
-    include: ['@pzero/shared', 'zod'],
+    include: ['zod'],
   },
   build: {
     commonjsOptions: {

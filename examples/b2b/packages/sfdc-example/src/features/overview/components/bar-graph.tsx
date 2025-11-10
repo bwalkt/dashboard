@@ -1,6 +1,6 @@
 "use client";
 
-import { Order } from "@pzero/shared";
+import { Order } from "@/types";
 import * as React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

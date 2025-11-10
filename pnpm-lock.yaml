@@ -433,9 +433,6 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.37.0
         version: 1.37.0
-      '@pzero/shared':
-        specifier: workspace:*
-        version: link:../../../../packages/shared
       '@radix-ui/react-accordion':
         specifier: 'catalog:'
         version: 1.2.3(@types/react-dom@19.1.1(@types/react@19.1.1))(@types/react@19.1.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)

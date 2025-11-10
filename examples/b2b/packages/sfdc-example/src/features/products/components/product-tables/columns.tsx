@@ -1,4 +1,4 @@
-import { Product } from "@pzero/shared";
+import { Product } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, Text, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

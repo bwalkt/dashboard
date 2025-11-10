@@ -1,4 +1,4 @@
-import { Order } from "@pzero/shared";
+import { Order } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { Text } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

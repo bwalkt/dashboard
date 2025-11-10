@@ -1,4 +1,4 @@
-import { Order } from "@pzero/shared";
+import { Order } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button";

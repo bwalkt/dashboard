@@ -1,4 +1,4 @@
-import { Order } from "@pzero/shared";
+import { Order } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 

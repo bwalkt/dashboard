@@ -10,7 +10,7 @@
     "dev:example-b2b": "pnpm dev:example-b2b-docker && pnpm run dev:example-b2b-server & pnpm run dev:example-b2b-dashboard",
     "build:mobile": "pnpm --filter @pzero/mobile build",
     "build:server": "pnpm --filter @pzero/sfdc-server-vanilla build",
-    "build:dashboard": "pnpm --filter @pzero/sfdc build",
+    "build:dashboard": "pnpm --filter @pzero/sfdc-example build",
     "build:shared": "pnpm --filter @pzero/shared build",
     "build": "pnpm run build:shared && pnpm run build:server && pnpm run build:dashboard",
     "ios": "pnpm --filter @pzero/mobile ios",

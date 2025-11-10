@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Product, ProductCreateRequest, ProductCreateRequestSchema } from "@pzero/shared";
+import { Product, ProductCreateRequest, ProductCreateRequestSchema } from "@/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";

@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { OrderCreateRequest, PaymentMethod } from "@pzero/shared";
+import { OrderCreateRequest, PaymentMethod } from "@/types";
 import { api } from "./api";
 
 /**
