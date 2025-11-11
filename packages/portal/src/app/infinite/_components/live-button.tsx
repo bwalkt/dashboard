@@ -50,7 +50,7 @@ export function LiveButton({ fetchPreviousPage }: LiveButtonProps) {
     }
   }, [date, sort, live, setSearch]);
 
-  function handleClick() {
+  const handleClick = React.useCallback(() => {
     setSearch((prev) => ({
       ...prev,
       live: !prev.live,
@@ -59,7 +59,7 @@ export function LiveButton({ fetchPreviousPage }: LiveButtonProps) {
     }));
     table.getColumn("date")?.setFilterValue(undefined);
     table.resetSorting();
-  }
+  }, [setSearch, table]);
 
   return (
     <Button

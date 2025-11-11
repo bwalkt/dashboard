@@ -10,8 +10,9 @@ import {
   sortData,
   splitData,
 } from "../utils/data-table-helpers";
-import { mock, mockLive } from "../utils/data-table-mock";
+import { mock, mockLive } from "@pzero/shared";
 import { calculateSpecificPercentile } from "../utils/percentile";
+import { authenticateToken } from "../middleware/auth";
 
 // Define types from the portal package - we'll need to move these to shared
 interface SearchParams {
@@ -40,7 +41,9 @@ interface LogsMeta {
 }
 
 export async function dataTableRoutes(fastify: FastifyInstance): Promise<void> {
-  fastify.get("/api/data-table/infinite", async (request, reply) => {
+  fastify.get("/api/data-table/infinite", {
+    preHandler: authenticateToken,
+  }, async (request, reply) => {
     const search = request.query as SearchParams;
     const totalData = [...mockLive, ...mock];
 

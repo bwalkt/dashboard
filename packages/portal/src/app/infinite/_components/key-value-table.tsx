@@ -33,7 +33,7 @@ function RowAction({ label, value }: { label: string; value: string }) {
     <TableRow
       role="button"
       tabIndex={0}
-      className="group *:border-border hover:bg-transparent [&>:not(:last-child)]:border-r text-left"
+      className="group *:border-border hover:bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&>:not(:last-child)]:border-r text-left"
       onClick={(event) => {
         event.stopPropagation();
         copy(value);
@@ -50,7 +50,7 @@ function RowAction({ label, value }: { label: string; value: string }) {
       </TableCell>
       <TableCell className="relative py-1 font-mono">
         {value}
-        <div className="absolute top-1.5 right-1.5 invisible group-hover:visible backdrop-blur-sm bg-background p-0.5 rounded-sm border border-border">
+        <div className="absolute top-1.5 right-1.5 invisible group-hover:visible group-focus-visible:visible backdrop-blur-sm bg-background p-0.5 rounded-sm border border-border">
           {!isCopied ? (
             <Copy className="h-3 w-3" />
           ) : (
