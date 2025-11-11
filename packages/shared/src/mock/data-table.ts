@@ -17,10 +17,11 @@ interface ColumnSchema {
   regions: (typeof REGIONS)[number][];
   date: Date;
   headers: Record<string, string>;
-  tags: string[];
-  public: boolean;
-  active: boolean;
-  p95: number;
+  tags?: string[];
+  public?: boolean;
+  active?: boolean;
+  p95?: number;
+  message?: string;
   "timing.dns": number;
   "timing.connection": number;
   "timing.tls": number;

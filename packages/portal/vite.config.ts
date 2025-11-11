@@ -36,7 +36,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@pzero/shared': path.resolve(__dirname, '../../../../packages/shared/src'),
+      '@pzero/shared/mock': path.resolve(__dirname, '../shared/dist/mock'),
+      '@pzero/shared': path.resolve(__dirname, '../shared/dist'),
     },
     dedupe: ['react', 'react-dom'],
   },

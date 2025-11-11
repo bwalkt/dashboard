@@ -21,6 +21,18 @@ interface LiveButtonProps {
 export function LiveButton({ fetchPreviousPage }: LiveButtonProps) {
   const [{ live, date, sort }, setSearch] = useQueryStates(searchParamsParser);
   const { table } = useDataTable();
+
+  const handleClick = React.useCallback(() => {
+    setSearch((prev) => ({
+      ...prev,
+      live: !prev.live,
+      date: null,
+      sort: null,
+    }));
+    table.getColumn("date")?.setFilterValue(undefined);
+    table.resetSorting();
+  }, [setSearch, table]);
+
   useHotKey(handleClick, "j");
 
   React.useEffect(() => {
@@ -49,17 +61,6 @@ export function LiveButton({ fetchPreviousPage }: LiveButtonProps) {
       setSearch((prev) => ({ ...prev, live: null }));
     }
   }, [date, sort, live, setSearch]);
-
-  const handleClick = React.useCallback(() => {
-    setSearch((prev) => ({
-      ...prev,
-      live: !prev.live,
-      date: null,
-      sort: null,
-    }));
-    table.getColumn("date")?.setFilterValue(undefined);
-    table.resetSorting();
-  }, [setSearch, table]);
 
   return (
     <Button

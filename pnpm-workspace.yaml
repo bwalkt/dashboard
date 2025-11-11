@@ -59,8 +59,8 @@ catalog:
   '@tailwindcss/postcss': 4.1.13
   '@tanstack/react-query': 5.90.2
   '@tanstack/react-query-devtools': 5.90.2
-  '@tanstack/react-table': 8.21.3
   '@tanstack/react-router': 1.135.2
+  '@tanstack/react-table': 8.21.3
   '@tanstack/virtual': 3.13.12
   '@tauri-apps/api': 2.8.0
   '@tauri-apps/cli': 2.8.4
