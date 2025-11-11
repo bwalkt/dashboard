@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 function getItemFromLocalStorage(key: string) {
   const item = window?.localStorage.getItem(key);

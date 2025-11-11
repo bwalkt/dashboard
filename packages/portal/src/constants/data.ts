@@ -38,4 +38,25 @@ export const navItems: NavItem[] = [
     shortcut: ['d', 'd'],
     items: [], // Empty array as there are no child items for Dashboard
   },
+  {
+    title: 'Tables',
+    url: '/dashboard/users',
+    icon: 'table',
+    isActive: false,
+    shortcut: ['t', 'b'],
+    items: [
+      {
+        title: 'Users Table',
+        url: '/dashboard/users',
+        icon: 'users',
+        shortcut: ['u', 's'],
+      },
+      {
+        title: 'Infinite Scroll',
+        url: '/dashboard/infinite',
+        icon: 'infinity',
+        shortcut: ['i', 'n'],
+      },
+    ],
+  },
 ]

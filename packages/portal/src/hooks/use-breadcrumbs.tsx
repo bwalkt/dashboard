@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
 import { useLocation } from '@tanstack/react-router'
+import { useMemo } from 'react'
 
 type BreadcrumbItem = {
   title: string
@@ -11,6 +11,18 @@ type BreadcrumbItem = {
 // This allows to add custom title as well
 const routeMapping: Record<string, BreadcrumbItem[]> = {
   '/dashboard': [{ title: 'Dashboard', link: '/dashboard' }],
+  '/dashboard/overview': [
+    { title: 'Dashboard', link: '/dashboard' },
+    { title: 'Overview', link: '/dashboard/overview' },
+  ],
+  '/dashboard/infinite': [
+    { title: 'Dashboard', link: '/dashboard' },
+    { title: 'Logs', link: '/dashboard/infinite' },
+  ],
+  '/dashboard/users': [
+    { title: 'Dashboard', link: '/dashboard' },
+    { title: 'Users', link: '/dashboard/users' },
+  ],
   '/dashboard/employee': [
     { title: 'Dashboard', link: '/dashboard' },
     { title: 'Employee', link: '/dashboard/employee' },

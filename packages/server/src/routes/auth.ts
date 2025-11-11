@@ -176,11 +176,15 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           user.email,
         );
         // Redirect to frontend sign-in page after setting cookies
-        const oAuthRedirectUrl = config.OAUTH_REDIRECT_URL || 'http://localhost:1430/auth/sign-in';
-        
-        console.log("Setting cookies - accessToken:", accessToken?.substring(0, 20) + "...");
+        const oAuthRedirectUrl =
+          config.OAUTH_REDIRECT_URL || "http://localhost:1430/auth/sign-in";
+
+        console.log(
+          "Setting cookies - accessToken:",
+          accessToken?.substring(0, 20) + "...",
+        );
         console.log("Setting cookies - domain:", process.env.NODE_ENV);
-        
+
         reply.setCookie("accessToken", accessToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
@@ -195,7 +199,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           path: "/",
           maxAge: 3600 * 24 * 30, // 30 days
         });
-        
+
         console.log("Redirecting to:", oAuthRedirectUrl);
         return reply.redirect(oAuthRedirectUrl);
       } catch (error) {

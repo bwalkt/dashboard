@@ -1,5 +1,5 @@
-import type React from 'react'
 import { Navigate, useRouter } from '@tanstack/react-router'
+import type React from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface ProtectedRouteProps {

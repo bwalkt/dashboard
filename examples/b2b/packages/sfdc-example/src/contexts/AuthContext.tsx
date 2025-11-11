@@ -1,7 +1,7 @@
-import { User } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { createContext, useContext } from "react";
 import { api } from "@/lib/api";
+import { User } from "@/types";
 
 interface AuthContextType {
   user: User | null;

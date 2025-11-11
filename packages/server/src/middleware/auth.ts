@@ -13,16 +13,25 @@ export async function authenticateToken(
   reply: FastifyReply,
 ): Promise<void> {
   try {
-    console.log("Auth middleware - cookies raw:", JSON.stringify(request.cookies));
-    console.log("Auth middleware - accessToken from cookies:", request.cookies?.accessToken?.substring(0, 20));
+    console.log(
+      "Auth middleware - cookies raw:",
+      JSON.stringify(request.cookies),
+    );
+    console.log(
+      "Auth middleware - accessToken from cookies:",
+      request.cookies?.accessToken?.substring(0, 20),
+    );
     console.log("Auth middleware - headers:", request.headers.cookie);
-    
+
     const authHeader = request.headers.authorization;
     const headerToken = authService.extractTokenFromHeader(authHeader);
     const cookieToken = authService.extractTokenFromCookies(request.cookies);
 
-    console.log("Extracted cookieToken:", cookieToken?.substring(0, 20) + "...");
-    
+    console.log(
+      "Extracted cookieToken:",
+      cookieToken?.substring(0, 20) + "...",
+    );
+
     // Try header token first, then cookie token
     const token = headerToken || cookieToken;
 
@@ -34,7 +43,7 @@ export async function authenticateToken(
     }
 
     const payload = authService.verifyAccessToken(token);
-    
+
     console.log("Token verification result:", payload);
 
     if (!payload) {

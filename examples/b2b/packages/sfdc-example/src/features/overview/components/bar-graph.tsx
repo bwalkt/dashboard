@@ -1,11 +1,11 @@
 "use client";
 
-import { Order } from "@/types";
 import * as React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useOrdersLast30Days } from "@/hooks/use-orders";
+import { Order } from "@/types";
 
 export const description = "An interactive bar chart showing orders by date and status";
 

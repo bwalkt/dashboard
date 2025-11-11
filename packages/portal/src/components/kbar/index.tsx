@@ -1,6 +1,6 @@
+import { useNavigate } from '@tanstack/react-router'
 import { KBarAnimator, KBarPortal, KBarPositioner, KBarProvider, KBarSearch } from 'kbar'
 import { useMemo } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { navItems } from '@/constants/data'
 import RenderResults from './render-result'
 import useThemeSwitching from './use-theme-switching'

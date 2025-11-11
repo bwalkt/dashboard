@@ -8,8 +8,8 @@ import {
   IconPhotoUp,
   IconUserCircle,
 } from '@tabler/icons-react'
-import * as React from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
+import * as React from 'react'
 import { toast } from 'sonner'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {

@@ -1,5 +1,5 @@
-import { User } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { User } from "@/types";
 
 interface UserAvatarProfileProps {
   className?: string;

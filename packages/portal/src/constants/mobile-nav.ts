@@ -10,4 +10,20 @@ export const mobileNavItems: NavItem[] = [
     shortcut: ['o', 'o'],
     items: [],
   },
+  {
+    title: 'Logs',
+    url: '/dashboard/infinite',
+    icon: 'activity',
+    isActive: false,
+    shortcut: ['l', 'l'],
+    items: [],
+  },
+  {
+    title: 'Users',
+    url: '/dashboard/users',
+    icon: 'users',
+    isActive: false,
+    shortcut: ['u', 'u'],
+    items: [],
+  },
 ]

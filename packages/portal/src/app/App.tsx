@@ -8,8 +8,8 @@ import { fontVariables } from '@/lib/font'
 import { cn } from '@/lib/utils'
 import 'nprogress/nprogress.css'
 import { NuqsAdapter } from 'nuqs/adapters/react'
-import { PostHogProviderWrapper } from './posthog-provider'
 import { AppRouter } from '@/router'
+import { PostHogProviderWrapper } from './posthog-provider'
 
 // Import all CSS styles
 import '@/styles/globals.css'

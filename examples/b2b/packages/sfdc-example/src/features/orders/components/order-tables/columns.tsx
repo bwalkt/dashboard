@@ -1,8 +1,8 @@
-import { Order } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { Text } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/ui/table/data-table-column-header";
+import { Order } from "@/types";
 import { CellAction } from "./cell-action";
 import { PAYMENT_OPTIONS, STATUS_OPTIONS } from "./options";
 

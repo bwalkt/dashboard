@@ -1,4 +1,5 @@
 import {
+  IconActivity,
   IconAlertTriangle,
   IconArrowRight,
   IconBrandGithub,
@@ -15,6 +16,7 @@ import {
   IconFile,
   IconFileText,
   IconHelpCircle,
+  IconInfinity,
   IconLayoutDashboard,
   IconLayoutKanban,
   IconLoader2,
@@ -27,10 +29,12 @@ import {
   IconSettings,
   IconShoppingBag,
   IconSun,
+  IconTable,
   IconTrash,
   IconUser,
   IconUserCircle,
   IconUserEdit,
+  IconUsers,
   IconUserX,
   IconX,
 } from '@tabler/icons-react'
@@ -39,6 +43,7 @@ export type Icon = React.ComponentType<IconProps>
 
 export const Icons = {
   dashboard: IconLayoutDashboard,
+  activity: IconActivity,
   logo: IconCommand,
   login: IconLogin,
   close: IconX,
@@ -60,6 +65,9 @@ export const Icons = {
   add: IconPlus,
   warning: IconAlertTriangle,
   user: IconUser,
+  users: IconUsers,
+  table: IconTable,
+  infinity: IconInfinity,
   arrowRight: IconArrowRight,
   help: IconHelpCircle,
   pizza: IconPizza,
