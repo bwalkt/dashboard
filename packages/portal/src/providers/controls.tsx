@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useSecondarySidebar } from "@/components/ui/sidebar";
 
