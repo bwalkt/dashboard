@@ -1,4 +1,3 @@
-'use client'
 
 import { CaretSortIcon, ChevronDownIcon, ChevronUpIcon, Cross2Icon } from '@radix-ui/react-icons'
 import type { Column } from '@tanstack/react-table'

@@ -1,8 +1,8 @@
-import { Product } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, Text, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/ui/table/data-table-column-header";
+import { Product } from "@/types";
 import { CellAction } from "./cell-action";
 import { CATEGORY_OPTIONS } from "./options";
 

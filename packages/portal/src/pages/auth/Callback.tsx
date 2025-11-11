@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
+import { useEffect } from 'react'
 
 export default function AuthCallback() {
   const navigate = useNavigate()

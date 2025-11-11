@@ -1,6 +1,6 @@
-import { Product } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { Product } from "@/types";
 
 interface ListApiResponse {
   success: boolean;

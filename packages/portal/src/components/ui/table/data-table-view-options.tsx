@@ -1,4 +1,3 @@
-'use client'
 
 import { CaretSortIcon, CheckIcon } from '@radix-ui/react-icons'
 import type { Table } from '@tanstack/react-table'

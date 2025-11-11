@@ -1,8 +1,8 @@
 import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
-import { useEffect } from 'react'
 // @ts-expect-error no declaration file
 import NProgress from 'nprogress'
+import { useEffect } from 'react'
 
 function RootComponent() {
   return (

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Outlet } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import KBar from '@/components/kbar'
 import MobileAppSidebar from '@/components/layout/mobile-app-sidebar'
 import MobileHeader from '@/components/layout/mobile-header'
@@ -28,7 +28,7 @@ export default function MobileDashboardLayout() {
           <MobileAppSidebar />
           <SidebarInset className="flex-1">
             <MobileHeader />
-            <main className="flex-1 overflow-y-auto">
+            <main className="flex-1 overflow-hidden">
               <Outlet />
             </main>
           </SidebarInset>
