@@ -83,9 +83,12 @@ runs:
 
         # Check for shared directory changes (packages/shared/)
         if echo "$CHANGED_FILES" | grep -q "^packages/shared/"; then
-          # If shared code changed, build sfdc-server-vanilla
+          # If shared code changed, build services that depend on it
           if [[ ! " ${SERVICES_ARRAY[@]} " =~ " sfdc-server-vanilla " ]]; then
             SERVICES_ARRAY+=("sfdc-server-vanilla")
+          fi
+          if [[ ! " ${SERVICES_ARRAY[@]} " =~ " server " ]]; then
+            SERVICES_ARRAY+=("server")
           fi
         fi
 

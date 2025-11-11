@@ -1,0 +1,99 @@
+name: pzero-api-server
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    container_name: pzero-postgres
+    restart: unless-stopped
+    command: ["postgres", "-c", "shared_preload_libraries=pgx_ulid"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-pzero}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432" # Changed default from 5432 to 5433 to avoid conflicts with local PostgreSQL
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:latest
+    container_name: pzero-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  pzero-server:
+    # Image from GitHub Container Registry
+    # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
+    # Or set SERVER_IMAGE to override the full image path
+    image: ${SERVER_IMAGE:-ghcr.io/${GITHUB_OWNER}/server:latest}
+    container_name: pzero-server
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8090}:${PORT:-8090}"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-8090}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-pzero}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
+      - BREVO_SENDER_NAME=${BREVO_SENDER_NAME:-P-Zero}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - SERVER_BASE_URL=${SERVER_BASE_URL:-http://localhost:8090}
+      - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  pzero-envoy:
+    image: envoyproxy/envoy:v1.30-latest
+    container_name: pzero-envoy-proxy
+    ports:
+      - "8181:8080" # External port for client requests
+      - "9901:9901" # Admin interface
+    volumes:
+      - type: bind
+        source: ./envoy.yaml
+        target: /etc/envoy/envoy.yaml
+        is_directory: false
+        content: |
+          envoy.yaml content
+    command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
+    restart: unless-stopped
+    environment:
+      - ENVOY_LOG_LEVEL=info
+    depends_on:
+      pzero-server:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  redis_data:

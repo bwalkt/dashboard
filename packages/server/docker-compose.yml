@@ -1,4 +1,4 @@
-version: "3.8"
+name: pzero-api-server
 
 services:
   postgres:
@@ -37,7 +37,7 @@ services:
       timeout: 3s
       retries: 5
 
-  server:
+  pzero-server:
     build:
       context: ../../
       dockerfile: packages/server/Dockerfile
@@ -61,11 +61,11 @@ services:
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - JWT_SECRET=${JWT_SECRET}
-      - OAUTH_REDIRECT_URL=${OAUTH_REDIRECT_URL}
-      - ZITI_CTRL_EDGE_ADVERTISED_ADDRESS=${ZITI_CTRL_EDGE_ADVERTISED_ADDRESS}
-      - ZITI_CTRL_ADVERTISED_ADDRESS=${ZITI_CTRL_ADVERTISED_ADDRESS}
-      - ZITI_USER=${ZITI_USER}
-      - ZITI_PWD=${ZITI_PWD}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - SERVER_BASE_URL=${SERVER_BASE_URL:-http://localhost:8090}
+      - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,6 +73,22 @@ services:
         condition: service_healthy
     volumes:
       - ./src:/app/packages/server/src
+
+  pzero-envoy:
+    image: envoyproxy/envoy:v1.30-latest
+    container_name: pzero-envoy-proxy
+    ports:
+      - "8181:8080" # External port for client requests
+      - "9901:9901" # Admin interface
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+    command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
+    restart: unless-stopped
+    environment:
+      - ENVOY_LOG_LEVEL=info
+    depends_on:
+      pzero-server:
+        condition: service_started
 
 volumes:
   postgres_data:

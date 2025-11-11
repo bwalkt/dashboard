@@ -18,19 +18,10 @@ const CallbackPage = () => {
         toast.error('Invalid auth state')
         return null
       }
-      return api.get<{ user: User, accessToken: string, refreshToken: string, message: string }>(`/auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`,
-        { skipAuth: true }
-      )
+      return api.get<{ user: User, accessToken: string, refreshToken: string, message: string }>(`/auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`)
     },
   })
 
-  React.useEffect(() => {
-    if (data) {
-      localStorage.setItem('accessToken', data.accessToken)
-      localStorage.setItem('refreshToken', data.refreshToken)
-      navigate('/dashboard/overview', { replace: true })
-    }
-  }, [data, navigate])
 
   if (isLoading) {
     return <div>Loading...</div>

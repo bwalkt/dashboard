@@ -107,3 +107,18 @@ jobs:
         with:
           webhook_url: ${{ secrets.COOLIFY_WEBHOOK_URL_GOLANG_PROXY }}
           coolify_token: ${{ secrets.COOLIFY_TOKEN }}
+
+  deploy-server:
+    needs: [detect-changes, build-services]
+    if: ${{ github.event_name != 'pull_request' && needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' && contains(needs.detect-changes.outputs.services, '"server"') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target_branch || github.ref }}
+      - name: Trigger Coolify deployment
+        uses: ./.github/actions/trigger-coolify-deployment
+        with:
+          webhook_url: ${{ secrets.COOLIFY_WEBHOOK_URL_SERVER }}
+          coolify_token: ${{ secrets.COOLIFY_TOKEN }}
