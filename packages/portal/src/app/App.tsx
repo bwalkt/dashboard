@@ -3,47 +3,21 @@ import NProgress from 'nprogress'
 import { useThemeConfig } from '@/components/active-theme'
 import Providers from '@/components/layout/providers'
 import ThemeProvider from '@/components/layout/ThemeToggle/theme-provider'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Toaster } from '@/components/ui/sonner'
 import { fontVariables } from '@/lib/font'
 import { cn } from '@/lib/utils'
 import 'nprogress/nprogress.css'
 import { NuqsAdapter } from 'nuqs/adapters/react'
-import { useEffect } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { PostHogProviderWrapper } from './posthog-provider'
+import { AppRouter } from '@/router'
 
 // Import all CSS styles
 import '@/styles/globals.css'
 import '@/styles/theme.css'
 
-// Import pages
-import SignIn from "../pages/auth/SignIn";
-import SignUp from "../pages/auth/SignUp";
-import MobileDashboardLayout from "../pages/dashboard/MobileLayout";
-import Overview from "../pages/dashboard/Overview";
-import AuthCallback from '@/pages/auth/Callback'
-
 // Configure NProgress
 NProgress.configure({ showSpinner: false })
 
-/**
- * Starts and completes the global top progress indicator whenever the current route pathname changes.
- *
- * This component has no visual output and exists solely to trigger NProgress on navigation.
- *
- * @returns `null` — the component renders nothing
- */
-function ProgressBar() {
-  const location = useLocation()
-
-  useEffect(() => {
-    NProgress.start()
-    NProgress.done()
-  }, [location.pathname])
-
-  return null
-}
 
 /**
  * Render the themed application shell with notification UI, global progress indicator, and route configuration.
@@ -67,33 +41,7 @@ function ThemedAppContent() {
       )}
     >
       <Toaster />
-      <ProgressBar />
-      <Routes>
-        {/* Auth routes - no authentication required */}
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/auth/sign-in" element={<SignIn />} />
-        <Route path="/auth/sign-up" element={<SignUp />} />
-
-        {/* Dashboard routes - authentication required */}
-        <Route
-          path="/dashboard/*"
-          element={
-            <ProtectedRoute>
-              <MobileDashboardLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard/overview" replace />} />
-          <Route path="overview" element={<Overview />} />
-         
-        </Route>
-
-        {/* Root redirect - go to sign in */}
-        <Route path="/" element={<Navigate to="/auth/sign-in" replace />} />
-
-        {/* Catch all other routes */}
-        <Route path="*" element={<Navigate to="/auth/sign-in" replace />} />
-      </Routes>
+      <AppRouter />
     </div>
   )
 }
@@ -125,13 +73,11 @@ function AppContent() {
  */
 function App() {
   return (
-    <BrowserRouter>
-      <PostHogProviderWrapper>
-        <NuqsAdapter>
-          <AppContent />
-        </NuqsAdapter>
-      </PostHogProviderWrapper>
-    </BrowserRouter>
+    <PostHogProviderWrapper>
+      <NuqsAdapter>
+        <AppContent />
+      </NuqsAdapter>
+    </PostHogProviderWrapper>
   )
 }
 

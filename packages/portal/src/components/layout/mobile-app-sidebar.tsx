@@ -8,7 +8,7 @@ import {
   IconUserCircle,
 } from '@tabler/icons-react'
 import * as React from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
@@ -175,7 +175,7 @@ export default function MobileAppSidebar() {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>
+                  <DropdownMenuItem onClick={() => navigate({ to: '/dashboard/settings' })}>
                     <IconUserCircle className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
@@ -189,7 +189,7 @@ export default function MobileAppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>
+                <DropdownMenuItem onClick={() => navigate({ to: '/dashboard/overview' })}>
                   <IconLogout className="mr-2 h-4 w-4" />
                   Home
                 </DropdownMenuItem>

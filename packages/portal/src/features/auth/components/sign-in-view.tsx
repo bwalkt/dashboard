@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,16 +19,14 @@ import GithubSignInButton from './github-auth-button'
  */
 export default function SignInViewPage(_props: {}) {
   const navigate = useNavigate()
-  const location = useLocation()
   const { user, loading } = useAuth()
 
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
-      const from = location.state?.from?.pathname || '/dashboard/overview'
-      navigate(from, { replace: true })
+      navigate({ to: '/dashboard/overview', replace: true })
     }
-  }, [user, loading, navigate, location])
+  }, [user, loading, navigate])
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault()
