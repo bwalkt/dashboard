@@ -1,7 +1,7 @@
 "use client";
 
-import { X } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { X } from "lucide-react";
 import { useQueryStates } from "nuqs";
 import { Kbd } from "@/components/custom/kbd";
 import { useDataTable } from "@/components/data-table/data-table-provider";

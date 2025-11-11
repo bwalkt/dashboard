@@ -1,7 +1,7 @@
 import * as React from 'react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { useSecondarySidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { useSecondarySidebar } from '@/components/ui/sidebar'
 
 /**
  * Example component demonstrating how to use a secondary sidebar that auto-collapses the primary sidebar.

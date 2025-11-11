@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useSecondarySidebar } from "@/components/ui/sidebar";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 interface ControlsContextType {
   open: boolean;

@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import InfinitePage from '@/app/infinite/page'
 import { type SearchParamsType, searchParamsCache } from '@/app/infinite/search-params'
+import { DataTableTitle } from '@/components/data-table/data-table-title'
 
 export const Route = createFileRoute('/dashboard/logs')({
   component: RouteComponent,
@@ -17,6 +18,5 @@ export const Route = createFileRoute('/dashboard/logs')({
 function RouteComponent() {
   const search = Route.useSearch()
   
-  // Render the InfinitePage directly without wrapper to match original styling  
   return <InfinitePage searchParams={search} />
 }

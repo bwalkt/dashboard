@@ -35,12 +35,13 @@ import {
   TableRow,
 } from "@/components/custom/table";
 import { DataTableFilterCommand } from "@/components/data-table/data-table-filter-command";
-import { DataTableToggleButton } from "@/components/data-table/data-table-toggle-button";
 import { DataTableFilterControls } from "@/components/data-table/data-table-filter-controls";
 import { DataTableProvider } from "@/components/data-table/data-table-provider";
 import { DataTableResetButtonWithUrl } from "@/components/data-table/data-table-reset-button-with-url";
 import { MemoizedDataTableSheetContent } from "@/components/data-table/data-table-sheet/data-table-sheet-content";
 import { DataTableSheetDetails } from "@/components/data-table/data-table-sheet/data-table-sheet-details";
+import { DataTableTitle } from "@/components/data-table/data-table-title";
+import { DataTableToggleButton } from "@/components/data-table/data-table-toggle-button";
 import { DataTableToolbarInfinite } from "@/components/data-table/data-table-toolbar-infinite";
 import type {
   DataTableFilterField,
@@ -60,6 +61,8 @@ import { TimelineChart } from "./timeline-chart";
 
 // TODO: add a possible chartGroupBy
 export interface DataTableInfiniteProps<TData, TValue, TMeta> {
+  title?: string;
+  description?: string;
   columns: ColumnDef<TData, TValue>[];
   getRowClassName?: (row: Row<TData>) => string;
   // REMINDER: make sure to pass the correct id to access the rows
@@ -104,6 +107,8 @@ export interface DataTableInfiniteProps<TData, TValue, TMeta> {
 }
 
 export function DataTableInfinite<TData, TValue, TMeta>({
+  title,
+  description,
   columns,
   getRowClassName,
   getRowId,
@@ -301,15 +306,21 @@ export function DataTableInfinite<TData, TValue, TMeta>({
       getFacetedUniqueValues={getFacetedUniqueValues}
       getFacetedMinMaxValues={getFacetedMinMaxValues}
     >
-      <div
-        className="flex h-full min-h-screen w-full flex-col sm:flex-row"
-        style={
-          {
-            "--top-bar-height": `${topBarHeight}px`,
-            ...columnSizeVars,
-          } as React.CSSProperties
-        }
-      >
+      <div className="flex h-full min-h-screen w-full flex-col">
+        {(title || description) && (
+          <div className="border-b border-border bg-background p-4">
+            <DataTableTitle title={title || ""} description={description} />
+          </div>
+        )}
+        <div
+          className="flex h-full min-h-screen w-full flex-col sm:flex-row"
+          style={
+            {
+              "--top-bar-height": `${topBarHeight}px`,
+              ...columnSizeVars,
+            } as React.CSSProperties
+          }
+        >
         <div
           className={cn(
             "h-full w-full flex-col sm:sticky sm:top-0 sm:max-h-screen sm:min-h-screen sm:min-w-52 sm:max-w-52 sm:self-start md:min-w-72 md:max-w-72",
@@ -493,6 +504,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
               </TableBody>
             </Table>
           </div>
+        </div>
         </div>
       </div>
       <DataTableSheetDetails

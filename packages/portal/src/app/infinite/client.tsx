@@ -83,6 +83,8 @@ export function Client() {
 
   return (
     <DataTableInfinite
+      title="Logs"
+      description="Monitor and analyze system logs and API requests"
       columns={columns}
       data={flatData}
       totalRows={totalDBRowCount}
