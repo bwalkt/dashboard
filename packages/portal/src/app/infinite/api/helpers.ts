@@ -160,7 +160,13 @@ export function splitData(data: ColumnSchema[], search: SearchParamsType) {
         // REMINDER: we need to make sure that we don't get items that are in the future which we do with mockLive data
         item.date.getTime() < now.getTime()
       ) {
-        newData.push(item);
+        if (newData.length < search.size) {
+          newData.push(item);
+        } else if (
+          newData[newData.length - 1]?.date.getTime() === item.date.getTime()
+        ) {
+          newData.push(item);
+        }
       }
     }
   });
@@ -192,10 +198,8 @@ export function getFacetsFromData(data: ColumnSchema[]) {
       let max: number | undefined;
       const rows = Array.from(valueMap.entries()).map(([value, total]) => {
         if (typeof value === "number") {
-          if (!min) min = value;
-          else min = value < min ? value : min;
-          if (!max) max = value;
-          else max = value > max ? value : max;
+          min = min === undefined || value < min ? value : min;
+          max = max === undefined || value > max ? value : max;
         }
         return {
           value,

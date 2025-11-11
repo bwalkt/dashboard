@@ -71,24 +71,26 @@ export async function dataTableRoutes(fastify: FastifyInstance): Promise<void> {
     const data = splitData(withPercentileData, search);
 
     const latencies = withPercentileData.map(({ latency }) => latency);
-    const currentPercentiles = latencies.length > 0 ? {
-      50: calculateSpecificPercentile(latencies, 50),
-      75: calculateSpecificPercentile(latencies, 75),
-      90: calculateSpecificPercentile(latencies, 90),
-      95: calculateSpecificPercentile(latencies, 95),
-      99: calculateSpecificPercentile(latencies, 99),
-    } : {
-      50: 0,
-      75: 0,
-      90: 0,
-      95: 0,
-      99: 0,
-    };
+    const currentPercentiles =
+      latencies.length > 0
+        ? {
+            50: calculateSpecificPercentile(latencies, 50),
+            75: calculateSpecificPercentile(latencies, 75),
+            90: calculateSpecificPercentile(latencies, 90),
+            95: calculateSpecificPercentile(latencies, 95),
+            99: calculateSpecificPercentile(latencies, 99),
+          }
+        : {
+            50: 0,
+            75: 0,
+            90: 0,
+            95: 0,
+            99: 0,
+          };
 
     const nextCursor =
       data.length > 0 ? data[data.length - 1].date.getTime() : null;
-    const prevCursor =
-      data.length > 0 ? data[0].date.getTime() : new Date().getTime();
+    const prevCursor = data.length > 0 ? data[0].date.getTime() : null;
 
     const response = SuperJSON.stringify({
       data,

@@ -31,10 +31,18 @@ function RowAction({ label, value }: { label: string; value: string }) {
 
   return (
     <TableRow
+      role="button"
+      tabIndex={0}
       className="group *:border-border hover:bg-transparent [&>:not(:last-child)]:border-r text-left"
-      onClick={(e) => {
-        e.stopPropagation();
+      onClick={(event) => {
+        event.stopPropagation();
         copy(value);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          copy(value);
+        }
       }}
     >
       <TableCell className="bg-muted/50 py-1 font-medium font-mono">

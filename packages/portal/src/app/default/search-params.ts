@@ -20,7 +20,7 @@ import {
 export const parseAsSort = createParser({
   parse(queryValue) {
     const [id, desc] = queryValue.split(".");
-    if (!id || desc === undefined) return null;
+    if (!id || !desc) return null;
     return { id, desc: desc === "desc" };
   },
   serialize(value) {

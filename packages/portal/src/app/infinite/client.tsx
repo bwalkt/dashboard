@@ -42,6 +42,12 @@ export function Client() {
   const facets = lastPage?.meta?.facets;
   const totalFetched = flatData?.length;
 
+  // Memoize fetchPreviousPage to prevent unnecessary effect re-runs in LiveButton
+  const stableFetchPrevious = React.useCallback(
+    (opts?: any) => fetchPreviousPage?.(opts),
+    [fetchPreviousPage],
+  );
+
   const { sort, start, size, uuid, cursor, direction, live, ...filter } =
     search;
 
@@ -86,7 +92,7 @@ export function Client() {
           id: key,
           value,
         }))
-        .filter(({ value }) => value ?? undefined)}
+        .filter(({ value }) => value != null)}
       defaultColumnSorting={sort ? [sort] : undefined}
       defaultRowSelection={search.uuid ? { [search.uuid]: true } : undefined}
       // FIXME: make it configurable - TODO: use `columnHidden: boolean` in `filterFields`
@@ -105,7 +111,7 @@ export function Client() {
       isLoading={isLoading}
       fetchNextPage={fetchNextPage}
       hasNextPage={hasNextPage}
-      fetchPreviousPage={fetchPreviousPage}
+      fetchPreviousPage={stableFetchPrevious}
       refetch={refetch}
       chartData={chartData}
       chartDataColumnId="date"

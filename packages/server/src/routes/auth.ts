@@ -179,11 +179,13 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         const oAuthRedirectUrl =
           config.OAUTH_REDIRECT_URL || "http://localhost:1430/auth/sign-in";
 
-        console.log(
-          "Setting cookies - accessToken:",
-          accessToken?.substring(0, 20) + "...",
-        );
-        console.log("Setting cookies - domain:", process.env.NODE_ENV);
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            "Setting cookies - accessToken:",
+            accessToken?.substring(0, 20) + "...",
+          );
+          console.log("Setting cookies - domain:", process.env.NODE_ENV);
+        }
 
         reply.setCookie("accessToken", accessToken, {
           httpOnly: true,
