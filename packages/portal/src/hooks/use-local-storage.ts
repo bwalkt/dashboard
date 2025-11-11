@@ -42,7 +42,6 @@ export function useLocalStorage<T>(
         // Save to localStorage
         window.localStorage.setItem(key, JSON.stringify(value));
       }
-      return setStoredValue;
     },
     [key, setStoredValue]
   );
