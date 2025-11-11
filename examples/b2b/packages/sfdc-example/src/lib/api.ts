@@ -415,8 +415,8 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
   // Handle body serialization
   const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, false);
 
-  // Get HTTP method
-  const method = fetchOptions.method ?? "GET";
+  // Extract method and preserve all other RequestInit properties (signal, cache, redirect, etc.)
+  const { method = "GET", ...remainingFetchOptions } = fetchOptions;
 
   // Create proxy fetch options
   const { proxyUrl, fetchOptions: proxyFetchOptions } = createProxyFetchOptions(
@@ -427,8 +427,14 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
     Object.keys(queryParams).length > 0 ? queryParams : undefined
   );
 
+  // Merge remaining RequestInit properties (signal, cache, redirect, etc.) into proxy fetch options
+  const finalFetchOptions: RequestInit = {
+    ...proxyFetchOptions,
+    ...remainingFetchOptions,
+  };
+
   try {
-    const response = await fetch(proxyUrl, proxyFetchOptions);
+    const response = await fetch(proxyUrl, finalFetchOptions);
 
     // Handle non-OK responses
     if (!response.ok) {
@@ -437,14 +443,19 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
         try {
           await refreshTokenWithProxy();
           // Retry the original request after successful refresh
-          const { proxyUrl: retryProxyUrl, fetchOptions: retryFetchOptions } = createProxyFetchOptions(
+          const { proxyUrl: retryProxyUrl, fetchOptions: retryProxyFetchOptions } = createProxyFetchOptions(
             targetUrl,
             method,
             updatedHeaders,
             serializedBody,
             Object.keys(queryParams).length > 0 ? queryParams : undefined
           );
-          const retryResponse = await fetch(retryProxyUrl, retryFetchOptions);
+          // Merge remaining RequestInit properties into retry fetch options
+          const retryFinalFetchOptions: RequestInit = {
+            ...retryProxyFetchOptions,
+            ...remainingFetchOptions,
+          };
+          const retryResponse = await fetch(retryProxyUrl, retryFinalFetchOptions);
 
           if (!retryResponse.ok) {
             const errorMessage = await extractErrorMessage(retryResponse);

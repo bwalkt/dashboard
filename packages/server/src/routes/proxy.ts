@@ -748,7 +748,7 @@ async function proxyHandler(
     const resp = await fetch(finalTargetURL, fetchOptions);
 
     // Read the response body with size limit (skip for HEAD requests and when no body)
-    let bodyString = "";
+    let bodyBuffer: Buffer | undefined;
     // HEAD requests don't have response bodies, and some responses may not have a body
     if (methodUpper !== "HEAD" && resp.body) {
       // Read body with size limit
@@ -784,7 +784,7 @@ async function proxyHandler(
         reader.releaseLock();
       }
 
-      // Combine chunks
+      // Combine chunks into a Buffer to preserve binary data
       if (chunks.length > 0) {
         const bodyBytes = new Uint8Array(totalSize);
         let offset = 0;
@@ -793,7 +793,8 @@ async function proxyHandler(
           offset += chunk.length;
         }
 
-        bodyString = new TextDecoder().decode(bodyBytes);
+        // Convert to Buffer to preserve binary data (PDFs, images, ZIPs, etc.)
+        bodyBuffer = Buffer.from(bodyBytes);
       }
     }
 
@@ -815,15 +816,32 @@ async function proxyHandler(
       "access-control-max-age",
     ]);
 
-    // Handle Set-Cookie headers specially if cookie domain override is set
-    if (cookieDomainOverride && resp.headers.getSetCookie) {
+    // Collect Set-Cookie headers to handle them specially (multiple cookies need array)
+    const setCookieValues: string[] = [];
+    let setCookieHandled = false;
+
+    // Handle Set-Cookie headers specially - collect all of them
+    if (resp.headers.getSetCookie) {
       const cookieValues = resp.headers.getSetCookie();
-      for (const cookieValue of cookieValues) {
-        const modifiedCookie = overrideCookieDomain(
-          cookieValue,
-          cookieDomainOverride,
-        );
-        reply.header("Set-Cookie", modifiedCookie);
+
+      if (cookieDomainOverride) {
+        // Apply domain override to each cookie
+        for (const cookieValue of cookieValues) {
+          const modifiedCookie = overrideCookieDomain(
+            cookieValue,
+            cookieDomainOverride,
+          );
+          setCookieValues.push(modifiedCookie);
+        }
+      } else {
+        // No override, forward cookies as-is
+        setCookieValues.push(...cookieValues);
+      }
+
+      // Set all Set-Cookie headers at once using raw.setHeader (accepts array)
+      if (setCookieValues.length > 0) {
+        reply.raw.setHeader("Set-Cookie", setCookieValues);
+        setCookieHandled = true;
       }
     }
 
@@ -831,11 +849,7 @@ async function proxyHandler(
     for (const [key, value] of resp.headers.entries()) {
       if (!skipHeaders.has(key.toLowerCase())) {
         // Skip Set-Cookie if we already handled it above
-        if (
-          key.toLowerCase() === "set-cookie" &&
-          cookieDomainOverride &&
-          resp.headers.getSetCookie()
-        ) {
+        if (key.toLowerCase() === "set-cookie" && setCookieHandled) {
           continue;
         }
         // Set header - entries() already gives us the value
@@ -847,7 +861,8 @@ async function proxyHandler(
     logProxyRequest(request, finalTargetURL, methodUpper, true, "");
 
     // Return the response as-is with the status code from the target server
-    await reply.code(resp.status).send(bodyString);
+    // Send Buffer directly to preserve binary data (PDFs, images, ZIPs, etc.)
+    await reply.code(resp.status).send(bodyBuffer ?? "");
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Request execution failed";
