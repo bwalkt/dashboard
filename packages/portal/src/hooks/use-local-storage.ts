@@ -4,9 +4,14 @@ import { useEffect, useState, useCallback } from "react";
 
 function getItemFromLocalStorage(key: string) {
   const item = window?.localStorage.getItem(key);
-  if (item) return JSON.parse(item);
-
-  return null;
+  if (!item) return null;
+  
+  try {
+    return JSON.parse(item);
+  } catch {
+    console.warn(`Failed to parse localStorage item "${key}"`);
+    return null;
+  }
 }
 
 export function useLocalStorage<T>(
