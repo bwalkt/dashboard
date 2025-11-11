@@ -29,7 +29,7 @@ interface ColumnSchema {
   "timing.transfer": number;
 }
 
-const DAYS = 20;
+const DAYS = 30;
 
 function getRandomTiming(latency: number) {
   // Generate random percentages within the specified ranges

@@ -2,7 +2,8 @@
 
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, ReferenceArea, XAxis } from "recharts";
+import * as React from "react";
+import { Bar, BarChart, CartesianGrid, ReferenceArea, Tooltip, XAxis } from "recharts";
 import type { CategoricalChartFunc } from "recharts/types/chart/generateCategoricalChart";
 import { useDataTable } from "@/components/data-table/data-table-provider";
 import {
@@ -20,15 +21,15 @@ export const description = "A stacked bar chart";
 const chartConfig = {
   success: {
     label: <TooltipLabel level="success" />,
-    color: "hsl(var(--success))",
+    color: "hsl(var(--muted-foreground))",
   },
   warning: {
     label: <TooltipLabel level="warning" />,
-    color: "hsl(var(--warning))",
+    color: "#f97316",
   },
   error: {
     label: <TooltipLabel level="error" />,
-    color: "hsl(var(--error))",
+    color: "#ef4444",
   },
 } satisfies ChartConfig;
 
@@ -55,21 +56,21 @@ export function TimelineChart<TChart extends BaseChartSchema>({
   const [refAreaRight, setRefAreaRight] = useState<string | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
 
-  // REMINDER: date has to be a string for tooltip label to work - don't ask me why
   const chart = useMemo(
-    () =>
-      data.map((item) => ({
+    () => {
+      return data.map((item) => ({
         ...item,
         [columnId]: new Date(item.timestamp).toString(),
-      })),
-    [data],
+      }));
+    },
+    [data, columnId],
   );
 
   const timerange = useMemo(() => {
     if (data.length === 0) return { interval: 0, period: undefined };
     const first = data[0].timestamp;
     const last = data[data.length - 1].timestamp;
-    const interval = Math.abs(first - last); // in ms
+    const interval = Math.abs(first - last);
     return { interval, period: calculatePeriod(interval) };
   }, [data]);
 
@@ -101,70 +102,53 @@ export function TimelineChart<TChart extends BaseChartSchema>({
   };
 
   return (
-    <ChartContainer
-      config={chartConfig}
-      className={cn(
-        "aspect-auto h-[60px] w-full",
-        "[&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted/50", // otherwise same color as 200
-        "select-none", // disable text selection
-        className,
-      )}
-    >
+    <ChartContainer config={chartConfig} className={cn("h-[60px] w-full", className)}>
       <BarChart
         accessibilityLayer
         data={chart}
         margin={{ top: 0, left: 0, right: 0, bottom: 0 }}
+        maxBarSize={20}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        style={{ cursor: "crosshair" }}
       >
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey={columnId}
           tickLine={false}
-          minTickGap={32}
           axisLine={false}
-          // interval="preserveStartEnd"
+          tickMargin={8}
+          minTickGap={32}
           tickFormatter={(value) => {
             const date = new Date(value);
             if (isNaN(date.getTime())) return "N/A";
-            if (timerange.period === "10m") {
-              return format(date, "HH:mm:ss");
-            } else if (timerange.period === "1d") {
-              return format(date, "HH:mm");
-            } else if (timerange.period === "1w") {
-              return format(date, "LLL dd HH:mm");
-            }
-            return format(date, "LLL dd, y");
+            return timerange.period === "10m"
+              ? format(date, "HH:mm")
+              : format(date, "LLL dd");
           }}
         />
         <ChartTooltip
           content={
             <ChartTooltipContent
+              className="w-[150px]"
               labelFormatter={(value) => {
                 const date = new Date(value);
                 if (isNaN(date.getTime())) return "N/A";
-                if (timerange.period === "10m") {
-                  return format(date, "LLL dd, HH:mm:ss");
-                }
                 return format(date, "LLL dd, y HH:mm");
               }}
             />
           }
         />
-        {/* TODO: we could use the `{timestamp, ...rest} = data[0]` to dynamically create the bars but that would mean the order can be very much random */}
-        <Bar dataKey="error" stackId="a" fill="var(--color-error)" />
-        <Bar dataKey="warning" stackId="a" fill="var(--color-warning)" />
-        <Bar dataKey="success" stackId="a" fill="var(--color-success)" />
-        {refAreaLeft && refAreaRight && (
+        <Bar dataKey="error" stackId="a" fill="#ef4444" />
+        <Bar dataKey="warning" stackId="a" fill="#f97316" />
+        <Bar dataKey="success" stackId="a" fill="hsl(var(--muted-foreground))" />
+        {isSelecting && refAreaLeft && refAreaRight && (
           <ReferenceArea
             x1={refAreaLeft}
             x2={refAreaRight}
             strokeOpacity={0.3}
-            fill="hsl(var(--foreground))"
-            fillOpacity={0.08}
+            fill="hsl(var(--primary))"
+            fillOpacity={0.1}
           />
         )}
       </BarChart>
