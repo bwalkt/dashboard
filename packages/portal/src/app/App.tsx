@@ -22,6 +22,7 @@ import SignIn from "../pages/auth/SignIn";
 import SignUp from "../pages/auth/SignUp";
 import MobileDashboardLayout from "../pages/dashboard/MobileLayout";
 import Overview from "../pages/dashboard/Overview";
+import AuthCallback from '@/pages/auth/Callback'
 
 // Configure NProgress
 NProgress.configure({ showSpinner: false })
