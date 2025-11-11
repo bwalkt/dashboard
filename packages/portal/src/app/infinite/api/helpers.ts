@@ -1,6 +1,7 @@
 import {
   addDays,
   addMilliseconds,
+  differenceInDays,
   differenceInMinutes,
   isSameDay,
 } from "date-fns";
@@ -230,13 +231,13 @@ export function groupChartData(
   data: ColumnSchema[],
   dates: Date[] | null,
 ): TimelineChartSchema[] {
-  if (data?.length === 0 && !dates) return [];
+  if (data?.length === 0) return [];
 
   // If we only have one date, we need to add a day to it
   const _dates = dates?.length === 1 ? [dates[0], addDays(dates[0], 1)] : dates;
 
-  const between =
-    _dates || (data?.length ? [data[data.length - 1].date, data[0].date] : []);
+  // Use actual data range instead of filter range to avoid empty slots
+  const between = data?.length ? [data[data.length - 1].date, data[0].date] : [];
 
   if (!between.length) return [];
   const interval = evaluateInterval(between);
@@ -277,8 +278,14 @@ export function evaluateInterval(dates: Date[] | null): number {
 
   // Calculate the time difference in minutes
   const timeDiffInMinutes = Math.abs(differenceInMinutes(dates[0], dates[1]));
+  const timeDiffInDays = Math.abs(differenceInDays(dates[0], dates[1]));
 
-  // Define thresholds and their respective intervals in milliseconds
+  // If data spans multiple days, use daily intervals
+  if (timeDiffInDays >= 1) {
+    return 24 * 60 * 60 * 1000; // 1 day in milliseconds
+  }
+
+  // Define thresholds and their respective intervals in milliseconds for same-day data
   const intervals = [
     { threshold: 1, interval: 1000 }, // 1 second
     { threshold: 5, interval: 5000 }, // 5 seconds

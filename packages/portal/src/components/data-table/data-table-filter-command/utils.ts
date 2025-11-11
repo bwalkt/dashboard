@@ -253,7 +253,8 @@ export function columnFiltersParser<TData>({
         ) || { commandDisabled: true }; // if column filter is not found, disable the command by default
         const parser = searchParamsParser[curr.id];
 
-        if (commandDisabled || !parser) return prev;
+        // Skip null, undefined, or empty values
+        if (commandDisabled || !parser || curr.value == null || curr.value === "") return prev;
 
         return `${prev}${curr.id}:${parser.serialize(curr.value)} `;
       }, "");

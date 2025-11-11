@@ -21,7 +21,7 @@ const ResultItem = React.forwardRef(
     }, [action.ancestors, currentRootActionId])
 
     return (
-      <div ref={ref} className={`relative z-10 flex cursor-pointer items-center justify-between px-4 py-3`}>
+      <div ref={ref} className={`relative z-10 flex cursor-pointer items-center justify-between px-4 py-2`}>
         {active && (
           <div id="kbar-result-item" className="border-primary bg-accent/50 absolute inset-0 z-[-1]! border-l-4"></div>
         )}

@@ -141,7 +141,6 @@ export function TimelineChart<TChart extends BaseChartSchema>({
           }}
         />
         <ChartTooltip
-          // defaultIndex={10}
           content={
             <ChartTooltipContent
               labelFormatter={(value) => {
@@ -156,9 +155,9 @@ export function TimelineChart<TChart extends BaseChartSchema>({
           }
         />
         {/* TODO: we could use the `{timestamp, ...rest} = data[0]` to dynamically create the bars but that would mean the order can be very much random */}
-        <Bar dataKey="error" stackId="a" fill="var(--color-error)" />
-        <Bar dataKey="warning" stackId="a" fill="var(--color-warning)" />
-        <Bar dataKey="success" stackId="a" fill="var(--color-success)" />
+        <Bar dataKey="error" stackId="a" fill="var(--color-error)" stroke="none" strokeWidth={0} />
+        <Bar dataKey="warning" stackId="a" fill="var(--color-warning)" stroke="none" strokeWidth={0} />
+        <Bar dataKey="success" stackId="a" fill="var(--color-success)" stroke="none" strokeWidth={0} />
         {refAreaLeft && refAreaRight && (
           <ReferenceArea
             x1={refAreaLeft}

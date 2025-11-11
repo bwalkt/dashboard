@@ -35,12 +35,13 @@ import {
   TableRow,
 } from "@/components/custom/table";
 import { DataTableFilterCommand } from "@/components/data-table/data-table-filter-command";
+import { DataTableToggleButton } from "@/components/data-table/data-table-toggle-button";
 import { DataTableFilterControls } from "@/components/data-table/data-table-filter-controls";
 import { DataTableProvider } from "@/components/data-table/data-table-provider";
-import { DataTableResetButton } from "@/components/data-table/data-table-reset-button";
+import { DataTableResetButtonWithUrl } from "@/components/data-table/data-table-reset-button-with-url";
 import { MemoizedDataTableSheetContent } from "@/components/data-table/data-table-sheet/data-table-sheet-content";
 import { DataTableSheetDetails } from "@/components/data-table/data-table-sheet/data-table-sheet-details";
-import { DataTableToolbar } from "@/components/data-table/data-table-toolbar"; // TODO: check where to put this
+import { DataTableToolbarInfinite } from "@/components/data-table/data-table-toolbar-infinite";
 import type {
   DataTableFilterField,
   SheetField,
@@ -321,7 +322,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
               <p className="px-2 font-medium text-foreground">Filters</p>
               <div>
                 {table.getState().columnFilters.length ? (
-                  <DataTableResetButton />
+                  <DataTableResetButtonWithUrl searchParamsParser={searchParamsParser} />
                 ) : null}
               </div>
             </div>
@@ -344,9 +345,15 @@ export function DataTableInfinite<TData, TValue, TMeta>({
               "sticky top-0 z-10 pb-4",
             )}
           >
-            <DataTableFilterCommand searchParamsParser={searchParamsParser} />
+            <div className="flex items-center gap-2">
+              <DataTableToggleButton />
+              <div className="flex-1">
+                <DataTableFilterCommand searchParamsParser={searchParamsParser} />
+              </div>
+            </div>
             {/* TBD: better flexibility with compound components? */}
-            <DataTableToolbar
+            <DataTableToolbarInfinite
+              searchParamsParser={searchParamsParser}
               renderActions={() => [
                 <RefreshButton key="refresh" onClick={refetch} />,
                 fetchPreviousPage ? (

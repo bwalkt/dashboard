@@ -39,6 +39,7 @@ export function Client() {
   const filterDBRowCount = lastPage?.meta?.filterRowCount;
   const metadata = lastPage?.meta?.metadata;
   const chartData = lastPage?.meta?.chartData;
+  console.log("Raw chart data from API:", chartData?.length, chartData);
   const facets = lastPage?.meta?.facets;
   const totalFetched = flatData?.length;
 

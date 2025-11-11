@@ -4,14 +4,18 @@ import { useMemo } from "react";
 import { useDataTable } from "@/components/data-table/data-table-provider";
 import { formatCompactNumber } from "@/lib/format";
 import { DataTableFilterControlsDrawer } from "./data-table-filter-controls-drawer";
-import { DataTableResetButton } from "./data-table-reset-button";
+import { DataTableResetButtonWithUrl } from "./data-table-reset-button-with-url";
 import { DataTableViewOptions } from "./data-table-view-options";
 
-interface DataTableToolbarProps {
+interface DataTableToolbarInfiniteProps {
   renderActions?: () => React.ReactNode;
+  searchParamsParser: Record<string, any>;
 }
 
-export function DataTableToolbar({ renderActions }: DataTableToolbarProps) {
+export function DataTableToolbarInfinite({
+  renderActions,
+  searchParamsParser,
+}: DataTableToolbarInfiniteProps) {
   const { table, isLoading, columnFilters } = useDataTable();
   const filters = table.getState().columnFilters;
 
@@ -49,7 +53,9 @@ export function DataTableToolbar({ renderActions }: DataTableToolbarProps) {
         </div>
       </div>
       <div className="ml-auto flex items-center gap-2">
-        {filters.length ? <DataTableResetButton /> : null}
+        {filters.length ? (
+          <DataTableResetButtonWithUrl searchParamsParser={searchParamsParser} />
+        ) : null}
         {renderActions?.()}
         <DataTableViewOptions />
       </div>
