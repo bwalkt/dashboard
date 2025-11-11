@@ -42,7 +42,9 @@ export const filterFields = [
     type: "slider",
     min: 0,
     max: 3000,
-    options: data.map(({ p95 }) => ({ label: `${p95}`, value: p95 })),
+    options: data
+      .filter(({ p95 }) => p95 !== undefined)
+      .map(({ p95 }) => ({ label: `${p95}`, value: p95 })),
     defaultOpen: true,
   },
   {

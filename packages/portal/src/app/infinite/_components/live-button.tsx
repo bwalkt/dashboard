@@ -48,7 +48,7 @@ export function LiveButton({ fetchPreviousPage }: LiveButtonProps) {
     if ((date || sort) && live) {
       setSearch((prev) => ({ ...prev, live: null }));
     }
-  }, [date, sort]);
+  }, [date, sort, live, setSearch]);
 
   function handleClick() {
     setSearch((prev) => ({
