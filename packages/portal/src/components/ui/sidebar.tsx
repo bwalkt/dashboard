@@ -28,6 +28,8 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  hasSecondarySidebar: boolean
+  setHasSecondarySidebar: (hasSecondary: boolean) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -72,6 +74,7 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
+  const [hasSecondarySidebar, setHasSecondarySidebar] = React.useState(false);
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -117,6 +120,13 @@ function SidebarProvider({
   // This makes it easier to style the sidebar with Tailwind classes.
   const state = open ? 'expanded' : 'collapsed';
 
+  // Auto-collapse primary sidebar when secondary sidebar opens
+  React.useEffect(() => {
+    if (hasSecondarySidebar && open && !isMobile) {
+      setOpen(false);
+    }
+  }, [hasSecondarySidebar, open, isMobile, setOpen]);
+
   const contextValue = React.useMemo<SidebarContextProps>(
     () => ({
       state,
@@ -125,9 +135,11 @@ function SidebarProvider({
       isMobile,
       openMobile,
       setOpenMobile,
-      toggleSidebar
+      toggleSidebar,
+      hasSecondarySidebar,
+      setHasSecondarySidebar
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, hasSecondarySidebar, setHasSecondarySidebar]
   );
 
   return (
@@ -829,6 +841,24 @@ function SidebarMenuSubButton({
   )
 }
 
+/**
+ * Hook to control secondary sidebar behavior and auto-collapse primary sidebar.
+ * 
+ * @param isOpen - Whether the secondary sidebar is currently open
+ * @returns Object with setters to control secondary sidebar state
+ */
+function useSecondarySidebar(isOpen: boolean) {
+  const { setHasSecondarySidebar } = useSidebar()
+  
+  React.useEffect(() => {
+    setHasSecondarySidebar(isOpen)
+  }, [isOpen, setHasSecondarySidebar])
+  
+  return {
+    setSecondarySidebarOpen: setHasSecondarySidebar
+  }
+}
+
 export {
   Sidebar,
   SidebarContent,
@@ -854,4 +884,5 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
+  useSecondarySidebar,
 }

@@ -1,5 +1,6 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useSecondarySidebar } from "@/components/ui/sidebar";
 
 interface ControlsContextType {
   open: boolean;
@@ -10,6 +11,9 @@ export const ControlsContext = createContext<ControlsContextType | null>(null);
 
 export function ControlsProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useLocalStorage("data-table-controls", true);
+  
+  // Auto-collapse primary sidebar when controls panel is open
+  useSecondarySidebar(open);
 
   return (
     <ControlsContext.Provider value={{ open, setOpen }}>

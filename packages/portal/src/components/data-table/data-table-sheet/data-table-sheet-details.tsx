@@ -14,6 +14,7 @@ import {
 import { useDataTable } from "@/components/data-table/data-table-provider";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useSecondarySidebar } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -37,6 +38,9 @@ export function DataTableSheetDetails({
   const { table, rowSelection, isLoading } = useDataTable();
 
   const selectedRowKey = Object.keys(rowSelection)?.[0];
+  
+  // Auto-collapse primary sidebar when this sheet opens
+  useSecondarySidebar(!!selectedRowKey);
 
   const selectedRow = React.useMemo(() => {
     if (isLoading && !selectedRowKey) return;
