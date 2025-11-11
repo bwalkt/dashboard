@@ -11,7 +11,8 @@ export const inDateRange: FilterFn<any> = (row, columnId, value) => {
   // if no end date, check if it's the same day
   if (!end) return isSameDay(date, start);
 
-  return isAfter(date, start) && isBefore(date, end);
+  return (isAfter(date, start) || isSameDay(date, start)) && 
+         (isBefore(date, end) || isSameDay(date, end));
 };
 
 inDateRange.autoRemove = (val: any) =>
