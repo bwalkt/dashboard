@@ -37,6 +37,7 @@
       "vite": ">=7.1.11"
     },
     "ignoredBuiltDependencies": [
+      "core-js",
       "react-native-nitro-modules"
     ]
   }

@@ -32,15 +32,12 @@ export class ApiError extends Error {
 /**
  * Retrieve the backend base URL from the `VITE_BACKEND_URL` environment variable.
  *
- * @returns The backend base URL string.
- * @throws Error if `VITE_BACKEND_URL` is not configured.
+ * @returns The backend base URL string, or empty string for relative URLs.
  */
 function getBackendUrl(): string {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
-  if (!backendUrl) {
-    throw new Error("Backend URL not configured. Please set VITE_BACKEND_URL in your environment variables.");
-  }
-  return backendUrl;
+  // If not set or empty, use relative URLs (proxied through Vite)
+  return backendUrl || '';
 }
 
 /**
@@ -78,7 +75,9 @@ async function refreshToken(): Promise<void> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
-      const response = await fetch(`${getBackendUrl()}/auth/refresh`, {
+      const backendUrl = getBackendUrl();
+      const refreshUrl = backendUrl ? `${backendUrl}/auth/refresh` : '/auth/refresh';
+      const response = await fetch(refreshUrl, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -114,8 +113,8 @@ async function refreshToken(): Promise<void> {
 export async function apiRequest<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
   const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options;
 
-  // Construct the full URL
-  const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+  // Construct the full URL (handle empty baseUrl for relative paths)
+  const url = baseUrl ? `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}` : endpoint;
 
   // Prepare the request configuration
   const requestConfig: RequestInit = {

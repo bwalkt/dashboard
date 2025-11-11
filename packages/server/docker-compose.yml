@@ -15,7 +15,7 @@ services:
     ports:
       - "${POSTGRES_PORT:-5433}:5432" # Changed default from 5432 to 5433 to avoid conflicts with local PostgreSQL
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
       - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]

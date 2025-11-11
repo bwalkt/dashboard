@@ -17,6 +17,7 @@ import '@/styles/globals.css'
 import '@/styles/theme.css'
 
 // Import pages
+import AuthCallback from "./pages/auth/Callback";
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
 import MobileDashboardLayout from "./pages/dashboard/MobileLayout";
@@ -68,6 +69,7 @@ function ThemedAppContent() {
       <ProgressBar />
       <Routes>
         {/* Auth routes - no authentication required */}
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/auth/sign-in" element={<SignIn />} />
         <Route path="/auth/sign-up" element={<SignUp />} />
 
