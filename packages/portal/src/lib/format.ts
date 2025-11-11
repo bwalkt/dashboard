@@ -23,17 +23,23 @@ export function formatMilliseconds(value: number) {
 }
 
 export function formatDate(value: Date | string) {
-  return format(new Date(`${value}`), "LLL dd, y HH:mm");
+  return format(new Date(value), "LLL dd, y HH:mm");
 }
 
 export function formatCompactNumber(value: number) {
-  if (value >= 100 && value < 1000) {
-    return value.toString(); // Keep the number as is if it's in the hundreds
-  } else if (value >= 1000 && value < 1000000) {
-    return (value / 1000).toFixed(1) + "k"; // Convert to 'k' for thousands
-  } else if (value >= 1000000) {
-    return (value / 1000000).toFixed(1) + "M"; // Convert to 'M' for millions
+  const isNegative = value < 0;
+  const absValue = Math.abs(value);
+  
+  let result: string;
+  if (absValue >= 100 && absValue < 1000) {
+    result = absValue.toString();
+  } else if (absValue >= 1000 && absValue < 1000000) {
+    result = (absValue / 1000).toFixed(1) + "k";
+  } else if (absValue >= 1000000) {
+    result = (absValue / 1000000).toFixed(1) + "M";
   } else {
-    return value.toString(); // Optionally handle numbers less than 100 if needed
+    result = absValue.toString();
   }
+  
+  return isNegative ? `-${result}` : result;
 }
