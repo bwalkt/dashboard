@@ -13,5 +13,5 @@ export function useHotKey(callback: () => void, key: string): void {
     return () => {
       window.removeEventListener("keydown", handler);
     };
-  }, [key]);
+  }, [key, callback]);
 }
