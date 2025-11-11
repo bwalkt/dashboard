@@ -12,7 +12,7 @@ export const mobileNavItems: NavItem[] = [
   },
   {
     title: 'Logs',
-    url: '/dashboard/infinite',
+    url: '/dashboard/logs',
     icon: 'activity',
     isActive: false,
     shortcut: ['l', 'l'],

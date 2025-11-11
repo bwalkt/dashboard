@@ -14,7 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
 import { Route as DashboardOverviewRouteImport } from './routes/dashboard/overview'
-import { Route as DashboardInfiniteRouteImport } from './routes/dashboard/infinite'
+import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
@@ -44,9 +44,9 @@ const DashboardOverviewRoute = DashboardOverviewRouteImport.update({
   path: '/overview',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardInfiniteRoute = DashboardInfiniteRouteImport.update({
-  id: '/infinite',
-  path: '/infinite',
+const DashboardLogsRoute = DashboardLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
   getParentRoute: () => DashboardRoute,
 } as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
@@ -71,7 +71,7 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
-  '/dashboard/infinite': typeof DashboardInfiniteRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -81,7 +81,7 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
-  '/dashboard/infinite': typeof DashboardInfiniteRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -93,7 +93,7 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
-  '/dashboard/infinite': typeof DashboardInfiniteRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -106,7 +106,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
-    | '/dashboard/infinite'
+    | '/dashboard/logs'
     | '/dashboard/overview'
     | '/dashboard/users'
     | '/dashboard/'
@@ -116,7 +116,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
-    | '/dashboard/infinite'
+    | '/dashboard/logs'
     | '/dashboard/overview'
     | '/dashboard/users'
     | '/dashboard'
@@ -127,7 +127,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
-    | '/dashboard/infinite'
+    | '/dashboard/logs'
     | '/dashboard/overview'
     | '/dashboard/users'
     | '/dashboard/'
@@ -178,11 +178,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardOverviewRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/dashboard/infinite': {
-      id: '/dashboard/infinite'
-      path: '/infinite'
-      fullPath: '/dashboard/infinite'
-      preLoaderRoute: typeof DashboardInfiniteRouteImport
+    '/dashboard/logs': {
+      id: '/dashboard/logs'
+      path: '/logs'
+      fullPath: '/dashboard/logs'
+      preLoaderRoute: typeof DashboardLogsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/auth/sign-up': {
@@ -210,14 +210,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface DashboardRouteChildren {
-  DashboardInfiniteRoute: typeof DashboardInfiniteRoute
+  DashboardLogsRoute: typeof DashboardLogsRoute
   DashboardOverviewRoute: typeof DashboardOverviewRoute
   DashboardUsersRoute: typeof DashboardUsersRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
-  DashboardInfiniteRoute: DashboardInfiniteRoute,
+  DashboardLogsRoute: DashboardLogsRoute,
   DashboardOverviewRoute: DashboardOverviewRoute,
   DashboardUsersRoute: DashboardUsersRoute,
   DashboardIndexRoute: DashboardIndexRoute,
