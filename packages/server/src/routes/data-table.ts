@@ -1,6 +1,8 @@
+import { mock, mockLive } from "@pzero/shared";
 import { addDays } from "date-fns";
 import type { FastifyInstance } from "fastify";
 import SuperJSON from "superjson";
+import { authenticateToken } from "../middleware/auth";
 import {
   filterData,
   getFacetsFromData,
@@ -10,9 +12,7 @@ import {
   sortData,
   splitData,
 } from "../utils/data-table-helpers";
-import { mock, mockLive } from "@pzero/shared";
 import { calculateSpecificPercentile } from "../utils/percentile";
-import { authenticateToken } from "../middleware/auth";
 
 // Define types from the portal package - we'll need to move these to shared
 interface SearchParams {
@@ -41,81 +41,93 @@ interface LogsMeta {
 }
 
 export async function dataTableRoutes(fastify: FastifyInstance): Promise<void> {
-  fastify.get("/api/data-table/infinite", {
-    preHandler: authenticateToken,
-  }, async (request, reply) => {
-    const search = request.query as SearchParams;
-    const totalData = [...mockLive, ...mock];
+  fastify.get(
+    "/api/data-table/infinite",
+    {
+      preHandler: authenticateToken,
+    },
+    async (request, reply) => {
+      const search = request.query as SearchParams;
+      const totalData = [...mockLive, ...mock];
 
-    const _date =
-      search.date?.length === 1
-        ? [search.date[0], addDays(search.date[0], 1)]
-        : search.date;
+      const _date =
+        search.date?.length === 1 && search.date[0]
+          ? [search.date[0], addDays(search.date[0], 1)]
+          : search.date;
 
-    // Filter out the slider values because they are not part of the search params
-    const _rest = Object.fromEntries(
-      Object.entries(search).filter(
-        ([key]) => !sliderFilterValues.includes(key as any),
-      ),
-    );
+      // Filter out the slider values because they are not part of the search params
+      const _rest = Object.fromEntries(
+        Object.entries(search).filter(
+          ([key]) => !sliderFilterValues.includes(key as any),
+        ),
+      );
 
-    const rangedData = filterData(totalData, { date: _date });
-    const withoutSliderData = filterData(rangedData, { ..._rest, date: null });
+      const rangedData = filterData(totalData, { date: _date });
+      const withoutSliderData = filterData(rangedData, {
+        ..._rest,
+        date: null,
+      });
 
-    const filteredData = filterData(withoutSliderData, {
-      ...search,
-      date: null,
-    });
-    const chartData = groupChartData(filteredData, _date);
-    const sortedData = sortData(filteredData, search.sort);
-    const withoutSliderFacets = getFacetsFromData(withoutSliderData);
-    const facets = getFacetsFromData(filteredData);
-    const withPercentileData = percentileData(sortedData);
-    const data = splitData(withPercentileData, search);
+      const filteredData = filterData(withoutSliderData, {
+        ...search,
+        date: null,
+      });
+      const chartData = groupChartData(
+        filteredData,
+        _date as Date[] | undefined,
+      );
+      const sortedData = sortData(filteredData, search.sort);
+      const withoutSliderFacets = getFacetsFromData(withoutSliderData);
+      const facets = getFacetsFromData(filteredData);
+      const withPercentileData = percentileData(sortedData);
+      const data = splitData(withPercentileData, search);
 
-    const latencies = withPercentileData.map(({ latency }) => latency);
-    const currentPercentiles =
-      latencies.length > 0
-        ? {
-            50: calculateSpecificPercentile(latencies, 50),
-            75: calculateSpecificPercentile(latencies, 75),
-            90: calculateSpecificPercentile(latencies, 90),
-            95: calculateSpecificPercentile(latencies, 95),
-            99: calculateSpecificPercentile(latencies, 99),
-          }
-        : {
-            50: 0,
-            75: 0,
-            90: 0,
-            95: 0,
-            99: 0,
-          };
+      const latencies = withPercentileData.map(
+        ({ latency }: { latency: number }) => latency,
+      );
+      const currentPercentiles =
+        latencies.length > 0
+          ? {
+              50: calculateSpecificPercentile(latencies, 50),
+              75: calculateSpecificPercentile(latencies, 75),
+              90: calculateSpecificPercentile(latencies, 90),
+              95: calculateSpecificPercentile(latencies, 95),
+              99: calculateSpecificPercentile(latencies, 99),
+            }
+          : {
+              50: 0,
+              75: 0,
+              90: 0,
+              95: 0,
+              99: 0,
+            };
 
-    const nextCursor =
-      data.length > 0 ? data[data.length - 1].date.getTime() : null;
-    const prevCursor = data.length > 0 ? data[0].date.getTime() : null;
+      const nextCursor =
+        data.length > 0 ? data[data.length - 1].date.getTime() : null;
+      const prevCursor = data.length > 0 ? data[0].date.getTime() : null;
 
-    const response = SuperJSON.stringify({
-      data,
-      meta: {
-        totalRowCount: totalData.length,
-        filterRowCount: filteredData.length,
-        chartData,
-        // Separate the slider for keeping the min/max facets of the slider fields
-        facets: {
-          ...withoutSliderFacets,
-          ...Object.fromEntries(
-            Object.entries(facets).filter(
-              ([key]) => !sliderFilterValues.includes(key as any),
+      const response = SuperJSON.stringify({
+        data,
+        meta: {
+          totalRowCount: totalData.length,
+          filterRowCount: filteredData.length,
+          chartData,
+          // Separate the slider for keeping the min/max facets of the slider fields
+          facets: {
+            ...withoutSliderFacets,
+            ...Object.fromEntries(
+              Object.entries(facets).filter(
+                ([key]) => !sliderFilterValues.includes(key as any),
+              ),
             ),
-          ),
+          },
+          metadata: { currentPercentiles },
         },
-        metadata: { currentPercentiles },
-      },
-      prevCursor,
-      nextCursor,
-    } satisfies InfiniteQueryResponse<any[], LogsMeta>);
+        prevCursor,
+        nextCursor,
+      } satisfies InfiniteQueryResponse<any[], LogsMeta>);
 
-    return reply.type("application/json").send(response);
-  });
+      return reply.type("application/json").send(response);
+    },
+  );
 }
