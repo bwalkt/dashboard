@@ -46,7 +46,7 @@ export function getTimingPercentage(
   timing: Record<TimingPhase, number>,
   latency: number
 ): Record<TimingPhase, number | string> {
-  // const total = Object.values(timing).reduce((acc, curr) => acc + curr, 0);
+  const percentage: Record<TimingPhase, number | string> = { ...timing };
   const percentage: Record<TimingPhase, number | string> = { ...timing };
   Object.entries(timing).forEach(([key, value]) => {
     const pValue = Math.round((value / latency) * 1000) / 1000;
