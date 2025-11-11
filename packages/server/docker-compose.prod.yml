@@ -66,7 +66,7 @@ services:
       - SERVER_BASE_URL=${SERVER_BASE_URL:-http://localhost:8090}
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
-      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
     depends_on:
       postgres:
         condition: service_healthy

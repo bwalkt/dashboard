@@ -10,7 +10,7 @@ services:
     ports:
       - "3000:3000" # Internal port for direct access (optional)
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - PORT=3000
       - DOCKER_CONTAINER=true
       # Salesforce Configuration
