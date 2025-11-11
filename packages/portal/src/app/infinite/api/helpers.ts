@@ -63,7 +63,7 @@ export function filterData(
         ) {
           return false;
         }
-        return true;
+        continue;
       }
       if (key === "status" && isArrayOfNumbers(filter)) {
         if (!filter.includes(row[key])) {
@@ -90,6 +90,23 @@ export function filterData(
       if (key === "level" && Array.isArray(filter)) {
         const typedFilter = filter as unknown as (typeof LEVELS)[number][];
         if (!typedFilter.includes(row[key])) {
+          return false;
+        }
+      }
+      if (
+        (key === "method" || key === "host" || key === "pathname") &&
+        Array.isArray(filter)
+      ) {
+        if (!filter.includes(row[key] as string)) {
+          return false;
+        }
+        continue;
+      }
+      if (
+        (key === "method" || key === "host" || key === "pathname") &&
+        typeof filter === "string"
+      ) {
+        if (row[key] !== filter) {
           return false;
         }
       }

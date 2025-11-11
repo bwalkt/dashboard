@@ -58,12 +58,7 @@ export class AuthService extends JWTService {
         typeof decoded.userId !== "string" ||
         typeof decoded.githubId !== "string"
       ) {
-        console.log(
-          "Token validation failed - userId type:",
-          typeof decoded.userId,
-          "githubId type:",
-          typeof decoded.githubId,
-        );
+        console.log("Token validation failed - userId type:", typeof decoded.userId, "githubId type:", typeof decoded.githubId);
         return null;
       }
 
