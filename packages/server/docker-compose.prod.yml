@@ -2,9 +2,10 @@ name: pzero-api-server
 
 services:
   postgres:
-    build:
-      context: .
-      dockerfile: Dockerfile.postgres
+    # Image from GitHub Container Registry
+    # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
+    # Or set POSTGRES_IMAGE to override the full image path
+    image: ${POSTGRES_IMAGE:-ghcr.io/${GITHUB_OWNER}/server-postgres:latest}
     container_name: pzero-postgres
     restart: unless-stopped
     command: ["postgres", "-c", "shared_preload_libraries=pgx_ulid"]

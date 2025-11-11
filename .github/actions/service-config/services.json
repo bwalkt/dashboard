@@ -17,6 +17,12 @@
       "dockerfile": "packages/server/Dockerfile",
       "context": ".",
       "image_name": "server"
+    },
+    {
+      "name": "server-postgres",
+      "dockerfile": "packages/server/Dockerfile.postgres",
+      "context": "./packages/server",
+      "image_name": "server-postgres"
     }
   ]
 }
