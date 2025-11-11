@@ -25,26 +25,27 @@ export function DataTableResetButtonWithUrl({
   const [_, setSearch] = useQueryStates(searchParamsParser);
 
   const handleReset = () => {
-    // Reset table filters first
-    table.resetColumnFilters();
-    
-    // Clear all filter-related URL parameters
-    const resetParams = filterFields.reduce(
-      (acc, field) => {
-        acc[field.value as string] = undefined;
-        return acc;
-      },
-      {} as Record<string, undefined>
-    );
-    
-    // Also clear other search-related params but keep essential ones like size, direction
+    // Clear all URL parameters first
     setSearch({
-      ...resetParams,
-      sort: undefined,
-      host: undefined,
-      pathname: undefined,
-      date: undefined,
+      date: null,
+      level: null,
+      host: null,
+      pathname: null,
+      status: null,
+      method: null,
+      regions: null,
+      latency: null,
+      "timing.dns": null,
+      "timing.connection": null,
+      "timing.tls": null,
+      "timing.ttfb": null,
+      "timing.transfer": null,
+      sort: null,
     });
+    
+    // Reset table filters after URL clear
+    table.resetColumnFilters();
+    table.resetSorting();
   };
 
   useHotKey(handleReset, "Escape");

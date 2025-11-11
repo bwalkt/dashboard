@@ -327,7 +327,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
               </div>
             </div>
           </div>
-          <div className="flex-1 p-2 sm:overflow-y-scroll">
+          <div className="flex-1 p-2 overflow-y-auto max-h-[calc(100vh-200px)]">
             <DataTableFilterControls />
           </div>
         </div>
