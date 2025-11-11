@@ -9,6 +9,7 @@ import { validateEnvironment } from "./config/env";
 import { redis } from "./config/redis";
 import { authRoutes } from "./routes/auth";
 import { emailRoutes } from "./routes/email";
+import { proxyRoutes } from "./routes/proxy";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -35,6 +36,9 @@ export default async function (
       "Authorization",
       "X-Requested-With",
       "Accept",
+      "traceparent",
+      "x-client-type",
+      "tracestate",
     ],
     exposedHeaders: ["Content-Range", "X-Content-Range"],
     maxAge: 86400, // Cache preflight response for 1 day
@@ -58,6 +62,7 @@ export default async function (
   // Register routes
   await fastify.register(authRoutes);
   await fastify.register(emailRoutes);
+  await fastify.register(proxyRoutes);
 
   // Console log when server starts
   fastify.addHook("onReady", async () => {});

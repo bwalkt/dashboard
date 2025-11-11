@@ -13,7 +13,6 @@ export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   body?: any;
   baseUrl?: string;
   skipRefresh?: boolean; // Skip automatic token refresh for this request
-  skipAuth?: boolean; // Skip authentication for this request
 }
 
 export interface ApiResponse<T = any> {
@@ -167,37 +166,80 @@ async function parseProxyResponse<T>(response: Response): Promise<T> {
     return {} as T;
   }
 
-  const { data } = (await response.json()) as { data: { statusCode: number; body: string } };
-
-  // Parse JSON response
+  // The proxy returns the raw body string directly, not wrapped in a data object
+  // Check content type to determine how to parse
   const contentType = response.headers.get("content-type");
+
   if (contentType && contentType.includes("application/json")) {
-    return JSON.parse(data.body) as T;
+    // Parse JSON response directly
+    const jsonData = await response.json();
+
+    // Check if this is a proxy error response
+    if (jsonData && typeof jsonData === "object" && "success" in jsonData && jsonData.success === false) {
+      // This is a proxy error response, throw it as an error
+      throw new ApiError(jsonData.message || "Proxy request failed", response.status, response.statusText, response);
+    }
+
+    return jsonData as T;
   }
 
   // Return text response for non-JSON content
-  return data.body as T;
+  return (await response.text()) as T;
 }
 
-type ApiProxyRequestBody = {
-  url: string;
-  method: string;
-  headers: HeadersInit;
-  body?: any;
-};
+/**
+ * Return type for proxy fetch options
+ */
+interface ProxyFetchOptions {
+  proxyUrl: string;
+  fetchOptions: RequestInit;
+}
 
 /**
  * Create fetch options for proxy requests
+ * The proxy endpoint now accepts all HTTP methods and forwards them to the target URL
  */
-function createProxyFetchOptions(requestConfig: ApiProxyRequestBody): RequestInit {
-  return {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestConfig),
+function createProxyFetchOptions(
+  targetUrl: string,
+  method: string,
+  headers: Record<string, string>,
+  body?: any,
+  queryParams?: Record<string, string | string[]>
+): ProxyFetchOptions {
+  // Build query string with target URL and any additional query parameters
+  const urlParams = new URLSearchParams();
+  urlParams.set("url", targetUrl);
+
+  // Add any additional query parameters
+  if (queryParams) {
+    for (const [key, value] of Object.entries(queryParams)) {
+      if (Array.isArray(value)) {
+        for (const val of value) {
+          urlParams.append(key, val);
+        }
+      } else {
+        urlParams.set(key, value);
+      }
+    }
+  }
+
+  const proxyUrl = `${getProxyUrl()}?${urlParams.toString()}`;
+
+  const fetchOptions: RequestInit = {
+    method: method,
+    headers: headers,
     credentials: "include",
   };
+
+  // Add body if present (for POST, PUT, PATCH, DELETE)
+  // Note: body is already serialized by serializeBody() before being passed here
+  const methodsWithoutBody = ["GET", "HEAD", "OPTIONS"];
+  if (!methodsWithoutBody.includes(method.toUpperCase()) && body !== undefined) {
+    // Body is already serialized (stringified JSON for objects, FormData as-is, etc.)
+    fetchOptions.body = body as BodyInit;
+  }
+
+  return { proxyUrl, fetchOptions };
 }
 
 /**
@@ -211,29 +253,13 @@ async function refreshToken(): Promise<void> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        throw new ApiError("Refresh token not found", 401, "Refresh token not found");
-      }
       const response = await fetch(`${getBackendUrl()}/auth/refresh`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${refreshToken}`,
-        },
         credentials: "include",
       });
 
       if (!response.ok) {
         throw new ApiError("Token refresh failed", response.status, response.statusText, response);
-      }
-
-      // Parse response and store tokens in localStorage
-      const responseData = await response.json();
-      if (responseData.refreshToken) {
-        localStorage.setItem("refreshToken", responseData.refreshToken);
-      }
-      if (responseData.accessToken) {
-        localStorage.setItem("accessToken", responseData.accessToken);
       }
     } catch (error) {
       throw error;
@@ -245,6 +271,10 @@ async function refreshToken(): Promise<void> {
 
   return refreshPromise;
 }
+
+/**
+ * Attempt to refresh the authentication token via proxy
+ */
 async function refreshTokenWithProxy(): Promise<void> {
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
@@ -253,26 +283,15 @@ async function refreshTokenWithProxy(): Promise<void> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        throw new ApiError("Refresh token not found", 401, "Refresh token not found");
-      }
-      const requestConfig: ApiProxyRequestBody = {
-        url: `${getProxyTarget()}/auth/refresh`,
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${refreshToken}`,
-        },
-      };
-      const response = await fetch(getProxyUrl(), createProxyFetchOptions(requestConfig));
+      const targetUrl = `${getProxyTarget()}/auth/refresh`;
+      const { proxyUrl, fetchOptions } = createProxyFetchOptions(targetUrl, "POST", {
+        "Content-Type": "application/json",
+      });
+      const response = await fetch(proxyUrl, fetchOptions);
 
       if (!response.ok) {
         throw new ApiError("Token refresh failed", response.status, response.statusText, response);
       }
-      const { data } = (await response.json()) as { data: { statusCode: number; body: string } };
-      const { refreshToken: newRefreshToken, accessToken: newAccessToken } = JSON.parse(data.body) as { refreshToken: string; accessToken: string };
-      localStorage.setItem("refreshToken", newRefreshToken);
-      localStorage.setItem("accessToken", newAccessToken);
     } catch (error) {
       throw error;
     } finally {
@@ -298,22 +317,13 @@ async function refreshTokenWithProxy(): Promise<void> {
  * @returns Promise resolving to the response data
  */
 export async function apiRequestWithoutProxy<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, skipAuth = false, ...fetchOptions } = options;
+  const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options;
 
   // Construct the full URL
   const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
   // Prepare headers as a plain object for serialization
-  let headersObj = headersToObject(headers);
-
-  // Add authorization header if token exists and auth is not skipped
-  const accessToken = localStorage.getItem("accessToken");
-  if (accessToken && !skipAuth) {
-    headersObj = {
-      ...headersObj,
-      Authorization: `Bearer ${accessToken}`,
-    };
-  }
+  const headersObj = headersToObject(headers);
 
   // Handle body serialization
   const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, false);
@@ -338,18 +348,6 @@ export async function apiRequestWithoutProxy<T = any>(endpoint: string, options:
       if (response.status === 401 && !skipRefresh && !url.includes("/auth/refresh")) {
         try {
           await refreshToken();
-          // Update authorization header with fresh token
-          const freshAccessToken = localStorage.getItem("accessToken");
-          if (freshAccessToken && !skipAuth) {
-            const updatedHeaders = {
-              ...headersObj,
-              Authorization: `Bearer ${freshAccessToken}`,
-            };
-            requestConfig.headers = {
-              ...defaultHeaders,
-              ...updatedHeaders,
-            };
-          }
           // Retry the original request after successful refresh
           const retryResponse = await fetch(url, requestConfig);
 
@@ -396,35 +394,41 @@ export async function apiRequestWithoutProxy<T = any>(endpoint: string, options:
  * @returns Promise resolving to the response data
  */
 export async function apiRequestWithProxy<T = any>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
-  const { skipAuth = false, baseUrl = getProxyTarget(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options ?? {};
-  const targetUrl = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
-  const proxyUrl = getProxyUrl();
+  const { baseUrl = getProxyTarget(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options ?? {};
 
-  // Convert headers to plain object for manipulation
-  let headersObj = headersToObject(headers);
+  // Build target URL - handle query parameters in endpoint
+  const [endpointPath, endpointQuery] = endpoint.split("?");
+  const targetUrl = `${baseUrl}${endpointPath.startsWith("/") ? endpointPath : `/${endpointPath}`}`;
 
-  // Add authorization header if token exists and auth is not skipped
-  const accessToken = localStorage.getItem("accessToken");
-  if (accessToken && !skipAuth) {
-    headersObj = {
-      ...headersObj,
-      Authorization: `Bearer ${accessToken}`,
-    };
+  // Parse query parameters from endpoint if present
+  const queryParams: Record<string, string> = {};
+  if (endpointQuery) {
+    const params = new URLSearchParams(endpointQuery);
+    for (const [key, value] of params.entries()) {
+      queryParams[key] = value;
+    }
   }
 
-  // Handle body serialization
-  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, true);
+  // Convert headers to plain object
+  const headersObj = headersToObject(headers);
 
-  // Prepare the request configuration
-  const requestConfig: ApiProxyRequestBody = {
-    url: targetUrl,
-    method: fetchOptions.method ?? "GET",
-    headers: updatedHeaders,
-    body: serializedBody,
-  };
+  // Handle body serialization
+  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, false);
+
+  // Get HTTP method
+  const method = fetchOptions.method ?? "GET";
+
+  // Create proxy fetch options
+  const { proxyUrl, fetchOptions: proxyFetchOptions } = createProxyFetchOptions(
+    targetUrl,
+    method,
+    updatedHeaders,
+    serializedBody,
+    Object.keys(queryParams).length > 0 ? queryParams : undefined
+  );
 
   try {
-    const response = await fetch(proxyUrl, createProxyFetchOptions(requestConfig));
+    const response = await fetch(proxyUrl, proxyFetchOptions);
 
     // Handle non-OK responses
     if (!response.ok) {
@@ -432,16 +436,15 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
       if (response.status === 401 && !skipRefresh && !targetUrl.includes("/auth/refresh")) {
         try {
           await refreshTokenWithProxy();
-          // Update authorization header with fresh token
-          const freshAccessToken = localStorage.getItem("accessToken");
-          if (freshAccessToken) {
-            requestConfig.headers = {
-              ...requestConfig.headers,
-              Authorization: `Bearer ${freshAccessToken}`,
-            };
-          }
           // Retry the original request after successful refresh
-          const retryResponse = await fetch(proxyUrl, createProxyFetchOptions(requestConfig));
+          const { proxyUrl: retryProxyUrl, fetchOptions: retryFetchOptions } = createProxyFetchOptions(
+            targetUrl,
+            method,
+            updatedHeaders,
+            serializedBody,
+            Object.keys(queryParams).length > 0 ? queryParams : undefined
+          );
+          const retryResponse = await fetch(retryProxyUrl, retryFetchOptions);
 
           if (!retryResponse.ok) {
             const errorMessage = await extractErrorMessage(retryResponse);

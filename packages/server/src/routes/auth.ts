@@ -45,8 +45,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     },
     callbackUri: (() => {
       // Extract base URL from OAUTH_REDIRECT_URL (e.g., http://localhost:1430/auth/sign-in -> http://localhost:1430)
-      if (process.env.OAUTH_REDIRECT_URL) {
-        const url = new URL(process.env.OAUTH_REDIRECT_URL);
+      if (process.env.FRONTEND_URL) {
+        const url = new URL(process.env.FRONTEND_URL);
         return `${url.protocol}//${url.host}/auth/callback`;
       }
       return `${process.env.SERVER_BASE_URL}/auth/callback`;

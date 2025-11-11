@@ -1,0 +1,77 @@
+static_resources:
+  listeners:
+    - name: listener_0
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8080 }
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: backend
+                      domains: ["*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: server_cluster }
+                http_filters:
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                  - name: envoy.filters.http.lua
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+                      inline_code: |
+                        function envoy_on_request(request_handle)
+                          local path = request_handle:headers():get(":path")
+                          local method = request_handle:headers():get(":method")
+                          
+                          -- Allow auth routes without cookie check
+                          if path:match("^/auth/login") or path:match("^/auth/callback") or path:match("^/proxy") then
+                            return
+                          end
+                          
+                          -- Allow OPTIONS requests for CORS preflight
+                          if method == "OPTIONS" then
+                            return
+                          end
+                          
+                          -- Check for JWT cookie existence (without verification)
+                          local cookies = request_handle:headers():get("cookie")
+                          if cookies then
+                            -- Check if accessToken or refreshToken cookie exists
+                            if cookies:match("accessToken=[^;]+") or cookies:match("refreshToken=[^;]+") then
+                              return
+                            end
+                          end
+                          
+                          -- No JWT cookie found, return 401
+                          request_handle:respond(
+                            {[":status"] = "401", ["content-type"] = "application/json"},
+                            '{"error":"JWT cookie required"}'
+                          )
+                        end
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+    - name: server_cluster
+      connect_timeout: 10s
+      type: logical_dns
+      dns_lookup_family: V4_ONLY
+      load_assignment:
+        cluster_name: server_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: pzero-server, port_value: 8090 }
+
+admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901

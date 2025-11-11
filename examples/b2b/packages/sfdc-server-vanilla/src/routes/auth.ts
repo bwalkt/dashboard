@@ -85,9 +85,14 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     try {
       const { code, state } = request.query as { code: string; state: string };
       // Validate state parameter
-      // const storedState = request.cookies.oauth_state;
-
       if (!state) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Invalid state parameter",
+        } as ErrorResponse);
+      }
+      const storedState = request.cookies.oauth_state;
+      if (!storedState || state !== storedState) {
         return reply.status(400).send({
           error: "Bad Request",
           message: "Invalid state parameter",
@@ -161,8 +166,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       });
       return reply.send({
         message: "Login successful",
-        accessToken,
-        refreshToken,
         user,
       });
     } catch (error) {

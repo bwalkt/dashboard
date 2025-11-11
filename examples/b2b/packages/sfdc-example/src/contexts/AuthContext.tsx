@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const { mutateAsync: signInWithGitHub } = useMutation<{ data: string; error: any }>({
     mutationFn: async () => {
-      const { authUrl, state } = await api.get<{ authUrl: string; state: string }>("/auth/login", { skipAuth: true, });
+      const { authUrl } = await api.get<{ authUrl: string; state: string }>("/auth/login",);
       return { data: authUrl, error: null };
     },
     onSuccess: ({ data }) => {

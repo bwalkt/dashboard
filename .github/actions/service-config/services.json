@@ -11,6 +11,12 @@
       "dockerfile": "packages/golang-proxy/Dockerfile",
       "context": "./packages/golang-proxy",
       "image_name": "golang-proxy"
+    },
+    {
+      "name": "server",
+      "dockerfile": "packages/server/Dockerfile",
+      "context": ".",
+      "image_name": "server"
     }
   ]
 }
