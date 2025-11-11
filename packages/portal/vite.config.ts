@@ -20,6 +20,17 @@ export default defineConfig({
           port: 1430,
         }
       : undefined,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8090',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      '/auth/callback': {
+        target: 'http://localhost:8090',
+        changeOrigin: true,
+      },
+    },
   },
   resolve: {
     alias: {

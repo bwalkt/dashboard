@@ -26,7 +26,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      domain: process.env.DOMAIN,
+      ...(process.env.DOMAIN && { domain: process.env.DOMAIN }),
       path: "/",
       maxAge: 3600, // 1 hour
     },
@@ -43,7 +43,14 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         tokenPath: "/login/oauth/access_token",
       },
     },
-    callbackUri: `${process.env.SERVER_BASE_URL}/auth/callback`,
+    callbackUri: (() => {
+      // Extract base URL from OAUTH_REDIRECT_URL (e.g., http://localhost:1430/auth/sign-in -> http://localhost:1430)
+      if (process.env.OAUTH_REDIRECT_URL) {
+        const url = new URL(process.env.OAUTH_REDIRECT_URL);
+        return `${url.protocol}//${url.host}/auth/callback`;
+      }
+      return `${process.env.SERVER_BASE_URL}/auth/callback`;
+    })(),
     scope: ["user:email"],
   });
 
@@ -168,12 +175,16 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           user.github_id,
           user.email,
         );
-        const oAuthRedirectUrl = config.OAUTH_REDIRECT_URL;
+        // Redirect to frontend sign-in page after setting cookies
+        const oAuthRedirectUrl = config.OAUTH_REDIRECT_URL || 'http://localhost:1430/auth/sign-in';
+        
+        console.log("Setting cookies - accessToken:", accessToken?.substring(0, 20) + "...");
+        console.log("Setting cookies - domain:", process.env.NODE_ENV);
+        
         reply.setCookie("accessToken", accessToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
-          domain: "localhost",
           path: "/",
           maxAge: 3600, // 1 hour
         });
@@ -181,10 +192,11 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
-          domain: "localhost",
           path: "/",
           maxAge: 3600 * 24 * 30, // 30 days
         });
+        
+        console.log("Redirecting to:", oAuthRedirectUrl);
         return reply.redirect(oAuthRedirectUrl);
       } catch (error) {
         console.error("OAuth callback error:", error);
@@ -226,7 +238,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    * POST /auth/refresh
    * Refresh access token using refresh token from cookies
    */
-  fastify.get(
+  fastify.post(
     "/auth/refresh",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -270,7 +282,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
-          domain: "localhost",
           path: "/",
           maxAge: 3600, // 1 hour
         });
@@ -279,7 +290,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
-          domain: "localhost",
           path: "/",
           maxAge: 3600 * 24 * 30, // 30 days
         });
@@ -311,12 +321,10 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       try {
         // Clear JWT cookies
         reply.clearCookie("accessToken", {
-          domain: "localhost",
           path: "/",
         });
 
         reply.clearCookie("refreshToken", {
-          domain: "localhost",
           path: "/",
         });
 

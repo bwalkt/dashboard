@@ -56,7 +56,7 @@ function useSidebar() {
  * @param open - Controlled open state; when provided, the provider becomes controlled and `defaultOpen` is ignored.
  * @param onOpenChange - Callback invoked with the new open state when a change is requested.
  * @param children - React nodes rendered inside the provider.
- * @returns A context provider that wraps `children` and supplies sidebar state, setters, and a toggle function to descendants.
+ * @returns A context provider that wraps `children` and supplies sidebar state, setters, and a toggle function to descendants. */
 function SidebarProvider({
   defaultOpen = true,
   open: openProp,
@@ -849,7 +849,7 @@ export {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  type SidebarProvider,
+  SidebarProvider,
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
