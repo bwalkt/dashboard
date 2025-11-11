@@ -25,23 +25,15 @@ export function DataTableResetButtonWithUrl({
   const [_, setSearch] = useQueryStates(searchParamsParser);
 
   const handleReset = () => {
-    // Clear all URL parameters first
-    setSearch({
-      date: null,
-      level: null,
-      host: null,
-      pathname: null,
-      status: null,
-      method: null,
-      regions: null,
-      latency: null,
-      "timing.dns": null,
-      "timing.connection": null,
-      "timing.tls": null,
-      "timing.ttfb": null,
-      "timing.transfer": null,
-      sort: null,
-    });
+    // Derive all parameters from searchParamsParser
+    const resetParams = Object.keys(searchParamsParser).reduce(
+      (acc, key) => {
+        acc[key] = null;
+        return acc;
+      },
+      {} as Record<string, null>
+    );
+    setSearch(resetParams);
     
     // Reset table filters after URL clear
     table.resetColumnFilters();
