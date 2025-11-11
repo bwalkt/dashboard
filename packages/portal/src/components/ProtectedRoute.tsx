@@ -1,5 +1,5 @@
 import type React from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useRouter } from '@tanstack/react-router'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface ProtectedRouteProps {
@@ -14,7 +14,7 @@ interface ProtectedRouteProps {
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth()
-  const location = useLocation()
+  const router = useRouter()
 
   if (loading) {
     return (
@@ -25,8 +25,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!user) {
-    // Redirect to sign in page with return url
-    return <Navigate to="/auth/sign-in" state={{ from: location }} replace />
+    // Redirect to sign in page
+    return <Navigate to="/auth/sign-in" replace />
   }
 
   return <>{children}</>

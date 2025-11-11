@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react'
+import { TanStackRouterVite } from '@tanstack/router-vite-plugin'
 import path from 'path'
 import { defineConfig } from 'vite'
 
@@ -7,7 +8,7 @@ const host = process.env.TAURI_DEV_HOST
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), TanStackRouterVite()],
   clearScreen: false,
   server: {
     port: 1430,
@@ -37,10 +38,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@pzero/shared': path.resolve(__dirname, '../../../../packages/shared/src'),
     },
-    dedupe: ['react', 'react-dom', 'react-router-dom'],
+    dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['@pzero/shared', 'zod', 'react', 'react-dom', 'react-router-dom'],
+    include: ['@pzero/shared', 'zod', 'react', 'react-dom'],
   },
   build: {
     commonjsOptions: {

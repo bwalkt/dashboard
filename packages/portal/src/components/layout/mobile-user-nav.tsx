@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,7 +31,7 @@ export function MobileUserNav() {
         toast.error('Failed to sign out: ' + error.message)
       } else {
         toast.success('Signed out successfully')
-        navigate('/auth/sign-in')
+        navigate({ to: '/auth/sign-in' })
       }
     } catch (error) {
       toast.error('An unexpected error occurred')
@@ -68,13 +68,13 @@ export function MobileUserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>Profile</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate({ to: '/dashboard/settings' })}>Profile</DropdownMenuItem>
           <DropdownMenuItem>Billing</DropdownMenuItem>
           <DropdownMenuItem>Settings</DropdownMenuItem>
           <DropdownMenuItem>New Team</DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>Home</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate({ to: '/dashboard/overview' })}>Home</DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

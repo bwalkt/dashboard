@@ -9,7 +9,7 @@ import {
   IconUserCircle,
 } from '@tabler/icons-react'
 import * as React from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
@@ -79,7 +79,7 @@ export default function AppSidebar() {
         toast.error('Failed to sign out: ' + error.message)
       } else {
         toast.success('Signed out successfully')
-        navigate('/auth/sign-in')
+        navigate({ to: '/auth/sign-in' })
       }
     } catch (error) {
       toast.error('An unexpected error occurred')
@@ -202,7 +202,7 @@ export default function AppSidebar() {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
+                  <DropdownMenuItem onClick={() => navigate({ to: '/dashboard/profile' })}>
                     <IconUserCircle className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
@@ -216,7 +216,7 @@ export default function AppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>
+                <DropdownMenuItem onClick={() => navigate({ to: '/dashboard/overview' })}>
                   <IconUserCircle className="mr-2 h-4 w-4" />
                   <span>Home</span>
                 </DropdownMenuItem>

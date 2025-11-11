@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import ThemeProvider from '@/components/layout/ThemeToggle/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { fontVariables } from '@/lib/font'
@@ -86,22 +85,18 @@ export default function MobileApp() {
   }
 
   return (
-    <BrowserRouter>
-      <div
-        className={cn(
-          'bg-background min-h-screen font-sans antialiased',
-          activeThemeValue ? `theme-${activeThemeValue}` : '',
-          isScaled ? 'theme-scaled' : '',
-          fontVariables,
-        )}
-      >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange enableColorScheme>
-          <Toaster />
-          <Routes>
-            <Route path="*" element={<MobileDashboard />} />
-          </Routes>
-        </ThemeProvider>
-      </div>
-    </BrowserRouter>
+    <div
+      className={cn(
+        'bg-background min-h-screen font-sans antialiased',
+        activeThemeValue ? `theme-${activeThemeValue}` : '',
+        isScaled ? 'theme-scaled' : '',
+        fontVariables,
+      )}
+    >
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange enableColorScheme>
+        <Toaster />
+        <MobileDashboard />
+      </ThemeProvider>
+    </div>
   )
 }

@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './App'
+import App from './app/App'
 import ErrorBoundary from './ErrorBoundary'
 
 // Environment detection removed - app now works universally

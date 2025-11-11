@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 
 export default function AuthCallback() {
@@ -13,7 +13,7 @@ export default function AuthCallback() {
     queryClient.invalidateQueries({ queryKey: ['user'] })
     
     // Navigate to dashboard
-    navigate('/dashboard/overview', { replace: true })
+    navigate({ to: '/dashboard/overview', replace: true })
   }, [navigate, queryClient])
 
   return (

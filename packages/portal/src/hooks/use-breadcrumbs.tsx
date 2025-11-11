@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation } from '@tanstack/react-router'
 
 type BreadcrumbItem = {
   title: string

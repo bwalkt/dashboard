@@ -1,6 +1,6 @@
 import { KBarAnimator, KBarPortal, KBarPositioner, KBarProvider, KBarSearch } from 'kbar'
 import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@tanstack/react-router'
 import { navItems } from '@/constants/data'
 import RenderResults from './render-result'
 import useThemeSwitching from './use-theme-switching'
@@ -18,7 +18,7 @@ export default function KBar({ children }: { children: React.ReactNode }) {
   const actions = useMemo(() => {
     // Define navigateTo inside the useMemo callback to avoid dependency array issues
     const navigateTo = (url: string) => {
-      navigate(url)
+      navigate({ to: url })
     }
 
     return navItems.flatMap(navItem => {
