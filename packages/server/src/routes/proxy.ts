@@ -1,5 +1,5 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { lookup } from "dns/promises";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { parse as parseQuery } from "querystring";
 
 // Security constants
