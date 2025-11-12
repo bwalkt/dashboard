@@ -48,15 +48,23 @@ export function DualSidebarLayout({ children, title, description, hasFilters = f
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               {onSidebarToggle ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onSidebarToggle}
-                  title="Toggle Sidebar"
-                  className="-ml-1 size-7"
-                >
-                  <PanelLeftIcon className="h-4 w-4" />
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onSidebarToggle}
+                        className="-ml-1 size-7"
+                      >
+                        <PanelLeftIcon className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Toggle Sidebar</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               ) : (
                 <SidebarTrigger className="-ml-1" title="Toggle Sidebar" />
               )}
