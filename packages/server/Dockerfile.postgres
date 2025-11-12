@@ -1,4 +1,7 @@
 # Custom PostgreSQL image with all required extensions
+# This image inherits the standard PostgreSQL entrypoint (docker-entrypoint.sh)
+# which automatically handles database initialization and creation of POSTGRES_DB
+# when the data directory (/var/lib/postgresql/data) is empty on first startup
 FROM postgres:18
 
 # Install required dependencies, PostGIS, and build tools
@@ -48,6 +51,23 @@ RUN git clone https://github.com/pksunkara/pgx_ulid.git /tmp/pgx_ulid && \
     cd / && \
     rm -rf /tmp/pgx_ulid
 
-# The init-db.sql script will be mounted via docker-compose
-# and will run automatically on first database initialization
+# Copy custom entrypoint script that ensures database exists
+COPY docker-entrypoint.sh /usr/local/bin/custom-entrypoint.sh
+RUN chmod +x /usr/local/bin/custom-entrypoint.sh
+
+# Override the entrypoint to use our custom script
+ENTRYPOINT ["/usr/local/bin/custom-entrypoint.sh"]
+
+# The custom entrypoint script:
+# 1. Calls the original PostgreSQL entrypoint (docker-entrypoint.sh)
+# 2. Waits for PostgreSQL to be ready
+# 3. Ensures the database specified in POSTGRES_DB exists (creates if missing)
+# 4. This works even if the volume already has data from a previous run
+#
+# The original PostgreSQL entrypoint automatically:
+# - Initializes the database cluster if /var/lib/postgresql/data is empty
+# - Creates the database specified in POSTGRES_DB environment variable (on first init only)
+# - Runs scripts from /docker-entrypoint-initdb.d/ (including init-db.sql) on first init only
+#
 # Note: shared_preload_libraries is configured via docker-compose.yml command
+# Note: Volume should be mounted at /var/lib/postgresql/data (not /var/lib/postgresql)
