@@ -15,7 +15,7 @@ export default function DashboardLayout() {
     <KBar>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="h-screen overflow-hidden">
           <Outlet />
         </SidebarInset>
       </SidebarProvider>

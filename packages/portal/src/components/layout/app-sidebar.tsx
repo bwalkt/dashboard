@@ -42,9 +42,10 @@ import { UserAvatarProfile } from '@/components/user-avatar-profile'
 import { navItems } from '@/constants/data'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { DataTableContext } from '../data-table/data-table-provider'
+import { SafeDataTableFilterControls } from '../data-table/safe-data-table-filter-controls'
 import { Icons } from '../icons'
 import { OrgSwitcher } from '../org-switcher'
-import { MobileFilterDisplay } from './mobile-filter-display'
 import { ModeToggle } from './ThemeToggle/theme-toggle'
 export const company = {
   name: 'Acme Inc',
@@ -85,6 +86,10 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
   
   // State for dynamically loaded filter fields
   const [loadedFilterFields, setLoadedFilterFields] = React.useState<any[]>([])
+  
+  // Get filter fields from DataTableContext if available
+  const dataTableContext = React.useContext(DataTableContext)
+  const contextFilterFields = dataTableContext?.filterFields
 
   const handleTabChange = (value: string) => {
     const tab = value as 'filter' | 'menu'
@@ -137,13 +142,17 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
       import('@/app/data-table/constants').then((module) => {
         setLoadedFilterFields(module.filterFields || [])
       })
+    } else if (pathname.includes('/logs') || pathname.includes('/dashboard/logs')) {
+      import('@/app/infinite/constants').then((module) => {
+        setLoadedFilterFields(module.filterFields || [])
+      })
     } else {
       setLoadedFilterFields([])
     }
   }, [pathname])
   
-  // Get filter fields - priority: props > loaded state (don't call useDataTable outside provider)
-  let filterFields: any[] = propFilterFields || loadedFilterFields || []
+  // Get filter fields - priority: props > context > loaded state
+  let filterFields: any[] = propFilterFields || contextFilterFields || loadedFilterFields || []
 
   const activeTenant = tenants[0]
 
@@ -173,11 +182,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
 
             {/* Filter Tab Content */}
             <TabsContent value="filter" className="mt-0 flex-1 overflow-y-auto p-4">
-              {filterFields.length > 0 ? (
-                <MobileFilterDisplay filterFields={filterFields} />
-              ) : (
-                <div className="text-muted-foreground text-sm">No filters available</div>
-              )}
+              <SafeDataTableFilterControls filterFields={filterFields} />
             </TabsContent>
 
             {/* Menu Tab Content */}

@@ -24,7 +24,7 @@ export function MainLayout({
   style
 }: MainLayoutProps) {
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col h-full overflow-hidden">
       <MainHeader 
         title={title}
         description={description}
