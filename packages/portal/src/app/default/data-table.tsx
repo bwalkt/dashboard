@@ -130,7 +130,7 @@ export function DataTable<TData, TValue>({
       sorting={sorting}
       pagination={pagination}
     >
-      <DualSidebarLayout>
+      <DualSidebarLayout hasFilters={filterFields.length > 0}>
         <div className="flex max-w-full flex-1 flex-col gap-4 p-4">
           <div className="flex items-center gap-2">
             <DataTableToggleButton />

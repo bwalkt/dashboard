@@ -22,10 +22,14 @@ import {
 import { useHotKey } from "@/hooks/use-hot-key";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DataTableFilterControls } from "./data-table-filter-controls";
+import { useDataTable } from "./data-table-provider";
 
 export function DataTableFilterControlsDrawer() {
   const triggerButtonRef = React.useRef<HTMLButtonElement>(null);
   const isMobile = useMediaQuery("(max-width: 640px)");
+  
+  // Get the context data outside the portal to pass it to the drawer content
+  const { filterFields } = useDataTable();
 
   useHotKey(() => {
     triggerButtonRef.current?.click();
@@ -66,7 +70,7 @@ export function DataTableFilterControlsDrawer() {
           </DrawerHeader>
         </VisuallyHidden>
         <div className="px-4 flex-1 overflow-y-auto">
-          <DataTableFilterControls />
+          <DataTableFilterControls filterFields={filterFields} />
         </div>
         <DrawerFooter>
           <DrawerClose asChild>

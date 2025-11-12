@@ -311,7 +311,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
         <DualSidebarLayout 
           title={title} 
           description={description}
-          hasFilters={true}
+          hasFilters={filterFields.length > 0}
           style={
             {
               "--top-bar-height": `${topBarHeight}px`,

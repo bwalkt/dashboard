@@ -13,15 +13,22 @@ interface DualSidebarLayoutProps {
   children: React.ReactNode
   title?: string
   description?: string
+  hasFilters?: boolean
+  style?: React.CSSProperties
 }
 
-export function DualSidebarLayout({ children, title, description }: DualSidebarLayoutProps) {
-  const [showFilters, setShowFilters] = React.useState(true)
+export function DualSidebarLayout({ children, title, description, hasFilters = false, style }: DualSidebarLayoutProps) {
+  const [showFilters, setShowFilters] = React.useState(hasFilters)
+  
+  // Update showFilters when hasFilters changes
+  React.useEffect(() => {
+    setShowFilters(hasFilters)
+  }, [hasFilters])
 
   return (
     <div className="flex h-full w-full">
-      {/* Filter sidebar - full height */}
-      {showFilters && (
+      {/* Filter sidebar - only show if hasFilters is true */}
+      {hasFilters && showFilters && (
         <Sidebar side="left" className="w-80" collapsible="none">
           <SidebarContent>
             <SidebarGroup>
@@ -36,11 +43,11 @@ export function DualSidebarLayout({ children, title, description }: DualSidebarL
       
       {/* Main content area with title, breadcrumb/search at top */}
       <div className="flex flex-col flex-1">
-        {(title || description) && (
-          <div className="border-b border-border bg-background p-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger className="-ml-1" />
+        <div className="border-b border-border bg-background p-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="-ml-1" />
+              {hasFilters && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -53,11 +60,13 @@ export function DualSidebarLayout({ children, title, description }: DualSidebarL
                     <IconFilter className="h-4 w-4" />
                   )}
                 </Button>
-              </div>
-              <DataTableTitle title={title || ""} description={description} />
+              )}
             </div>
+            {(title || description) && (
+              <DataTableTitle title={title || ""} description={description} />
+            )}
           </div>
-        )}
+        </div>
         
         <div className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <Breadcrumbs />
@@ -66,7 +75,7 @@ export function DualSidebarLayout({ children, title, description }: DualSidebarL
           </div>
         </div>
         
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto" style={style}>
           {children}
         </main>
       </div>
