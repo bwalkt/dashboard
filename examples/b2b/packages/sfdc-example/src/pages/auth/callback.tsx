@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
@@ -18,9 +18,15 @@ const CallbackPage = () => {
         toast.error('Invalid auth state')
         return null
       }
-      return api.get<{ user: User, accessToken: string, refreshToken: string, message: string }>(`/auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`)
+      return api.get<{ user: User, message: string }>(`/auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`)
     },
   })
+
+  useEffect(() => {
+    if (data?.user.id) {
+      navigate('/')
+    }
+  }, [data, navigate])
 
 
   if (isLoading) {
