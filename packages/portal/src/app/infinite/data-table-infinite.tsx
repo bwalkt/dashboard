@@ -156,7 +156,8 @@ export function DataTableInfinite<TData, TValue, TMeta>({
   const topBarRef = React.useRef<HTMLDivElement>(null);
   const tableRef = React.useRef<HTMLTableElement>(null);
   const [topBarHeight, setTopBarHeight] = React.useState(0);
-  const controlsOpen = false;
+   // FIXME: searchParamsParser needs to be passed as property
+   const [_, setSearch] = useQueryStates(searchParamsParser);
   // FIXME: searchParamsParser needs to be passed as property
   const [_, setSearch] = useQueryStates(searchParamsParser);
 
