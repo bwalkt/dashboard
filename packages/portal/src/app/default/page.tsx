@@ -5,7 +5,6 @@ import { data } from "./data";
 import { DataTable } from "./data-table";
 import { searchParamsCache } from "./search-params";
 import { Skeleton } from "./skeleton";
-import { useSidebar } from "@/components/ui/sidebar";
 
 function PageContent({ 
   search, 
@@ -16,8 +15,6 @@ function PageContent({
   title?: string; 
   description?: string; 
 }) {
-  const { toggleSidebar } = useSidebar()
-  
   return (
     <DataTable
       columns={columns}
@@ -25,7 +22,6 @@ function PageContent({
       filterFields={filterFields}
       title={title}
       description={description}
-      onSidebarToggle={toggleSidebar}
       defaultColumnFilters={Object.entries(search)
         .map(([key, value]) => ({
           id: key,

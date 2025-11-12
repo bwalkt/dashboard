@@ -79,6 +79,16 @@ function SidebarProvider({
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen);
+  
+  // Initialize from localStorage after mount
+  React.useEffect(() => {
+    if (openProp === undefined) {
+      const saved = localStorage.getItem(SIDEBAR_COOKIE_NAME);
+      if (saved !== null) {
+        _setOpen(saved === 'true');
+      }
+    }
+  }, [openProp]);
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
@@ -89,8 +99,8 @@ function SidebarProvider({
         _setOpen(openState);
       }
 
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      // This sets localStorage to keep the sidebar state.
+      localStorage.setItem(SIDEBAR_COOKIE_NAME, String(openState));
     },
     [setOpenProp, open]
   );
@@ -120,12 +130,12 @@ function SidebarProvider({
   // This makes it easier to style the sidebar with Tailwind classes.
   const state = open ? 'expanded' : 'collapsed';
 
-  // Auto-collapse primary sidebar when secondary sidebar opens
-  React.useEffect(() => {
-    if (hasSecondarySidebar && open && !isMobile) {
-      setOpen(false);
-    }
-  }, [hasSecondarySidebar, open, isMobile, setOpen]);
+  // Auto-collapse primary sidebar when secondary sidebar opens - DISABLED
+  // React.useEffect(() => {
+  //   if (hasSecondarySidebar && open && !isMobile) {
+  //     setOpen(false);
+  //   }
+  // }, [hasSecondarySidebar, open, isMobile, setOpen]);
 
   const contextValue = React.useMemo<SidebarContextProps>(
     () => ({

@@ -39,8 +39,7 @@ import { DataTableProvider } from "@/components/data-table/data-table-provider";
 import { MemoizedDataTableSheetContent } from "@/components/data-table/data-table-sheet/data-table-sheet-content";
 import { DataTableSheetDetails } from "@/components/data-table/data-table-sheet/data-table-sheet-details";
 import { DataTableToolbarInfinite } from "@/components/data-table/data-table-toolbar-infinite";
-import { DualSidebarLayout } from "@/components/data-table/dual-sidebar";
-import { useSidebar } from "@/components/ui/sidebar";
+import { AppLayout } from "@/components/layout/app-layout";
 import type {
   DataTableFilterField,
   SheetField,
@@ -135,7 +134,6 @@ export function DataTableInfinite<TData, TValue, TMeta>({
   renderSheetTitle,
   searchParamsParser,
 }: DataTableInfiniteProps<TData, TValue, TMeta>) {
-  const { toggleSidebar } = useSidebar()
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>(defaultColumnFilters);
   const [sorting, setSorting] =
@@ -304,11 +302,10 @@ export function DataTableInfinite<TData, TValue, TMeta>({
       getFacetedUniqueValues={getFacetedUniqueValues}
       getFacetedMinMaxValues={getFacetedMinMaxValues}
     >
-        <DualSidebarLayout 
+        <AppLayout 
           title={title} 
           description={description}
           hasFilters={filterFields.length > 0}
-          onSidebarToggle={toggleSidebar}
           style={
             {
               "--top-bar-height": `${topBarHeight}px`,
@@ -472,7 +469,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
             </Table>
           </div>
         </div>
-        </DualSidebarLayout>
+        </AppLayout>
       <DataTableSheetDetails
         title={renderSheetTitle({ row: selectedRow })}
         titleClassName="font-mono"

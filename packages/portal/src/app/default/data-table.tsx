@@ -33,7 +33,7 @@ import { DataTableFilterCommand } from "@/components/data-table/data-table-filte
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableProvider } from "@/components/data-table/data-table-provider";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
-import { DualSidebarLayout } from "@/components/data-table/dual-sidebar";
+import { AppLayout } from "@/components/layout/app-layout";
 import type { DataTableFilterField } from "@/components/data-table/types";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { searchParamsParser } from "./search-params";
@@ -46,7 +46,6 @@ export interface DataTableProps<TData, TValue> {
   filterFields?: DataTableFilterField<TData>[];
   title?: string;
   description?: string;
-  onSidebarToggle?: () => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -56,7 +55,6 @@ export function DataTable<TData, TValue>({
   filterFields = [],
   title,
   description,
-  onSidebarToggle,
 }: DataTableProps<TData, TValue>) {
   const controlsOpen = false;
   const [columnFilters, setColumnFilters] =
@@ -133,7 +131,7 @@ export function DataTable<TData, TValue>({
       sorting={sorting}
       pagination={pagination}
     >
-      <DualSidebarLayout hasFilters={filterFields.length > 0} title={title} description={description} onSidebarToggle={onSidebarToggle}>
+      <AppLayout hasFilters={filterFields.length > 0} title={title} description={description}>
         <div className="flex max-w-full flex-1 flex-col gap-4 p-4">
           <div className="flex items-center gap-2">
             <div className="flex-1">
@@ -196,7 +194,7 @@ export function DataTable<TData, TValue>({
           </div>
           <DataTablePagination />
         </div>
-      </DualSidebarLayout>
+      </AppLayout>
     </DataTableProvider>
   );
 }

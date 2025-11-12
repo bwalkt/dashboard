@@ -1,5 +1,4 @@
 import { Outlet } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
 import KBar from '@/components/kbar'
 import AppSidebar from '@/components/layout/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -12,16 +11,9 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
  * @returns The rendered layout element containing `KBar`, `SidebarProvider` (with `AppSidebar`), `SidebarInset`, and the route `Outlet`.
  */
 export default function DashboardLayout() {
-  const [defaultOpen, setDefaultOpen] = useState(true)
-
-  useEffect(() => {
-    const sidebarState = localStorage.getItem('sidebar_state')
-    setDefaultOpen(sidebarState === 'true')
-  }, [])
-
   return (
     <KBar>
-      <SidebarProvider defaultOpen={defaultOpen}>
+      <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
           <Outlet />
