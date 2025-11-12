@@ -33,7 +33,7 @@ import { DataTableFilterCommand } from "@/components/data-table/data-table-filte
 import { DataTableFilterControls } from "@/components/data-table/data-table-filter-controls";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableProvider } from "@/components/data-table/data-table-provider";
-import { DataTableToggleButton } from "@/components/data-table/data-table-toggle-button";
+import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import { DualSidebarLayout } from "@/components/data-table/dual-sidebar";
 import type { DataTableFilterField } from "@/components/data-table/types";
