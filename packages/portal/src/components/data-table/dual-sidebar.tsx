@@ -1,12 +1,12 @@
 "use client";
 
-import * as React from 'react'
 import { IconFilter, IconFilterOff } from '@tabler/icons-react'
+import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarTrigger } from '@/components/ui/sidebar'
-import { DataTableFilterControls } from './data-table-filter-controls'
 import { Breadcrumbs } from '../breadcrumbs'
 import SearchInput from '../search-input'
+import { DataTableFilterControls } from './data-table-filter-controls'
 import { DataTableTitle } from './data-table-title'
 
 interface DualSidebarLayoutProps {

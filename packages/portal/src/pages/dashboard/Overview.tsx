@@ -1,18 +1,16 @@
+import { DualSidebarLayout } from '@/components/data-table/dual-sidebar'
 import Overview from '@/features/overview/components/overview'
-import Main from '@/components/layout/main'
 
 export default function OverviewPage() {
-  const handleFilterToggle = (isOpen: boolean) => {
-    console.log('Overview filter toggle:', isOpen)
-  }
-
   return (
-    <Main 
+    <DualSidebarLayout 
       title="Dashboard" 
       description="Overview of your system metrics and analytics"
-      onFilterToggle={handleFilterToggle}
+      hasFilters={false}
     >
-      <Overview />
-    </Main>
+      <div className="p-4">
+        <Overview />
+      </div>
+    </DualSidebarLayout>
   )
 }

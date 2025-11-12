@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Outlet } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import KBar from '@/components/kbar'
 import AppSidebar from '@/components/layout/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'

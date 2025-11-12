@@ -1,7 +1,7 @@
 import { IconFilter } from '@tabler/icons-react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
-import { useState } from 'react'
 
 interface MainHeaderProps {
   title: string
