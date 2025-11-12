@@ -65,7 +65,7 @@ const tenants = [
 export default function AppSidebar() {
   const location = useLocation()
   const pathname = location.pathname
-  const { isOpen } = useMediaQuery()
+  const isOpen = useMediaQuery("(max-width: 768px)")
   const { user: authUser, signOut } = useAuth()
   const navigate = useNavigate()
 

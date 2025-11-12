@@ -8,8 +8,12 @@ import { Skeleton } from "./skeleton";
 
 export default async function Page({
   searchParams,
+  title,
+  description,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  title?: string;
+  description?: string;
 }) {
   const search = searchParamsCache.parse(await searchParams);
 
@@ -19,6 +23,8 @@ export default async function Page({
         columns={columns}
         data={data}
         filterFields={filterFields}
+        title={title}
+        description={description}
         defaultColumnFilters={Object.entries(search)
           .map(([key, value]) => ({
             id: key,

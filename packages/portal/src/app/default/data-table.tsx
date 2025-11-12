@@ -47,6 +47,8 @@ export interface DataTableProps<TData, TValue> {
   defaultColumnFilters?: ColumnFiltersState;
   // TODO: add sortingColumnFilters
   filterFields?: DataTableFilterField<TData>[];
+  title?: string;
+  description?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -54,6 +56,8 @@ export function DataTable<TData, TValue>({
   data,
   defaultColumnFilters = [],
   filterFields = [],
+  title,
+  description,
 }: DataTableProps<TData, TValue>) {
   const controlsOpen = false;
   const [columnFilters, setColumnFilters] =
@@ -130,7 +134,7 @@ export function DataTable<TData, TValue>({
       sorting={sorting}
       pagination={pagination}
     >
-      <DualSidebarLayout hasFilters={filterFields.length > 0}>
+      <DualSidebarLayout hasFilters={filterFields.length > 0} title={title} description={description}>
         <div className="flex max-w-full flex-1 flex-col gap-4 p-4">
           <div className="flex items-center gap-2">
             <DataTableToggleButton />
