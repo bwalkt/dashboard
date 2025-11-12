@@ -37,6 +37,7 @@ import { DataTableToggleButton } from "@/components/data-table/data-table-toggle
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import { DualSidebarLayout } from "@/components/data-table/dual-sidebar";
 import type { DataTableFilterField } from "@/components/data-table/types";
+import { useSidebar } from "@/components/ui/sidebar";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { cn } from "@/lib/utils";
 import { searchParamsParser } from "./search-params";
@@ -59,6 +60,7 @@ export function DataTable<TData, TValue>({
   title,
   description,
 }: DataTableProps<TData, TValue>) {
+  const { toggleSidebar } = useSidebar()
   const controlsOpen = false;
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>(defaultColumnFilters);
@@ -134,10 +136,9 @@ export function DataTable<TData, TValue>({
       sorting={sorting}
       pagination={pagination}
     >
-      <DualSidebarLayout hasFilters={filterFields.length > 0} title={title} description={description}>
+      <DualSidebarLayout hasFilters={filterFields.length > 0} title={title} description={description} onSidebarToggle={toggleSidebar}>
         <div className="flex max-w-full flex-1 flex-col gap-4 p-4">
           <div className="flex items-center gap-2">
-            <DataTableToggleButton />
             <div className="flex-1">
               <DataTableFilterCommand searchParamsParser={searchParamsParser} />
             </div>
