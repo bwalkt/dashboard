@@ -42,6 +42,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { Icons } from '../icons'
 import { OrgSwitcher } from '../org-switcher'
+import { ModeToggle } from './ThemeToggle/theme-toggle'
 export const company = {
   name: 'Acme Inc',
   logo: IconPhotoUp,
@@ -156,6 +157,17 @@ export default function AppSidebar() {
                 </SidebarMenuItem>
               )
             })}
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <div className="flex items-center gap-2 p-2">
+                <ModeToggle />
+                <span className="text-sm">Theme</span>
+              </div>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

@@ -18,3 +18,9 @@ TTFB (Time to First Byte): 415ms (59.0%) - The largest portion of the latency, r
 Transfer: 5ms (<1%) - Time taken to download the full response after the first byte was received.
 Server Details: The request was served by Cloudflare.
 Cache-Control: The response headers indicate that the content is not to be cached (no-cache, no-store, must-revalidate).
+
+
+|            |                |  /breadcrumb  [ cmd search]              | 
+|main Sidebar| filter Sidebar | [search table]                           |
+|.           |                |  <Table Content>.                        |
+|.           |.               |                                          |

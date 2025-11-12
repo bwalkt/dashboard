@@ -43,6 +43,7 @@ import { DataTableSheetDetails } from "@/components/data-table/data-table-sheet/
 import { DataTableTitle } from "@/components/data-table/data-table-title";
 import { DataTableToggleButton } from "@/components/data-table/data-table-toggle-button";
 import { DataTableToolbarInfinite } from "@/components/data-table/data-table-toolbar-infinite";
+import { DualSidebarLayout } from "@/components/data-table/dual-sidebar";
 import type {
   DataTableFilterField,
   SheetField,
@@ -155,6 +156,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
   const topBarRef = React.useRef<HTMLDivElement>(null);
   const tableRef = React.useRef<HTMLTableElement>(null);
   const [topBarHeight, setTopBarHeight] = React.useState(0);
+  const controlsOpen = false;
   // FIXME: searchParamsParser needs to be passed as property
   const [_, setSearch] = useQueryStates(searchParamsParser);
 
@@ -306,14 +308,10 @@ export function DataTableInfinite<TData, TValue, TMeta>({
       getFacetedUniqueValues={getFacetedUniqueValues}
       getFacetedMinMaxValues={getFacetedMinMaxValues}
     >
-      <div className="flex h-full min-h-screen w-full flex-col">
-        {(title || description) && (
-          <div className="border-b border-border bg-background p-4">
-            <DataTableTitle title={title || ""} description={description} />
-          </div>
-        )}
-        <div
-          className="flex h-full min-h-screen w-full flex-col sm:flex-row"
+        <DualSidebarLayout 
+          title={title} 
+          description={description}
+          hasFilters={true}
           style={
             {
               "--top-bar-height": `${topBarHeight}px`,
@@ -321,34 +319,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
             } as React.CSSProperties
           }
         >
-        <div
-          className={cn(
-            "h-full w-full flex-col sm:sticky sm:top-0 sm:max-h-screen sm:min-h-screen sm:min-w-52 sm:max-w-52 sm:self-start md:min-w-72 md:max-w-72",
-            "group-data-[expanded=false]/controls:hidden",
-            "hidden sm:flex",
-          )}
-        >
-          <div className="border-b border-border bg-background p-2 md:sticky md:top-0">
-            <div className="flex h-[46px] items-center justify-between gap-3">
-              <p className="px-2 font-medium text-foreground">Filters</p>
-              <div>
-                {table.getState().columnFilters.length ? (
-                  <DataTableResetButtonWithUrl searchParamsParser={searchParamsParser} />
-                ) : null}
-              </div>
-            </div>
-          </div>
-          <div className="flex-1 p-2 overflow-y-auto max-h-[calc(100vh-200px)]">
-            <DataTableFilterControls />
-          </div>
-        </div>
-        <div
-          className={cn(
-            "flex max-w-full flex-1 flex-col border-border sm:border-l",
-            // Chrome issue
-            "group-data-[expanded=true]/controls:sm:max-w-[calc(100vw_-_208px)] group-data-[expanded=true]/controls:md:max-w-[calc(100vw_-_288px)]",
-          )}
-        >
+        <div className="flex max-w-full flex-1 flex-col">
           <div
             ref={topBarRef}
             className={cn(
@@ -357,7 +328,6 @@ export function DataTableInfinite<TData, TValue, TMeta>({
             )}
           >
             <div className="flex items-center gap-2">
-              <DataTableToggleButton />
               <div className="flex-1">
                 <DataTableFilterCommand searchParamsParser={searchParamsParser} />
               </div>
@@ -505,8 +475,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
             </Table>
           </div>
         </div>
-        </div>
-      </div>
+        </DualSidebarLayout>
       <DataTableSheetDetails
         title={renderSheetTitle({ row: selectedRow })}
         titleClassName="font-mono"

@@ -36,6 +36,7 @@ import { DataTableProvider } from "@/components/data-table/data-table-provider";
 import { DataTableToggleButton } from "@/components/data-table/data-table-toggle-button";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import type { DataTableFilterField } from "@/components/data-table/types";
+import { DualSidebarLayout } from "@/components/data-table/dual-sidebar";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { cn } from "@/lib/utils";
 import { searchParamsParser } from "./search-params";
@@ -54,6 +55,7 @@ export function DataTable<TData, TValue>({
   defaultColumnFilters = [],
   filterFields = [],
 }: DataTableProps<TData, TValue>) {
+  const controlsOpen = false;
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>(defaultColumnFilters);
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -128,16 +130,8 @@ export function DataTable<TData, TValue>({
       sorting={sorting}
       pagination={pagination}
     >
-      <div className="flex h-full w-full flex-col gap-3 sm:flex-row">
-        <div
-          className={cn(
-            "hidden w-full p-1 sm:block sm:min-w-52 sm:max-w-52 sm:self-start md:min-w-64 md:max-w-64",
-            "group-data-[expanded=false]/controls:hidden",
-          )}
-        >
-          <DataTableFilterControls />
-        </div>
-        <div className="flex max-w-full flex-1 flex-col gap-4 overflow-hidden p-1">
+      <DualSidebarLayout>
+        <div className="flex max-w-full flex-1 flex-col gap-4 p-4">
           <div className="flex items-center gap-2">
             <DataTableToggleButton />
             <div className="flex-1">
@@ -200,7 +194,7 @@ export function DataTable<TData, TValue>({
           </div>
           <DataTablePagination />
         </div>
-      </div>
+      </DualSidebarLayout>
     </DataTableProvider>
   );
 }

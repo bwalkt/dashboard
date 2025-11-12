@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useAuth } from '@/contexts/AuthContext'
-import MobileDashboardLayout from '@/pages/dashboard/MobileLayout'
+import DashboardLayout from '@/pages/dashboard/Layout'
 
 export const Route = createFileRoute('/dashboard')({
   component: DashboardLayoutComponent,
@@ -21,5 +21,5 @@ function DashboardLayoutComponent() {
     throw redirect({ to: '/auth/sign-in' })
   }
 
-  return <MobileDashboardLayout />
+  return <DashboardLayout />
 }
