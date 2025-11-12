@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import InfinitePage from '@/app/infinite/page'
 import { type SearchParamsType, searchParamsCache } from '@/app/infinite/search-params'
-import { DataTableTitle } from '@/components/data-table/data-table-title'
 
 export const Route = createFileRoute('/dashboard/logs')({
   component: RouteComponent,
