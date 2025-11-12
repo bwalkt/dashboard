@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Suspense } from 'react'
-import DefaultPage from '@/app/default/page'
+import DefaultPage from '@/app/data-table/page'
 
 export const Route = createFileRoute('/dashboard/users')({
   component: RouteComponent,
