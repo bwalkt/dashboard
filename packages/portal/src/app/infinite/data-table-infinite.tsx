@@ -39,11 +39,11 @@ import { DataTableProvider } from "@/components/data-table/data-table-provider";
 import { MemoizedDataTableSheetContent } from "@/components/data-table/data-table-sheet/data-table-sheet-content";
 import { DataTableSheetDetails } from "@/components/data-table/data-table-sheet/data-table-sheet-details";
 import { DataTableToolbarInfinite } from "@/components/data-table/data-table-toolbar-infinite";
-import { AppLayout } from "@/components/layout/app-layout";
 import type {
   DataTableFilterField,
   SheetField,
 } from "@/components/data-table/types";
+import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import { useHotKey } from "@/hooks/use-hot-key";
 import { useLocalStorage } from "@/hooks/use-local-storage";

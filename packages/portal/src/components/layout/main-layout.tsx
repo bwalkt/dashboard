@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from 'react'
-import { MainHeader } from './main-header'
 import { MainContent } from './main-content'
+import { MainHeader } from './main-header'
 
 export interface MainLayoutProps {
   children: React.ReactNode

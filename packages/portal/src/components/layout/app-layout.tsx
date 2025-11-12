@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from 'react'
-import { MainLayout } from './main-layout'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { DataTableFilterControls } from '../data-table/data-table-filter-controls'
+import { MainLayout } from './main-layout'
 
 export interface AppLayoutProps {
   children: React.ReactNode
@@ -20,6 +21,7 @@ export function AppLayout({
   style
 }: AppLayoutProps) {
   const [showFilters, setShowFilters] = React.useState(hasFilters)
+  const isMobile = useMediaQuery("(max-width: 768px)")
   
   React.useEffect(() => {
     setShowFilters(hasFilters)
@@ -27,8 +29,8 @@ export function AppLayout({
 
   return (
     <div className="flex h-full w-full">
-      {/* Filter sidebar - only rendered when hasFilters is true AND showFilters is true */}
-      {hasFilters && showFilters && (
+      {/* Filter sidebar - only rendered on DESKTOP when hasFilters is true AND showFilters is true */}
+      {!isMobile && hasFilters && showFilters && (
         <div className="w-80 border-r bg-background">
           <div className="p-4">
             <h3 className="font-medium text-sm text-muted-foreground mb-4">Filters</h3>
