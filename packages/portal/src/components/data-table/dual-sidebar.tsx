@@ -11,7 +11,7 @@ import SearchInput from '../search-input'
 import { DataTableFilterControls } from './data-table-filter-controls'
 import { DataTableTitle } from './data-table-title'
 
-interface DualSidebarLayoutProps {
+export interface DualSidebarLayoutProps {
   children: React.ReactNode
   title?: string
   description?: string

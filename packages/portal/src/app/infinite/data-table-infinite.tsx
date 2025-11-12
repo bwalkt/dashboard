@@ -35,15 +35,12 @@ import {
   TableRow,
 } from "@/components/custom/table";
 import { DataTableFilterCommand } from "@/components/data-table/data-table-filter-command";
-import { DataTableFilterControls } from "@/components/data-table/data-table-filter-controls";
 import { DataTableProvider } from "@/components/data-table/data-table-provider";
-import { DataTableResetButtonWithUrl } from "@/components/data-table/data-table-reset-button-with-url";
 import { MemoizedDataTableSheetContent } from "@/components/data-table/data-table-sheet/data-table-sheet-content";
 import { DataTableSheetDetails } from "@/components/data-table/data-table-sheet/data-table-sheet-details";
-import { DataTableTitle } from "@/components/data-table/data-table-title";
-import { DataTableToggleButton } from "@/components/data-table/data-table-toggle-button";
 import { DataTableToolbarInfinite } from "@/components/data-table/data-table-toolbar-infinite";
 import { DualSidebarLayout } from "@/components/data-table/dual-sidebar";
+import { useSidebar } from "@/components/ui/sidebar";
 import type {
   DataTableFilterField,
   SheetField,
@@ -138,6 +135,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
   renderSheetTitle,
   searchParamsParser,
 }: DataTableInfiniteProps<TData, TValue, TMeta>) {
+  const { toggleSidebar } = useSidebar()
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>(defaultColumnFilters);
   const [sorting, setSorting] =
@@ -158,9 +156,6 @@ export function DataTableInfinite<TData, TValue, TMeta>({
   const [topBarHeight, setTopBarHeight] = React.useState(0);
    // FIXME: searchParamsParser needs to be passed as property
    const [_, setSearch] = useQueryStates(searchParamsParser);
-  // FIXME: searchParamsParser needs to be passed as property
-  const [_, setSearch] = useQueryStates(searchParamsParser);
-
   const onScroll = React.useCallback(
     (e: React.UIEvent<HTMLElement>) => {
       const onPageBottom =
@@ -313,6 +308,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
           title={title} 
           description={description}
           hasFilters={filterFields.length > 0}
+          onSidebarToggle={toggleSidebar}
           style={
             {
               "--top-bar-height": `${topBarHeight}px`,
