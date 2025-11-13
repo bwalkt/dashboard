@@ -125,7 +125,7 @@ export const avatarColumns: ColumnDef<UserData>[] = [
       <DataTableColumnHeader column={column} title="Employee Status" />
     ),
     cell: ({ row }) => {
-      const status = row.getValue("status") as keyof typeof statusConfig;
+      const status = row.getValue("status") as keyof typeof statusConfig ?? 'active';
       const config = statusConfig[status];
       const Icon = config.icon;
       

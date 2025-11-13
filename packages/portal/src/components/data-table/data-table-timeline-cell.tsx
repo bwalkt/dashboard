@@ -40,16 +40,17 @@ export function TimelineCell({
   compact = false,
   maxItems = 3
 }: TimelineCellProps) {
-  const displayItems = timeline.slice(0, maxItems);
-  const hasMore = timeline.length > maxItems;
-
-  if (!timeline || timeline.length === 0) {
+  
+  if (timeline?.length === 0) {
     return (
       <div className={cn("text-muted-foreground text-sm", className)}>
         No timeline data
       </div>
     );
   }
+
+  const displayItems = timeline.slice(0, maxItems);
+  const hasMore = timeline.length > maxItems;
 
   return (
     <div className={cn("space-y-2", className)}>

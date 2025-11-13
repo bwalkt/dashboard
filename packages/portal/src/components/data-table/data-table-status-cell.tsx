@@ -1,4 +1,3 @@
-import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export type StatusType = "todo" | "working" | "done" | "stuck" | "review" | "cancelled" | "active" | "inactive" | "pending";
@@ -24,7 +23,7 @@ const statusConfig: Record<StatusType, {
     icon: "⏸️"
   },
   working: {
-    label: "InProgress",
+    label: "In Progress",
     bgColor: "bg-orange-400",
     textColor: "text-white",
     icon: "🔄"

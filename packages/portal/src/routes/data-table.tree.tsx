@@ -1,5 +1,6 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
-import * as React from 'react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useEffect } from 'react'
+
 import { DataTable } from '@/app/data-table'
 import { filterFields } from '@/app/data-table/constants'
 import { treeColumns } from '@/app/data-table/tree-columns'
@@ -15,6 +16,13 @@ export const Route = createFileRoute('/data-table/tree')({
 
 function TreeTablePage() {
   const { user, loading } = useAuth()
+  const navigate = useNavigate({ from: Route.fullPath })
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate({ to: '/auth/sign-in' })
+    }
+  }, [user, loading, navigate])
 
   if (loading) {
     return (
@@ -25,7 +33,7 @@ function TreeTablePage() {
   }
 
   if (!user) {
-    throw redirect({ to: '/auth/sign-in' })
+    return null
   }
 
   return (

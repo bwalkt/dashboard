@@ -18,7 +18,7 @@ interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
 }
 
 const Table = React.forwardRef<HTMLTableElement, TableProps>(
-  ({ className, containerClassName, onScroll, padding = "md", ...props }, ref) => (
+  ({ className, containerClassName, onScroll, padding = "none", ...props }, ref) => (
     <div
       className={cn("w-full overflow-auto", containerClassName)}
       // REMINDER: we are not scrolling the table, but the container
@@ -71,11 +71,12 @@ interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
 }
 
 const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(
-  ({ className, padding = "md", ...props }, ref) => (
+  ({ className, padding = "none", ...props }, ref) => (
     <tr
       ref={ref}
       className={cn(
         "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors h-16",
+        paddingClasses[padding],
         className
       )}
       {...props}
