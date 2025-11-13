@@ -1,26 +1,29 @@
 "use client";
 
-import type React from "react";
+import React from "react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/custom/accordion";
-import { useDataTable } from "@/components/data-table/data-table-provider";
+import { DataTableContext } from "@/components/data-table/data-table-provider";
 import { DataTableFilterCheckbox } from "./data-table-filter-checkbox";
 import { DataTableFilterInput } from "./data-table-filter-input";
 import { DataTableFilterResetButton } from "./data-table-filter-reset-button";
 import { DataTableFilterSlider } from "./data-table-filter-slider";
 import { DataTableFilterTimerange } from "./data-table-filter-timerange";
+import type { DataTableFilterField } from "./types";
 
 // FIXME: use @container (especially for the slider element) to restructure elements
 
 // TODO: only pass the columns to generate the filters!
 // https://tanstack.com/table/v8/docs/framework/react/examples/filters
 
-export function DataTableFilterControls() {
-  const { filterFields } = useDataTable();
+export function DataTableFilterControls({ filterFields: propFilterFields }: { filterFields?: DataTableFilterField<any>[] } = {}) {
+  const context = React.useContext(DataTableContext);
+  const contextFilterFields = context?.filterFields;
+  const filterFields = propFilterFields ?? contextFilterFields;
   return (
     <Accordion
       type="multiple"

@@ -35,16 +35,15 @@ import {
   TableRow,
 } from "@/components/custom/table";
 import { DataTableFilterCommand } from "@/components/data-table/data-table-filter-command";
-import { DataTableFilterControls } from "@/components/data-table/data-table-filter-controls";
 import { DataTableProvider } from "@/components/data-table/data-table-provider";
-import { DataTableResetButton } from "@/components/data-table/data-table-reset-button";
 import { MemoizedDataTableSheetContent } from "@/components/data-table/data-table-sheet/data-table-sheet-content";
 import { DataTableSheetDetails } from "@/components/data-table/data-table-sheet/data-table-sheet-details";
-import { DataTableToolbar } from "@/components/data-table/data-table-toolbar"; // TODO: check where to put this
+import { DataTableToolbarInfinite } from "@/components/data-table/data-table-toolbar-infinite";
 import type {
   DataTableFilterField,
   SheetField,
 } from "@/components/data-table/types";
+import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import { useHotKey } from "@/hooks/use-hot-key";
 import { useLocalStorage } from "@/hooks/use-local-storage";
@@ -59,6 +58,8 @@ import { TimelineChart } from "./timeline-chart";
 
 // TODO: add a possible chartGroupBy
 export interface DataTableInfiniteProps<TData, TValue, TMeta> {
+  title?: string;
+  description?: string;
   columns: ColumnDef<TData, TValue>[];
   getRowClassName?: (row: Row<TData>) => string;
   // REMINDER: make sure to pass the correct id to access the rows
@@ -103,6 +104,8 @@ export interface DataTableInfiniteProps<TData, TValue, TMeta> {
 }
 
 export function DataTableInfinite<TData, TValue, TMeta>({
+  title,
+  description,
   columns,
   getRowClassName,
   getRowId,
@@ -149,9 +152,8 @@ export function DataTableInfinite<TData, TValue, TMeta>({
   const topBarRef = React.useRef<HTMLDivElement>(null);
   const tableRef = React.useRef<HTMLTableElement>(null);
   const [topBarHeight, setTopBarHeight] = React.useState(0);
-  // FIXME: searchParamsParser needs to be passed as property
-  const [_, setSearch] = useQueryStates(searchParamsParser);
-
+   // FIXME: searchParamsParser needs to be passed as property
+   const [_, setSearch] = useQueryStates(searchParamsParser);
   const onScroll = React.useCallback(
     (e: React.UIEvent<HTMLElement>) => {
       const onPageBottom =
@@ -300,43 +302,18 @@ export function DataTableInfinite<TData, TValue, TMeta>({
       getFacetedUniqueValues={getFacetedUniqueValues}
       getFacetedMinMaxValues={getFacetedMinMaxValues}
     >
-      <div
-        className="flex h-full min-h-screen w-full flex-col sm:flex-row"
-        style={
-          {
-            "--top-bar-height": `${topBarHeight}px`,
-            ...columnSizeVars,
-          } as React.CSSProperties
-        }
-      >
-        <div
-          className={cn(
-            "h-full w-full flex-col sm:sticky sm:top-0 sm:max-h-screen sm:min-h-screen sm:min-w-52 sm:max-w-52 sm:self-start md:min-w-72 md:max-w-72",
-            "group-data-[expanded=false]/controls:hidden",
-            "hidden sm:flex",
-          )}
+        <AppLayout 
+          title={title} 
+          description={description}
+          hasFilters={filterFields.length > 0}
+          style={
+            {
+              "--top-bar-height": `${topBarHeight}px`,
+              ...columnSizeVars,
+            } as React.CSSProperties
+          }
         >
-          <div className="border-b border-border bg-background p-2 md:sticky md:top-0">
-            <div className="flex h-[46px] items-center justify-between gap-3">
-              <p className="px-2 font-medium text-foreground">Filters</p>
-              <div>
-                {table.getState().columnFilters.length ? (
-                  <DataTableResetButton />
-                ) : null}
-              </div>
-            </div>
-          </div>
-          <div className="flex-1 p-2 sm:overflow-y-scroll">
-            <DataTableFilterControls />
-          </div>
-        </div>
-        <div
-          className={cn(
-            "flex max-w-full flex-1 flex-col border-border sm:border-l",
-            // Chrome issue
-            "group-data-[expanded=true]/controls:sm:max-w-[calc(100vw_-_208px)] group-data-[expanded=true]/controls:md:max-w-[calc(100vw_-_288px)]",
-          )}
-        >
+        <div className="flex max-w-full flex-1 flex-col">
           <div
             ref={topBarRef}
             className={cn(
@@ -344,9 +321,14 @@ export function DataTableInfinite<TData, TValue, TMeta>({
               "sticky top-0 z-10 pb-4",
             )}
           >
-            <DataTableFilterCommand searchParamsParser={searchParamsParser} />
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <DataTableFilterCommand searchParamsParser={searchParamsParser} />
+              </div>
+            </div>
             {/* TBD: better flexibility with compound components? */}
-            <DataTableToolbar
+            <DataTableToolbarInfinite
+              searchParamsParser={searchParamsParser}
               renderActions={() => [
                 <RefreshButton key="refresh" onClick={refetch} />,
                 fetchPreviousPage ? (
@@ -487,7 +469,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
             </Table>
           </div>
         </div>
-      </div>
+        </AppLayout>
       <DataTableSheetDetails
         title={renderSheetTitle({ row: selectedRow })}
         titleClassName="font-mono"

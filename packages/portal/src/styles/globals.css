@@ -196,3 +196,16 @@
   /* Apply the reveal animation */
   animation: reveal 0.4s ease-in-out forwards;
 }
+.recharts-layer {
+  outline: none !important;
+}
+
+/* Or for specific components, e.g., Tooltip */
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+/* Example for a Recharts Bar */
+.recharts-bar-rectangle:hover {
+  stroke: none !important; /* Removes border */
+  outline: none !important; /* Removes outline */
+}

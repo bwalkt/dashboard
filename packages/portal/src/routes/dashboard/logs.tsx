@@ -17,6 +17,5 @@ export const Route = createFileRoute('/dashboard/logs')({
 function RouteComponent() {
   const search = Route.useSearch()
   
-  // Render the InfinitePage directly without wrapper to match original styling  
   return <InfinitePage searchParams={search} />
 }

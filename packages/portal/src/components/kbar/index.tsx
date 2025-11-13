@@ -43,7 +43,7 @@ export default function KBar({ children }: { children: React.ReactNode }) {
           name: childItem.title,
           shortcut: childItem.shortcut,
           keywords: childItem.title.toLowerCase(),
-          section: navItem.title,
+          section: 'Navigation',
           subtitle: `Go to ${childItem.title}`,
           perform: () => navigateTo(childItem.url),
         })) ?? []

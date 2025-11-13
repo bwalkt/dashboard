@@ -1,15 +1,26 @@
+import Main from '@/components/layout/main'
+
 /**
  * Render the Accounts page UI.
  *
- * Displays a container with an "Accounts" heading and placeholder paragraph.
+ * Displays accounts management interface with header, sidebar toggle, and filter options.
  *
  * @returns A JSX element representing the Accounts page.
  */
 export default function AccountsPage() {
+  const handleFilterToggle = (isOpen: boolean) => {
+    console.log('Accounts filter toggle:', isOpen)
+  }
+
   return (
-    <div className="container p-4">
-      <h1 className="text-2xl font-bold">Accounts</h1>
-      <p>Accounts page content goes here</p>
-    </div>
+    <Main 
+      title="Accounts" 
+      description="Manage user accounts and permissions"
+      onFilterToggle={handleFilterToggle}
+    >
+      <div className="p-6">
+        <p>Accounts page content goes here</p>
+      </div>
+    </Main>
   )
 }

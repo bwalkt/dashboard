@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Suspense } from 'react'
-import DefaultPage from '@/app/default/page'
-import PageContainer from '@/components/layout/page-container'
+import DefaultPage from '@/app/data-table/page'
 
 export const Route = createFileRoute('/dashboard/users')({
   component: RouteComponent,
@@ -12,15 +11,12 @@ function RouteComponent() {
   const search = Route.useSearch()
 
   return (
-    <PageContainer scrollable>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">Users Table</h1>
-        </div>
-        <Suspense fallback={<div>Loading...</div>}>
-          <DefaultPage searchParams={Promise.resolve(search as { [key: string]: string | string[] | undefined })} />
-        </Suspense>
-      </div>
-    </PageContainer>
+    <Suspense fallback={<div>Loading...</div>}>
+      <DefaultPage 
+        searchParams={Promise.resolve(search as { [key: string]: string | string[] | undefined })}
+        title="Users"
+        description="Manage and monitor user accounts and their activity"
+      />
+    </Suspense>
   )
 }

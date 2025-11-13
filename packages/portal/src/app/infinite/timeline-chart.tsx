@@ -141,7 +141,6 @@ export function TimelineChart<TChart extends BaseChartSchema>({
           }}
         />
         <ChartTooltip
-          // defaultIndex={10}
           content={
             <ChartTooltipContent
               labelFormatter={(value) => {

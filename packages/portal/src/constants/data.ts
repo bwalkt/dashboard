@@ -40,22 +40,21 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Tables',
-    url: '/dashboard/users',
+    url: '#',
     icon: 'table',
     isActive: false,
-    shortcut: ['t', 'b'],
     items: [
       {
         title: 'Users Table',
         url: '/dashboard/users',
         icon: 'users',
-        shortcut: ['u', 's'],
+        shortcut: ['t', 'b'],
       },
       {
-        title: 'Infinite Scroll',
-        url: '/dashboard/infinite',
+        title: 'Logs',
+        url: '/dashboard/logs',
         icon: 'infinity',
-        shortcut: ['i', 'n'],
+        shortcut: ['l', 'g'],
       },
     ],
   },

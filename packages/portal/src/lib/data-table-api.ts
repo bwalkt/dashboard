@@ -30,7 +30,7 @@ export async function fetchDataTableData(searchParams: URLSearchParams): Promise
   const _date =
     search.date?.length === 1
       ? [search.date[0], addDays(search.date[0], 1)]
-      : search.date;
+      : search.date || [addDays(new Date(), -30), new Date()]; // Default to last 30 days
 
   // Filter out the slider values because they are not part of the search params
   const _rest = Object.fromEntries(
@@ -43,7 +43,7 @@ export async function fetchDataTableData(searchParams: URLSearchParams): Promise
   const withoutSliderData = filterData(rangedData, { ..._rest, date: null });
 
   const filteredData = filterData(withoutSliderData, { ...search, date: null });
-  const chartData = groupChartData(filteredData, _date);
+  const chartData = groupChartData(rangedData, _date);
   const sortedData = sortData(filteredData, search.sort);
   const withoutSliderFacets = getFacetsFromData(withoutSliderData);
   const facets = getFacetsFromData(filteredData);
