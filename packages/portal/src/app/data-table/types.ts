@@ -12,4 +12,7 @@ export type ColumnSchema = {
   date: Date;
   p95?: number | undefined;
   timeline?: TimelineData;
+  employeeStatus?: "Active" | "Inactive" | "On Leave";
+  projectStatus?: "Planning" | "In Progress" | "Completed" | "On Hold";
+  priority?: "Low" | "Medium" | "High";
 };

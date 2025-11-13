@@ -32,6 +32,8 @@ import {
   TableRow,
 } from "@/components/custom/table";
 import { DataTableFilterCommand } from "@/components/data-table/data-table-filter-command";
+import { DataTableGroupBy, type GroupByOption } from "@/components/data-table/data-table-group-by";
+import { DataTableGrouped } from "@/components/data-table/data-table-grouped";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableProvider } from "@/components/data-table/data-table-provider";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
@@ -47,6 +49,7 @@ export interface DataTableProps<TData, TValue> extends TreeDataTableProps<TData 
   defaultColumnFilters?: ColumnFiltersState;
   // TODO: add sortingColumnFilters
   filterFields?: DataTableFilterField<TData>[];
+  groupByOptions?: GroupByOption<TData>[];
   title?: string;
   description?: string;
   cellPadding?: TablePadding;
@@ -58,6 +61,7 @@ export function DataTable<TData, TValue>({
   data,
   defaultColumnFilters = [],
   filterFields = [],
+  groupByOptions = [],
   title,
   description,
   enableExpanding = false,
@@ -80,7 +84,15 @@ export function DataTable<TData, TValue>({
   const [columnSizing, setColumnSizing] = 
     useLocalStorage<ColumnSizingState>("data-table-column-sizing", {});
   const [expanded, setExpanded] = React.useState<ExpandedState>(initialExpanded);
+  const [groupBy, setGroupBy] = React.useState<keyof TData | null>(null);
   const [_, setSearch] = useQueryStates(searchParamsParser);
+
+  // Reset groupBy when tree expansion is enabled
+  React.useEffect(() => {
+    if (enableExpanding && groupBy) {
+      setGroupBy(null);
+    }
+  }, [enableExpanding, groupBy]);
 
   React.useEffect(() => {
     if (onExpandedChange) {
@@ -177,16 +189,42 @@ export function DataTable<TData, TValue>({
               <DataTableFilterCommand searchParamsParser={searchParamsParser} />
             </div>
           </div>
-          <DataTableToolbar />
-          <div className="rounded-md border">
-            <Table 
-              style={{ 
-                width: table.getCenterTotalSize(),
-              }}
-              className={`table-fixed table-resizable ${
-                table.getState().columnSizingInfo.isResizingColumn ? 'table-resizing' : ''
-              }`}
-            >
+          <DataTableToolbar 
+            groupByComponent={
+              groupByOptions.length > 0 && !enableExpanding ? (
+                <DataTableGroupBy
+                  groupByOptions={groupByOptions}
+                  groupBy={groupBy}
+                  onGroupByChange={setGroupBy}
+                />
+              ) : null
+            }
+          />
+          
+          {/* Render grouped table or normal table */}
+          {groupBy ? (
+            <div className="flex-1 overflow-auto">
+              <DataTableGrouped
+                table={table}
+                columns={columns}
+                data={data}
+                groupBy={groupBy}
+                groupByOptions={groupByOptions}
+                cellPadding={cellPadding}
+                headerPadding={headerPadding}
+              />
+            </div>
+          ) : (
+            <div className="flex-1 overflow-auto">
+              <div className="rounded-md border">
+                <Table 
+                  style={{ 
+                    width: table.getCenterTotalSize(),
+                  }}
+                  className={`table-fixed table-resizable ${
+                    table.getState().columnSizingInfo.isResizingColumn ? 'table-resizing' : ''
+                  }`}
+                >
               <TableHeader className="bg-muted/50">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow
@@ -259,8 +297,11 @@ export function DataTable<TData, TValue>({
                   </TableRow>
                 )}
               </TableBody>
-            </Table>
-          </div>
+              </Table>
+              </div>
+            </div>
+          )}
+          
           <DataTablePagination />
         </div>
       </AppLayout>

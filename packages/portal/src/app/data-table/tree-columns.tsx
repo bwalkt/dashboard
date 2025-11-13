@@ -5,6 +5,7 @@ import { format, isSameDay } from "date-fns";
 import { Check, Minus } from "lucide-react";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableExpandableColumn } from "@/components/data-table/data-table-expandable-column";
+import { StatusCell } from "@/components/data-table/data-table-status-cell";
 import { TimelineCell } from "@/components/data-table/data-table-timeline-cell";
 import { Badge } from "@/components/ui/badge";
 import { tagColor } from "@/constants/tag";
@@ -199,5 +200,87 @@ export const treeColumns: ColumnDef<ColumnSchema & { subRows?: any[] }>[] = [
     },
     enableSorting: false,
     size: 200,
+  },
+  {
+    accessorKey: "employeeStatus",
+    header: "Employee Status",
+    cell: ({ row }) => {
+      const status = row.getValue("employeeStatus") as string;
+      if (!status) return null;
+      
+      const statusMapping: Record<string, any> = {
+        "Active": "active",
+        "Inactive": "inactive", 
+        "On Leave": "pending"
+      };
+      
+      return (
+        <StatusCell 
+          status={statusMapping[status] || "inactive"} 
+          size="sm"
+        />
+      );
+    },
+    filterFn: (row, id, value) => {
+      const rowValue = row.getValue(id);
+      if (typeof value === "string") return value === String(rowValue);
+      if (Array.isArray(value)) return value.includes(rowValue);
+      return false;
+    },
+  },
+  {
+    accessorKey: "projectStatus",
+    header: "Project Status",
+    cell: ({ row }) => {
+      const status = row.getValue("projectStatus") as string;
+      if (!status) return null;
+      
+      const statusMapping: Record<string, any> = {
+        "Planning": "todo",
+        "In Progress": "working",
+        "Completed": "done",
+        "On Hold": "stuck"
+      };
+      
+      return (
+        <StatusCell 
+          status={statusMapping[status] || "todo"} 
+          size="sm"
+        />
+      );
+    },
+    filterFn: (row, id, value) => {
+      const rowValue = row.getValue(id);
+      if (typeof value === "string") return value === String(rowValue);
+      if (Array.isArray(value)) return value.includes(rowValue);
+      return false;
+    },
+  },
+  {
+    accessorKey: "priority",
+    header: "Priority",
+    cell: ({ row }) => {
+      const priority = row.getValue("priority") as string;
+      if (!priority) return null;
+      
+      const priorityMapping: Record<string, any> = {
+        "Low": "inactive",
+        "Medium": "working", 
+        "High": "stuck"
+      };
+      
+      return (
+        <StatusCell 
+          status={priorityMapping[priority] || "inactive"} 
+          size="sm"
+        />
+      );
+    },
+    filterFn: (row, id, value) => {
+      const rowValue = row.getValue(id);
+      if (typeof value === "string") return value === String(rowValue);
+      if (Array.isArray(value)) return value.includes(rowValue);
+      return false;
+    },
   },
 ];

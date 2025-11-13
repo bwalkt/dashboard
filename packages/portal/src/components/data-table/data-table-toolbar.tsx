@@ -9,9 +9,10 @@ import { DataTableViewOptions } from "./data-table-view-options";
 
 interface DataTableToolbarProps {
   renderActions?: () => React.ReactNode;
+  groupByComponent?: React.ReactNode;
 }
 
-export function DataTableToolbar({ renderActions }: DataTableToolbarProps) {
+export function DataTableToolbar({ renderActions, groupByComponent }: DataTableToolbarProps) {
   const { table, isLoading, columnFilters } = useDataTable();
   const filters = table.getState().columnFilters;
 
@@ -47,6 +48,7 @@ export function DataTableToolbar({ renderActions }: DataTableToolbarProps) {
             row(s)
           </p>
         </div>
+        {groupByComponent}
       </div>
       <div className="ml-auto flex items-center gap-2">
         {filters.length ? <DataTableResetButton /> : null}

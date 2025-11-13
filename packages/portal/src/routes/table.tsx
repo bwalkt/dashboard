@@ -4,6 +4,7 @@ import { DataTable } from '@/app/data-table'
 import { avatarColumns } from '@/app/data-table/avatar-columns'
 import { avatarFilterFields } from '@/app/data-table/avatar-constants'
 import { avatarData } from '@/app/data-table/avatar-data'
+import { avatarGroupByOptions } from '@/app/data-table/avatar-group-options'
 import KBar from '@/components/kbar'
 import AppSidebar from '@/components/layout/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -45,8 +46,9 @@ function TablePage() {
               columns={avatarColumns}
               data={avatarData}
               filterFields={avatarFilterFields}
+              groupByOptions={avatarGroupByOptions}
               title="User Directory"
-              description="Employee directory showcasing avatar components with initials fallback"
+              description="Employee directory with grouping functionality - try grouping by department, status, or role"
             />
           </div>
         </SidebarInset>

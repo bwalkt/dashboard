@@ -13,6 +13,9 @@ export const treeData = [
     tags: ["api", "enterprise"],
     date: subHours(new Date(), 1),
     timeline: createSimpleTimeline(["Nov 11 - 12", "Nov 13 - 14", "Nov 15 - 16"], 0),
+    employeeStatus: "Active",
+    projectStatus: "In Progress",
+    priority: "High",
     subRows: [
       {
         name: "Edge Api - Authentication",
@@ -68,6 +71,9 @@ export const treeData = [
     tags: ["api"],
     date: subHours(new Date(), 10),
     timeline: createSimpleTimeline(["Nov 10 - 11", "Nov 12 - 13", "Nov 14 - 15"], 1),
+    employeeStatus: "Active",
+    projectStatus: "Completed",
+    priority: "Medium",
     subRows: [
       {
         name: "Lambda Api - User Service",
@@ -101,6 +107,9 @@ export const treeData = [
     tags: ["web"],
     date: subDays(new Date(), 1),
     timeline: createSimpleTimeline(["Nov 09 - 10", "Nov 11 - 12", "Nov 13 - 14"], 2),
+    employeeStatus: "On Leave",
+    projectStatus: "Planning",
+    priority: "Low",
     subRows: [
       {
         name: "Marketing - Landing Pages",
@@ -155,6 +164,9 @@ export const treeData = [
     regions: ["iad", "fra"],
     tags: ["app"],
     date: subHours(new Date(), 13),
+    employeeStatus: "Inactive",
+    projectStatus: "On Hold",
+    priority: "High",
   },
   {
     name: "Dashboard",
@@ -165,6 +177,9 @@ export const treeData = [
     regions: ["iad", "fra"],
     tags: ["web"],
     date: subHours(new Date(), 28),
+    employeeStatus: "Active",
+    projectStatus: "In Progress",
+    priority: "Medium",
     subRows: [
       {
         name: "Dashboard - Analytics Widget",
