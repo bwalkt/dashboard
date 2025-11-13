@@ -51,6 +51,18 @@ export const navItems: NavItem[] = [
         shortcut: ['t', 'b'],
       },
       {
+        title: 'Avatar Table',
+        url: '/table',
+        icon: 'user',
+        shortcut: ['a', 'v'],
+      },
+      {
+        title: 'Tree Table',
+        url: '/data-table/tree',
+        icon: 'tree',
+        shortcut: ['t', 'r'],
+      },
+      {
         title: 'Logs',
         url: '/dashboard/logs',
         icon: 'infinity',

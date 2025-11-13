@@ -1,3 +1,4 @@
+import type { ExpandedState } from "@tanstack/react-table";
 import type { JSX } from "react";
 
 export type SearchParams = {
@@ -88,4 +89,30 @@ export type SheetField<TData, TMeta = Record<string, unknown>> = {
   condition?: (props: TData) => boolean;
   className?: string;
   skeletonClassName?: string;
+};
+
+/** ----------------------------------------- */
+
+// Tree data types for expandable rows
+export type TreeData<T = any> = T & {
+  subRows?: TreeData<T>[];
+};
+
+export type TreeDataTableProps<TData extends TreeData> = {
+  enableExpanding?: boolean;
+  getSubRows?: (row: TData) => TData[] | undefined;
+  getRowCanExpand?: (row: TData) => boolean;
+  initialExpanded?: ExpandedState;
+  onExpandedChange?: (expanded: ExpandedState) => void;
+};
+
+export type ExpandableColumnProps<TData extends TreeData> = {
+  row: {
+    id: string;
+    depth: number;
+    getCanExpand: () => boolean;
+    getIsExpanded: () => boolean;
+    getToggleExpandedHandler: () => () => void;
+    original: TData;
+  };
 };

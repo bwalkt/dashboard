@@ -9,9 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TableRouteImport } from './routes/table'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as DataTableTreeRouteImport } from './routes/data-table.tree'
 import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
 import { Route as DashboardOverviewRouteImport } from './routes/dashboard/overview'
 import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
@@ -19,6 +21,11 @@ import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 
+const TableRoute = TableRouteImport.update({
+  id: '/table',
+  path: '/table',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -33,6 +40,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DashboardRoute,
+} as any)
+const DataTableTreeRoute = DataTableTreeRouteImport.update({
+  id: '/data-table/tree',
+  path: '/data-table/tree',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardUsersRoute = DashboardUsersRouteImport.update({
   id: '/users',
@@ -68,34 +80,40 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/table': typeof TableRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/users': typeof DashboardUsersRoute
+  '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/table': typeof TableRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/users': typeof DashboardUsersRoute
+  '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard': typeof DashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/table': typeof TableRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/users': typeof DashboardUsersRoute
+  '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRouteTypes {
@@ -103,46 +121,61 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/table'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
     | '/dashboard/overview'
     | '/dashboard/users'
+    | '/data-table/tree'
     | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/table'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
     | '/dashboard/overview'
     | '/dashboard/users'
+    | '/data-table/tree'
     | '/dashboard'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/table'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
     | '/dashboard/overview'
     | '/dashboard/users'
+    | '/data-table/tree'
     | '/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
+  TableRoute: typeof TableRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
+  DataTableTreeRoute: typeof DataTableTreeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/table': {
+      id: '/table'
+      path: '/table'
+      fullPath: '/table'
+      preLoaderRoute: typeof TableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -163,6 +196,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/data-table/tree': {
+      id: '/data-table/tree'
+      path: '/data-table/tree'
+      fullPath: '/data-table/tree'
+      preLoaderRoute: typeof DataTableTreeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/dashboard/users': {
       id: '/dashboard/users'
@@ -230,9 +270,11 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
+  TableRoute: TableRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,
+  DataTableTreeRoute: DataTableTreeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

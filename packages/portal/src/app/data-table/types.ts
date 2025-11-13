@@ -1,3 +1,4 @@
+import type { TimelineData } from "@/components/data-table/data-table-timeline-cell";
 import { REGIONS } from "@/constants/region";
 import { TAGS } from "@/constants/tag";
 
@@ -10,4 +11,5 @@ export type ColumnSchema = {
   tags: (typeof TAGS)[number][];
   date: Date;
   p95?: number | undefined;
+  timeline?: TimelineData;
 };
