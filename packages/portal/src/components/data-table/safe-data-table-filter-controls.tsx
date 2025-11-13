@@ -30,14 +30,14 @@ export function SafeDataTableFilterControls({ filterFields: propFilterFields }: 
               <div className="font-medium text-sm mb-2">{field.label}</div>
               <div className="text-xs text-muted-foreground">
                 Type: {field.type}
-                {field.options && ` • ${field.options.length} options`}
+                {'options' in field && field.options && ` • ${field.options.length} options`}
               </div>
-              {field.type === 'slider' && (
+              {field.type === 'slider' && 'min' in field && 'max' in field && (
                 <div className="text-xs text-muted-foreground mt-1">
-                  Range: {(field as any).min} - {(field as any).max}
+                  Range: {field.min} - {field.max}
                 </div>
               )}
-              {field.options && field.options.length <= 5 && (
+              {'options' in field && field.options && field.options.length <= 5 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {field.options.slice(0, 5).map((option, optIndex) => (
                     <span key={optIndex} className="text-xs bg-muted px-2 py-1 rounded">

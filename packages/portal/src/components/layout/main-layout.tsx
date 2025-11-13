@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from 'react'
 import { MainContent } from './main-content'
 import { MainHeader } from './main-header'

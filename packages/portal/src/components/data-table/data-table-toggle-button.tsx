@@ -14,7 +14,7 @@ import { useControls } from "@/providers/controls";
 
 export function DataTableToggleButton() {
   const { open, setOpen } = useControls();
-  useHotKey(() => setOpen((prev) => !prev), "b");
+  useHotKey(() => setOpen((prev) => !prev), "Meta+b");
 
   return (
     <TooltipProvider>
@@ -24,6 +24,7 @@ export function DataTableToggleButton() {
             size="sm"
             variant="ghost"
             onClick={() => setOpen((prev) => !prev)}
+            aria-label={open ? "Close controls panel" : "Open controls panel"}
             className="hidden sm:flex"
           >
             {open ? (
