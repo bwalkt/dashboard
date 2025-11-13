@@ -203,20 +203,17 @@ export function DataTable<TData, TValue>({
           
           {/* Render grouped table or normal table */}
           {groupBy ? (
-            <div className="flex-1 overflow-auto">
-              <DataTableGrouped
-                table={table}
-                columns={columns}
-                data={data}
-                groupBy={groupBy}
-                groupByOptions={groupByOptions}
-                cellPadding={cellPadding}
-                headerPadding={headerPadding}
-              />
-            </div>
+            <DataTableGrouped
+              table={table}
+              columns={columns}
+              data={data}
+              groupBy={groupBy}
+              groupByOptions={groupByOptions}
+              cellPadding={cellPadding}
+              headerPadding={headerPadding}
+            />
           ) : (
-            <div className="flex-1 overflow-auto">
-              <div className="rounded-md border">
+            <div className="rounded-md border">
                 <Table 
                   style={{ 
                     width: table.getCenterTotalSize(),
@@ -298,7 +295,6 @@ export function DataTable<TData, TValue>({
                 )}
               </TableBody>
               </Table>
-              </div>
             </div>
           )}
           
