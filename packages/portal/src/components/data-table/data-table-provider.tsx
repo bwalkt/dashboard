@@ -1,6 +1,7 @@
 import type {
   ColumnDef,
   ColumnFiltersState,
+  ExpandedState,
   PaginationState,
   RowSelectionState,
   SortingState,
@@ -21,7 +22,9 @@ interface DataTableStateContextType {
   columnOrder: string[];
   columnVisibility: VisibilityState;
   pagination: PaginationState;
+  expanded: ExpandedState;
   enableColumnOrdering: boolean;
+  enableExpanding: boolean;
 }
 
 interface DataTableBaseContextType<TData = unknown, TValue = unknown> {
@@ -64,7 +67,9 @@ export function DataTableProvider<TData, TValue>({
       columnOrder: props.columnOrder ?? [],
       columnVisibility: props.columnVisibility ?? {},
       pagination: props.pagination ?? { pageIndex: 0, pageSize: 10 },
+      expanded: props.expanded ?? {},
       enableColumnOrdering: props.enableColumnOrdering ?? false,
+      enableExpanding: props.enableExpanding ?? false,
     }),
     [
       props.columnFilters,
@@ -73,10 +78,12 @@ export function DataTableProvider<TData, TValue>({
       props.columnOrder,
       props.columnVisibility,
       props.pagination,
+      props.expanded,
       props.table,
       props.filterFields,
       props.columns,
       props.enableColumnOrdering,
+      props.enableExpanding,
       props.isLoading,
       props.getFacetedUniqueValues,
       props.getFacetedMinMaxValues,

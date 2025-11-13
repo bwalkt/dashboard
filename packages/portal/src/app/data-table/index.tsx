@@ -1,6 +1,8 @@
 import type {
   ColumnDef,
   ColumnFiltersState,
+  ColumnSizingState,
+  ExpandedState,
   PaginationState,
   SortingState,
   Table as TTable,
@@ -9,6 +11,7 @@ import type {
 import {
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
   getFacetedMinMaxValues,
   getFacetedRowModel,
   getFacetedUniqueValues,
@@ -25,18 +28,20 @@ import {
   TableCell,
   TableHead,
   TableHeader,
+  type TablePadding,
   TableRow,
 } from "@/components/custom/table";
 import { DataTableFilterCommand } from "@/components/data-table/data-table-filter-command";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableProvider } from "@/components/data-table/data-table-provider";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
-import type { DataTableFilterField } from "@/components/data-table/types";
+import type { DataTableFilterField, TreeData, TreeDataTableProps } from "@/components/data-table/types";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { searchParamsParser } from "./search-params";
+import "./data-table.css";
 
-export interface DataTableProps<TData, TValue> {
+export interface DataTableProps<TData, TValue> extends TreeDataTableProps<TData & TreeData> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   defaultColumnFilters?: ColumnFiltersState;
@@ -44,6 +49,8 @@ export interface DataTableProps<TData, TValue> {
   filterFields?: DataTableFilterField<TData>[];
   title?: string;
   description?: string;
+  cellPadding?: TablePadding;
+  headerPadding?: TablePadding;
 }
 
 export function DataTable<TData, TValue>({
@@ -53,6 +60,13 @@ export function DataTable<TData, TValue>({
   filterFields = [],
   title,
   description,
+  enableExpanding = false,
+  getSubRows,
+  getRowCanExpand,
+  initialExpanded = {},
+  onExpandedChange,
+  cellPadding = "none",
+  headerPadding = "sm",
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>(defaultColumnFilters);
@@ -63,21 +77,47 @@ export function DataTable<TData, TValue>({
   });
   const [columnVisibility, setColumnVisibility] =
     useLocalStorage<VisibilityState>("data-table-visibility", {});
+  const [columnSizing, setColumnSizing] = 
+    useLocalStorage<ColumnSizingState>("data-table-column-sizing", {});
+  const [expanded, setExpanded] = React.useState<ExpandedState>(initialExpanded);
   const [_, setSearch] = useQueryStates(searchParamsParser);
+
+  React.useEffect(() => {
+    if (onExpandedChange) {
+      onExpandedChange(expanded);
+    }
+  }, [expanded, onExpandedChange]);
 
   const table = useReactTable({
     data,
     columns,
-    state: { columnFilters, sorting, columnVisibility, pagination },
+    state: { 
+      columnFilters, 
+      sorting, 
+      columnVisibility,
+      columnSizing,
+      pagination,
+      ...(enableExpanding && { expanded })
+    },
     onColumnVisibilityChange: setColumnVisibility,
+    onColumnSizingChange: setColumnSizing,
     onColumnFiltersChange: setColumnFilters,
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
+    ...(enableExpanding && { onExpandedChange: setExpanded }),
+    enableColumnResizing: true,
+    columnResizeMode: 'onChange',
     getSortedRowModel: getSortedRowModel(),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    ...(enableExpanding && { 
+      getExpandedRowModel: getExpandedRowModel(),
+      getSubRows: getSubRows || ((row: any) => row.subRows),
+      getRowCanExpand: getRowCanExpand || ((row: any) => Boolean(row.subRows?.length)),
+      filterFromLeafRows: true,
+    }),
     getFacetedMinMaxValues: getFacetedMinMaxValues(),
     // REMINDER: it doesn't support array of strings (WARNING: might not work for other types)
     getFacetedUniqueValues: (table: TTable<TData>, columnId: string) => () => {
@@ -127,6 +167,8 @@ export function DataTable<TData, TValue>({
       columnFilters={columnFilters}
       sorting={sorting}
       pagination={pagination}
+      expanded={expanded}
+      enableExpanding={enableExpanding}
     >
       <AppLayout hasFilters={filterFields.length > 0} title={title} description={description}>
         <div className="flex max-w-full flex-1 flex-col gap-4 p-4">
@@ -137,7 +179,14 @@ export function DataTable<TData, TValue>({
           </div>
           <DataTableToolbar />
           <div className="rounded-md border">
-            <Table>
+            <Table 
+              style={{ 
+                width: table.getCenterTotalSize(),
+              }}
+              className={`table-fixed table-resizable ${
+                table.getState().columnSizingInfo.isResizingColumn ? 'table-resizing' : ''
+              }`}
+            >
               <TableHeader className="bg-muted/50">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow
@@ -146,13 +195,29 @@ export function DataTable<TData, TValue>({
                   >
                     {headerGroup.headers.map((header) => {
                       return (
-                        <TableHead key={header.id}>
+                        <TableHead 
+                          key={header.id}
+                          padding={headerPadding}
+                          style={{ 
+                            width: header.getSize(),
+                            position: 'relative'
+                          }}
+                        >
                           {header.isPlaceholder
                             ? null
                             : flexRender(
                                 header.column.columnDef.header,
                                 header.getContext(),
                               )}
+                          {header.column.getCanResize() && (
+                            <div
+                              onMouseDown={header.getResizeHandler()}
+                              onTouchStart={header.getResizeHandler()}
+                              className={`resize-handle ${
+                                header.column.getIsResizing() ? 'resizing' : ''
+                              }`}
+                            />
+                          )}
                         </TableHead>
                       );
                     })}
@@ -167,7 +232,13 @@ export function DataTable<TData, TValue>({
                       data-state={row.getIsSelected() && "selected"}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
+                        <TableCell 
+                          key={cell.id}
+                          padding={cellPadding}
+                          style={{ 
+                            width: cell.column.getSize() 
+                          }}
+                        >
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext(),
@@ -180,6 +251,7 @@ export function DataTable<TData, TValue>({
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
+                      padding={cellPadding}
                       className="h-24 text-center"
                     >
                       No results.

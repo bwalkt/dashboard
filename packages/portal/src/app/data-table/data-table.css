@@ -1,0 +1,40 @@
+/* Column resize handle styles */
+.resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  background: transparent;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+  transition: background-color 0.2s;
+}
+
+.resize-handle:hover {
+  background: rgb(59 130 246 / 0.5);
+}
+
+.resize-handle.resizing {
+  background: rgb(59 130 246);
+}
+
+/* Ensure table doesn't break during resize */
+.table-resizable {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.table-resizable th,
+.table-resizable td {
+  position: relative;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Visual indicator during resize */
+.table-resizing {
+  user-select: none;
+  cursor: col-resize;
+}
