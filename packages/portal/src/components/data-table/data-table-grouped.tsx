@@ -1,5 +1,6 @@
 import type { ColumnDef, Table as TTable } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import * as React from "react";
 import {
   Table,
@@ -40,6 +41,20 @@ export function DataTableGrouped<TData>({
   cellPadding = "none",
   headerPadding = "sm",
 }: GroupedTableProps<TData>) {
+  const [collapsedGroups, setCollapsedGroups] = React.useState<Set<string>>(new Set());
+
+  const toggleGroup = (groupKey: string) => {
+    setCollapsedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey);
+      } else {
+        newSet.add(groupKey);
+      }
+      return newSet;
+    });
+  };
+
   const groupedData = React.useMemo(() => {
     const groups = new Map<string, TData[]>();
     
@@ -73,35 +88,43 @@ export function DataTableGrouped<TData>({
 
   return (
     <div className="space-y-4">
-      {groupedData.map((group) => (
-        <div 
-          key={group.groupKey} 
-          className="rounded-md border border-l-4"
-          style={{ 
-            borderLeftColor: group.color 
-          }}
-        >
-          {/* Group Header */}
-          <div className="flex items-center gap-3 border-b bg-muted/30 px-4 py-3">
-            <div
-              className="h-1 w-6 rounded-full"
-              style={{ backgroundColor: group.color }}
-            />
-            <h3 className="font-medium text-sm">
-              {group.groupValue} {group.items.length} item{group.items.length !== 1 ? 's' : ''}
-            </h3>
-          </div>
-
-          {/* Group Table */}
-          <Table 
-            className={`table-fixed table-resizable ${
-              table.getState().columnSizingInfo.isResizingColumn ? 'table-resizing' : ''
-            }`}
-            style={{ 
-              width: table.getCenterTotalSize(),
-            }}
+      {groupedData.map((group) => {
+        const isCollapsed = collapsedGroups.has(group.groupKey);
+        
+        return (
+          <div 
+            key={group.groupKey} 
+            className="rounded-md border overflow-hidden"
           >
-            <TableHeader className="bg-muted/20 sticky top-0 z-10">
+            {/* Group Header */}
+            <button
+              onClick={() => toggleGroup(group.groupKey)}
+              className="flex w-full items-center gap-2 border-l-4 bg-muted/30 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+              style={{ 
+                borderLeftColor: group.color 
+              }}
+            >
+              {isCollapsed ? (
+                <ChevronDown className="h-5 w-5 stroke-[5]" style={{ color: group.color }} />
+              ) : (
+                <ChevronUp className="h-5 w-5 stroke-[5]" style={{ color: group.color }} />
+              )}
+              <h3 className="font-medium text-lg capitalize">
+                {group.groupValue}&nbsp;&nbsp;&nbsp; {group.items.length} item{group.items.length !== 1 ? 's' : ''}
+              </h3>
+            </button>
+
+            {/* Group Table - Collapsible */}
+            {!isCollapsed && (
+              <Table 
+                className={`table-fixed table-resizable ${
+                  table.getState().columnSizingInfo.isResizingColumn ? 'table-resizing' : ''
+                }`}
+                style={{ 
+                  width: table.getCenterTotalSize(),
+                }}
+              >
+                <TableHeader className="bg-muted/20 sticky top-0 z-10">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow
                   key={`${group.groupKey}-${headerGroup.id}`}
@@ -197,10 +220,12 @@ export function DataTableGrouped<TData>({
                   </TableCell>
                 </TableRow>
               )}
-            </TableBody>
-          </Table>
-        </div>
-      ))}
+              </TableBody>
+            </Table>
+            )}
+          </div>
+        );
+      })}
       
       {groupedData.length === 0 && (
         <div className="rounded-md border">
