@@ -24,3 +24,39 @@ Cache-Control: The response headers indicate that the content is not to be cache
 |main Sidebar| filter Sidebar | [search table]                           |
 |.           |                |  <Table Content>.                        |
 |.           |.               |                                          |
+
+
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+
+const DashboardLayout = () => (
+  <div>
+    <h1>Dashboard</h1>
+    <nav>
+      {/* Navigation links for partial routes within the dashboard */}
+      <Link to="/dashboard/overview">Overview</Link>
+      <Link to="/dashboard/reports">Reports</Link>
+    </nav>
+    <Outlet /> {/* This is where nested route components will render */}
+  </div>
+);
+
+const OverviewComponent = () => <h2>Dashboard Overview</h2>;
+const ReportsComponent = () => <h2>Dashboard Reports</h2>;
+const HomePage = () => <h2>Welcome to the Home Page!</h2>;
+
+const App = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route path="overview" element={<OverviewComponent />} />
+          <Route path="reports" element={<ReportsComponent />} />
+        </Route>
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;

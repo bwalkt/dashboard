@@ -41,7 +41,7 @@ function TablePage() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="h-screen overflow-hidden">
-          <div className="flex flex-col gap-4 sm:gap-8 w-full max-w-7xl mx-auto relative min-h-full h-full rounded-lg border border-border/50 bg-background/50 p-4 backdrop-blur-[2px] sm:p-8">
+          <div className="flex flex-col w-full h-full">
             <DataTable
               columns={avatarColumns}
               data={avatarData}
