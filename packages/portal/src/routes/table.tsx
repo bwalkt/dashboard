@@ -4,6 +4,7 @@ import { DataTable } from '@/app/data-table'
 import { avatarColumns } from '@/app/data-table/avatar-columns'
 import { avatarFilterFields } from '@/app/data-table/avatar-constants'
 import { avatarData } from '@/app/data-table/avatar-data'
+import { avatarGroupByOptions } from '@/app/data-table/avatar-group-options'
 import KBar from '@/components/kbar'
 import AppSidebar from '@/components/layout/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -40,13 +41,14 @@ function TablePage() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="h-screen overflow-hidden">
-          <div className="flex flex-col gap-4 sm:gap-8 w-full max-w-7xl mx-auto relative min-h-full h-full rounded-lg border border-border/50 bg-background/50 p-4 backdrop-blur-[2px] sm:p-8">
+          <div className="flex flex-col w-full h-full">
             <DataTable
               columns={avatarColumns}
               data={avatarData}
               filterFields={avatarFilterFields}
+              groupByOptions={avatarGroupByOptions}
               title="User Directory"
-              description="Employee directory showcasing avatar components with initials fallback"
+              description="Employee directory with grouping functionality - try grouping by department, status, or role"
             />
           </div>
         </SidebarInset>
