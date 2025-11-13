@@ -101,7 +101,7 @@ export function DataTableGrouped<TData>({
               width: table.getCenterTotalSize(),
             }}
           >
-            <TableHeader className="bg-muted/20">
+            <TableHeader className="bg-muted/20 sticky top-0 z-10">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow
                   key={`${group.groupKey}-${headerGroup.id}`}
