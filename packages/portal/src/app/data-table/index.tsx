@@ -203,7 +203,7 @@ export function DataTable<TData, TValue>({
           
           {/* Render grouped table or normal table */}
           {groupBy ? (
-            <div className="max-h-[calc(100vh-300px)] overflow-auto">
+            <div className="max-h-[calc(100vh-350px)] overflow-auto">
               <DataTableGrouped
                 table={table}
                 columns={columns}
@@ -217,7 +217,7 @@ export function DataTable<TData, TValue>({
           ) : (
             <div className="rounded-md border overflow-hidden">
                 <Table 
-                  containerClassName="max-h-[calc(100vh-300px)] overflow-auto"
+                  containerClassName="max-h-[calc(100vh-350px)] overflow-auto"
                   style={{ 
                     width: table.getCenterTotalSize(),
                   }}
@@ -225,7 +225,7 @@ export function DataTable<TData, TValue>({
                     table.getState().columnSizingInfo.isResizingColumn ? 'table-resizing' : ''
                   }`}
                 >
-              <TableHeader className="bg-muted/50 sticky top-0 z-10">
+              <TableHeader className="bg-background sticky top-0 z-20 border-b">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow
                     key={headerGroup.id}
