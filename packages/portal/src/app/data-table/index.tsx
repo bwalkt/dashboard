@@ -183,7 +183,7 @@ export function DataTable<TData, TValue>({
       enableExpanding={enableExpanding}
     >
       <AppLayout hasFilters={filterFields.length > 0} title={title} description={description}>
-        <div className="flex max-w-full flex-1 flex-col gap-4 p-4">
+        <div className="flex max-w-full flex-1 flex-col gap-4 p-4 pb-2">
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <DataTableFilterCommand searchParamsParser={searchParamsParser} />
@@ -203,7 +203,7 @@ export function DataTable<TData, TValue>({
           
           {/* Render grouped table or normal table */}
           {groupBy ? (
-            <div className="max-h-[calc(100vh-350px)] overflow-auto">
+            <div className="max-h-[calc(100vh-320px)] overflow-auto">
               <DataTableGrouped
                 table={table}
                 columns={columns}
@@ -217,7 +217,7 @@ export function DataTable<TData, TValue>({
           ) : (
             <div className="rounded-md border overflow-hidden">
                 <Table 
-                  containerClassName="max-h-[calc(100vh-350px)] overflow-auto"
+                  containerClassName="max-h-[calc(100vh-320px)] overflow-auto"
                   style={{ 
                     width: table.getCenterTotalSize(),
                   }}
