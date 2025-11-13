@@ -27,7 +27,7 @@ Cache-Control: The response headers indicate that the content is not to be cache
 
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, Link } from 'react-router-dom';
 
 const DashboardLayout = () => (
   <div>

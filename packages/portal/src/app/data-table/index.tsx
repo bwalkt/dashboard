@@ -300,8 +300,7 @@ export function DataTable<TData, TValue>({
               </Table>
             </div>
           )}
-          
-          <DataTablePagination />
+          {!groupBy && <DataTablePagination />}
         </div>
       </AppLayout>
     </DataTableProvider>

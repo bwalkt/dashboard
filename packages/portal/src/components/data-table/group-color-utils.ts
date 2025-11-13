@@ -78,6 +78,9 @@ export function getGroupColor(
 
 // Simple hash function to generate consistent colors
 function hashStringToColor(str: string): string {
+  if (str == null || typeof str !== 'string') {
+    return "#6b7280"; // default gray for invalid input
+  }
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);

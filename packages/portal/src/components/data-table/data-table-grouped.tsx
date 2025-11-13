@@ -54,13 +54,12 @@ export function DataTableGrouped<TData>({
       return newSet;
     });
   };
-
+  const filteredRows = table.getFilteredRowModel().rows;
+    
   const groupedData = React.useMemo(() => {
     const groups = new Map<string, TData[]>();
     
     // Group the filtered data
-    const filteredRows = table.getFilteredRowModel().rows;
-    
     filteredRows.forEach((row) => {
       const value = row.getValue(groupBy as string);
       const key = String(value || "No " + String(groupBy));
@@ -84,7 +83,7 @@ export function DataTableGrouped<TData>({
         items,
       };
     });
-  }, [table, data, groupBy, groupByOptions]);
+  }, [filteredRows, groupBy, groupByOptions]);
 
   return (
     <div className="space-y-4">
