@@ -9,6 +9,8 @@
  * - Built-in retry logic for authentication failures
  */
 
+import { getUseProxy } from './proxy-config';
+
 export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   body?: any;
   baseUrl?: string;
@@ -232,11 +234,17 @@ function createProxyFetchOptions(
   };
 
   // Add body if present (for POST, PUT, PATCH, DELETE)
-  // Note: body is already serialized by serializeBody() before being passed here
+  // Note: body may be a plain object (for proxy) or already serialized
   const methodsWithoutBody = ["GET", "HEAD", "OPTIONS"];
   if (!methodsWithoutBody.includes(method.toUpperCase()) && body !== undefined) {
-    // Body is already serialized (stringified JSON for objects, FormData as-is, etc.)
-    fetchOptions.body = body as BodyInit;
+    // For proxy requests, serialize objects to JSON string
+    // FormData and other BodyInit types are passed as-is
+    if (body instanceof FormData || body instanceof Blob || typeof body === 'string') {
+      fetchOptions.body = body as BodyInit;
+    } else {
+      // JSON stringify objects for proxy requests
+      fetchOptions.body = JSON.stringify(body);
+    }
   }
 
   return { proxyUrl, fetchOptions };
@@ -413,7 +421,7 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
   const headersObj = headersToObject(headers);
 
   // Handle body serialization
-  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, false);
+  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, true);
 
   // Extract method and preserve all other RequestInit properties (signal, cache, redirect, etc.)
   const { method = "GET", ...remainingFetchOptions } = fetchOptions;
@@ -486,12 +494,18 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
   }
 }
 
-const apiRequest = import.meta.env.VITE_USE_PROXY === "true" ? apiRequestWithProxy : apiRequestWithoutProxy;
+/**
+ * Get the appropriate API request function based on current USE_PROXY setting
+ * This checks localStorage dynamically so changes take effect immediately
+ */
+function getApiRequest() {
+  return getUseProxy() ? apiRequestWithProxy : apiRequestWithoutProxy;
+}
 
 export const api = {
-  get: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, "method" | "body">) => apiRequest<T>(endpoint, { ...options, method: "GET" }),
-  post: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "POST", body }),
-  put: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "PUT", body }),
-  patch: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "PATCH", body }),
-  delete: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, "method" | "body">) => apiRequest<T>(endpoint, { ...options, method: "DELETE" }),
+  get: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, "method" | "body">) => getApiRequest()<T>(endpoint, { ...options, method: "GET" }),
+  post: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => getApiRequest()<T>(endpoint, { ...options, method: "POST", body }),
+  put: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => getApiRequest()<T>(endpoint, { ...options, method: "PUT", body }),
+  patch: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => getApiRequest()<T>(endpoint, { ...options, method: "PATCH", body }),
+  delete: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, "method" | "body">) => getApiRequest()<T>(endpoint, { ...options, method: "DELETE" }),
 };

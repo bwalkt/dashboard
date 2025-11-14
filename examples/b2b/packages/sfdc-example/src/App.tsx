@@ -27,6 +27,7 @@ import MobileDashboardLayout from "./pages/dashboard/MobileLayout";
 import Orders from "./pages/dashboard/Orders";
 import Overview from "./pages/dashboard/Overview";
 import Products from "./pages/dashboard/Products";
+import Settings from "./pages/dashboard/Settings";
 
 // Configure NProgress
 NProgress.configure({ showSpinner: false });
@@ -74,6 +75,7 @@ function ThemedAppContent() {
           <Route path="products" element={<Products />} />
           <Route path="products/new" element={<ProductViewPage />} />
           <Route path="products/:productId" element={<ProductViewPage />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
 
         {/* Root redirect - go to sign in */}
