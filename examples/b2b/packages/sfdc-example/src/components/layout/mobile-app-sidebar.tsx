@@ -9,9 +9,7 @@ import {
 } from '@tabler/icons-react'
 import * as React from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { getUseProxy, setUseProxy } from '@/lib/proxy-config'
+import { toast } from 'sonner'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
@@ -22,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Label } from '@/components/ui/label'
 import {
   Sidebar,
   SidebarContent,
@@ -37,9 +36,11 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
+import { Switch } from '@/components/ui/switch'
 import { mobileNavItems } from '@/constants/mobile-nav'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { getUseProxy, setUseProxy } from '@/lib/proxy-config'
 import { Icons } from '../icons'
 import { OrgSwitcher } from '../org-switcher'
 import { UserAvatarProfile } from '../user-avatar-profile'
@@ -91,10 +92,16 @@ export default function MobileAppSidebar() {
   }, [])
 
   const handleToggle = (checked: boolean) => {
-    setUseProxy(checked)
-    setUseProxyState(checked)
-    // Refresh the page to ensure all API requests use the new proxy setting
-    window.location.reload()
+    const success = setUseProxy(checked)
+    if (success) {
+      setUseProxyState(checked)
+      // Refresh the page to ensure all API requests use the new proxy setting
+      window.location.reload()
+    } else {
+      // Revert the toggle state if save failed
+      setUseProxyState(!checked)
+      toast.error('Failed to save proxy setting. Please check your browser settings.')
+    }
   }
 
   const { user } = useAuth()
@@ -109,7 +116,7 @@ export default function MobileAppSidebar() {
           <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarMenu>
             {mobileNavItems.map(item => {
-              const Icon = item.icon ? Icons[item.icon] : Icons.logo
+              const Icon = item.icon ? Icons[item.icon as keyof typeof Icons] : Icons.logo
               return item?.items && item?.items?.length > 0 ? (
                 <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
                   <SidebarMenuItem>
@@ -122,7 +129,7 @@ export default function MobileAppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {item.items?.map(subItem => (
+                        {item.items?.map((subItem: any) => (
                           <SidebarMenuSubItem key={subItem.title}>
                             <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
                               <Link to={subItem.url}>
