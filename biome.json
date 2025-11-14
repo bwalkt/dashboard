@@ -62,7 +62,7 @@
     {
       "includes": ["packages/**", "examples/*/packages/**"],
       "formatter": {
-        "enabled": false
+        "enabled": true
       },
       "linter": {
         "enabled": false

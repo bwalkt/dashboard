@@ -1,7 +1,16 @@
-import { IconBell, IconChevronRight, IconChevronsDown, IconCreditCard, IconLogout, IconPhotoUp, IconUserCircle } from "@tabler/icons-react";
-import * as React from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  IconBell,
+  IconChevronRight,
+  IconChevronsDown,
+  IconCreditCard,
+  IconLogout,
+  IconPhotoUp,
+  IconUserCircle,
+} from '@tabler/icons-react'
+import * as React from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +19,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
+import { Label } from '@/components/ui/label'
 import {
   Sidebar,
   SidebarContent,
@@ -25,43 +35,76 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
-} from "@/components/ui/sidebar";
-import { mobileNavItems } from "@/constants/mobile-nav";
-import { useAuth } from "@/contexts/AuthContext";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { Icons } from "../icons";
-import { OrgSwitcher } from "../org-switcher";
-import { UserAvatarProfile } from "../user-avatar-profile";
+} from '@/components/ui/sidebar'
+import { Switch } from '@/components/ui/switch'
+import { mobileNavItems } from '@/constants/mobile-nav'
+import { useAuth } from '@/contexts/AuthContext'
+import { useMediaQuery } from '@/hooks/use-media-query'
+import { getUseProxy, setUseProxy } from '@/lib/proxy-config'
+import { Icons } from '../icons'
+import { OrgSwitcher } from '../org-switcher'
+import { UserAvatarProfile } from '../user-avatar-profile'
 
 export const company = {
-  name: "Acme Inc",
+  name: 'Acme Inc',
   logo: IconPhotoUp,
-  plan: "Enterprise",
-};
+  plan: 'Enterprise',
+}
 
 const tenants = [
-  { id: "1", name: "Acme Inc" },
-  { id: "2", name: "Beta Corp" },
-  { id: "3", name: "Gamma Ltd" },
-];
+  { id: '1', name: 'Acme Inc' },
+  { id: '2', name: 'Beta Corp' },
+  { id: '3', name: 'Gamma Ltd' },
+]
 
 export default function MobileAppSidebar() {
-  const location = useLocation();
-  const pathname = location.pathname;
-  const { isOpen } = useMediaQuery();
-  const navigate = useNavigate();
+  const location = useLocation()
+  const pathname = location.pathname
+  const { isOpen } = useMediaQuery()
+  const navigate = useNavigate()
+  const [useProxy, setUseProxyState] = React.useState(getUseProxy())
 
   const handleSwitchTenant = (_tenantId: string) => {
     // Tenant switching functionality would be implemented here
-  };
+  }
 
-  const activeTenant = tenants[0];
+  const activeTenant = tenants[0]
 
   React.useEffect(() => {
     // Side effects based on sidebar state changes
-  }, [isOpen]);
+  }, [isOpen])
 
-  const { user } = useAuth();
+  React.useEffect(() => {
+    // Sync state with localStorage in case it changes elsewhere
+    const handleStorageChange = () => {
+      setUseProxyState(getUseProxy())
+    }
+
+    // Listen for storage events (if changed in another tab/window)
+    window.addEventListener('storage', handleStorageChange)
+
+    // Also check on mount
+    setUseProxyState(getUseProxy())
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
+
+  const handleToggle = (checked: boolean) => {
+    const success = setUseProxy(checked)
+    if (success) {
+      setUseProxyState(checked)
+      // Refresh the page to ensure all API requests use the new proxy setting
+      window.location.reload()
+    } else {
+      // Revert the toggle state if save failed
+      setUseProxyState(!checked)
+      toast.error('Failed to save proxy setting. Please check your browser settings.')
+    }
+  }
+
+  const { user } = useAuth()
 
   return (
     <Sidebar collapsible="icon">
@@ -72,8 +115,8 @@ export default function MobileAppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarMenu>
-            {mobileNavItems.map((item) => {
-              const Icon = item.icon ? Icons[item.icon] : Icons.logo;
+            {mobileNavItems.map(item => {
+              const Icon = item.icon ? Icons[item.icon as keyof typeof Icons] : Icons.logo
               return item?.items && item?.items?.length > 0 ? (
                 <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
                   <SidebarMenuItem>
@@ -86,7 +129,7 @@ export default function MobileAppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {item.items?.map((subItem) => (
+                        {item.items?.map((subItem: any) => (
                           <SidebarMenuSubItem key={subItem.title}>
                             <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
                               <Link to={subItem.url}>
@@ -108,8 +151,21 @@ export default function MobileAppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              );
+              )
             })}
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+                <Label htmlFor="use-proxy-toggle" className="text-sm font-normal cursor-pointer">
+                  Use Proxy
+                </Label>
+                <Switch id="use-proxy-toggle" checked={useProxy} onCheckedChange={handleToggle} />
+              </div>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
@@ -118,7 +174,10 @@ export default function MobileAppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
                   <div className="flex items-center gap-2">
                     <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                       <UserAvatarProfile user={user} />
@@ -131,7 +190,12 @@ export default function MobileAppSidebar() {
                   <IconChevronsDown className="ml-auto size-4" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg" side="bottom" align="end" sideOffset={4}>
+              <DropdownMenuContent
+                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                side="bottom"
+                align="end"
+                sideOffset={4}
+              >
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="px-1 py-1.5">
                     <div className="flex items-center gap-2">
@@ -148,7 +212,7 @@ export default function MobileAppSidebar() {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
+                  <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>
                     <IconUserCircle className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
@@ -162,7 +226,7 @@ export default function MobileAppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/dashboard/overview")}>
+                <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>
                   <IconLogout className="mr-2 h-4 w-4" />
                   Home
                 </DropdownMenuItem>
@@ -173,5 +237,5 @@ export default function MobileAppSidebar() {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  );
+  )
 }

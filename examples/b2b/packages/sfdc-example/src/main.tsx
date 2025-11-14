@@ -1,6 +1,10 @@
 // Import tracing first to initialize OpenTelemetry instrumentation
 import './tracing';
 
+// Initialize USE_PROXY from localStorage before any API requests are made
+import { initializeUseProxy } from './lib/proxy-config';
+initializeUseProxy();
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
