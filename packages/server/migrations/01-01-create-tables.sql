@@ -443,6 +443,14 @@ CREATE TABLE pzero.all_orgs (
 PARTITION BY
   list (is_act);
 
+create table pzero.all_nhs (
+  LIKE pzero.all_orgs including defaults including constraints,
+  nh_level smallint NOT NULL DEFAULT 0,
+  PRIMARY KEY (id, is_act),
+  UNIQUE (name, nh_level, is_act)
+) PARTITION BY
+  list (is_act);
+
 -- Indexes will be created automatically by event trigger
 CREATE TABLE pzero.all_sessions (
   LIKE pzero.id_base_loc_table including defaults including constraints,
@@ -475,7 +483,6 @@ CREATE TABLE pzero.all_endpoints (
   headers pzero.key_values,
   variables pzero.key_values,
   tags TEXT[],
-  nh smallint NOT NULL DEFAULT 0,
   access_policy smallint NOT NULL DEFAULT 0, -- 0 private, 1 - internal, 3 - public collab 4 - public
   add_policy smallint NOT NULL DEFAULT 0, -- 1 - shareable, 2 - discoverable, 4 - explicit invitation
   PRIMARY KEY (id, is_act),
@@ -534,62 +541,54 @@ INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_auth', 'A');
-
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_users', 'U');
-
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_groups', 'G');
-
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_orgs', 'O');
-
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_nhs', 'N');
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_sessions', 'S');
-
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_devices', 'D');
-
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_endpoints', 'E');
-
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_files', 'F');
-
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_dirs', 'DR');
-
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_relations', 'R');
-
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_audits', 'AD');
-
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_thread_heads', 'TH');
-
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
