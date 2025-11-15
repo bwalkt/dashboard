@@ -443,6 +443,24 @@ CREATE TABLE pzero.all_orgs (
 PARTITION BY
   list (is_act);
 
+CREATE TABLE pzero.all_nhs (
+  LIKE pzero.base_loc_table including defaults including constraints,
+  level smallint NOT NULL DEFAULT 0,
+  whitelisted_domains pzero.domain[],
+  blacklisted_domains pzero.domain[],
+  whitelisted_emails pzero.email[],
+  blacklisted_emails pzero.email[],
+  handle pzero.valid_org_handle NOT NULL,
+  tags TEXT[],
+  headers pzero.key_values,
+  variables pzero.key_values,
+  status pzero.org_status,
+  PRIMARY KEY (id, is_act),
+  UNIQUE (name, level, is_act)
+)
+PARTITION BY
+  list (is_act);
+
 -- Indexes will be created automatically by event trigger
 CREATE TABLE pzero.all_sessions (
   LIKE pzero.id_base_loc_table including defaults including constraints,
@@ -475,7 +493,6 @@ CREATE TABLE pzero.all_endpoints (
   headers pzero.key_values,
   variables pzero.key_values,
   tags TEXT[],
-  nh smallint NOT NULL DEFAULT 0,
   access_policy smallint NOT NULL DEFAULT 0, -- 0 private, 1 - internal, 3 - public collab 4 - public
   add_policy smallint NOT NULL DEFAULT 0, -- 1 - shareable, 2 - discoverable, 4 - explicit invitation
   PRIMARY KEY (id, is_act),
@@ -553,6 +570,11 @@ VALUES
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
+  ('all_nhs', 'N');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
   ('all_sessions', 'S');
 
 INSERT INTO
@@ -597,7 +619,7 @@ VALUES
 
 -- Down Migration
 DROP TABLE IF EXISTS pzero.endpoints;
-
+DROP TABLE IF EXISTS pzero.all_nhs;
 DROP TABLE IF EXISTS pzero.sessions;
 
 DROP TABLE IF EXISTS pzero.users;
