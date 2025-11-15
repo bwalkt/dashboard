@@ -407,30 +407,34 @@ CREATE TABLE pzero.all_users (
 PARTITION BY
   list (is_act);
 
-CREATE TABLE pzero.all_groups (
-  LIKE pzero.id_base_table including defaults including constraints,
+CREATE TABLE PZERO.DOMAIN_BASE (
   tags TEXT[],
-  access_policy smallint NOT NULL DEFAULT 0, -- 0 private, 1 - internal, 3 - public collab 4 - public
-  add_policy smallint NOT NULL DEFAULT 0, -- 1 - shareable, 2 - discoverable, 4 - explicit invitation
+  whitelisted_domains pzero.domain[],
+  blacklisted_domains pzero.domain[],
+  whitelisted_emails pzero.email[[],
+  blacklisted_emails pzer.email[],
+  status pzero.org_status,
+  handle pzero.valid_org_handle NOT NULL
+  add_policy smallint NOT NULL DEFAULT 0, 0-- explicite, 1 -- disacoverable, 2 -- shareable 3 -- discoverable and shareable
+);
+CREATE TABLE pzero.all_groups (
+  LIKE pzero.id_base_loc_table including defaults including constraints,
+  LIKE pzero.domain_base including all,
   PRIMARY KEY (id, is_act)
 )
 PARTITION BY
   list (is_act);
-
+CREATE TABLE pzero.ENDPOINT_BASE (
+  headers pzero.key_values,
+  variables pzero.key_values
+)
 -- Indexes will be created automatically by event trigger
 CREATE TABLE pzero.all_orgs (
   LIKE pzero.id_base_loc_table including defaults including constraints,
+  LIKE pzero.domain_base including all,
+  LIKE pzero.endpoint_base including all,
   website pzero.domain,
   favicon text,
-  whitelisted_domains pzero.domain[],
-  blacklisted_domains pzero.domain[],
-  whitelisted_emails pzero.email[],
-  blacklisted_emails pzero.email[],
-  handle pzero.valid_org_handle NOT NULL,
-  tags TEXT[],
-  headers pzero.key_values,
-  variables pzero.key_values,
-  status pzero.org_status,
   subscriber_tier_level pzero.subscriber_tier_level DEFAULT 'FREE',
   subscriber_tier_expiry timestamptz,
   multi_tenant boolean DEFAULT TRUE,
@@ -445,16 +449,9 @@ PARTITION BY
 
 CREATE TABLE pzero.all_nhs (
   LIKE pzero.base_loc_table including defaults including constraints,
-  level smallint NOT NULL DEFAULT 0,
-  whitelisted_domains pzero.domain[],
-  blacklisted_domains pzero.domain[],
-  whitelisted_emails pzero.email[],
-  blacklisted_emails pzero.email[],
-  handle pzero.valid_org_handle NOT NULL,
-  tags TEXT[],
-  headers pzero.key_values,
-  variables pzero.key_values,
-  status pzero.org_status,
+  LIKE pzero.domain_base including all,
+  LIKE pzero.endpoint_base including all,
+  level smallint NOT NULL DEFAULT 0
   PRIMARY KEY (id, is_act),
   UNIQUE (name, level, is_act)
 )

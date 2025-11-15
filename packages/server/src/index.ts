@@ -2,6 +2,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import helmet from '@fastify/helmet';
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { db } from "./config/database";
@@ -38,12 +39,24 @@ export default async function (
       "Accept",
       "traceparent",
       "x-client-type",
+      "x-auth-token",
       "tracestate",
     ],
     exposedHeaders: ["Content-Range", "X-Content-Range"],
     maxAge: 86400, // Cache preflight response for 1 day
     preflightContinue: false,
     optionsSuccessStatus: 204,
+  });
+    // Security plugins
+  await fastify.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
   });
 
   // Register cookie plugin for OAuth state management
