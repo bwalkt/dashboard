@@ -11,7 +11,7 @@ import { redis } from "./config/redis";
 import { authRoutes } from "./routes/auth";
 import { emailRoutes } from "./routes/email";
 import { proxyRoutes } from "./routes/proxy";
-
+import { config } from "./config/env";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -29,20 +29,11 @@ export default async function (
 
   // Register CORS plugin
   await fastify.register(cors, {
-    origin: true, // Allow all origins in development - you can restrict this in production
+    origin: config.CORS_ORIGINS, // Allow all origins in development - you can restrict this in production
     credentials: true, // Allow credentials (cookies, authorization headers)
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "Accept",
-      "traceparent",
-      "x-client-type",
-      "x-auth-token",
-      "tracestate",
-    ],
-    exposedHeaders: ["Content-Range", "X-Content-Range"],
+    allowedHeaders: config.CORS_ALLOWED_HEADERS,
+    exposedHeaders: config.CORS_EXPOSED_HEADERS,
     maxAge: 86400, // Cache preflight response for 1 day
     preflightContinue: false,
     optionsSuccessStatus: 204,

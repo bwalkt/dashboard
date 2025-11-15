@@ -15,9 +15,9 @@ class DatabaseManager {
       user: config.POSTGRES_USER,
       password: config.POSTGRES_PASSWORD,
       database: config.POSTGRES_DB,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      max: config.POSTGRES_MAX_CLIENTS || 20,
+      idleTimeoutMillis: config.POSTGRES_IDLE_TIMEOUT || 30000,
+      connectionTimeoutMillis: config.POSTGRES_CONNECTION_TIMEOUT || 2000,
     });
 
     // Handle pool errors
