@@ -444,7 +444,7 @@ PARTITION BY
   list (is_act);
 
 CREATE TABLE pzero.all_nhs (
-  LIKE pzero.all_orgs including defaults including constraints,
+  LIKE pzero.base_loc_table including defaults including constraints,
   level smallint NOT NULL DEFAULT 0,
   whitelisted_domains pzero.domain[],
   blacklisted_domains pzero.domain[],
