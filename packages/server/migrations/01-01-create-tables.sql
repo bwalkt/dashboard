@@ -619,7 +619,7 @@ VALUES
 
 -- Down Migration
 DROP TABLE IF EXISTS pzero.endpoints;
-
+DROP TABLE IF EXISTS pzero.all_nhs;
 DROP TABLE IF EXISTS pzero.sessions;
 
 DROP TABLE IF EXISTS pzero.users;
