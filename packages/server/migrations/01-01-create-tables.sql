@@ -443,12 +443,22 @@ CREATE TABLE pzero.all_orgs (
 PARTITION BY
   list (is_act);
 
-create table pzero.all_nhs (
+CREATE TABLE pzero.all_nhs (
   LIKE pzero.all_orgs including defaults including constraints,
-  nh_level smallint NOT NULL DEFAULT 0,
+  level smallint NOT NULL DEFAULT 0,
+  whitelisted_domains pzero.domain[],
+  blacklisted_domains pzero.domain[],
+  whitelisted_emails pzero.email[],
+  blacklisted_emails pzero.email[],
+  handle pzero.valid_org_handle NOT NULL,
+  tags TEXT[],
+  headers pzero.key_values,
+  variables pzero.key_values,
+  status pzero.org_status,
   PRIMARY KEY (id, is_act),
-  UNIQUE (name, nh_level, is_act)
-) PARTITION BY
+  UNIQUE (name, level, is_act)
+)
+PARTITION BY
   list (is_act);
 
 -- Indexes will be created automatically by event trigger
@@ -541,54 +551,67 @@ INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_auth', 'A');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_users', 'U');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_groups', 'G');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_orgs', 'O');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_nhs', 'N');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_sessions', 'S');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_devices', 'D');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_endpoints', 'E');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_files', 'F');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_dirs', 'DR');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_relations', 'R');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_audits', 'AD');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_thread_heads', 'TH');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
