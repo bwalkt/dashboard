@@ -164,7 +164,8 @@ const getCardType = (number: string): keyof typeof CardIcons => {
   // Mastercard: starts with 5 or 2221-2720
   if (
     cleanNumber.startsWith('5') ||
-    (cleanNumber.startsWith('2') &&
+    (cleanNumber.length >= 4 &&
+      cleanNumber.startsWith('2') &&
       parseInt(cleanNumber.substring(0, 4)) >= 2221 &&
       parseInt(cleanNumber.substring(0, 4)) <= 2720)
   ) {
