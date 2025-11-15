@@ -20,8 +20,8 @@ import type {
   StepSharedProps,
 } from "./stepper-types"
 
-const Step = React.forwardRef<HTMLLIElement, StepProps>(
-  (props, ref: React.Ref<any>) => {
+const Step = React.forwardRef<HTMLDivElement, StepProps>(
+  (props, ref: React.Ref<HTMLDivElement>) => {
     const {
       children,
       description,
@@ -475,6 +475,23 @@ const iconVariants = cva("", {
   },
 })
 
+const IconContainer = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { size?: 'sm' | 'md' | 'lg' }
+>((props, ref) => {
+  const { size, ...rest } = props
+  return (
+    <Flex
+      ref={ref}
+      className={cn(iconVariants({ size }), props.className)}
+      align="center"
+      justify="center"
+      {...rest}
+    />
+  )
+})
+IconContainer.displayName = "IconContainer"
+
 const StepIcon = React.forwardRef<HTMLDivElement, StepIconProps>(
   (props, ref) => {
     const { size } = useStepper()
@@ -491,102 +508,61 @@ const StepIcon = React.forwardRef<HTMLDivElement, StepIconProps>(
       errorIcon: CustomErrorIcon,
     } = props
 
-    const Icon = useMemo(() => (CustomIcon ? CustomIcon : null), [CustomIcon])
+    const Icon = CustomIcon || null
+    const ErrorIcon = CustomErrorIcon || null
+    const Check = CustomCheckIcon || CheckIcon
 
-    const ErrorIcon = useMemo(
-      () => (CustomErrorIcon ? CustomErrorIcon : null),
-      [CustomErrorIcon]
-    )
-
-    const Check = useMemo(
-      () => (CustomCheckIcon ? CustomCheckIcon : CheckIcon),
-      [CustomCheckIcon]
-    )
-
-    return useMemo(() => {
-      const IconContainer = React.forwardRef<
-        HTMLDivElement,
-        React.HTMLAttributes<HTMLDivElement>
-      >((props, ref) => (
-        <Flex
-          ref={ref}
-          className={cn(iconVariants({ size }), props.className)}
-          align="center"
-          justify="center"
-          {...props}
-        />
-      ))
-
-      if (isCompletedStep) {
-        if (isError && isKeepError) {
-          return (
-            <IconContainer key="icon">
-              <X className={cn(iconVariants({ size }))} />
-            </IconContainer>
-          )
-        }
+    if (isCompletedStep) {
+      if (isError && isKeepError) {
         return (
-          <IconContainer
-            key="check-icon"
-            className={cn(iconVariants({ size }))}
-          >
-            <Check name="Check" />
-          </IconContainer>
-        )
-      }
-      if (isCurrentStep) {
-        if (isError && ErrorIcon) {
-          return (
-            <IconContainer
-              key="error-icon"
-              className={cn(iconVariants({ size }))}
-            >
-              <ErrorIcon name="X" />
-            </IconContainer>
-          )
-        }
-        if (isError) {
-          return (
-            <IconContainer key="icon">
-              <X className={cn(iconVariants({ size }))} />
-            </IconContainer>
-          )
-        }
-        if (isLoading) {
-          return (
-            <Loader className={cn(iconVariants({ size }), "animate-spin")} />
-          )
-        }
-      }
-      if (Icon) {
-        return (
-          <IconContainer key="step-icon" className={cn(iconVariants({ size }))}>
-            <Icon name="Check" />
+          <IconContainer key="icon" size={size}>
+            <X className={cn(iconVariants({ size }))} />
           </IconContainer>
         )
       }
       return (
-        <span
-          ref={ref}
-          key="label"
-          className={cn("text-center font-medium text-md")}
-        >
-          {(index || 0) + 1}
-        </span>
+        <IconContainer key="check-icon" size={size}>
+          <Check name="Check" />
+        </IconContainer>
       )
-    }, [
-      isCompletedStep,
-      isCurrentStep,
-      isError,
-      isLoading,
-      Icon,
-      index,
-      Check,
-      ErrorIcon,
-      isKeepError,
-      ref,
-      size,
-    ])
+    }
+    if (isCurrentStep) {
+      if (isError && ErrorIcon) {
+        return (
+          <IconContainer key="error-icon" size={size}>
+            <ErrorIcon name="X" />
+          </IconContainer>
+        )
+      }
+      if (isError) {
+        return (
+          <IconContainer key="icon" size={size}>
+            <X className={cn(iconVariants({ size }))} />
+          </IconContainer>
+        )
+      }
+      if (isLoading) {
+        return (
+          <Loader className={cn(iconVariants({ size }), "animate-spin")} />
+        )
+      }
+    }
+    if (Icon) {
+      return (
+        <IconContainer key="step-icon" size={size}>
+          <Icon name="Check" />
+        </IconContainer>
+      )
+    }
+    return (
+      <span
+        ref={ref}
+        key="label"
+        className={cn("text-center font-medium text-md")}
+      >
+        {(index || 0) + 1}
+      </span>
+    )
   }
 )
 StepIcon.displayName = "StepIcon"

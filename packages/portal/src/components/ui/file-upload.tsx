@@ -75,14 +75,16 @@ export const FileUploader = forwardRef<
     const [isFileTooBig, setIsFileTooBig] = useState(false)
     const [isLOF, setIsLOF] = useState(false)
     const [activeIndex, setActiveIndex] = useState(-1)
-    const {
-      accept = {
+    const defaultOptions = {
+      accept: {
         'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
       },
-      maxFiles = 1,
-      maxSize = 4 * 1024 * 1024,
-      multiple = true,
-    } = dropzoneOptions
+      maxFiles: 1,
+      maxSize: 4 * 1024 * 1024,
+      multiple: true,
+    }
+    const mergedOptions = { ...defaultOptions, ...dropzoneOptions }
+    const { accept, maxFiles, maxSize, multiple } = mergedOptions
 
     const reSelectAll = maxFiles === 1 ? true : reSelect
     const direction: DirectionOptions = dir === 'rtl' ? 'rtl' : 'ltr'
@@ -201,9 +203,7 @@ export const FileUploader = forwardRef<
       setIsLOF(false)
     }, [value, maxFiles])
 
-    const opts = dropzoneOptions
-      ? dropzoneOptions
-      : { accept, maxFiles, maxSize, multiple }
+    const opts = mergedOptions
 
     const dropzoneState = useDropzone({
       ...opts,
