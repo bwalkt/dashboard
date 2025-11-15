@@ -801,17 +801,13 @@ const HorizontalContent = ({ children }: PropsWithChildren) => {
     return null
   }
 
-  return (
-    <>
-      {React.Children.map(childArr[activeStep], (node) => {
-        if (!React.isValidElement(node)) {
-          return null
-        }
-        // @ts-ignore
-        return React.Children.map(node.props.children, (childNode) => childNode)
-      })}
-    </>
-  )
+  const activeChild = childArr[activeStep]
+  if (!React.isValidElement(activeChild)) {
+    return null
+  }
+
+  // Access children in a type-safe way
+  return <>{activeChild.props.children}</>
 }
 
 export {
