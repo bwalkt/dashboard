@@ -443,12 +443,22 @@ CREATE TABLE pzero.all_orgs (
 PARTITION BY
   list (is_act);
 
-create table pzero.all_nhs (
-  LIKE pzero.all_orgs including defaults including constraints,
-  nh_level smallint NOT NULL DEFAULT 0,
+CREATE TABLE pzero.all_nhs (
+  LIKE pzero.base_loc_table including defaults including constraints,
+  level smallint NOT NULL DEFAULT 0,
+  whitelisted_domains pzero.domain[],
+  blacklisted_domains pzero.domain[],
+  whitelisted_emails pzero.email[],
+  blacklisted_emails pzero.email[],
+  handle pzero.valid_org_handle NOT NULL,
+  tags TEXT[],
+  headers pzero.key_values,
+  variables pzero.key_values,
+  status pzero.org_status,
   PRIMARY KEY (id, is_act),
-  UNIQUE (name, nh_level, is_act)
-) PARTITION BY
+  UNIQUE (name, level, is_act)
+)
+PARTITION BY
   list (is_act);
 
 -- Indexes will be created automatically by event trigger
@@ -479,6 +489,8 @@ CREATE TABLE pzero.all_endpoints (
   LIKE pzero.id_base_loc_table including defaults including constraints,
   url pzero.domain NOT NULL,
   status pzero.endpoint_status NOT NULL DEFAULT 'PENDING',
+  ip INET,
+  path TEXT,
   methods pzero.method[] NOT NULL,
   headers pzero.key_values,
   variables pzero.key_values,
@@ -529,11 +541,6 @@ PARTITION BY
 CREATE TABLE pzero.all_threads (
   LIKE pzero.all_thread_heads including defaults including constraints,
   root_id pzero.id NOT NULL,
-  client_ip INET,
-  path TEXT,
-  method pzero.method,
-  duration_ms INTEGER,
-  -- data has ua, 
   PRIMARY KEY (id, is_act),
   FOREIGN key (root_id, is_act) REFERENCES pzero.all_thread_heads (id, is_act) ON DELETE CASCADE
 )
@@ -542,98 +549,71 @@ PARTITION BY
 
 CREATE INDEX idx_threads_root ON pzero.all_threads (root_id, c_at);
 
-
--- Rate limit violations
-CREATE TABLE IF NOT EXISTS rate_limit_violations (
-  id SERIAL PRIMARY KEY,
-  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  client_ip INET NOT NULL,
-  request_count INTEGER,
-  window_start TIMESTAMPTZ,
-  blocked BOOLEAN DEFAULT FALSE
-);
-
--- Indexes for performance
-CREATE INDEX idx_auth_logs_timestamp ON auth_logs(timestamp DESC);
-CREATE INDEX idx_auth_logs_client_ip ON auth_logs(client_ip);
-CREATE INDEX idx_auth_logs_status ON auth_logs(status);
-
-CREATE INDEX idx_request_logs_timestamp ON request_logs(timestamp DESC);
-CREATE INDEX idx_request_logs_client_ip ON request_logs(client_ip);
-CREATE INDEX idx_request_logs_auth_status ON request_logs(auth_status);
-
-CREATE INDEX idx_rate_limit_violations_client_ip ON rate_limit_violations(client_ip);
-CREATE INDEX idx_rate_limit_violations_timestamp ON rate_limit_violations(timestamp DESC);
-
--- Partition by month for large datasets (optional)
--- CREATE TABLE auth_logs_2024_01 PARTITION OF auth_logs
--- FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
-
--- Function to clean old logs
-CREATE OR REPLACE FUNCTION cleanup_old_logs() 
-RETURNS void AS $$
-BEGIN
-  -- Delete logs older than 30 days
-  DELETE FROM auth_logs WHERE timestamp < NOW() - INTERVAL '30 days';
-  DELETE FROM request_logs WHERE timestamp < NOW() - INTERVAL '30 days';
-  DELETE FROM rate_limit_violations WHERE timestamp < NOW() - INTERVAL '7 days';
-END;
-$$ LANGUAGE plpgsql;
-
--- Schedule cleanup (requires pg_cron extension)
--- SELECT cron.schedule('cleanup-logs', '0 2 * * *', 'SELECT cleanup_old_logs();');
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_auth', 'A');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_users', 'U');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_groups', 'G');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_orgs', 'O');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_nhs', 'N');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_sessions', 'S');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_devices', 'D');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_endpoints', 'E');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_files', 'F');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_dirs', 'DR');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_relations', 'R');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_audits', 'AD');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_thread_heads', 'TH');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
@@ -641,7 +621,7 @@ VALUES
 
 -- Down Migration
 DROP TABLE IF EXISTS pzero.endpoints;
-
+DROP TABLE IF EXISTS pzero.all_nhs;
 DROP TABLE IF EXISTS pzero.sessions;
 
 DROP TABLE IF EXISTS pzero.users;
