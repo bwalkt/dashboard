@@ -28,7 +28,7 @@ interface MultiSelectorProps
 
 interface MultiSelectContextProps {
   value: string[]
-  onValueChange: (value: any) => void
+  onValueChange: (value: string) => void
   open: boolean
   setOpen: (value: boolean) => void
   inputValue: string
@@ -79,8 +79,7 @@ const MultiSelector = ({
         onValueChange([...value, val])
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [value],
+    [value, onValueChange],
   )
 
   const handleSelect = React.useCallback(
@@ -181,8 +180,7 @@ const MultiSelector = ({
           break
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [value, inputValue, activeIndex, loop],
+    [value, inputValue, activeIndex, loop, dir, selectedValue, isValueSelected, open, onValueChangeHandler, setOpen],
   )
 
   return (
@@ -315,10 +313,10 @@ MultiSelectorInput.displayName = 'MultiSelectorInput'
 const MultiSelectorContent = forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ children }, ref) => {
+>(({ children, className, ...props }, ref) => {
   const { open } = useMultiSelect()
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className={cn('relative', className)} {...props}>
       {open && children}
     </div>
   )

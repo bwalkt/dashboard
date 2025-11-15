@@ -201,6 +201,7 @@ const VerticalStep = React.forwardRef<HTMLDivElement, VerticalStepProps>(
       checkIcon: checkIconProp,
       errorIcon: errorIconProp,
       onClickStep,
+      isKeepError,
     } = props
 
     const {
@@ -287,12 +288,6 @@ const VerticalStep = React.forwardRef<HTMLDivElement, VerticalStepProps>(
               onClickStepGeneral?.(index || 0, setStep)
           }
         }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            onClickStep?.(index || 0, setStep) ||
-              onClickStepGeneral?.(index || 0, setStep)
-          }
-        }}
         onClick={() =>
           onClickStep?.(index || 0, setStep) ||
           onClickStepGeneral?.(index || 0, setStep)
@@ -321,6 +316,7 @@ const VerticalStep = React.forwardRef<HTMLDivElement, VerticalStepProps>(
                 isLoading: localIsLoading,
                 isCurrentStep,
                 isCompletedStep,
+                isKeepError,
               }}
               icon={icon}
               checkIcon={checkIcon}
@@ -355,7 +351,7 @@ const HorizontalStep = React.forwardRef<HTMLDivElement, StepSharedProps>(
     const {
       isError,
       isLoading,
-      onClickStep,
+      onClickStep: onClickStepGeneral,
       variant,
       clickable,
       checkIcon: checkIconContext,
@@ -377,6 +373,7 @@ const HorizontalStep = React.forwardRef<HTMLDivElement, StepSharedProps>(
       state,
       checkIcon: checkIconProp,
       errorIcon: errorIconProp,
+      onClickStep,
     } = props
 
     const localIsLoading = isLoading || state === "loading"
@@ -395,7 +392,7 @@ const HorizontalStep = React.forwardRef<HTMLDivElement, StepSharedProps>(
         aria-disabled={!hasVisited}
         className={cn(
           "stepper__horizontal-step",
-          (clickable || !!onClickStep) && "cursor-pointer",
+          (clickable || !!onClickStep || !!onClickStepGeneral) && "cursor-pointer",
           "relative flex items-center transition-all duration-200",
           "[&:not(:last-child)]:flex-1",
           "[&:not(:last-child)]:after:transition-all [&:not(:last-child)]:after:duration-200",
@@ -412,15 +409,19 @@ const HorizontalStep = React.forwardRef<HTMLDivElement, StepSharedProps>(
         )}
         onKeyUp={(event) => {
           if (event.key === "Enter" || event.key === " ") {
-            onClickStep?.(index || 0, setStep)
+            onClickStep?.(index || 0, setStep) ||
+              onClickStepGeneral?.(index || 0, setStep)
           }
         }}
         data-optional={steps[index || 0]?.optional}
         data-completed={isCompletedStep}
         data-active={active}
         data-invalid={localIsError}
-        data-clickable={clickable}
-        onClick={() => onClickStep?.(index || 0, setStep)}
+        data-clickable={clickable || !!onClickStep}
+        onClick={() => 
+          onClickStep?.(index || 0, setStep) ||
+          onClickStepGeneral?.(index || 0, setStep)
+        }
         ref={ref}
       >
         <div
@@ -750,7 +751,7 @@ const Stepper = React.forwardRef<HTMLDivElement, StepperProps>(
         >
           <VerticalContent>{items}</VerticalContent>
         </div>
-        {orientation === "horizontal" && (
+        {orientationValue === "horizontal" && (
           <HorizontalContent>{items}</HorizontalContent>
         )}
         {footer}
@@ -796,7 +797,7 @@ const HorizontalContent = ({ children }: PropsWithChildren) => {
   const { activeStep } = useStepper()
   const childArr = React.Children.toArray(children)
 
-  if (activeStep > childArr.length) {
+  if (activeStep >= childArr.length) {
     return null
   }
 

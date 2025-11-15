@@ -175,7 +175,7 @@ const LocationSelector = ({
               variant="outline"
               role="combobox"
               aria-expanded={openStateDropdown}
-              disabled={!selectedCountry}
+              disabled={disabled || !selectedCountry}
               className="w-full justify-between"
             >
               {selectedState ? (

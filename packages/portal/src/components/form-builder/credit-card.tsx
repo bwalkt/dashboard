@@ -144,20 +144,15 @@ interface ValidationErrors {
 }
 
 const formatCardNumber = (value: string) => {
-  const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '')
-  const matches = v.match(/\d{4,16}/g)
-  const match = (matches && matches[0]) || ''
+  // Strip non-digits and hard-limit to 19 digits
+  const digits = value.replace(/\D/g, '').slice(0, 19)
   const parts: string[] = []
 
-  for (let i = 0, len = match.length; i < len; i += 4) {
-    parts.push(match.substring(i, i + 4))
+  for (let i = 0; i < digits.length; i += 4) {
+    parts.push(digits.slice(i, i + 4))
   }
 
-  if (parts.length) {
-    return parts.join(' ')
-  } else {
-    return v
-  }
+  return parts.length ? parts.join(' ') : digits
 }
 
 const getCardType = (number: string): keyof typeof CardIcons => {
@@ -297,8 +292,7 @@ function CreditCard({
 
     const isValid = Object.keys(validationErrors).length === 0
     onValidationChange?.(isValid, validationErrors)
-
-    return isValid
+    return { isValid, validationErrors }
   }
 
   const handleInputChange = (
@@ -350,18 +344,17 @@ function CreditCard({
   }
 
   const handleValidate = () => {
-    const isValid = validateAndUpdate(currentValue)
+    const { isValid, validationErrors } = validateAndUpdate(currentValue)
 
     if (!isValid) {
-      if (errors.cardholderName) {
+      if (validationErrors.cardholderName) {
         cardholderInputRef.current?.focus()
-      } else if (errors.cardNumber) {
+      } else if (validationErrors.cardNumber) {
         cardNumberInputRef.current?.focus()
-      } else if (errors.cvv) {
+      } else if (validationErrors.cvv) {
         cvvInputRef.current?.focus()
       }
     }
-
     return isValid
   }
 
@@ -545,6 +538,7 @@ function CreditCard({
 
         <div>
           <label className="block text-sm font-medium mb-2">Card Number</label>
+          {/* 19 digits grouped as xxxx xxxx xxxx xxxx xxx → 23 chars incl. spaces */}
           <Input
             ref={cardNumberInputRef}
             type="text"
@@ -558,7 +552,7 @@ function CreditCard({
               focusedField === 'cardNumber' && 'ring-2 ring-primary',
               errors.cardNumber && 'border-destructive',
             )}
-            maxLength={19}
+            maxLength={23}
           />
           {errors.cardNumber && (
             <p className="text-destructive text-xs mt-1">{errors.cardNumber}</p>

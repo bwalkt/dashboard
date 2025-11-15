@@ -12,18 +12,28 @@ export type OnboardingProps = {
 export const Onboarding = ({ onComplete, onError }: OnboardingProps) => {
   const [stepData, setStepData] = useState<Record<number, any>>({})
   const [userData, setUserData] = useState<any>(null)
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true)
   const isDesktop = useMediaQuery("(min-width: 768px)")
 
   useEffect(() => {
     // Retrieve user data from localStorage
     try {
       const raw = localStorage.getItem("signupUserData")
-      if (raw) setUserData(JSON.parse(raw))
+      if (raw) {
+        setUserData(JSON.parse(raw))
+      } else {
+        // No signup data found
+        const error = new Error("No signup data found. Please sign up first.")
+        console.error(error.message)
+        onError?.(error)
+      }
     } catch (e) {
       console.error("Corrupted signupUserData in localStorage", e)
       onError?.(e instanceof Error ? e : new Error(String(e)))
+    } finally {
+      setIsLoadingUserData(false)
     }
-  }, [])
+  }, [onError])
 
   const handleFinalSubmit = async (finalData: Record<number, any>) => {
     if (!userData) {
@@ -56,9 +66,22 @@ export const Onboarding = ({ onComplete, onError }: OnboardingProps) => {
     }
   }
 
-  if (!userData) {
+  if (isLoadingUserData) {
     return <div className="flex h-screen items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+  }
+
+  if (!userData) {
+    return <div className="flex h-screen items-center justify-center">
+      <div className="text-center">
+        <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
+          No signup data found. Please sign up first.
+        </p>
+        <a href="/signup" className="text-blue-500 hover:text-blue-600 underline">
+          Go to Sign Up
+        </a>
+      </div>
     </div>
   }
 

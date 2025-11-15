@@ -60,6 +60,13 @@ export const Rating = React.forwardRef<HTMLDivElement, RatingProps>(
       }
     }
 
+    const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+      if (!readOnly && onChange && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault()
+        onChange(index)
+      }
+    }
+
     return (
       <div ref={ref} className={cn('flex items-center', className)} {...props}>
         {[...Array(max)].map((_, index) => {
@@ -77,10 +84,14 @@ export const Rating = React.forwardRef<HTMLDivElement, RatingProps>(
               onMouseEnter={() => handleMouseEnter(index + 1)}
               onMouseLeave={handleMouseLeave}
               onClick={() => handleClick(index + 1)}
-              aria-hidden={readOnly}
+              onKeyDown={(e) => handleKeyDown(e, index + 1)}
               role={readOnly ? undefined : 'button'}
               tabIndex={readOnly ? -1 : 0}
-              aria-label={`Rate ${index + 1} out of ${max}`}
+              aria-label={
+                readOnly
+                  ? `${index + 1} out of ${max}`
+                  : `Rate ${index + 1} out of ${max}`
+              }
             />
           )
         })}

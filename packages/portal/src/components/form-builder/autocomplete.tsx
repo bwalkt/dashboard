@@ -85,7 +85,9 @@ export default function Autocomplete({ value = '', onChange }: AutoCompleteProps
       e.preventDefault()
       setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1))
     } else if (e.key === 'Enter' && selectedIndex >= 0) {
-      setQuery(suggestions[selectedIndex])
+      const chosen: string = suggestions[selectedIndex]
+      setQuery(chosen)
+      onChange?.(chosen)
       setSuggestions([])
       setSelectedIndex(-1)
     } else if (e.key === 'Escape') {

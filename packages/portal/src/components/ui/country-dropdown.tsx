@@ -89,7 +89,6 @@ const CountryDropdownComponent = (
  
   const handleSelect = useCallback(
     (country: Country) => {
-      console.log("🌍 CountryDropdown value: ", country);
       setSelectedCountry(country);
       onChange?.(country);
       setOpen(false);
@@ -127,7 +126,7 @@ const CountryDropdownComponent = (
         ) : (
           <span>
             {slim === false ? (
-              placeholder || setSelectedCountry.name
+              placeholder
             ) : (
               <Globe size={20} />
             )}
@@ -187,4 +186,4 @@ const CountryDropdownComponent = (
 CountryDropdownComponent.displayName = "CountryDropdownComponent";
  
 export const CountryDropdown = forwardRef(CountryDropdownComponent);
-Copy
+CountryDropdown.displayName = "CountryDropdown";

@@ -234,7 +234,7 @@ export const formSchema: { steps: StepSchema<any>[] } = {
             items: {
               type: "string",
             },
-            minLength: 1, // Require at least one selection
+            minItems: 1, // Require at least one selection
           },
         },
         required: ["referralSources"],

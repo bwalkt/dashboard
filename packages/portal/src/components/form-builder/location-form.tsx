@@ -56,13 +56,13 @@ export function LocationForm() {
                   setCountryName(country?.name || '')
                   form.setValue(field.name, [
                     country?.name || '',
-                    stateName || '',
+                    form.getValues('location')[1] || '',
                   ])
                 }}
                 onStateChange={(state) => {
                   setStateName(state?.name || '')
                   form.setValue(field.name, [
-                    countryName || '',
+                    form.getValues('location')[0] || '',
                     state?.name || '',
                   ])
                 }}

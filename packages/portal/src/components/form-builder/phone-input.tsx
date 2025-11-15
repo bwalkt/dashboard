@@ -48,13 +48,14 @@ const PhoneInput: React.ForwardRefExoticComponent<PhoneInputProps> =
            * Handles the onChange event.
            *
            * react-phone-number-input might trigger the onChange event as undefined
-           * when a valid phone number is not entered. To prevent this,
-           * the value is coerced to an empty string.
+           * when a valid phone number is not entered. The value is coerced to an
+           * empty string to maintain controlled component behavior.
            *
            * @param {E164Number | undefined} value - The entered value
            */
           onChange={(value) => {
-            if (value) onChange?.(value)
+            // Allow parents to react to both valid numbers and clears
+            onChange?.(value ?? ('' as RPNInput.Value))
           }}
           {...props}
         />

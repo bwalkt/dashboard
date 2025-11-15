@@ -123,13 +123,23 @@ export function CreditCardForm() {
   }
 
   const onSubmit = (data: CreditCardFormData) => {
-    console.log('Form submitted:', data)
+    const maskedNumber = data.cardNumber
+      .replace(/\s/g, '')
+      .slice(-4)
+      .padStart(data.cardNumber.replace(/\s/g, '').length, '•')
+
     toast.success(
       <div className="space-y-2">
         <p className="font-semibold">Payment Information Submitted</p>
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 text-xs">
-          <code className="text-white">{JSON.stringify(data, null, 2)}</code>
-        </pre>
+        <p className="text-sm text-muted-foreground">
+          Card ending in {maskedNumber.slice(-4)}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Cardholder: {data.cardholderName}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Expires: {data.expiryMonth}/{data.expiryYear.slice(-2)}
+        </p>
       </div>,
     )
   }

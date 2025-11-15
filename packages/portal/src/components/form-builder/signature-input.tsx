@@ -145,7 +145,7 @@ export default function SignatureInput({
   return (
     <div className="border border-gray-300 rounded-md overflow-hidden relative w-[400px] h-[200px]">
       <canvas
-        ref={internalCanvasRef}
+        ref={canvasRef}
         width={400}
         height={200}
         className="w-full"
