@@ -98,9 +98,11 @@ export function DataTableGrouped<TData>({
             {/* Group Header */}
             <button
               onClick={() => toggleGroup(group.groupKey)}
-              className="flex w-full items-center gap-2 border-l-4 bg-muted/30 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+              className={`flex w-full items-center gap-2 bg-muted/30 px-4 py-3 text-left hover:bg-muted/50 transition-colors ${
+                isCollapsed ? 'border-l-4' : ''
+              }`}
               style={{ 
-                borderLeftColor: group.color 
+                borderLeftColor: isCollapsed ? group.color : undefined
               }}
             >
               {isCollapsed ? (
@@ -115,14 +117,15 @@ export function DataTableGrouped<TData>({
 
             {/* Group Table - Collapsible */}
             {!isCollapsed && (
-              <Table 
-                className={`table-fixed table-resizable ${
-                  table.getState().columnSizingInfo.isResizingColumn ? 'table-resizing' : ''
-                }`}
-                style={{ 
-                  width: table.getCenterTotalSize(),
-                }}
-              >
+              <div className="border-l-4" style={{ borderLeftColor: group.color }}>
+                <Table 
+                  className={`table-fixed table-resizable ${
+                    table.getState().columnSizingInfo.isResizingColumn ? 'table-resizing' : ''
+                  }`}
+                  style={{ 
+                    width: table.getCenterTotalSize(),
+                  }}
+                >
                 <TableHeader className="bg-muted/20 sticky top-0 z-10">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow
@@ -220,7 +223,8 @@ export function DataTableGrouped<TData>({
                 </TableRow>
               )}
               </TableBody>
-            </Table>
+                </Table>
+              </div>
             )}
           </div>
         );
