@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Frontend Fingerprinting Example</title>
+  <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
+</head>
+<body>
+  <h1>Frontend Fingerprinting</h1>
+  
+  <script>
+    // Initialize FingerprintJS
+    async function initFingerprinting() {
+      try {
+        // Load FingerprintJS
+        const fp = await FingerprintJS.load();
+        
+        // Get visitor identifier
+        const result = await fp.get();
+        
+        console.log('Visitor ID:', result.visitorId);
+        console.log('Confidence:', result.confidence.score);
+        console.log('Components:', result.components);
+        
+        // Store in session/local storage
+        sessionStorage.setItem('fpVisitorId', result.visitorId);
+        sessionStorage.setItem('fpConfidence', result.confidence.score.toString());
+        
+        // Include in all subsequent requests
+        setupRequestInterceptor(result.visitorId, result.confidence.score);
+        
+      } catch (error) {
+        console.error('Fingerprinting failed:', error);
+        // Fallback to simple browser fingerprint
+        const fallback = createFallbackFingerprint();
+        sessionStorage.setItem('fpVisitorId', fallback);
+      }
+    }
+    
+    function setupRequestInterceptor(visitorId, confidence) {
+      // Override fetch to include fingerprint headers
+      const originalFetch = window.fetch;
+      window.fetch = function(url, options = {}) {
+        if (!options.headers) {
+          options.headers = {};
+        }
+        
+        options.headers['X-Fingerprint-ID'] = visitorId;
+        options.headers['X-Fingerprint-Confidence'] = confidence.toString();
+        options.headers['X-Fingerprint-Timestamp'] = Date.now().toString();
+        
+        return originalFetch(url, options);
+      };
+      
+      // Override XMLHttpRequest
+      const originalOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+        this.addEventListener('readystatechange', function() {
+          if (this.readyState === 1) { // OPENED
+            this.setRequestHeader('X-Fingerprint-ID', visitorId);
+            this.setRequestHeader('X-Fingerprint-Confidence', confidence.toString());
+            this.setRequestHeader('X-Fingerprint-Timestamp', Date.now().toString());
+          }
+        });
+        
+        return originalOpen.apply(this, arguments);
+      };
+    }
+    
+    function createFallbackFingerprint() {
+      // Simple fallback fingerprint
+      const components = [
+        navigator.userAgent || '',
+        navigator.language || '',
+        screen.width + 'x' + screen.height,
+        new Date().getTimezoneOffset().toString(),
+        navigator.platform || '',
+        navigator.cookieEnabled.toString()
+      ];
+      
+      return 'fallback_' + btoa(components.join('|')).substring(0, 16);
+    }
+    
+    // Test function to make API call
+    async function testAPICall() {
+      try {
+        const response = await fetch('/api/test-endpoint', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        console.log('API Response:', data);
+        
+        // Show response headers from server
+        console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
+        
+      } catch (error) {
+        console.error('API call failed:', error);
+      }
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initFingerprinting);
+  </script>
+  
+  <button onclick="testAPICall()">Test API Call</button>
+  
+  <div id="fingerprint-info">
+    <h3>Fingerprint Information</h3>
+    <p>Check console for details</p>
+    <p>Current visitor ID: <span id="visitor-id">Loading...</span></p>
+  </div>
+  
+  <script>
+    // Update UI with fingerprint info
+    setTimeout(() => {
+      const visitorId = sessionStorage.getItem('fpVisitorId');
+      if (visitorId) {
+        document.getElementById('visitor-id').textContent = visitorId;
+      }
+    }, 2000);
+  </script>
+</body>
+</html>

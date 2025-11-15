@@ -1,0 +1,31 @@
+{
+  "scripts": {
+    "dev": "ts-node src/app-fastify.ts",
+    "dev:envoy": "docker-compose up --build",
+    "build": "tsc && pnpm run build:wasm",
+    "build:wasm": "cd wasm-filter && pnpm install && pnpm build",
+    "start": "node dist/app-fastify.js",
+    "start:fastify": "NODE_ENV=production ENABLE_HEADER_VALIDATION=true node dist/app-fastify.js",
+    "start:envoy": "docker-compose --profile full up",
+    "start:no-envoy": "pnpm run start:fastify",
+    "benchmark": "chmod +x benchmark.sh && ./benchmark.sh",
+    "benchmark:fastify": "pnpm benchmark -- --target=fastify",
+    "test": "pnpm test:fastify && pnpm test:envoy",
+    "test:fastify": "NODE_ENV=test pnpm start:fastify",
+    "test:envoy": "pnpm start:envoy"
+  },
+  "dependencies": {
+    "fastify": "^4.24.0",
+    "@fastify/helmet": "^11.1.1",
+    "@fastify/cors": "^8.4.0",
+    "@fastify/cookie": "^9.2.0",
+    "@fastify/rate-limit": "^8.0.3",
+    "fastify-plugin": "^4.5.1",
+    "pino-pretty": "^10.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
+  }
+}

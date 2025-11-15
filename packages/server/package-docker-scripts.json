@@ -1,0 +1,58 @@
+{
+  "scripts": {
+    "docker:build": "docker-compose -f docker-compose.fastify.yaml build",
+    "docker:up": "docker-compose -f docker-compose.fastify.yaml up",
+    "docker:up:detached": "docker-compose -f docker-compose.fastify.yaml up -d",
+    "docker:up:build": "docker-compose -f docker-compose.fastify.yaml up --build",
+    "docker:down": "docker-compose -f docker-compose.fastify.yaml down",
+    "docker:down:volumes": "docker-compose -f docker-compose.fastify.yaml down -v",
+    
+    "docker:fastify": "docker-compose -f docker-compose.fastify.yaml up pzero-fastify postgres redis",
+    "docker:envoy": "pnpm build:wasm && docker-compose -f docker-compose.fastify.yaml --profile envoy up --build",
+    "docker:dev": "docker-compose -f docker-compose.fastify.yaml --profile dev up",
+    "docker:test": "docker-compose -f docker-compose.fastify.yaml --profile testing up",
+    
+    "docker:logs": "docker-compose -f docker-compose.fastify.yaml logs",
+    "docker:logs:follow": "docker-compose -f docker-compose.fastify.yaml logs -f",
+    "docker:logs:fastify": "docker-compose -f docker-compose.fastify.yaml logs -f pzero-fastify",
+    
+    "docker:restart": "docker-compose -f docker-compose.fastify.yaml restart",
+    "docker:restart:fastify": "docker-compose -f docker-compose.fastify.yaml restart pzero-fastify",
+    
+    "docker:ps": "docker-compose -f docker-compose.fastify.yaml ps",
+    "docker:stats": "docker stats pzero-fastify pzero-postgres pzero-redis pzero-envoy",
+    
+    "docker:shell:fastify": "docker exec -it pzero-fastify sh",
+    "docker:shell:postgres": "docker exec -it pzero-postgres psql -U postgres -d pzero",
+    "docker:shell:redis": "docker exec -it pzero-redis redis-cli",
+    
+    "docker:clean": "docker system prune -f",
+    "docker:clean:all": "docker-compose -f docker-compose.fastify.yaml down -v && docker system prune -af",
+    
+    "health": "curl -f http://localhost:8090/health || curl -f http://localhost:8181/health",
+    "test:auth": "curl -H 'x-custom-auth: secret-value-123' http://localhost:8090/api/test",
+    "test:auth:envoy": "curl -H 'x-custom-auth: secret-value-123' http://localhost:8181/api/test",
+    
+    "benchmark:docker": "docker exec pzero-load-tester wrk -t4 -c50 -d30s http://pzero-fastify:8090/health",
+    "benchmark:auth:docker": "docker exec pzero-load-tester wrk -t4 -c50 -d30s -H 'x-custom-auth: secret-value-123' http://pzero-fastify:8090/api/test"
+  },
+  "pnpm": {
+    "scripts": {
+      "docker:setup": [
+        "echo 'Setting up Docker environment...'",
+        "cp .env.example .env",
+        "echo 'Building Wasm filter...'",
+        "cd wasm-filter && pnpm install && pnpm build && cd ..",
+        "echo 'Starting Docker services...'",
+        "docker-compose -f docker-compose.fastify.yaml up --build -d",
+        "echo 'Waiting for services to be ready...'",
+        "sleep 10",
+        "pnpm health",
+        "echo 'Setup complete! Services running at:'",
+        "echo '  Fastify: http://localhost:8090'",
+        "echo '  Health: http://localhost:8090/health'",
+        "echo '  Metrics: http://localhost:8090/metrics'"
+      ]
+    }
+  }
+}

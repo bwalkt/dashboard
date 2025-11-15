@@ -1,0 +1,124 @@
+name: pzero-conditional-setup
+
+services:
+  # Node.js server (always runs)
+  pzero-server:
+    build:
+      context: ../../
+      dockerfile: packages/server/Dockerfile
+    container_name: pzero-server
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-8090}:${SERVER_PORT:-8090}"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${SERVER_PORT:-8090}
+      - ENABLE_HEADER_VALIDATION=${ENABLE_HEADER_VALIDATION:-true}
+      - USE_ENVOY=${USE_ENVOY:-false}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-pzero}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/packages/server/src
+    profiles:
+      - server
+      - full
+
+  # Envoy proxy (only when profile includes envoy)
+  pzero-envoy:
+    image: envoyproxy/envoy:v1.28-latest
+    container_name: pzero-envoy
+    ports:
+      - "${ENVOY_PORT:-8181}:8080"
+      - "${ENVOY_ADMIN_PORT:-9901}:9901"
+    volumes:
+      - ./envoy-wasm.yaml:/etc/envoy/envoy.yaml:ro
+      - ./wasm-filter/build/header-validator.wasm:/etc/envoy/header-validator.wasm:ro
+    command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml -l info
+    restart: unless-stopped
+    environment:
+      - ENVOY_LOG_LEVEL=info
+    depends_on:
+      pzero-server:
+        condition: service_started
+    profiles:
+      - envoy
+      - full
+
+  # PostgreSQL (shared)
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    container_name: pzero-postgres
+    restart: unless-stopped
+    command: ["postgres", "-c", "shared_preload_libraries=pgx_ulid"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-pzero}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - server
+      - envoy
+      - full
+
+  # Redis (shared)
+  redis:
+    image: redis:latest
+    container_name: pzero-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    profiles:
+      - server
+      - envoy
+      - full
+
+  # Load tester (optional)
+  load-tester:
+    image: alpine:latest
+    container_name: pzero-load-tester
+    command: >
+      sh -c "
+        apk add --no-cache curl &&
+        echo 'Load tester ready. Use: docker exec -it pzero-load-tester sh' &&
+        sleep infinity
+      "
+    profiles:
+      - testing
+
+volumes:
+  postgres_data:
+  redis_data:
+
+# Usage:
+# Server only:     docker-compose --profile server up
+# Envoy only:      docker-compose --profile envoy up  
+# Full stack:      docker-compose --profile full up
+# With testing:    docker-compose --profile full --profile testing up

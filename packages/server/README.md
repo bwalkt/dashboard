@@ -320,3 +320,19 @@ ISC License
 ## 📞 Support
 
 For issues and questions, please create an issue in the repository or contact the development team.
+
+
+## Ports
+
+  1. pzero-server: Runs on port 8090 (your existing backend server)
+  2. Envoy with Wasm filter:
+    - Listens internally on port 8080
+    - Exposed externally on port 8181 (for client requests)
+    - Routes to backend server on port 8090
+
+  This matches your existing setup where:
+  - Clients connect to Envoy on port 8181
+  - Envoy validates headers using the Wasm filter
+  - Valid requests are forwarded to your server on port 8090
+
+  The corrected configuration maintains compatibility with your existing infrastructure.

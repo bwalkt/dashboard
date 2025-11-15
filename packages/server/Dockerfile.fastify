@@ -1,0 +1,72 @@
+# Multi-stage Dockerfile for Fastify application
+FROM node:18-alpine AS base
+
+# Enable pnpm
+RUN corepack enable
+RUN corepack prepare pnpm@8.10.0 --activate
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies for building
+FROM base AS deps
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# Build the application
+FROM base AS build
+COPY package.json pnpm-lock.yaml ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Build TypeScript
+RUN pnpm build
+
+# Production image
+FROM node:18-alpine AS production
+
+# Enable pnpm
+RUN corepack enable
+RUN corepack prepare pnpm@8.10.0 --activate
+
+# Create app user for security
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 fastify
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install production dependencies only
+RUN pnpm install --frozen-lockfile --prod
+
+# Copy built application
+COPY --from=build /app/dist ./dist
+COPY --from=build --chown=fastify:nodejs /app/dist ./dist
+
+# Create necessary directories
+RUN mkdir -p logs && chown fastify:nodejs logs
+
+# Switch to non-root user
+USER fastify
+
+# Expose port
+EXPOSE 8090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "
+    const http = require('http');
+    const options = { hostname: 'localhost', port: 8090, path: '/health', timeout: 2000 };
+    const req = http.request(options, (res) => {
+      if (res.statusCode === 200) process.exit(0);
+      else process.exit(1);
+    });
+    req.on('error', () => process.exit(1));
+    req.on('timeout', () => process.exit(1));
+    req.end();
+  "
+
+# Start the application
+CMD ["node", "dist/app-fastify.js"]

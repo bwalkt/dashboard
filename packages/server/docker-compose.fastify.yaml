@@ -1,0 +1,199 @@
+name: pzero-fastify
+
+services:
+  # Fastify application
+  pzero-fastify:
+    build:
+      context: ../../
+      dockerfile: packages/server/Dockerfile.fastify
+    container_name: pzero-fastify
+    restart: unless-stopped
+    ports:
+      - "${FASTIFY_PORT:-8090}:8090"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=8090
+      - HOST=0.0.0.0
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_HEADER_VALIDATION=${ENABLE_HEADER_VALIDATION:-true}
+      - MAX_REQUESTS_PER_MINUTE=${MAX_REQUESTS_PER_MINUTE:-100}
+      - TOKEN_CACHE_TTL=${TOKEN_CACHE_TTL:-300000}
+      
+      # Database connection
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-pzero}
+      
+      # Redis connection
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      
+      # Security
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret}
+      - COOKIE_SECRET=${COOKIE_SECRET:-your-cookie-secret}
+      
+      # External services
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
+      - BREVO_SENDER_NAME=${BREVO_SENDER_NAME:-P-Zero}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - SERVER_BASE_URL=${SERVER_BASE_URL:-http://localhost:8090}
+      - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN:-localhost}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Mount source code for development (remove in production)
+      - ./src:/app/src:ro
+      - ./package.json:/app/package.json:ro
+      # Logs volume
+      - fastify_logs:/app/logs
+    networks:
+      - pzero-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Envoy proxy (optional - use with --profile envoy)
+  pzero-envoy:
+    image: envoyproxy/envoy:v1.28-latest
+    container_name: pzero-envoy
+    ports:
+      - "${ENVOY_PORT:-8181}:8080"
+      - "${ENVOY_ADMIN_PORT:-9901}:9901"
+    volumes:
+      - ./envoy-wasm.yaml:/etc/envoy/envoy.yaml:ro
+      - ./wasm-filter/build/header-validator.wasm:/etc/envoy/header-validator.wasm:ro
+    command: ["/usr/local/bin/envoy", "-c", "/etc/envoy/envoy.yaml", "-l", "info"]
+    restart: unless-stopped
+    environment:
+      - ENVOY_LOG_LEVEL=${ENVOY_LOG_LEVEL:-info}
+    depends_on:
+      pzero-fastify:
+        condition: service_healthy
+    networks:
+      - pzero-network
+    profiles:
+      - envoy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9901/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # PostgreSQL database
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    container_name: pzero-postgres
+    restart: unless-stopped
+    command: ["postgres", "-c", "shared_preload_libraries=pgx_ulid"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-pzero}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql:ro
+    networks:
+      - pzero-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-pzero}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # Redis cache
+  redis:
+    image: redis:7-alpine
+    container_name: pzero-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - pzero-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Development tools (optional - use with --profile dev)
+  pzero-dev:
+    build:
+      context: ../../
+      dockerfile: packages/server/Dockerfile.fastify
+      target: base  # Use base stage for development
+    container_name: pzero-fastify-dev
+    restart: unless-stopped
+    ports:
+      - "${DEV_PORT:-8091}:8090"
+    environment:
+      - NODE_ENV=development
+      - PORT=8090
+      - HOST=0.0.0.0
+      - LOG_LEVEL=debug
+      - ENABLE_HEADER_VALIDATION=true
+    volumes:
+      # Full source mount for hot reload
+      - ../../:/app
+      - /app/node_modules  # Exclude node_modules
+    command: ["pnpm", "dev"]
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - pzero-network
+    profiles:
+      - dev
+
+  # Load testing service
+  load-tester:
+    image: alpine:latest
+    container_name: pzero-load-tester
+    command: >
+      sh -c "
+        apk add --no-cache curl wrk &&
+        echo 'Load tester ready!' &&
+        echo 'Test commands:' &&
+        echo '  curl http://pzero-fastify:8090/health' &&
+        echo '  curl -H \"x-custom-auth: secret-value-123\" http://pzero-fastify:8090/api/test' &&
+        echo '  wrk -t4 -c50 -d30s http://pzero-fastify:8090/health' &&
+        sleep infinity
+      "
+    networks:
+      - pzero-network
+    profiles:
+      - testing
+
+volumes:
+  postgres_data:
+    name: pzero_postgres_data
+  redis_data:
+    name: pzero_redis_data
+  fastify_logs:
+    name: pzero_fastify_logs
+
+networks:
+  pzero-network:
+    name: pzero-network
+    driver: bridge

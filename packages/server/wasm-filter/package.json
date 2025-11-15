@@ -1,0 +1,13 @@
+{
+  "name": "header-validator-wasm",
+  "version": "1.0.0",
+  "description": "Envoy Wasm filter for custom header validation",
+  "scripts": {
+    "build": "asc assembly/index.ts -b build/header-validator.wasm -t build/header-validator.wat --sourceMap --optimize",
+    "build:debug": "asc assembly/index.ts -b build/header-validator.debug.wasm -t build/header-validator.debug.wat --sourceMap --debug"
+  },
+  "devDependencies": {
+    "@solo-io/proxy-runtime": "^0.2.0",
+    "assemblyscript": "^0.27.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "targets": {
+    "debug": {
+      "outFile": "build/header-validator.debug.wasm",
+      "textFile": "build/header-validator.debug.wat",
+      "sourceMap": true,
+      "debug": true
+    },
+    "release": {
+      "outFile": "build/header-validator.wasm",
+      "textFile": "build/header-validator.wat",
+      "sourceMap": true,
+      "optimize": true
+    }
+  },
+  "options": {
+    "runtime": "stub"
+  }
+}

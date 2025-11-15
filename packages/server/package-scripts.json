@@ -1,0 +1,19 @@
+{
+  "scripts": {
+    "dev": "ts-node src/app-without-envoy.ts",
+    "dev:envoy": "docker-compose up --build",
+    "start": "node dist/app-without-envoy.js",
+    "start:envoy": "docker-compose -f docker-compose-wasm.yaml up",
+    "start:no-envoy": "NODE_ENV=production ENABLE_HEADER_VALIDATION=true node dist/app-without-envoy.js",
+    "build": "tsc && npm run build:wasm",
+    "build:wasm": "cd wasm-filter && ./build.sh",
+    "test:no-envoy": "NODE_ENV=test ENABLE_HEADER_VALIDATION=true npm run start:no-envoy",
+    "test:envoy": "npm run start:envoy",
+    "benchmark": "chmod +x benchmark.sh && ./benchmark.sh",
+    "compare": "npm run benchmark > benchmark-results.txt && cat benchmark-results.txt"
+  },
+  "config": {
+    "envoy_enabled": false,
+    "default_port": 8090
+  }
+}

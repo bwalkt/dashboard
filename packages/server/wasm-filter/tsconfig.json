@@ -1,0 +1,11 @@
+{
+  "extends": "assemblyscript/std/assembly.json",
+  "compilerOptions": {
+    "types": ["assemblyscript/std/types"],
+    "lib": ["esnext"]
+  },
+  "include": [
+    "assembly/**/*.ts",
+    "assembly/**/*.d.ts"
+  ]
+}
