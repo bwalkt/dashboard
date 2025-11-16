@@ -85,7 +85,8 @@ CREATE TYPE pzero.user_status AS enum(
   'INACTIVE',
   'BANNED',
   'DELETED',
-  'PENDING'
+  'PENDING',
+  'BLOCKED'
 );
 
 CREATE TYPE pzero.user_online_status AS enum('ONLINE', 'OOO', 'AWAY', 'BUSY', 'INACTIVE');
@@ -316,9 +317,6 @@ EXECUTE function pzero.create_tables_post ();
 
 CREATE TABLE pzero.all_auth (
   id pzero.id NOT NULL DEFAULT pzero.gen_id (),
-  password text,
-  oauth_provider pzero.oauth_provider,
-  oauth_id text,
   email pzero.email NOT NULL,
   phone text,
   email_verified boolean NOT NULL DEFAULT FALSE,

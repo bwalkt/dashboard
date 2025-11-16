@@ -9,7 +9,7 @@ import { config } from "../config/env";
 import { redis } from "../config/redis";
 import { authenticateToken } from "../middleware/auth";
 import { authService } from "../services/auth.service";
-import { smsService } from "../services/sms.service";
+import { emailService } from "../services/email.service";
 import { userService } from "../services/user.service";
 
 declare module "fastify" {
@@ -350,46 +350,295 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * POST /verify/phone
-   * Send phone verification code via SMS
+   * POST /auth/register
+   * Register new user with email
    */
   fastify.post(
-    "/verify/phone",
+    "/auth/register",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { phone } = request.body as { phone: string };
+        const { email, name } = request.body as { email: string; name?: string };
 
-        // Validate phone number format
-        if (!phone || !smsService.validatePhoneFormat(phone)) {
+        // Validate email format
+        if (!email || !emailService.validateEmailFormat(email)) {
           return reply.status(400).send({
             error: "Bad Request",
-            message:
-              "Invalid phone number format. Please use E.164 format (e.g., +12345678900)",
+            message: "Invalid email address",
+          } as ErrorResponse);
+        }
+
+        // Check if user already exists
+        const existingUser = await userService.getUserByEmail(email);
+        if (existingUser) {
+          return reply.status(409).send({
+            error: "Conflict",
+            message: "User with this email already exists",
           } as ErrorResponse);
         }
 
         // Generate verification code
-        const verificationCode = smsService.generateVerificationCode();
-
-        // Store verification code in Redis with 10 minute expiration
-        const redisKey = `phone_verification:${phone}`;
-        await redis.set(redisKey, verificationCode, 600);
-
-        // Send SMS with verification code
-        await smsService.sendVerificationCode({
-          to: phone,
-          code: verificationCode,
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expirySeconds = config.EMAIL_EXPIRY_MINUTES * 60;
+        // Store verification data in Redis with 10 minute expiration
+        const redisKey = `email_registration:${email}`;
+        await redis.set(
+          redisKey,
+          JSON.stringify({ code: verificationCode, name, createdAt: new Date().toISOString() }),
+          expirySeconds,
+        );
+        await userService.createUser({
+          email,
+          name: name || email.split("@")[0],
+        });
+        // Send verification email with confirmation code
+        await emailService.sendConfirmationCodeEmail({
+          to: email,
+          confirmationCode: verificationCode,
+          recipientName: name || '',
         });
 
         return reply.send({
-          message: "Verification code sent successfully",
+          message: "Verification code sent to email",
+          email,
+          expiresIn: expirySeconds,
+        });
+      } catch (error) {
+        console.error("Registration error:", error);
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Registration failed",
+        } as ErrorResponse);
+      }
+    },
+  );
+
+  /**
+   * POST /auth/register/verify
+   * Verify email and complete registration
+   */
+  fastify.post(
+    "/auth/register/verify",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { email, code } = request.body as { email: string; code: string };
+
+        // Validate inputs
+        if (!email || !code) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Email and verification code are required",
+          } as ErrorResponse);
+        }
+
+        // Get registration data from Redis
+        const redisKey = `email_registration:${email}`;
+        const registrationData = await redis.get(redisKey);
+
+        if (!registrationData) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Invalid or expired verification code",
+          } as ErrorResponse);
+        }
+
+        const { code: storedCode, name } = JSON.parse(registrationData);
+
+        // Verify code
+        if (code !== storedCode) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Invalid verification code",
+          } as ErrorResponse);
+        }
+
+        // Create user
+        const user = await userService.createUserFromEmail({
+          email,
+          name: name || email.split("@")[0],
+          email_verified: true,
+        });
+
+        // Delete registration data from Redis
+        await redis.delete(redisKey);
+
+        // Generate JWT tokens
+        const { accessToken, refreshToken } = authService.generateTokenPair(
+          user.id,
+          "", // No GitHub ID for email users
+          user.email
+        );
+
+        // Set JWT tokens as cookies
+        reply.setCookie("accessToken", accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 3600, // 1 hour
+        });
+
+        reply.setCookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 3600 * 24 * 30, // 30 days
+        });
+
+        return reply.send({
+          message: "Registration successful",
+          user,
+          accessToken,
+        });
+      } catch (error) {
+        console.error("Registration verification error:", error);
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Failed to complete registration",
+        } as ErrorResponse);
+      }
+    },
+  );
+
+  /**
+   * POST /auth/login
+   * Login with email (sends verification code)
+   */
+  fastify.post(
+    "/auth/login",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { email } = request.body as { email: string };
+
+        // Validate email format
+        if (!email || !emailService.validateEmailFormat(email)) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Invalid email address",
+          } as ErrorResponse);
+        }
+
+        // Check if user exists
+        const user = await userService.getUserByEmail(email);
+        if (!user) {
+          return reply.status(404).send({
+            error: "Not Found",
+            message: "No account found with this email",
+          } as ErrorResponse);
+        }
+
+        // Generate verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Store verification code in Redis with 10 minute expiration
+        const redisKey = `email_login:${email}`;
+        await redis.set(redisKey, verificationCode, 600);
+
+        // Send verification email
+        await emailService.sendConfirmationCodeEmail({
+          to: email,
+          confirmationCode: verificationCode,
+          recipientName: user.name,
+        });
+
+        return reply.send({
+          message: "Verification code sent to email",
+          email,
           expiresIn: 600, // seconds
         });
       } catch (error) {
-        console.error("Phone verification error:", error);
+        console.error("Login error:", error);
         return reply.status(500).send({
           error: "Internal Server Error",
-          message: "Failed to send verification code",
+          message: "Login failed",
+        } as ErrorResponse);
+      }
+    },
+  );
+
+  /**
+   * POST /auth/login/verify
+   * Verify email login code
+   */
+  fastify.post(
+    "/auth/login/verify",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { email, code } = request.body as { email: string; code: string };
+
+        // Validate inputs
+        if (!email || !code) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Email and verification code are required",
+          } as ErrorResponse);
+        }
+
+        // Get verification code from Redis
+        const redisKey = `email_login:${email}`;
+        const storedCode = await redis.get(redisKey);
+
+        if (!storedCode) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Invalid or expired verification code",
+          } as ErrorResponse);
+        }
+
+        // Verify code
+        if (code !== storedCode) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Invalid verification code",
+          } as ErrorResponse);
+        }
+
+        // Get user
+        const user = await userService.getUserByEmail(email);
+        if (!user) {
+          return reply.status(404).send({
+            error: "Not Found",
+            message: "User not found",
+          } as ErrorResponse);
+        }
+
+        // Delete verification code from Redis
+        await redis.delete(redisKey);
+
+        // Generate JWT tokens
+        const { accessToken, refreshToken } = authService.generateTokenPair(
+          user.id,
+          user.github_id || "",
+          user.email
+        );
+
+        // Set JWT tokens as cookies
+        reply.setCookie("accessToken", accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 3600, // 1 hour
+        });
+
+        reply.setCookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 3600 * 24 * 30, // 30 days
+        });
+
+        return reply.send({
+          message: "Login successful",
+          user,
+          accessToken,
+        });
+      } catch (error) {
+        console.error("Login verification error:", error);
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Failed to complete login",
         } as ErrorResponse);
       }
     },

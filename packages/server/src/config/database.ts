@@ -5,7 +5,7 @@ import { config } from "../config/env";
 const { Pool } = pg;
 
 class DatabaseManager {
-  private pool: pg.Pool;
+  public pool: pg.Pool;
   private initialized: boolean = false;
 
   constructor() {
@@ -42,35 +42,45 @@ class DatabaseManager {
       throw error;
     }
   }
+public async getUserByGithubId(githubId: string): Promise<User | null> {
+  const result = await this.pool.query(
+    "SELECT * FROM users WHERE github_id = $1",
+    [githubId],
+  );
+  return result.rows[0] || null;
+}
 
-  public async getUserByGithubId(githubId: string): Promise<User | null> {
+public async getUserById(id: string, schema: string = 'pzero'): Promise<User | null> {
+
+    const result = await this.pool.query(`SELECT * FROM ${schema}.auth WHERE id = $1`, [
+      id,
+    ]);
+    return result?.rows[0] || null;
+  }
+
+  public async getUserByEmail(email: string, schema: string = 'pzero'): Promise<User | null> {
     const result = await this.pool.query(
-      "SELECT * FROM users WHERE github_id = $1",
-      [githubId],
+      `SELECT * FROM ${schema}.auth WHERE email = $1`,
+      [email],
     );
     return result.rows[0] || null;
   }
 
-  public async getUserById(id: number): Promise<User | null> {
-    const result = await this.pool.query("SELECT * FROM users WHERE id = $1", [
-      id,
-    ]);
-    return result.rows[0] || null;
-  }
-
-  public async createUser(userData: CreateUserData): Promise<User> {
+  public async createUser(userData: CreateUserData, schema: string = 'pzero'): Promise<User> {
     const result = await this.pool.query(
-      `INSERT INTO users (github_id, name, email, avatar)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO ${schema}.auth ( name, email)
+       VALUES ($1, $2)
        RETURNING *`,
-      [userData.github_id, userData.name, userData.email, userData.avatar],
+      [
+        userData.name,
+        userData.email
+      ],
     );
 
     return result.rows[0];
   }
 
   public async updateUser(
-    githubId: string,
     userData: Partial<CreateUserData>,
   ): Promise<User | null> {
     const fields: string[] = [];

@@ -46,6 +46,7 @@ export interface EnvironmentConfig {
   CORS_ALLOW_CREDENTIALS?: boolean;
   CORS_EXPOSED_HEADERS?: string | string[];
   CORS_ALLOWED_HEADERS?: string | string[];
+  EMAIL_EXPIRY_MINUTES: number;
 }
 const DEFAULT_ALLOWED_HEADERS = [
       "Content-Type",
@@ -98,7 +99,7 @@ export const config: EnvironmentConfig = {
   SIGNALWIRE_PROJECT_ID: process.env.SIGNALWIRE_PROJECT_ID || "",
   SIGNALWIRE_TOKEN: process.env.SIGNALWIRE_TOKEN || "",
   SIGNALWIRE_PHONE_NUMBER: process.env.SIGNALWIRE_PHONE_NUMBER || "",
-  OAUTH_REDIRECT_URL: process.env.OAUTH_REDIRECT_URL || "http://localhost:1420",
+  OAUTH_REDIRECT_URL: process.env.OAUTH_REDIRECT_URL || "http://localhost:1430",
   SERVER_BASE_URL: process.env.SERVER_BASE_URL || "http://localhost:8090",
   DOMAIN: domain,
   POSTGRES_IDLE_TIMEOUT: parseInt(process.env.POSTGRES_IDLE_TIMEOUT || "30000", 10),
@@ -108,6 +109,7 @@ export const config: EnvironmentConfig = {
   CORS_ALLOW_CREDENTIALS: process.env.CORS_ALLOW_CREDENTIALS === "true",
   CORS_EXPOSED_HEADERS: parserOnlyArray(process.env.CORS_EXPOSED_HEADERS, DEFAULT_EXPOSED_HEADERS.join(",")),
   CORS_ALLOWED_HEADERS: parserOnlyArray(process.env.CORS_ALLOWED_HEADERS, DEFAULT_ALLOWED_HEADERS.join(",")),
+  EMAIL_EXPIRY_MINUTES: parseInt(process.env.EMAIL_EXPIRY_MINUTES || "100", 10) ,
 };
 
 /**

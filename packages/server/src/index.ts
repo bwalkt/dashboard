@@ -29,7 +29,7 @@ export default async function (
 
   // Register CORS plugin
   await fastify.register(cors, {
-    origin: config.CORS_ORIGINS, // Allow all origins in development - you can restrict this in production
+    origin: config.CORS_ALLOWED_ORIGINS, // Allow all origins in development - you can restrict this in production
     credentials: true, // Allow credentials (cookies, authorization headers)
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: config.CORS_ALLOWED_HEADERS,

@@ -1,12 +1,11 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { use, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/AuthContext'
-import GithubSignInButton from './github-auth-button'
 
 /**
  * Render the sign-up page with a local form and a GitHub OAuth sign-in option.
@@ -17,7 +16,7 @@ import GithubSignInButton from './github-auth-button'
  */
 export default function SignUpViewPage() {
   const navigate = useNavigate()
-  const { user, loading } = useAuth()
+  const { user, loading, signUp } = useAuth()
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -26,10 +25,24 @@ export default function SignUpViewPage() {
     }
   }, [user, loading, navigate])
 
-  const handleSignUp = (e: React.FormEvent) => {
-    e.preventDefault()
-    // For demo purposes, we'll just show a message since we're focusing on GitHub OAuth
-    toast.info('Please use GitHub OAuth to sign up')
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const email = (e.target as any).email.value;
+    const name = (e.target as any).fullName.value;
+    
+    try {
+      const result = await signUp({
+        email: email,
+        name: name,
+      })
+      
+      console.log('Sign up successful:', result);
+      toast.success('Check your email for verification code');
+    } catch (error) {
+      console.error('Sign up error:', error);
+      toast.error('Failed to sign up. Please try again.');
+    }
   }
 
   return (
@@ -63,14 +76,7 @@ export default function SignUpViewPage() {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" placeholder="Create a password" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input id="confirmPassword" type="password" placeholder="Confirm your password" required />
-                </div>
+               
                 <Button type="submit" className="w-full">
                   Sign Up
                 </Button>
@@ -85,7 +91,6 @@ export default function SignUpViewPage() {
                 </div>
               </div>
 
-              <GithubSignInButton />
 
               <div className="mt-4 text-center text-sm">
                 Already have an account?{' '}

@@ -30,6 +30,9 @@ export default function SignInViewPage(_props: {}) {
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault()
+    useAuth().signIn({
+      email: (e.target as any).email.value,
+    })
     // For demo purposes, we'll just show a message since we're focusing on GitHub OAuth
     toast.info('Please use GitHub OAuth to sign in')
   }
@@ -61,10 +64,7 @@ export default function SignInViewPage(_props: {}) {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" placeholder="Enter your password" required />
-                </div>
+               
                 <Button type="submit" className="w-full">
                   Sign In
                 </Button>
@@ -78,9 +78,6 @@ export default function SignInViewPage(_props: {}) {
                   <span className="bg-background text-muted-foreground px-2">Or continue with</span>
                 </div>
               </div>
-
-              <GithubSignInButton />
-
               <div className="mt-4 text-center text-sm">
                 Don't have an account?{' '}
                 <Link to="/auth/sign-up" className="hover:text-primary underline underline-offset-4">

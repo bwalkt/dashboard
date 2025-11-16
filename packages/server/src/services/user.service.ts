@@ -12,22 +12,41 @@ export class UserService {
   /**
    * Get user by internal ID
    */
-  public async getUserById(id: number): Promise<User | null> {
-    return db.getUserById(id);
+  public async getUserById(id: string, schema: string = 'pzero'): Promise<User | null> {
+    
+    const result = await db.pool.query(`SELECT * FROM ${schema}.auth WHERE id = $1`, [
+      id,
+    ]);
+    return result?.rows[0] || null;
   }
 
   /**
-   * Create or update user from GitHub profile
+   * Get user by email
    */
-  public async upsertUserFromGitHub(githubUser: GitHubUser): Promise<User> {
-    const userData: CreateUserData = {
-      github_id: githubUser.id.toString(),
-      name: githubUser.name || githubUser.login,
-      email: githubUser.email || "",
-      avatar: githubUser.avatar_url,
+  public async getUserByEmail(email: string): Promise<User | null> {
+    const result = await db.pool.query(`SELECT * from public.users where email=$1`, [email])
+    return result.rows[0] || null;
+  }
+
+
+  
+
+  /**
+   * Create user from email registration
+   */
+  public async createUserFromEmail(userData: {
+    email: string;
+    name: string;
+    email_verified?: boolean;
+  }): Promise<User> {
+    const createData: CreateUserData = {
+      name: userData.name,
+      email: userData.email,
+      github_id: "",
+      avatar: ""
     };
 
-    return db.upsertUser(userData);
+    return db.createUser(createData);
   }
 
   /**
@@ -41,10 +60,37 @@ export class UserService {
    * Update user information
    */
   public async updateUser(
-    githubId: string,
+    id: string,
     userData: Partial<CreateUserData>,
+    schema: string = 'pzero'
   ): Promise<User | null> {
-    return db.updateUser(githubId, userData);
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (userData.name !== undefined) {
+      fields.push(`name = $${paramCount++}`);
+      values.push(userData.name);
+    }
+    if (userData.email !== undefined) {
+      fields.push(`email = $${paramCount++}`);
+      values.push(userData.email);
+    }
+    if (userData.avatar !== undefined) {
+      fields.push(`avatar = $${paramCount++}`);
+      values.push(userData.avatar);
+    }
+    values.push(id);
+
+    const result = await db.pool.query(
+      `UPDATE ${schema}.users
+       SET ${fields.join(", ")}
+       WHERE id = $${id}
+       RETURNING *`,
+      values,
+    );
+
+    return result.rows[0] || null;
   }
 
   /**

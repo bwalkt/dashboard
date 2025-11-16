@@ -9,6 +9,8 @@ interface AuthContextType {
   loading: boolean
   signInWithGitHub: () => Promise<{ data: string; error: any }>
   signOut: () => Promise<{ error: any }>
+  signUp: (data: { email: string; name: string }) => Promise<any>
+  signIn: (data: { email: string }) => Promise<any>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -28,6 +30,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return user
     },
     retry: false,
+  })
+  const signUpMutation = useMutation({
+    mutationFn: async (data: { email: string; name: string }) => {
+      debugger;
+      console.log("Signing up with data:", data);
+      try {
+        console.log("About to make API call to /auth/register");
+        const response = await api.post<{ message: string; userId?: string }>('/auth/register', data)
+        console.log("API response received:", response);
+        debugger
+        return response
+      } catch (error) {
+        console.error("API call failed:", error);
+        debugger;
+        throw error;
+      }
+    },
+  })
+
+  const { mutateAsync: signIn } = useMutation({
+    mutationFn: async (data: { email: string}) => {
+      const response = await api.post('/auth/login', data)
+      return response.data
+    },
   })
 
   const { mutateAsync: signInWithGitHub } = useMutation<{ data: string; error: any }>({
@@ -62,6 +88,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading: isLoading,
     signInWithGitHub,
     signOut,
+    signUp: signUpMutation.mutateAsync,
+    signIn,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
