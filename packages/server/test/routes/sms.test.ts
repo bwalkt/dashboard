@@ -2,11 +2,13 @@ import { FastifyInstance } from "fastify";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestApp } from "../helpers/app";
+import { mockRedis } from "../mocks/redis";
 
 describe("SMS Routes", () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
+    mockRedis._clear(); // Clear Redis mock storage before each test
     app = await createTestApp();
     await app.ready();
   });
@@ -178,21 +180,24 @@ describe("SMS Routes", () => {
         phone: "+1234567890",
       };
 
-      // Send multiple requests quickly to trigger rate limiting
-      const promises = Array(6)
-        .fill(0)
-        .map(() =>
-          request(app.server).post("/sms/verify/resend").send(phoneData),
-        );
+      // First request should succeed
+      const firstResponse = await request(app.server)
+        .post("/sms/verify/resend")
+        .send(phoneData);
 
-      const responses = await Promise.all(promises);
+      expect(firstResponse.status).toBe(200);
 
-      // At least one should be rate limited
-      const rateLimitedResponse = responses.find((r) => r.status === 429);
-      if (rateLimitedResponse) {
-        expect(rateLimitedResponse.body).toHaveProperty("error");
-        expect(rateLimitedResponse.body.message).toContain("rate limit");
-      }
+      // Small delay to ensure Redis write completes
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Second request immediately after should be rate limited (60 second window)
+      const secondResponse = await request(app.server)
+        .post("/sms/verify/resend")
+        .send(phoneData);
+
+      expect(secondResponse.status).toBe(429);
+      expect(secondResponse.body).toHaveProperty("error");
+      expect(secondResponse.body.message).toContain("wait");
     });
   });
 });

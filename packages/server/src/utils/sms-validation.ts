@@ -10,14 +10,31 @@ export async function validatePhoneNumber(
   phone: string,
   reply: FastifyReply,
 ): Promise<boolean> {
-  if (!phone || !smsService.validatePhoneFormat(phone)) {
+  if (!phone) {
     reply.status(400).send({
       error: "Bad Request",
-      message:
-        "Invalid phone number format. Please use E.164 format (e.g., +12345678900)",
+      message: "Phone number is required",
     } as ErrorResponse);
     return false;
   }
+
+  if (!smsService.validatePhoneFormat(phone)) {
+    reply.status(400).send({
+      error: "Bad Request",
+      message: "Invalid phone number format",
+    } as ErrorResponse);
+    return false;
+  }
+
+  // Check if it's a US phone number (country code +1)
+  if (!phone.startsWith("+1")) {
+    reply.status(400).send({
+      error: "Bad Request",
+      message: "Only US phone numbers are supported",
+    } as ErrorResponse);
+    return false;
+  }
+
   return true;
 }
 
@@ -74,7 +91,7 @@ export async function sendSmsVerification(phone: string): Promise<{
   });
 
   return {
-    message: "Verification code sent successfully",
+    message: "SMS verification code sent successfully",
     expiresIn: 600, // seconds
   };
 }
@@ -100,7 +117,7 @@ export async function resendSmsVerification(phone: string): Promise<{
   });
 
   return {
-    message: "Verification code resent successfully",
+    message: "SMS verification code sent successfully",
     expiresIn: 600, // seconds
   };
 }

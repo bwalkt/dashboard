@@ -228,8 +228,11 @@ const headerValidationPlugin: FastifyPluginAsync<
       "spider",
       "crawler",
       "scraper",
+      "scrapy",
       "curl",
       "wget",
+      "python-requests",
+      "requests",
     ];
     return suspiciousPatterns.some((pattern) => userAgent.includes(pattern));
   }

@@ -53,8 +53,8 @@ beforeAll(async () => {
   console.log("Test environment configured with config:", {
     NODE_ENV: process.env.NODE_ENV,
     hasJWTSecret: !!config.JWT_SECRET,
-    hasDBUrl: !!config.DATABASE_URL,
-    redisUrl: config.REDIS_URL,
+    hasDBConfig: !!config.POSTGRES_HOST,
+    redisHost: config.REDIS_HOST,
     oauthRedirectUrl: config.OAUTH_REDIRECT_URL,
     serverBaseUrl: config.SERVER_BASE_URL,
   });

@@ -375,6 +375,17 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
+        // Check rate limiting for registration attempts - 1 attempt per email every 60 seconds
+        const rateLimitKey = `email_registration_rate:${email}`;
+        const isRateLimited = await redis.exists(rateLimitKey);
+
+        if (isRateLimited) {
+          return reply.status(429).send({
+            error: "Too Many Requests",
+            message: "Please wait before requesting another verification email",
+          } as ErrorResponse);
+        }
+
         // Check if user already exists
         const existingUser = await userService.getUserByEmail(email);
         if (existingUser) {
@@ -407,6 +418,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           confirmationCode: verificationCode,
           recipientName: name || "",
         });
+
+        // Set rate limit after successful email send (60 seconds)
+        await redis.set(rateLimitKey, "1", 60);
 
         return reply.send({
           message: "Verification code sent to email",
@@ -441,6 +455,17 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
+        // Check rate limiting for verification attempts - allow attempts only once every 60 seconds per email
+        const rateLimitKey = `email_register_verify_rate:${email}`;
+        const isRateLimited = await redis.exists(rateLimitKey);
+
+        if (isRateLimited) {
+          return reply.status(429).send({
+            error: "Too Many Requests",
+            message: "Please wait before attempting verification again",
+          } as ErrorResponse);
+        }
+
         // Get registration data from Redis
         const redisKey = `email_registration:${email}`;
         const registrationData = await redis.get(redisKey);
@@ -456,6 +481,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Verify code
         if (code !== storedCode) {
+          // Set rate limit to prevent brute-force attacks (60 seconds)
+          await redis.set(rateLimitKey, "1", 60);
+
           return reply.status(400).send({
             error: "Bad Request",
             message: "Invalid verification code",
@@ -529,6 +557,17 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
+        // Check rate limiting for login attempts - 1 attempt per email every 60 seconds
+        const rateLimitKey = `email_login_rate:${email}`;
+        const isRateLimited = await redis.exists(rateLimitKey);
+
+        if (isRateLimited) {
+          return reply.status(429).send({
+            error: "Too Many Requests",
+            message: "Please wait before requesting another verification code",
+          } as ErrorResponse);
+        }
+
         // Check if user exists
         const user = await userService.getUserByEmail(email);
         if (!user) {
@@ -554,6 +593,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           confirmationCode: verificationCode,
           recipientName: user.name,
         });
+
+        // Set rate limit after successful email send (60 seconds)
+        await redis.set(rateLimitKey, "1", 60);
 
         return reply.send({
           message: "Verification code sent to email",
@@ -588,6 +630,17 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
+        // Check rate limiting - allow verification attempts only once every 60 seconds per email
+        const rateLimitKey = `email_login_verify_rate:${email}`;
+        const isRateLimited = await redis.exists(rateLimitKey);
+
+        if (isRateLimited) {
+          return reply.status(429).send({
+            error: "Too Many Requests",
+            message: "Please wait before attempting verification again",
+          } as ErrorResponse);
+        }
+
         // Get verification code from Redis
         const redisKey = `email_login:${email}`;
         const storedCode = await redis.get(redisKey);
@@ -601,6 +654,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Verify code
         if (code !== storedCode) {
+          // Set rate limit to prevent brute-force attacks (60 seconds)
+          await redis.set(rateLimitKey, "1", 60);
+
           return reply.status(400).send({
             error: "Bad Request",
             message: "Invalid verification code",

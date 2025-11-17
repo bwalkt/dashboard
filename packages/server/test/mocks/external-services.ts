@@ -1,14 +1,11 @@
 import { vi } from "vitest";
+import { createEmailCaptureMock } from "./email-capture";
 
-// Mock external email service
+// Mock external email service with email capture capability
 vi.mock("@getbrevo/brevo", () => ({
-  TransactionalEmailsApi: vi.fn().mockImplementation(() => ({
-    setApiKey: vi.fn(),
-    sendTransacEmail: vi.fn().mockResolvedValue({
-      response: { statusCode: 201 },
-      body: { messageId: "test-message-id" },
-    }),
-  })),
+  TransactionalEmailsApi: vi
+    .fn()
+    .mockImplementation(() => createEmailCaptureMock()),
   TransactionalEmailsApiApiKeys: {
     apiKey: "apiKey",
   },
@@ -17,14 +14,14 @@ vi.mock("@getbrevo/brevo", () => ({
 
 // Mock SMS service
 vi.mock("@signalwire/realtime-api", () => ({
-  RestClient: vi.fn().mockImplementation(() => ({
-    messages: {
-      create: vi.fn().mockResolvedValue({
-        sid: "test-message-sid",
+  SignalWire: vi.fn().mockResolvedValue({
+    messaging: {
+      send: vi.fn().mockResolvedValue({
+        id: "test-message-id",
         status: "queued",
       }),
     },
-  })),
+  }),
 }));
 
 // Mock axios for any HTTP requests
