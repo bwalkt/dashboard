@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package envoy.service.ext_proc.v3;
+
+import "google/protobuf/struct.proto";
+
+// External Processing Service for Envoy
+service ExternalProcessor {
+  // Process request/response flow
+  rpc Process(stream ProcessingRequest) returns (stream ProcessingResponse);
+}
+
+message ProcessingRequest {
+  oneof request {
+    HttpHeaders request_headers = 1;
+    HttpBody request_body = 2;
+    HttpHeaders response_headers = 3;
+    HttpBody response_body = 4;
+    HttpTrailers request_trailers = 5;
+    HttpTrailers response_trailers = 6;
+  }
+}
+
+message ProcessingResponse {
+  oneof response {
+    HeadersResponse request_headers = 1;
+    BodyResponse request_body = 2;
+    HeadersResponse response_headers = 3;
+    BodyResponse response_body = 4;
+    TrailersResponse request_trailers = 5;
+    TrailersResponse response_trailers = 6;
+    ImmediateResponse immediate_response = 7;
+  }
+}
+
+message HttpHeaders {
+  map<string, string> headers = 1;
+  bool end_of_stream = 2;
+}
+
+message HttpBody {
+  bytes body = 1;
+  bool end_of_stream = 2;
+}
+
+message HttpTrailers {
+  map<string, string> trailers = 1;
+}
+
+message HeadersResponse {
+  CommonResponse response = 1;
+}
+
+message BodyResponse {
+  CommonResponse response = 1;
+}
+
+message TrailersResponse {
+  HeaderMutation header_mutation = 1;
+}
+
+message ImmediateResponse {
+  int32 status = 1;
+  map<string, string> headers = 2;
+  string body = 3;
+  GrpcStatus grpc_status = 4;
+  string details = 5;
+}
+
+message CommonResponse {
+  enum ResponseStatus {
+    CONTINUE = 0;
+    CONTINUE_AND_REPLACE = 1;
+  }
+  ResponseStatus status = 1;
+  HeaderMutation header_mutation = 2;
+  BodyMutation body_mutation = 3;
+}
+
+message HeaderMutation {
+  repeated HeaderValueOption set_headers = 1;
+  repeated string remove_headers = 2;
+}
+
+message HeaderValueOption {
+  string header = 1;
+  string value = 2;
+  bool append = 3;
+}
+
+message BodyMutation {
+  bytes body = 1;
+  bool clear_body = 2;
+}
+
+message GrpcStatus {
+  int32 status = 1;
+}

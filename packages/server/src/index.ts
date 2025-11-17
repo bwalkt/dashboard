@@ -10,7 +10,9 @@ import { config, validateEnvironment } from "./config/env";
 import { redis } from "./config/redis";
 import headerValidationPlugin from "./middleware/header-validation";
 import { authRoutes } from "./routes/auth";
+import { centrifugoRoutes } from "./routes/centrifugo";
 import { emailRoutes } from "./routes/email";
+import { gatewayRoutes } from "./routes/gateway";
 import { proxyRoutes } from "./routes/proxy";
 import { smsRoutes } from "./routes/sms";
 
@@ -75,7 +77,9 @@ export default async function (
 
   // Register routes
   await fastify.register(authRoutes);
+  await fastify.register(centrifugoRoutes);
   await fastify.register(emailRoutes);
+  await fastify.register(gatewayRoutes);
   await fastify.register(proxyRoutes);
   await fastify.register(smsRoutes);
 
