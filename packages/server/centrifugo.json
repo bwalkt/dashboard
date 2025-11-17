@@ -1,0 +1,67 @@
+{
+  "token_hmac_secret_key": "my-secret-token-key",
+  "admin_password": "admin-password",
+  "admin_secret": "admin-secret",
+  "api_key": "api-key-for-server",
+
+  "allowed_origins": [
+    "http://localhost:1430",
+    "http://localhost:3000",
+    "http://localhost:8090"
+  ],
+
+  "namespaces": [
+    {
+      "name": "personal",
+      "allow_publish_for_subscriber": true,
+      "allow_publish_for_client": true,
+      "presence": true,
+      "join_leave": true,
+      "history_size": 10,
+      "history_ttl": "300s"
+    },
+    {
+      "name": "notifications",
+      "allow_publish_for_subscriber": false,
+      "allow_publish_for_client": false,
+      "presence": false,
+      "join_leave": false,
+      "history_size": 50,
+      "history_ttl": "1h"
+    },
+    {
+      "name": "admin",
+      "allow_publish_for_subscriber": true,
+      "allow_publish_for_client": true,
+      "presence": true,
+      "join_leave": true,
+      "history_size": 100,
+      "history_ttl": "24h"
+    }
+  ],
+
+  "log_level": "debug",
+  "log_file": "",
+
+  "health": true,
+  "prometheus": true,
+
+  "websocket_compression": true,
+  "websocket_compression_level": 1,
+
+  "client_stale_close_delay": "25s",
+  "client_expired_close_delay": "25s",
+  "client_expired_sub_close_delay": "25s",
+
+  "proxy_connect_endpoint": "http://localhost:8090/centrifugo/connect",
+  "proxy_connect_timeout": "5s",
+
+  "proxy_refresh_endpoint": "http://localhost:8090/centrifugo/refresh",
+  "proxy_refresh_timeout": "5s",
+
+  "proxy_subscribe_endpoint": "http://localhost:8090/centrifugo/subscribe",
+  "proxy_subscribe_timeout": "5s",
+
+  "proxy_publish_endpoint": "http://localhost:8090/centrifugo/publish",
+  "proxy_publish_timeout": "5s"
+}

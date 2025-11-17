@@ -284,3 +284,203 @@ main() {
 
 # Run main function
 main
+# ================================================================
+# CENTRIFUGO INTEGRATION TESTS
+# ================================================================
+
+CENTRIFUGO_API_URL="http://localhost:8091"
+GRPC_PORT="9091"
+
+print_centrifugo() {
+    echo -e "\033[0;35m🔄 $1\033[0m"  # Purple for Centrifugo
+}
+
+# Test Centrifugo API connectivity
+test_centrifugo_api() {
+    print_centrifugo "Testing Centrifugo API connectivity..."
+    
+    local response
+    if response=$(curl -s "$CENTRIFUGO_API_URL/api" -H "Authorization: apikey api-key-for-server" -H "Content-Type: application/json" -d '{"method":"info"}' 2>/dev/null); then
+        if echo "$response" | grep -q "\"nodes\""; then
+            print_success "Centrifugo API working - server info retrieved"
+        else
+            print_error "Centrifugo API failed. Response: $response"
+        fi
+    else
+        print_error "Centrifugo API not accessible at $CENTRIFUGO_API_URL"
+        echo "Start with: docker run -d --name pzero-centrifugo -p 8091:8000 -p 8092:8001 -v \$(pwd)/centrifugo.json:/centrifugo/config.json centrifugo/centrifugo:v5 centrifugo -c config.json"
+    fi
+}
+
+# Test Centrifugo proxy endpoints
+test_centrifugo_connect_proxy() {
+    print_centrifugo "Testing Centrifugo connect proxy (no token)..."
+    
+    local response
+    response=$(curl -s -H "User-Agent: $USER_AGENT" -X POST "$SERVER_URL/centrifugo/connect" \
+        -H "Content-Type: application/json" \
+        -d '{}')
+    
+    if echo "$response" | grep -q "\"code\":4001\|Authentication required"; then
+        print_success "Centrifugo connect proxy correctly rejects missing token"
+    else
+        print_error "Centrifugo connect proxy failed. Response: $response"
+    fi
+}
+
+test_centrifugo_connect_with_token() {
+    print_centrifugo "Testing Centrifugo connect proxy (with test token)..."
+    
+    # Create a test JWT token using Node.js
+    if command -v node > /dev/null; then
+        local test_token
+        test_token=$(node -e "
+            const jwt = require('jsonwebtoken');
+            const payload = {
+                userId: 123,
+                email: 'test@example.com',
+                exp: Math.floor(Date.now() / 1000) + 3600
+            };
+            console.log(jwt.sign(payload, 'my-secret-token-key'));
+        " 2>/dev/null)
+        
+        if [ -n "$test_token" ]; then
+            local response
+            response=$(curl -s -H "User-Agent: $USER_AGENT" -X POST "$SERVER_URL/centrifugo/connect" \
+                -H "Content-Type: application/json" \
+                -d "{\"token\":\"$test_token\"}")
+            
+            if echo "$response" | grep -q "\"user\":\|\"result\""; then
+                print_success "Centrifugo connect proxy accepts valid token"
+            else
+                print_error "Centrifugo connect proxy failed with valid token. Response: $response"
+            fi
+        else
+            echo "⚠️  Could not generate test JWT token"
+        fi
+    else
+        echo "⚠️  Node.js not available - skipping JWT token test"
+    fi
+}
+
+test_centrifugo_subscribe_proxy() {
+    print_centrifugo "Testing Centrifugo subscribe proxy..."
+    
+    local response
+    response=$(curl -s -H "User-Agent: $USER_AGENT" -X POST "$SERVER_URL/centrifugo/subscribe" \
+        -H "Content-Type: application/json" \
+        -d '{"channel":"personal:123","user":"123"}')
+    
+    if echo "$response" | grep -q "\"result\"\|\"disconnect\""; then
+        print_success "Centrifugo subscribe proxy working"
+    else
+        print_error "Centrifugo subscribe proxy failed. Response: $response"
+    fi
+}
+
+test_centrifugo_publish_proxy() {
+    print_centrifugo "Testing Centrifugo publish proxy..."
+    
+    local response
+    response=$(curl -s -H "User-Agent: $USER_AGENT" -X POST "$SERVER_URL/centrifugo/publish" \
+        -H "Content-Type: application/json" \
+        -d '{"channel":"personal:123","user":"123","data":{"message":"test"}}')
+    
+    if echo "$response" | grep -q "\"result\"\|\"disconnect\""; then
+        print_success "Centrifugo publish proxy working"
+    else
+        print_error "Centrifugo publish proxy failed. Response: $response"
+    fi
+}
+
+# Test gRPC server connectivity
+test_grpc_server() {
+    print_centrifugo "Testing gRPC server connectivity..."
+    
+    if nc -z localhost $GRPC_PORT 2>/dev/null; then
+        print_success "gRPC server accessible on port $GRPC_PORT"
+    else
+        print_error "gRPC server not accessible on port $GRPC_PORT"
+        echo "Start with: pnpm run dev:centrifuge"
+    fi
+}
+
+# Test token validation endpoint
+test_token_validation() {
+    print_step "Testing token validation endpoint..."
+    
+    local response
+    response=$(curl -s -H "User-Agent: $USER_AGENT" -X POST "$SERVER_URL/auth/validate-token" \
+        -H "Content-Type: application/json" \
+        -d '{"token":"invalid-token"}')
+    
+    if echo "$response" | grep -q "\"valid\":false\|Invalid"; then
+        print_success "Token validation endpoint correctly rejects invalid token"
+    else
+        print_error "Token validation failed. Response: $response"
+    fi
+}
+
+# Test real-time messaging through Centrifugo API
+test_centrifugo_publish_api() {
+    print_centrifugo "Testing Centrifugo publish via API..."
+    
+    local response
+    if response=$(curl -s "$CENTRIFUGO_API_URL/api" \
+        -H "Authorization: apikey api-key-for-server" \
+        -H "Content-Type: application/json" \
+        -d '{"method":"publish","params":{"channel":"personal:test","data":{"message":"Hello from tests!","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}}}' 2>/dev/null); then
+        
+        if echo "$response" | grep -q "\"result\"\|\"error\":null"; then
+            print_success "Successfully published message to Centrifugo channel"
+        else
+            print_error "Failed to publish to Centrifugo. Response: $response"
+        fi
+    else
+        print_error "Could not connect to Centrifugo API for publishing"
+    fi
+}
+
+# Test channel information
+test_centrifugo_channels() {
+    print_centrifugo "Testing Centrifugo channels info..."
+    
+    local response
+    if response=$(curl -s "$CENTRIFUGO_API_URL/api" \
+        -H "Authorization: apikey api-key-for-server" \
+        -H "Content-Type: application/json" \
+        -d '{"method":"channels"}' 2>/dev/null); then
+        
+        if echo "$response" | grep -q "\"result\""; then
+            print_success "Successfully retrieved Centrifugo channels info"
+        else
+            print_error "Failed to get channels info. Response: $response"
+        fi
+    else
+        print_error "Could not connect to Centrifugo API for channels info"
+    fi
+}
+
+# Add new tests to the main execution section
+echo ""
+echo "🔄 Testing Centrifugo Integration..."
+echo "=================================="
+test_centrifugo_api
+test_centrifugo_connect_proxy  
+test_centrifugo_connect_with_token
+test_centrifugo_subscribe_proxy
+test_centrifugo_publish_proxy
+test_centrifugo_publish_api
+test_centrifugo_channels
+
+echo ""
+echo "🔧 Testing gRPC Server..."
+echo "========================"
+test_grpc_server
+
+echo ""
+echo "🔐 Testing Authentication Integration..." 
+echo "======================================"
+test_token_validation
+
+print_success "🎉 Centrifugo integration tests completed!"

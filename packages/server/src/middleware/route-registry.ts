@@ -17,6 +17,12 @@ const PUBLIC_ROUTES = new Set([
   "/auth/callback/github",
   "/auth/refresh",
 
+  // Centrifugo proxy routes (must be public for Centrifugo server to call)
+  "/centrifugo/connect",
+  "/centrifugo/refresh",
+  "/centrifugo/subscribe",
+  "/centrifugo/publish",
+
   // SMS verification routes
   "/sms/verify",
   "/sms/verify/confirm",

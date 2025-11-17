@@ -1,0 +1,98 @@
+version: "3.8"
+
+services:
+  # Existing PostgreSQL service
+  pzero-postgres:
+    image: postgres:15-alpine
+    container_name: pzero-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pzero_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d/
+    networks:
+      - pzero-network
+
+  # Existing Redis service
+  pzero-redis:
+    image: redis:7-alpine
+    container_name: pzero-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - pzero-network
+
+  # Centrifugo WebSocket server
+  centrifugo:
+    image: centrifugo/centrifugo:v5
+    container_name: pzero-centrifugo
+    ports:
+      - "8091:8000" # WebSocket port
+      - "8092:8001" # Admin/API port
+    volumes:
+      - ./centrifugo.json:/centrifugo/config.json
+    command: centrifugo -c config.json
+    depends_on:
+      - pzero-redis
+    networks:
+      - pzero-network
+    environment:
+      CENTRIFUGO_TOKEN_HMAC_SECRET_KEY: "my-secret-token-key"
+      CENTRIFUGO_ADMIN_PASSWORD: "admin-password"
+      CENTRIFUGO_ADMIN_SECRET: "admin-secret"
+      CENTRIFUGO_API_KEY: "api-key-for-server"
+
+  # Fastify HTTP server
+  fastify-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pzero-fastify
+    ports:
+      - "8090:8090"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@pzero-postgres:5432/pzero_dev
+      REDIS_URL: redis://pzero-redis:6379
+      CENTRIFUGO_URL: http://centrifugo:8000
+      CENTRIFUGO_API_URL: http://centrifugo:8001
+      CENTRIFUGO_API_KEY: "api-key-for-server"
+    depends_on:
+      - pzero-postgres
+      - pzero-redis
+      - centrifugo
+    networks:
+      - pzero-network
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  # gRPC server for Envoy ext_proc
+  grpc-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.grpc
+    container_name: pzero-grpc
+    ports:
+      - "9091:9091"
+    environment:
+      NODE_ENV: development
+      FASTIFY_BASE_URL: http://fastify-server:8090
+      CENTRIFUGO_API_URL: http://centrifugo:8001
+      CENTRIFUGO_API_KEY: "api-key-for-server"
+    depends_on:
+      - fastify-server
+      - centrifugo
+    networks:
+      - pzero-network
+
+volumes:
+  postgres_data:
+
+networks:
+  pzero-network:
+    driver: bridge

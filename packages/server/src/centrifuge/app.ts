@@ -44,10 +44,8 @@ async function startCentrifugeApp(): Promise<void> {
 
     console.log("🎉 Centrifuge application started successfully!");
     console.log("📊 Server metrics:");
-    console.log(`  - Client count: ${centrifugeServer.getClientCount()}`);
-    console.log(
-      `  - Active channels: ${centrifugeServer.getChannels().length}`,
-    );
+    console.log("  - gRPC server running for Envoy ext_proc");
+    console.log("  - Ready to proxy authentication to Centrifugo");
   } catch (error) {
     console.error("❌ Failed to start Centrifuge application:", error);
     process.exit(1);

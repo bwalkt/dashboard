@@ -1,6 +1,17 @@
 import * as grpc from "@grpc/grpc-js";
-import { Centrifuge } from "centrifuge";
-import { AuthProxy, AuthResult } from "../../auth-proxy";
+import { AuthProxy } from "../../auth-proxy";
+
+interface AuthResult {
+  valid: boolean;
+  user?: {
+    id: number;
+    email: string;
+    name: string;
+    role?: string[];
+    verified?: boolean;
+  };
+  error?: string;
+}
 
 interface ProcessingRequest {
   request_headers?: {
@@ -53,10 +64,7 @@ interface ProcessingResponse {
   };
 }
 
-export function createExtProcService(
-  centrifuge: Centrifuge,
-  authProxy: AuthProxy,
-) {
+export function createExtProcService(authProxy: AuthProxy) {
   return {
     Process: (
       call: grpc.ServerDuplexStream<ProcessingRequest, ProcessingResponse>,

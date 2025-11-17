@@ -1211,12 +1211,12 @@ importers:
       '@signalwire/realtime-api':
         specifier: ^4.1.3
         version: 4.1.3(@types/jest@29.5.12)(@types/node@22.18.12)
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       axios:
         specifier: ^1.12.2
         version: 1.12.2
-      centrifuge:
-        specifier: ^5.5.2
-        version: 5.5.2
       date-fns:
         specifier: 'catalog:'
         version: 4.1.0
@@ -1256,6 +1256,9 @@ importers:
       superjson:
         specifier: 'catalog:'
         version: 2.2.5
+      ws:
+        specifier: ^8.18.3
+        version: 8.18.3
     devDependencies:
       '@types/jsonwebtoken':
         specifier: ^9.0.7
@@ -4521,6 +4524,9 @@ packages:
   '@types/validator@13.15.3':
     resolution: {integrity: sha512-7bcUmDyS6PN3EuD9SlGGOxM77F8WLVsrwkxyWxKnxzmXoequ6c7741QBrANq6htVRGOITJ7z72mTP6Z4XyuG+Q==}
 
+  '@types/ws@8.18.1':
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+
   '@types/yargs-parser@21.0.3':
     resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
 
@@ -4934,9 +4940,6 @@ packages:
 
   caniuse-lite@1.0.30001751:
     resolution: {integrity: sha512-A0QJhug0Ly64Ii3eIqHu5X51ebln3k4yTUkY1j8drqpWHVreg/VLijN48cZ1bYPiqOQuqpkIKnzr/Ul8V+p6Cw==}
-
-  centrifuge@5.5.2:
-    resolution: {integrity: sha512-ewr0sYidOWKevUq9WyaddlYSg3q2Xmxc+OLl5xjV6WFTWOb0IChJjdNaUhkqL5JbFCsIe/eo3KXinKrm7JwUcA==}
 
   chai@5.3.3:
     resolution: {integrity: sha512-4zNhdJD/iOjSH0A05ea+Ke6MU5mmpQcbQsSOkgdaUMJ9zTlDTD/GYlwohmIE2u0gaxHYiVHEn1Fw9mZ/ktJWgw==}
@@ -12509,6 +12512,10 @@ snapshots:
 
   '@types/validator@13.15.3': {}
 
+  '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 22.18.12
+
   '@types/yargs-parser@21.0.3': {}
 
   '@types/yargs@17.0.34':
@@ -13035,11 +13042,6 @@ snapshots:
 
   caniuse-lite@1.0.30001751: {}
 
-  centrifuge@5.5.2:
-    dependencies:
-      events: 3.3.0
-      protobufjs: 7.5.4
-
   chai@5.3.3:
     dependencies:
       assertion-error: 2.0.1
@@ -13140,7 +13142,7 @@ snapshots:
       '@radix-ui/react-compose-refs': 1.1.2(@types/react@19.1.1)(react@19.1.1)
       '@radix-ui/react-dialog': 1.1.15(@types/react-dom@19.1.1(@types/react@19.1.1))(@types/react@19.1.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       '@radix-ui/react-id': 1.1.1(@types/react@19.1.1)(react@19.1.1)
-      '@radix-ui/react-primitive': 2.1.3(@types/react-dom@19.1.1(@types/react@19.1.1))(@types/react@19.1.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      '@radix-ui/react-primitive': 2.1.4(@types/react-dom@19.1.1(@types/react@19.1.1))(@types/react@19.1.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
     transitivePeerDependencies:
