@@ -1,7 +1,7 @@
+import type { AuthResult, AuthUser } from "@pzero/shared/grpc";
 import axios from "axios";
 import { JWTService } from "../services/jwt.service";
 import { centrifugeConfig } from "./config";
-import type { AuthResult, AuthUser } from "@pzero/shared/grpc";
 
 export class AuthProxy {
   private jwtService: JWTService;

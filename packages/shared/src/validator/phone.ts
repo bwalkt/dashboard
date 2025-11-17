@@ -1,66 +1,63 @@
-import { 
-  parsePhoneNumber, 
-  isValidPhoneNumber,
+import {
+  type CountryCode,
   isPossiblePhoneNumber,
+  isValidPhoneNumber,
   type PhoneNumber,
-  type CountryCode
-} from 'libphonenumber-js';
+  parsePhoneNumber,
+} from 'libphonenumber-js'
 
 /**
  * Phone validation result interface
  */
 export interface PhoneValidationResult {
-  isValid: boolean;
-  isPossible: boolean;
-  formatted?: string;
-  country?: string;
-  countryCallingCode?: string;
-  nationalNumber?: string;
-  type?: string;
-  error?: string;
+  isValid: boolean
+  isPossible: boolean
+  formatted?: string
+  country?: string
+  countryCallingCode?: string
+  nationalNumber?: string
+  type?: string
+  error?: string
 }
 
 /**
  * Validate and parse a phone number
  */
-export function validatePhoneNumber(
-  phoneNumber: string,
-  defaultCountry?: CountryCode
-): PhoneValidationResult {
+export function validatePhoneNumber(phoneNumber: string, defaultCountry?: CountryCode): PhoneValidationResult {
   try {
     if (!phoneNumber || typeof phoneNumber !== 'string') {
       return {
         isValid: false,
         isPossible: false,
-        error: 'Phone number is required and must be a string'
-      };
+        error: 'Phone number is required and must be a string',
+      }
     }
 
     // Check if it's a possible phone number first
-    const isPossible = isPossiblePhoneNumber(phoneNumber, defaultCountry);
-    
+    const isPossible = isPossiblePhoneNumber(phoneNumber, defaultCountry)
+
     if (!isPossible) {
       return {
         isValid: false,
         isPossible: false,
-        error: 'Phone number format is not possible'
-      };
+        error: 'Phone number format is not possible',
+      }
     }
 
     // Check if it's a valid phone number
-    const isValid = isValidPhoneNumber(phoneNumber, defaultCountry);
-    
+    const isValid = isValidPhoneNumber(phoneNumber, defaultCountry)
+
     if (!isValid) {
       return {
         isValid: false,
         isPossible: true,
-        error: 'Phone number is not valid'
-      };
+        error: 'Phone number is not valid',
+      }
     }
 
     // Parse the phone number to get detailed information
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry);
-    
+    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+
     return {
       isValid: true,
       isPossible: true,
@@ -68,14 +65,14 @@ export function validatePhoneNumber(
       country: parsed.country,
       countryCallingCode: parsed.countryCallingCode,
       nationalNumber: parsed.nationalNumber,
-      type: parsed.getType() || undefined
-    };
+      type: parsed.getType() || undefined,
+    }
   } catch (error) {
     return {
       isValid: false,
       isPossible: false,
-      error: error instanceof Error ? error.message : 'Unknown validation error'
-    };
+      error: error instanceof Error ? error.message : 'Unknown validation error',
+    }
   }
 }
 
@@ -83,14 +80,14 @@ export function validatePhoneNumber(
  * Check if phone number is valid
  */
 export function isValidPhone(phoneNumber: string, defaultCountry?: CountryCode): boolean {
-  return isValidPhoneNumber(phoneNumber, defaultCountry);
+  return isValidPhoneNumber(phoneNumber, defaultCountry)
 }
 
 /**
  * Check if phone number is possible (loose validation)
  */
 export function isPossiblePhone(phoneNumber: string, defaultCountry?: CountryCode): boolean {
-  return isPossiblePhoneNumber(phoneNumber, defaultCountry);
+  return isPossiblePhoneNumber(phoneNumber, defaultCountry)
 }
 
 /**
@@ -98,10 +95,10 @@ export function isPossiblePhone(phoneNumber: string, defaultCountry?: CountryCod
  */
 export function formatPhoneInternational(phoneNumber: string, defaultCountry?: CountryCode): string | null {
   try {
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry);
-    return parsed.format('INTERNATIONAL');
+    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+    return parsed.format('INTERNATIONAL')
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -110,10 +107,10 @@ export function formatPhoneInternational(phoneNumber: string, defaultCountry?: C
  */
 export function formatPhoneNational(phoneNumber: string, defaultCountry?: CountryCode): string | null {
   try {
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry);
-    return parsed.format('NATIONAL');
+    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+    return parsed.format('NATIONAL')
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -122,10 +119,10 @@ export function formatPhoneNational(phoneNumber: string, defaultCountry?: Countr
  */
 export function formatPhoneE164(phoneNumber: string, defaultCountry?: CountryCode): string | null {
   try {
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry);
-    return parsed.format('E.164');
+    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+    return parsed.format('E.164')
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -134,10 +131,10 @@ export function formatPhoneE164(phoneNumber: string, defaultCountry?: CountryCod
  */
 export function getPhoneCountry(phoneNumber: string, defaultCountry?: CountryCode): string | null {
   try {
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry);
-    return parsed.country || null;
+    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+    return parsed.country || null
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -146,10 +143,10 @@ export function getPhoneCountry(phoneNumber: string, defaultCountry?: CountryCod
  */
 export function isPhoneFromCountry(phoneNumber: string, country: CountryCode, defaultCountry?: CountryCode): boolean {
   try {
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry);
-    return parsed.country === country;
+    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+    return parsed.country === country
   } catch {
-    return false;
+    return false
   }
 }
 
@@ -157,31 +154,31 @@ export function isPhoneFromCountry(phoneNumber: string, country: CountryCode, de
  * Validate US phone number specifically
  */
 export function validateUSPhoneNumber(phoneNumber: string): PhoneValidationResult {
-  const result = validatePhoneNumber(phoneNumber, 'US');
-  
+  const result = validatePhoneNumber(phoneNumber, 'US')
+
   if (result.isValid && result.country !== 'US') {
     return {
       isValid: false,
       isPossible: result.isPossible,
-      error: 'Only US phone numbers are supported'
-    };
+      error: 'Only US phone numbers are supported',
+    }
   }
-  
-  return result;
+
+  return result
 }
 
 /**
  * Simple phone format validation (legacy compatibility)
  */
 export function validatePhoneFormat(phoneNumber: string): boolean {
-  return isValidPhoneNumber(phoneNumber);
+  return isValidPhoneNumber(phoneNumber)
 }
 
 // Re-export useful types and functions from libphonenumber-js
 export {
-  parsePhoneNumber,
-  isValidPhoneNumber,
+  type CountryCode,
   isPossiblePhoneNumber,
+  isValidPhoneNumber,
   type PhoneNumber,
-  type CountryCode
-} from 'libphonenumber-js';
+  parsePhoneNumber,
+} from 'libphonenumber-js'

@@ -1,16 +1,16 @@
 import * as grpc from "@grpc/grpc-js";
-import type { 
-  AuthResult, 
-  ProcessingRequest, 
-  ProcessingResponse
+import type {
+  AuthResult,
+  ProcessingRequest,
+  ProcessingResponse,
 } from "@pzero/shared/grpc";
 import {
-  ProcessingStatus,
-  GrpcStatus,
-  extractTokenFromCookie,
-  isPublicPath,
   createAuthHeaders,
-  createResponseTrackingHeaders
+  createResponseTrackingHeaders,
+  extractTokenFromCookie,
+  GrpcStatus,
+  isPublicPath,
+  ProcessingStatus,
 } from "@pzero/shared/grpc";
 import { AuthProxy } from "../../auth-proxy";
 
@@ -70,7 +70,10 @@ export function createExtProcService(authProxy: AuthProxy) {
                     response: {
                       status: ProcessingStatus.CONTINUE_AND_REPLACE,
                       header_mutation: {
-                        set_headers: createAuthHeaders(authResult.user.id, authResult.user.email),
+                        set_headers: createAuthHeaders(
+                          authResult.user.id,
+                          authResult.user.email,
+                        ),
                         remove_headers: ["x-custom-auth"], // Remove original token for security
                       },
                     },
@@ -146,7 +149,7 @@ export function createExtProcService(authProxy: AuthProxy) {
               const response: ProcessingResponse = {
                 response_headers: {
                   response: {
-                    status: ProcessingStatus.CONTINUE
+                    status: ProcessingStatus.CONTINUE,
                   },
                 },
               };

@@ -21,7 +21,7 @@ export async function validatePhoneNumber(
   }
 
   const validationResult = validateUSPhoneNumber(phone);
-  
+
   if (!validationResult.isValid) {
     reply.status(400).send({
       error: "Bad Request",
