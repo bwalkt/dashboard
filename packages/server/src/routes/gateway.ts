@@ -1,10 +1,23 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { config } from "../config/env";
 
-// Simple pass-through gateway to sfdc-vanilla-server
-// This acts as a header validation gateway that forwards requests after authentication
+// Multi-target gateway with header validation and authentication
+// Supports multiple backend services through different route prefixes
 
-const SFDC_SERVER_BASE_URL = "http://localhost:8080";
+// Backend services configuration based on URL patterns
+const BACKEND_SERVICES = {
+  // Default service for explicit gateway routes
+  default: "http://localhost:8080", // sfdc-vanilla-server
+
+  // Path-based routing (future expansion)
+  // When we move admin functions to separate services:
+  // "/auth": "http://localhost:3002",
+  // "/billing": "http://localhost:3003",
+  // "/api": "http://localhost:3001"
+} as const;
+
+// For now, everything defaults to current server (admin portal)
+// except explicit /gateway/* routes which go to backend services
 
 async function gatewayHandler(
   request: FastifyRequest,
@@ -14,9 +27,16 @@ async function gatewayHandler(
     // At this point, the header validation middleware has already run
     // and the request is authenticated (or public route)
 
-    // Construct target URL by preserving the path and query parameters
-    const targetPath = request.url.replace(/^\/gateway/, "") || "/";
-    const targetURL = `${SFDC_SERVER_BASE_URL}${targetPath}`;
+    // Intelligent routing based on originating URL
+    // /gateway/* routes are forwarded to backend services
+    // All other routes (/auth, /billing, etc.) stay on current server (admin portal)
+
+    const gatewayPath = request.url.replace(/^\/gateway\/?/, "");
+    let targetPath = "/" + gatewayPath;
+
+    // Default to the configured backend service (sfdc-vanilla-server)
+    const serviceBaseURL = BACKEND_SERVICES.default;
+    const targetURL = `${serviceBaseURL}${targetPath}`;
 
     console.log(
       `Gateway: Forwarding ${request.method} ${request.url} -> ${targetURL}`,
@@ -45,6 +65,7 @@ async function gatewayHandler(
     if (request.user?.authenticated) {
       forwardHeaders["x-gateway-auth"] = "true";
       forwardHeaders["x-gateway-method"] = request.user.method;
+      forwardHeaders["x-gateway-target"] = serviceBaseURL;
     }
 
     // Prepare fetch options
@@ -107,8 +128,9 @@ export async function gatewayRoutes(fastify: FastifyInstance): Promise<void> {
   // Also handle /gateway root
   fastify.all("/gateway", gatewayHandler);
 
+  console.log("Gateway routes registered:");
+  console.log(`  - /gateway/* → ${BACKEND_SERVICES.default} (backend service)`);
   console.log(
-    "Gateway routes registered - forwarding to",
-    SFDC_SERVER_BASE_URL,
+    `  - /auth/*, /billing/*, etc. → localhost:${config.PORT} (admin portal)`,
   );
 }

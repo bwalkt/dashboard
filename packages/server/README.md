@@ -4,6 +4,8 @@ A Fastify-based Node.js server that provides REST API endpoints for Salesforce i
 
 - This is server for pzero.
 - TODO We will split as microservices and use bff pattern to access various services.
+- **Gateway Proxy**: Secure pass-through proxy with header validation and JWT authentication
+- **Header Validation**: Bot detection and security filtering with rate limiting
 - **CORS Support**: Cross-origin resource sharing enabled for frontend integration
 - **TypeScript**: Full TypeScript support with type definitions
 - **Fastify Framework**: High-performance Node.js web framework
@@ -137,52 +139,173 @@ The server will start on `http://localhost:8090`
 - `GET /verify/email` - Verify email with token (requires: `token` query parameter)
 - `POST /verify/email/resend` - Resend verification email (requires: `email`, optional: `name`)
 
+### Gateway (Intelligent Routing & Admin Portal)
+
+The server provides both **admin portal functionality** and **gateway proxy** capabilities with intelligent routing based on URL patterns.
+
+#### Architecture Overview
+
+```
+Current Server (localhost:${PORT}) - Admin Portal & Gateway
+├── Admin Portal Routes (handled locally)
+│   ├── /auth/* - Authentication & user management
+│   ├── /billing/* - Billing & subscription management
+│   ├── /email/* - Email verification
+│   ├── /sms/* - SMS verification
+│   └── /health - Health checks
+└── Gateway Routes (forwarded to backend services)
+    └── /gateway/* → Backend Services
+```
+
+#### Route Resolution
+
+| URL Pattern  | Destination             | Purpose                               |
+| ------------ | ----------------------- | ------------------------------------- |
+| `/gateway/*` | `http://localhost:8080` | Backend service (sfdc-vanilla-server) |
+| `/auth/*`    | `localhost:${PORT}`     | Admin portal - user authentication    |
+| `/billing/*` | `localhost:${PORT}`     | Admin portal - billing management     |
+| `/email/*`   | `localhost:${PORT}`     | Admin portal - email verification     |
+| `/sms/*`     | `localhost:${PORT}`     | Admin portal - SMS verification       |
+| `/health`    | `localhost:${PORT}`     | Admin portal - health checks          |
+
+**Examples**:
+
+- `/gateway/api/users` → `http://localhost:8080/api/users` (forwarded)
+- `/auth/login` → `localhost:${PORT}/auth/login` (handled locally)
+- `/billing/subscriptions` → `localhost:${PORT}/billing/subscriptions` (handled locally)
+
+#### Authentication
+
+Gateway routes require authentication via one of these methods:
+
+1. **JWT Header Authentication** (recommended):
+
+   ```bash
+   curl -H "x-custom-auth: YOUR_JWT_TOKEN" http://localhost:${PORT}/gateway/api/users
+   ```
+
+2. **JWT Cookie Authentication**:
+   ```bash
+   curl -H "Cookie: accessToken=YOUR_JWT_TOKEN" http://localhost:${PORT}/gateway/api/users
+   ```
+
+#### Features
+
+- **🛡️ Security**: Blocks suspicious bots and crawlers
+- **🔐 Authentication**: JWT token validation for all gateway routes
+- **🧠 Intelligent Routing**: URL-based routing (admin vs gateway)
+- **🌐 Admin Portal**: Handle auth, billing, email/SMS locally
+- **🌐 Gateway Proxy**: Forward `/gateway/*` to backend services
+- **📊 Monitoring**: Request/response logging with validation headers
+- **🔄 Transparent**: Preserves original request/response data
+
+#### Configuration
+
+Required environment variables for gateway functionality:
+
+```bash
+# Proxy Configuration - Comma-separated list of allowed target domains
+ALLOWED_DOMAINS=localhost:8080,127.0.0.1:8080,api.example.com:443
+
+# Optional: Cookie domain override for forwarded Set-Cookie headers
+COOKIE_DOMAIN=localhost
+```
+
+#### Usage Examples
+
+1. **Basic authenticated request**:
+
+   ```bash
+   # Generate JWT token (example using Node.js)
+   JWT_TOKEN=$(node -e "
+   const jwt = require('jsonwebtoken');
+   const token = jwt.sign({
+     sub: 'user-123',
+     exp: Math.floor(Date.now() / 1000) + 3600
+   }, 'your_jwt_secret');
+   console.log(token);
+   ")
+
+   # Make authenticated gateway request to backend service
+   curl -H "User-Agent: Mozilla/5.0 (Browser)" \
+        -H "x-custom-auth: $JWT_TOKEN" \
+        http://localhost:${PORT}/gateway/api/users
+   ```
+
+2. **POST request with body**:
+
+   ```bash
+   curl -X POST \
+        -H "User-Agent: Mozilla/5.0 (Browser)" \
+        -H "x-custom-auth: $JWT_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{"name":"John","email":"john@example.com"}' \
+        http://localhost:${PORT}/gateway/api/users
+   ```
+
+3. **Response headers verification**:
+   ```bash
+   curl -v -H "x-custom-auth: $JWT_TOKEN" \
+        http://localhost:${PORT}/gateway/health
+   # Look for these authentication headers in response:
+   # x-auth-validated: true
+   # x-validation-method: custom-header
+   # x-validation-timestamp: 1234567890123
+   ```
+
+#### Architecture
+
+```
+Client Request
+     ↓
+Gateway Server (8093)
+     ├── Header Validation (blocks bots)
+     ├── Authentication (JWT validation)
+     ├── Request Forwarding
+     ↓
+Target Server (8080)
+     ↓
+Response + Auth Headers
+     ↓
+Client Response
+```
+
+#### Testing
+
+Run the comprehensive gateway tests:
+
+```bash
+# Run all gateway tests
+./test-curl-workflows.sh
+
+# Or test individual components
+curl http://localhost:8090/health  # Should block (suspicious bot)
+curl -H "User-Agent: Mozilla/5.0 (Browser)" http://localhost:8090/health  # Should allow
+curl -H "User-Agent: Mozilla/5.0 (Browser)" http://localhost:${PORT}/gateway/  # Should require auth
+```
+
 ### Environment Variables
 
-| Variable               | Description                | Required                       |
-| ---------------------- | -------------------------- | ------------------------------ |
-| `PORT`                 | Server port                | No (defaults to 8090)          |
-| `NODE_ENV`             | Node environment           | No (defaults to development)   |
-| `GITHUB_CLIENT_ID`     | GitHub OAuth Client ID     | Yes                            |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes                            |
-| `JWT_SECRET`           | JWT signing secret         | Yes                            |
-| `POSTGRES_HOST`        | PostgreSQL host            | No (defaults to localhost)     |
-| `POSTGRES_PORT`        | PostgreSQL port            | No (defaults to 5432)          |
-| `POSTGRES_USER`        | PostgreSQL username        | No (defaults to postgres)      |
-| `POSTGRES_PASSWORD`    | PostgreSQL password        | No (defaults to postgres)      |
-| `POSTGRES_DB`          | PostgreSQL database name   | No (defaults to pzero)         |
-| `REDIS_HOST`           | Redis host                 | No (defaults to localhost)     |
-| `REDIS_PORT`           | Redis port                 | No (defaults to 6379)          |
-| `BREVO_API_KEY`        | Brevo API key for email    | Yes                            |
-| `BREVO_SENDER_EMAIL`   | Sender email address       | Yes                            |
-| `BREVO_SENDER_NAME`    | Sender name                | No (defaults to P-Zero)        |
-| `OAUTH_REDIRECT_URL`   | OAuth callback URL         | Yes                            |
-| Variable               | Description                | Required                       |
-| `PORT`                 | Server port                | No (defaults to 8090)          |
-| `NODE_ENV`             | Node environment           | No (defaults to development)   |
-| `GITHUB_CLIENT_ID`     | GitHub OAuth Client ID     | Yes                            |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes                            |
-| `JWT_SECRET`           | JWT signing secret         | Yes                            |
-| `DATABASE_PATH`        | SQLite database path       | No (defaults to ./database.db) |
-| `OAUTH_REDIRECT_URL`   | OAuth callback URL         | Yes                            |
-| Variable               | Description                | Required                       |
-| ---------------------- | -------------------------- | ----------------------------   |
-| `PORT`                 | Server port                | No (defaults to 8090)          |
-| `NODE_ENV`             | Node environment           | No (defaults to development)   |
-| `GITHUB_CLIENT_ID`     | GitHub OAuth Client ID     | Yes                            |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes                            |
-| `JWT_SECRET`           | JWT signing secret         | Yes                            |
-| `POSTGRES_HOST`        | PostgreSQL host            | No (defaults to localhost)     |
-| `POSTGRES_PORT`        | PostgreSQL port            | No (defaults to 5432)          |
-| `POSTGRES_USER`        | PostgreSQL username        | No (defaults to postgres)      |
-| `POSTGRES_PASSWORD`    | PostgreSQL password        | No (defaults to postgres)      |
-| `POSTGRES_DB`          | PostgreSQL database name   | No (defaults to pzero)         |
-| `REDIS_HOST`           | Redis host                 | No (defaults to localhost)     |
-| `REDIS_PORT`           | Redis port                 | No (defaults to 6379)          |
-| `BREVO_API_KEY`        | Brevo API key for email    | Yes                            |
-| `BREVO_SENDER_EMAIL`   | Sender email address       | Yes                            |
-| `BREVO_SENDER_NAME`    | Sender name                | No (defaults to P-Zero)        |
-| `OAUTH_REDIRECT_URL`   | OAuth callback URL         | Yes                            |
+| Variable               | Description                   | Required                           |
+| ---------------------- | ----------------------------- | ---------------------------------- |
+| `PORT`                 | Server port                   | No (defaults to 8090)              |
+| `NODE_ENV`             | Node environment              | No (defaults to development)       |
+| `GITHUB_CLIENT_ID`     | GitHub OAuth Client ID        | Yes                                |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret    | Yes                                |
+| `JWT_SECRET`           | JWT signing secret            | Yes                                |
+| `POSTGRES_HOST`        | PostgreSQL host               | No (defaults to localhost)         |
+| `POSTGRES_PORT`        | PostgreSQL port               | No (defaults to 5432)              |
+| `POSTGRES_USER`        | PostgreSQL username           | No (defaults to postgres)          |
+| `POSTGRES_PASSWORD`    | PostgreSQL password           | No (defaults to postgres)          |
+| `POSTGRES_DB`          | PostgreSQL database name      | No (defaults to pzero)             |
+| `REDIS_HOST`           | Redis host                    | No (defaults to localhost)         |
+| `REDIS_PORT`           | Redis port                    | No (defaults to 6379)              |
+| `BREVO_API_KEY`        | Brevo API key for email       | Yes                                |
+| `BREVO_SENDER_EMAIL`   | Sender email address          | Yes                                |
+| `BREVO_SENDER_NAME`    | Sender name                   | No (defaults to P-Zero)            |
+| `OAUTH_REDIRECT_URL`   | OAuth callback URL            | Yes                                |
+| `ALLOWED_DOMAINS`      | Gateway proxy allowed domains | Required for gateway functionality |
+| `COOKIE_DOMAIN`        | Cookie domain override        | No (for gateway functionality)     |
 
 ## 📁 Project Structure
 
