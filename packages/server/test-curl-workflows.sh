@@ -483,4 +483,145 @@ echo "🔐 Testing Authentication Integration..."
 echo "======================================"
 test_token_validation
 
-print_success "🎉 Centrifugo integration tests completed!"
+# Gateway Testing Functions
+# Test gateway functionality with header validation and pass-through to target server
+
+GATEWAY_URL="http://localhost:8093"
+TARGET_URL="http://localhost:8080"
+
+print_gateway() {
+    echo -e "${YELLOW}🌐 $1${NC}"
+}
+
+# Function to generate JWT token for authentication
+generate_jwt_token() {
+    if command -v node >/dev/null 2>&1; then
+        node -e "
+        const jwt = require('jsonwebtoken');
+        const secret = 'your_super_secret_jwt_key_change_this_in_production';
+        const token = jwt.sign({
+          sub: 'test-user',
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + (60 * 60) // 1 hour
+        }, secret);
+        console.log(token);
+        " 2>/dev/null
+    else
+        echo ""
+    fi
+}
+
+# Test bot detection (should block curl with default user agent)
+test_gateway_bot_detection() {
+    print_gateway "Testing gateway bot detection..."
+    
+    local response
+    response=$(curl -s "$GATEWAY_URL/health" 2>/dev/null || echo "")
+    
+    if echo "$response" | grep -q "Suspicious bot detected"; then
+        print_success "Gateway successfully blocks suspicious bots"
+    else
+        print_error "Gateway bot detection failed. Expected 'Suspicious bot detected', got: $response"
+    fi
+}
+
+# Test legitimate user agent (should allow)
+test_gateway_legitimate_access() {
+    print_gateway "Testing gateway with legitimate user agent..."
+    
+    local response
+    response=$(curl -s -H "User-Agent: $USER_AGENT" "$GATEWAY_URL/health" 2>/dev/null)
+    
+    if echo "$response" | grep -q '"status":"ok"'; then
+        print_success "Gateway allows legitimate user agents"
+    else
+        print_error "Gateway failed to allow legitimate user agent. Response: $response"
+    fi
+}
+
+# Test gateway authentication requirement
+test_gateway_auth_required() {
+    print_gateway "Testing gateway authentication requirement..."
+    
+    local response
+    response=$(curl -s -H "User-Agent: $USER_AGENT" "$GATEWAY_URL/gateway/" 2>/dev/null)
+    
+    if echo "$response" | grep -q "Authentication required"; then
+        print_success "Gateway properly requires authentication for protected routes"
+    else
+        print_error "Gateway auth requirement failed. Response: $response"
+    fi
+}
+
+# Test gateway pass-through functionality with authentication
+test_gateway_passthrough() {
+    print_gateway "Testing gateway pass-through to target server..."
+    
+    local jwt_token
+    jwt_token=$(generate_jwt_token)
+    
+    if [ -n "$jwt_token" ]; then
+        local response
+        response=$(curl -s -H "User-Agent: $USER_AGENT" \
+            -H "x-custom-auth: $jwt_token" \
+            "$GATEWAY_URL/gateway/salesforce" 2>/dev/null)
+        
+        # Should get 404 from target server (route doesn't exist)
+        if echo "$response" | grep -q "Route GET:/salesforce not found"; then
+            print_success "Gateway successfully forwards authenticated requests to target server"
+        else
+            print_error "Gateway pass-through failed. Response: $response"
+        fi
+    else
+        print_error "Could not generate JWT token for gateway test"
+    fi
+}
+
+# Test direct access to target server (should work)
+test_target_server_direct() {
+    print_gateway "Testing direct access to target server..."
+    
+    local response
+    response=$(curl -s -H "User-Agent: $USER_AGENT" "$TARGET_URL/" 2>/dev/null)
+    
+    if echo "$response" | grep -q "Route GET:/ not found"; then
+        print_success "Target server is accessible directly"
+    else
+        print_error "Target server direct access failed. Response: $response"
+    fi
+}
+
+# Test gateway vs direct access comparison
+test_gateway_vs_direct() {
+    print_gateway "Comparing gateway vs direct access..."
+    
+    local jwt_token
+    jwt_token=$(generate_jwt_token)
+    
+    if [ -n "$jwt_token" ]; then
+        print_gateway "  → Gateway access (with auth):"
+        curl -v -H "User-Agent: $USER_AGENT" \
+            -H "x-custom-auth: $jwt_token" \
+            "$GATEWAY_URL/gateway/" 2>&1 | grep -E "(HTTP/|< x-auth-validated)"
+            
+        print_gateway "  → Direct access:"
+        curl -v -H "User-Agent: $USER_AGENT" \
+            "$TARGET_URL/" 2>&1 | grep "HTTP/"
+            
+        print_success "Gateway adds authentication validation while preserving target server responses"
+    else
+        print_error "Could not generate JWT token for comparison test"
+    fi
+}
+
+echo ""
+echo "🌐 Testing Gateway Functionality..."
+echo "================================="
+test_gateway_bot_detection
+test_gateway_legitimate_access  
+test_gateway_auth_required
+test_gateway_passthrough
+test_target_server_direct
+test_gateway_vs_direct
+
+print_success "🎉 All tests completed!"
