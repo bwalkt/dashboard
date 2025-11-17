@@ -1,94 +1,18 @@
 import * as grpc from "@grpc/grpc-js";
+import type { 
+  AuthResult, 
+  ProcessingRequest, 
+  ProcessingResponse
+} from "@pzero/shared/grpc";
+import {
+  ProcessingStatus,
+  GrpcStatus,
+  extractTokenFromCookie,
+  isPublicPath,
+  createAuthHeaders,
+  createResponseTrackingHeaders
+} from "@pzero/shared/grpc";
 import { AuthProxy } from "../../auth-proxy";
-
-interface AuthResult {
-  valid: boolean;
-  user?: {
-    id: number;
-    email: string;
-    name: string;
-    role?: string[];
-    verified?: boolean;
-  };
-  error?: string;
-}
-
-interface ProcessingRequest {
-  request_headers?: {
-    headers: { [key: string]: string };
-    end_of_stream: boolean;
-  };
-  request_body?: {
-    body: Buffer;
-    end_of_stream: boolean;
-  };
-  response_headers?: {
-    headers: { [key: string]: string };
-    end_of_stream: boolean;
-  };
-  response_body?: {
-    body: Buffer;
-    end_of_stream: boolean;
-  };
-}
-
-interface ProcessingResponse {
-  request_headers?: {
-    response: {
-      status: number; // 0 = CONTINUE, 1 = CONTINUE_AND_REPLACE
-      header_mutation?: {
-        set_headers: Array<{ header: string; value: string; append: boolean }>;
-        remove_headers: string[];
-      };
-      body_mutation?: {
-        body: Buffer;
-        clear_body: boolean;
-      };
-    };
-  };
-  response_headers?: {
-    response: {
-      status: number;
-      header_mutation?: {
-        set_headers: Array<{ header: string; value: string; append: boolean }>;
-        remove_headers: string[];
-      };
-    };
-  };
-  request_body?: {
-    response: {
-      status: number; // 0 = CONTINUE, 1 = CONTINUE_AND_REPLACE
-      header_mutation?: {
-        set_headers: Array<{ header: string; value: string; append: boolean }>;
-        remove_headers: string[];
-      };
-      body_mutation?: {
-        body: Buffer;
-        clear_body: boolean;
-      };
-    };
-  };
-  response_body?: {
-    response: {
-      status: number; // 0 = CONTINUE, 1 = CONTINUE_AND_REPLACE
-      header_mutation?: {
-        set_headers: Array<{ header: string; value: string; append: boolean }>;
-        remove_headers: string[];
-      };
-      body_mutation?: {
-        body: Buffer;
-        clear_body: boolean;
-      };
-    };
-  };
-  immediate_response?: {
-    status: number;
-    headers: { [key: string]: string };
-    body: string;
-    grpc_status: { status: number };
-    details: string;
-  };
-}
 
 export function createExtProcService(authProxy: AuthProxy) {
   return {
@@ -144,40 +68,9 @@ export function createExtProcService(authProxy: AuthProxy) {
                 const response: ProcessingResponse = {
                   request_headers: {
                     response: {
-                      status: 1, // CONTINUE_AND_REPLACE
+                      status: ProcessingStatus.CONTINUE_AND_REPLACE,
                       header_mutation: {
-                        set_headers: [
-                          {
-                            header: "x-auth-validated",
-                            value: "true",
-                            append: false,
-                          },
-                          {
-                            header: "x-auth-user-id",
-                            value: authResult.user.id.toString(),
-                            append: false,
-                          },
-                          {
-                            header: "x-auth-user-email",
-                            value: authResult.user.email,
-                            append: false,
-                          },
-                          {
-                            header: "x-client-id",
-                            value: clientId,
-                            append: false,
-                          },
-                          {
-                            header: "x-validation-method",
-                            value: "centrifuge-grpc",
-                            append: false,
-                          },
-                          {
-                            header: "x-validation-timestamp",
-                            value: Date.now().toString(),
-                            append: false,
-                          },
-                        ],
+                        set_headers: createAuthHeaders(authResult.user.id, authResult.user.email),
                         remove_headers: ["x-custom-auth"], // Remove original token for security
                       },
                     },
@@ -200,7 +93,7 @@ export function createExtProcService(authProxy: AuthProxy) {
               const response: ProcessingResponse = {
                 request_headers: {
                   response: {
-                    status: 0, // CONTINUE
+                    status: ProcessingStatus.CONTINUE,
                   },
                 },
               };
@@ -222,7 +115,7 @@ export function createExtProcService(authProxy: AuthProxy) {
                   supportedMethods: ["x-custom-auth", "Authorization Bearer"],
                   timestamp: new Date().toISOString(),
                 }),
-                grpc_status: { status: 0 },
+                grpc_status: { status: GrpcStatus.OK },
                 details: "Authentication required for this resource",
               },
             };
@@ -239,20 +132,9 @@ export function createExtProcService(authProxy: AuthProxy) {
               const response: ProcessingResponse = {
                 response_headers: {
                   response: {
-                    status: 1, // CONTINUE_AND_REPLACE
+                    status: ProcessingStatus.CONTINUE_AND_REPLACE,
                     header_mutation: {
-                      set_headers: [
-                        {
-                          header: "x-server-processed-by",
-                          value: "centrifuge-grpc",
-                          append: false,
-                        },
-                        {
-                          header: "x-processing-time",
-                          value: Date.now().toString(),
-                          append: false,
-                        },
-                      ],
+                      set_headers: createResponseTrackingHeaders(),
                       remove_headers: [], // Don't remove any response headers
                     },
                   },
@@ -264,7 +146,7 @@ export function createExtProcService(authProxy: AuthProxy) {
               const response: ProcessingResponse = {
                 response_headers: {
                   response: {
-                    status: 0, // CONTINUE
+                    status: ProcessingStatus.CONTINUE
                   },
                 },
               };
@@ -316,7 +198,7 @@ export function createExtProcService(authProxy: AuthProxy) {
                 error: "Internal processing error",
                 timestamp: new Date().toISOString(),
               }),
-              grpc_status: { status: 13 }, // INTERNAL
+              grpc_status: { status: GrpcStatus.INTERNAL },
               details: "External processing service error",
             },
           };
@@ -340,47 +222,4 @@ export function createExtProcService(authProxy: AuthProxy) {
   };
 }
 
-function extractTokenFromCookie(cookieHeader: string): string | null {
-  if (!cookieHeader) return null;
-
-  const cookies: { [key: string]: string } = {};
-  cookieHeader.split(";").forEach((cookie) => {
-    const [name, value] = cookie.trim().split("=");
-    if (name && value) {
-      cookies[name] = decodeURIComponent(value);
-    }
-  });
-
-  // Check for JWT tokens in cookies
-  return cookies.accessToken || cookies.refreshToken || null;
-}
-
-function isPublicPath(path: string): boolean {
-  const publicPaths = [
-    "/health",
-    "/metrics",
-    "/favicon.ico",
-    "/robots.txt",
-    "/sitemap.xml",
-    "/auth/register",
-    "/auth/login",
-    "/auth/logout",
-    "/auth/refresh",
-  ];
-
-  const publicPrefixes = ["/static/", "/assets/", "/api/public/", "/_next/"];
-
-  // Exact matches
-  if (publicPaths.includes(path)) {
-    return true;
-  }
-
-  // Prefix matches
-  for (const prefix of publicPrefixes) {
-    if (path.startsWith(prefix)) {
-      return true;
-    }
-  }
-
-  return false;
-}
+// These utility functions are now imported from @pzero/shared/grpc

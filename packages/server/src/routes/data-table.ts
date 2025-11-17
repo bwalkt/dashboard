@@ -11,7 +11,7 @@ import {
   sliderFilterValues,
   sortData,
   splitData,
-} from "../utils/data-table-helpers";
+} from "@pzero/shared/data-table";
 import { calculateSpecificPercentile } from "../utils/percentile";
 
 // Define types from the portal package - we'll need to move these to shared

@@ -1,20 +1,7 @@
 import axios from "axios";
 import { JWTService } from "../services/jwt.service";
 import { centrifugeConfig } from "./config";
-
-export interface AuthUser {
-  id: number;
-  email: string;
-  name: string;
-  role?: string[];
-  verified?: boolean;
-}
-
-export interface AuthResult {
-  valid: boolean;
-  user?: AuthUser;
-  error?: string;
-}
+import type { AuthResult, AuthUser } from "@pzero/shared/grpc";
 
 export class AuthProxy {
   private jwtService: JWTService;
@@ -152,7 +139,7 @@ export class AuthProxy {
     const token = clientContext?.token;
     if (token) {
       const result = await this.validateToken(token);
-      return result.valid ? result.user : null;
+      return result.valid ? result.user || null : null;
     }
 
     return null;

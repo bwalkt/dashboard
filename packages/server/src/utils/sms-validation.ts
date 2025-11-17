@@ -1,12 +1,12 @@
 import type { ErrorResponse } from "@pzero/shared";
+import { validateUSPhoneNumber } from "@pzero/shared/validator";
 import type { FastifyReply } from "fastify";
 import { redis } from "../config/redis";
 import { smsService } from "../services/sms.service";
 
 /**
  * Validate phone number format and return error response if invalid
- *  TODO: Extend to support international numbers
- *. libphonenumber-js
+ * Now uses libphonenumber-js for proper validation
  */
 export async function validatePhoneNumber(
   phone: string,
@@ -20,19 +20,12 @@ export async function validatePhoneNumber(
     return false;
   }
 
-  if (!smsService.validatePhoneFormat(phone)) {
+  const validationResult = validateUSPhoneNumber(phone);
+  
+  if (!validationResult.isValid) {
     reply.status(400).send({
       error: "Bad Request",
-      message: "Invalid phone number format",
-    } as ErrorResponse);
-    return false;
-  }
-
-  // Check if it's a US phone number (country code +1)
-  if (!phone.startsWith("+1")) {
-    reply.status(400).send({
-      error: "Bad Request",
-      message: "Only US phone numbers are supported",
+      message: validationResult.error || "Invalid phone number format",
     } as ErrorResponse);
     return false;
   }
