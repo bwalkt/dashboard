@@ -1,8 +1,8 @@
 {
-  "token_hmac_secret_key": "my-secret-token-key",
-  "admin_password": "admin-password",
-  "admin_secret": "admin-secret",
-  "api_key": "api-key-for-server",
+  "token_hmac_secret_key": "${CENTRIFUGO_TOKEN_HMAC_SECRET_KEY}",
+  "admin_password": "${CENTRIFUGO_ADMIN_PASSWORD}",
+  "admin_secret": "${CENTRIFUGO_ADMIN_SECRET}",
+  "api_key": "${CENTRIFUGO_API_KEY}",
 
   "allowed_origins": [
     "http://localhost:1430",

@@ -16,7 +16,7 @@
     "test:sms": "vitest run test/routes/sms.test.ts",
     "test:middleware": "vitest run test/middleware/",
     "build": "tsc",
-    "build:proto": "grpc_tools_node_protoc --proto_path=src/centrifuge/grpc/proto --js_out=import_style=commonjs,binary:src/centrifuge/grpc/generated --grpc_out=grpc_js:src/centrifuge/grpc/generated --ts_out=src/centrifuge/grpc/generated src/centrifuge/grpc/proto/*.proto",
+    "build:proto:disabled": "echo 'Protobuf generation disabled - using manual TypeScript interfaces in src/centrifuge/grpc/services/ext-proc.ts'",
     "start": "fastify start dist/index.js --port 8090",
     "dev": "tsx watch src/server.ts",
     "dev:centrifuge": "tsx watch src/centrifuge/app.ts",

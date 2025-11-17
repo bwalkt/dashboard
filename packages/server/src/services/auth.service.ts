@@ -56,7 +56,7 @@ export class AuthService extends JWTService {
 
       // Additional validation
       if (
-        typeof decoded.userId !== "string" ||
+        typeof decoded.userId !== "number" ||
         (decoded.githubId !== null && typeof decoded.githubId !== "string")
       ) {
         console.log(
@@ -161,7 +161,109 @@ export class AuthService extends JWTService {
   }
 
   /**
-   * Validate any JWT token and return user information for Centrifuge
+   * Validate access token only and return user information for authorization
+   * This method should be used for general authorization purposes
+   */
+  public async validateAccessToken(token: string): Promise<{
+    valid: boolean;
+    user?: {
+      id: number;
+      email: string;
+      name: string;
+      role?: string[];
+      verified?: boolean;
+    };
+    error?: string;
+  }> {
+    try {
+      const accessTokenPayload = this.verifyAccessToken(token);
+      if (accessTokenPayload) {
+        // Validate userId is a valid number
+        if (
+          typeof accessTokenPayload.userId !== "number" ||
+          isNaN(accessTokenPayload.userId)
+        ) {
+          return {
+            valid: false,
+            error: "Invalid userId in token",
+          };
+        }
+
+        return {
+          valid: true,
+          user: {
+            id: accessTokenPayload.userId,
+            email: accessTokenPayload.email,
+            name: accessTokenPayload.email.split("@")[0], // Extract name from email as fallback
+            verified: true, // Access tokens are for verified users
+          },
+        };
+      }
+
+      return {
+        valid: false,
+        error: "Invalid or expired access token",
+      };
+    } catch (error) {
+      console.error("Access token validation error:", error);
+      return {
+        valid: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Access token validation failed",
+      };
+    }
+  }
+
+  /**
+   * Validate refresh token specifically for token refresh operations
+   * This method should only be used for /auth/refresh endpoints
+   */
+  public async validateRefreshTokenForRefresh(token: string): Promise<{
+    valid: boolean;
+    userId?: number;
+    error?: string;
+  }> {
+    try {
+      const refreshTokenPayload = this.verifyRefreshToken(token);
+      if (refreshTokenPayload) {
+        // Validate userId is a valid number
+        if (
+          typeof refreshTokenPayload.userId !== "number" ||
+          isNaN(refreshTokenPayload.userId)
+        ) {
+          return {
+            valid: false,
+            error: "Invalid userId in refresh token",
+          };
+        }
+
+        return {
+          valid: true,
+          userId: refreshTokenPayload.userId,
+        };
+      }
+
+      return {
+        valid: false,
+        error: "Invalid or expired refresh token",
+      };
+    } catch (error) {
+      console.error("Refresh token validation error:", error);
+      return {
+        valid: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Refresh token validation failed",
+      };
+    }
+  }
+
+  /**
+   * @deprecated Use validateAccessToken instead for authorization
+   * Legacy method for backward compatibility - validates access tokens only
    */
   public async validateToken(token: string): Promise<{
     valid: boolean;
@@ -174,49 +276,7 @@ export class AuthService extends JWTService {
     };
     error?: string;
   }> {
-    try {
-      // Try to verify as access token first
-      const accessTokenPayload = this.verifyAccessToken(token);
-      if (accessTokenPayload) {
-        return {
-          valid: true,
-          user: {
-            id: Number(accessTokenPayload.userId), // Convert string to number
-            email: accessTokenPayload.email,
-            name: accessTokenPayload.email.split("@")[0], // Extract name from email as fallback
-            verified: true, // Access tokens are for verified users
-          },
-        };
-      }
-
-      // Try to verify as refresh token
-      const refreshTokenPayload = this.verifyRefreshToken(token);
-      if (refreshTokenPayload) {
-        // For refresh tokens, we need to fetch user details
-        // This is a simplified version - in production you might need to fetch from database
-        return {
-          valid: true,
-          user: {
-            id: refreshTokenPayload.userId,
-            email: `user${refreshTokenPayload.userId}@unknown.com`, // Placeholder
-            name: `User ${refreshTokenPayload.userId}`, // Placeholder
-            verified: true,
-          },
-        };
-      }
-
-      return {
-        valid: false,
-        error: "Invalid token signature or format",
-      };
-    } catch (error) {
-      console.error("Token validation error:", error);
-      return {
-        valid: false,
-        error:
-          error instanceof Error ? error.message : "Token validation failed",
-      };
-    }
+    return this.validateAccessToken(token);
   }
 }
 

@@ -41,10 +41,10 @@ services:
     networks:
       - pzero-network
     environment:
-      CENTRIFUGO_TOKEN_HMAC_SECRET_KEY: "my-secret-token-key"
-      CENTRIFUGO_ADMIN_PASSWORD: "admin-password"
-      CENTRIFUGO_ADMIN_SECRET: "admin-secret"
-      CENTRIFUGO_API_KEY: "api-key-for-server"
+      CENTRIFUGO_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_TOKEN_HMAC_SECRET_KEY}
+      CENTRIFUGO_ADMIN_PASSWORD: ${CENTRIFUGO_ADMIN_PASSWORD}
+      CENTRIFUGO_ADMIN_SECRET: ${CENTRIFUGO_ADMIN_SECRET}
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY}
 
   # Fastify HTTP server
   fastify-server:
@@ -60,7 +60,7 @@ services:
       REDIS_URL: redis://pzero-redis:6379
       CENTRIFUGO_URL: http://centrifugo:8000
       CENTRIFUGO_API_URL: http://centrifugo:8001
-      CENTRIFUGO_API_KEY: "api-key-for-server"
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY}
     depends_on:
       - pzero-postgres
       - pzero-redis
@@ -83,7 +83,7 @@ services:
       NODE_ENV: development
       FASTIFY_BASE_URL: http://fastify-server:8090
       CENTRIFUGO_API_URL: http://centrifugo:8001
-      CENTRIFUGO_API_KEY: "api-key-for-server"
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY}
     depends_on:
       - fastify-server
       - centrifugo

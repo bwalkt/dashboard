@@ -55,6 +55,32 @@ interface ProcessingResponse {
       };
     };
   };
+  request_body?: {
+    response: {
+      status: number; // 0 = CONTINUE, 1 = CONTINUE_AND_REPLACE
+      header_mutation?: {
+        set_headers: Array<{ header: string; value: string; append: boolean }>;
+        remove_headers: string[];
+      };
+      body_mutation?: {
+        body: Buffer;
+        clear_body: boolean;
+      };
+    };
+  };
+  response_body?: {
+    response: {
+      status: number; // 0 = CONTINUE, 1 = CONTINUE_AND_REPLACE
+      header_mutation?: {
+        set_headers: Array<{ header: string; value: string; append: boolean }>;
+        remove_headers: string[];
+      };
+      body_mutation?: {
+        body: Buffer;
+        clear_body: boolean;
+      };
+    };
+  };
   immediate_response?: {
     status: number;
     headers: { [key: string]: string };
@@ -252,7 +278,7 @@ export function createExtProcService(authProxy: AuthProxy) {
             console.log("📄 Processing request body");
             // For now, just continue - could add body validation here
             const response: ProcessingResponse = {
-              request_headers: {
+              request_body: {
                 response: {
                   status: 0, // CONTINUE
                 },
@@ -267,7 +293,7 @@ export function createExtProcService(authProxy: AuthProxy) {
             console.log("📋 Processing response body");
             // For now, just continue - could add response modification here
             const response: ProcessingResponse = {
-              response_headers: {
+              response_body: {
                 response: {
                   status: 0, // CONTINUE
                 },

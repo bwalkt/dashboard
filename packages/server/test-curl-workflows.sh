@@ -342,7 +342,7 @@ test_centrifugo_connect_with_token() {
                 exp: Math.floor(Date.now() / 1000) + 3600
             };
             console.log(jwt.sign(payload, 'my-secret-token-key'));
-        " 2>/dev/null)
+        " 2>/dev/null || true)
         
         if [ -n "$test_token" ]; then
             local response
@@ -505,7 +505,7 @@ generate_jwt_token() {
           exp: Math.floor(Date.now() / 1000) + (60 * 60) // 1 hour
         }, secret);
         console.log(token);
-        " 2>/dev/null
+        " 2>/dev/null || true
     else
         echo ""
     fi

@@ -145,8 +145,10 @@ The server provides both **admin portal functionality** and **gateway proxy** ca
 
 #### Architecture Overview
 
+**Single Fastify Server Architecture**: The gateway is **NOT a separate service**. It's the same Fastify server running on port 8090 (configurable via `PORT` environment variable) that provides both admin portal functionality and gateway proxy capabilities through intelligent URL-based routing.
+
 ```
-Current Server (localhost:${PORT}) - Admin Portal & Gateway
+Fastify Server (localhost:8090) - Admin Portal & Gateway
 ├── Admin Portal Routes (handled locally)
 │   ├── /auth/* - Authentication & user management
 │   ├── /billing/* - Billing & subscription management
@@ -154,7 +156,7 @@ Current Server (localhost:${PORT}) - Admin Portal & Gateway
 │   ├── /sms/* - SMS verification
 │   └── /health - Health checks
 └── Gateway Routes (forwarded to backend services)
-    └── /gateway/* → Backend Services
+    └── /gateway/* → Backend Services (e.g., localhost:8080)
 ```
 
 #### Route Resolution
@@ -162,17 +164,17 @@ Current Server (localhost:${PORT}) - Admin Portal & Gateway
 | URL Pattern  | Destination             | Purpose                               |
 | ------------ | ----------------------- | ------------------------------------- |
 | `/gateway/*` | `http://localhost:8080` | Backend service (sfdc-vanilla-server) |
-| `/auth/*`    | `localhost:${PORT}`     | Admin portal - user authentication    |
-| `/billing/*` | `localhost:${PORT}`     | Admin portal - billing management     |
-| `/email/*`   | `localhost:${PORT}`     | Admin portal - email verification     |
-| `/sms/*`     | `localhost:${PORT}`     | Admin portal - SMS verification       |
-| `/health`    | `localhost:${PORT}`     | Admin portal - health checks          |
+| `/auth/*`    | `localhost:8090`        | Admin portal - user authentication    |
+| `/billing/*` | `localhost:8090`        | Admin portal - billing management     |
+| `/email/*`   | `localhost:8090`        | Admin portal - email verification     |
+| `/sms/*`     | `localhost:8090`        | Admin portal - SMS verification       |
+| `/health`    | `localhost:8090`        | Admin portal - health checks          |
 
 **Examples**:
 
 - `/gateway/api/users` → `http://localhost:8080/api/users` (forwarded)
-- `/auth/login` → `localhost:${PORT}/auth/login` (handled locally)
-- `/billing/subscriptions` → `localhost:${PORT}/billing/subscriptions` (handled locally)
+- `/auth/login` → `localhost:8090/auth/login` (handled locally)
+- `/billing/subscriptions` → `localhost:8090/billing/subscriptions` (handled locally)
 
 #### Authentication
 
@@ -181,12 +183,12 @@ Gateway routes require authentication via one of these methods:
 1. **JWT Header Authentication** (recommended):
 
    ```bash
-   curl -H "x-custom-auth: YOUR_JWT_TOKEN" http://localhost:${PORT}/gateway/api/users
+   curl -H "x-custom-auth: YOUR_JWT_TOKEN" http://localhost:8090/gateway/api/users
    ```
 
 2. **JWT Cookie Authentication**:
    ```bash
-   curl -H "Cookie: accessToken=YOUR_JWT_TOKEN" http://localhost:${PORT}/gateway/api/users
+   curl -H "Cookie: accessToken=YOUR_JWT_TOKEN" http://localhost:8090/gateway/api/users
    ```
 
 #### Features
@@ -229,7 +231,7 @@ COOKIE_DOMAIN=localhost
    # Make authenticated gateway request to backend service
    curl -H "User-Agent: Mozilla/5.0 (Browser)" \
         -H "x-custom-auth: $JWT_TOKEN" \
-        http://localhost:${PORT}/gateway/api/users
+        http://localhost:8090/gateway/api/users
    ```
 
 2. **POST request with body**:
@@ -240,13 +242,13 @@ COOKIE_DOMAIN=localhost
         -H "x-custom-auth: $JWT_TOKEN" \
         -H "Content-Type: application/json" \
         -d '{"name":"John","email":"john@example.com"}' \
-        http://localhost:${PORT}/gateway/api/users
+        http://localhost:8090/gateway/api/users
    ```
 
 3. **Response headers verification**:
    ```bash
    curl -v -H "x-custom-auth: $JWT_TOKEN" \
-        http://localhost:${PORT}/gateway/health
+        http://localhost:8090/gateway/health
    # Look for these authentication headers in response:
    # x-auth-validated: true
    # x-validation-method: custom-header
@@ -258,12 +260,14 @@ COOKIE_DOMAIN=localhost
 ```
 Client Request
      ↓
-Gateway Server (8093)
+Fastify Server (localhost:8090)
      ├── Header Validation (blocks bots)
      ├── Authentication (JWT validation)
-     ├── Request Forwarding
+     ├── Intelligent Routing:
+     │   ├── /gateway/* → Forward to Backend (localhost:8080)
+     │   └── /auth/*, /billing/* → Handle Locally
      ↓
-Target Server (8080)
+Target Server (8080) [if gateway route]
      ↓
 Response + Auth Headers
      ↓
@@ -281,7 +285,7 @@ Run the comprehensive gateway tests:
 # Or test individual components
 curl http://localhost:8090/health  # Should block (suspicious bot)
 curl -H "User-Agent: Mozilla/5.0 (Browser)" http://localhost:8090/health  # Should allow
-curl -H "User-Agent: Mozilla/5.0 (Browser)" http://localhost:${PORT}/gateway/  # Should require auth
+curl -H "User-Agent: Mozilla/5.0 (Browser)" http://localhost:8090/gateway/  # Should require auth
 ```
 
 ### Environment Variables
