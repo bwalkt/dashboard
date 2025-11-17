@@ -21,7 +21,7 @@ export const extractVerificationCode = (htmlContent: string): string | null => {
     /verification code[^0-9]*(\d{6})/i,
     /confirmation code[^0-9]*(\d{6})/i,
     /code[^0-9]*(\d{6})/i,
-    />(\d{6})</g, // Common HTML pattern for codes
+    />(\d{6})</i, // Common HTML pattern for codes (fixed: removed global flag)
     /(\d{6})/, // Simple 6-digit pattern
   ];
 

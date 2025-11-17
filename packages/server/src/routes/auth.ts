@@ -184,7 +184,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
             "Setting cookies - accessToken:",
             accessToken?.substring(0, 20) + "...",
           );
-          console.log("Setting cookies - domain:", config.NODE_ENV);
+          console.log("Setting cookies - environment:", config.NODE_ENV);
+          console.log("Setting cookies - domain:", config.DOMAIN);
         }
 
         reply.setCookie("accessToken", accessToken, {

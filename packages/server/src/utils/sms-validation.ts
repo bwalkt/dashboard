@@ -5,6 +5,8 @@ import { smsService } from "../services/sms.service";
 
 /**
  * Validate phone number format and return error response if invalid
+ *  TODO: Extend to support international numbers
+ *. libphonenumber-js
  */
 export async function validatePhoneNumber(
   phone: string,
