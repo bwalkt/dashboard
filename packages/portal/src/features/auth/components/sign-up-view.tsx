@@ -1,11 +1,13 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { use, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/AuthContext'
+import { api } from '@/lib/api'
 
 /**
  * Render the sign-up page with a local form and a GitHub OAuth sign-in option.
@@ -17,6 +19,11 @@ import { useAuth } from '@/contexts/AuthContext'
 export default function SignUpViewPage() {
   const navigate = useNavigate()
   const { user, loading, signUp } = useAuth()
+  const [emailSent, setEmailSent] = useState(false)
+  const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
+  const [otpCode, setOtpCode] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -28,20 +35,50 @@ export default function SignUpViewPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const email = (e.target as any).email.value;
-    const name = (e.target as any).fullName.value;
-    
-    try {
-      const result = await signUp({
-        email: email,
-        name: name,
-      })
+    if (emailSent) {
+      // Handle OTP verification
+      if (otpCode.length !== 6) {
+        toast.error('Please enter a 6-digit verification code');
+        return;
+      }
       
-      console.log('Sign up successful:', result);
-      toast.success('Check your email for verification code');
-    } catch (error) {
-      console.error('Sign up error:', error);
-      toast.error('Failed to sign up. Please try again.');
+      setIsLoading(true);
+      try {
+        const result = await api.post('/auth/register/verify', {
+          email: email,
+          code: otpCode
+        });
+        
+        toast.success('Registration successful!');
+        navigate({ to: '/dashboard/overview', replace: true });
+      } catch (error) {
+        console.error('Verification error:', error);
+        toast.error('Invalid or expired verification code. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Handle initial registration
+      const formEmail = (e.target as any).email.value;
+      const formName = (e.target as any).fullName.value;
+      
+      setIsLoading(true);
+      try {
+        const result = await signUp({
+          email: formEmail,
+          name: formName,
+        });
+        
+        setEmail(formEmail);
+        setName(formName);
+        setEmailSent(true);
+        toast.success('Check your email for verification code');
+      } catch (error) {
+        console.error('Sign up error:', error);
+        toast.error('Failed to sign up. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
     }
   }
 
@@ -64,7 +101,14 @@ export default function SignUpViewPage() {
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" type="text" placeholder="Enter your full name" required />
+                  <Input 
+                    id="fullName" 
+                    type="text" 
+                    placeholder="Enter your full name" 
+                    defaultValue={name}
+                    disabled={emailSent}
+                    required 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -72,13 +116,40 @@ export default function SignUpViewPage() {
                     id="email"
                     type="email"
                     placeholder="your_mail+test@example.com"
-                    defaultValue="your_mail+test@example.com"
+                    defaultValue={email || "your_mail+test@example.com"}
+                    disabled={emailSent}
                     required
                   />
                 </div>
+                
+                {emailSent && (
+                  <div className="space-y-2">
+                    <Label htmlFor="otpCode">Verification Code</Label>
+                    <div className="flex justify-center">
+                      <InputOTP
+                        maxLength={6}
+                        value={otpCode}
+                        onChange={(value) => setOtpCode(value)}
+                        autoFocus
+                      >
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} />
+                          <InputOTPSlot index={1} />
+                          <InputOTPSlot index={2} />
+                          <InputOTPSlot index={3} />
+                          <InputOTPSlot index={4} />
+                          <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                    <p className="text-sm text-muted-foreground text-center">
+                      Enter the 6-digit code sent to your email
+                    </p>
+                  </div>
+                )}
                
-                <Button type="submit" className="w-full">
-                  Sign Up
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Processing...' : emailSent ? 'Verify Code' : 'Register'}
                 </Button>
               </form>
 

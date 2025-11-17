@@ -386,10 +386,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           JSON.stringify({ code: verificationCode, name, createdAt: new Date().toISOString() }),
           expirySeconds,
         );
-        await userService.createUser({
-          email,
-          name: name || email.split("@")[0],
-        });
+
         // Send verification email with confirmation code
         await emailService.sendConfirmationCodeEmail({
           to: email,
