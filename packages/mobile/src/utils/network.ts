@@ -65,9 +65,9 @@ export async function getNetworkInfo() {
  * Subscribe to network state changes
  */
 export function subscribeToNetworkChanges(
-  callback: (state: { isConnected: boolean; type: string; ipAddress: string | null }) => void
+  callback: (state: { isConnected: boolean; type: string; ipAddress: string | null }) => void,
 ) {
-  return NetInfo.addEventListener(async (state) => {
+  return NetInfo.addEventListener(async state => {
     const ipAddress = await getLocalIPAddress()
     callback({
       isConnected: state.isConnected || false,

@@ -12,27 +12,25 @@ export interface MainLayoutProps {
   style?: React.CSSProperties
 }
 
-export function MainLayout({ 
-  children, 
-  title, 
-  description, 
-  hasFilters = false, 
+export function MainLayout({
+  children,
+  title,
+  description,
+  hasFilters = false,
   showFilters = false,
   onToggleFilters,
-  style
+  style,
 }: MainLayoutProps) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <MainHeader 
+      <MainHeader
         title={title}
         description={description}
         hasFilters={hasFilters}
         showFilters={showFilters}
         onToggleFilters={onToggleFilters}
       />
-      <MainContent style={style}>
-        {children}
-      </MainContent>
+      <MainContent style={style}>{children}</MainContent>
     </div>
   )
 }

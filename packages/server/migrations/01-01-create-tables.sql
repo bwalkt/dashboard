@@ -405,33 +405,35 @@ CREATE TABLE pzero.all_users (
 PARTITION BY
   list (is_act);
 
-CREATE TABLE PZERO.DOMAIN_BASE (
+CREATE TABLE pzero.domain_base (
   tags TEXT[],
   whitelisted_domains pzero.domain[],
   blacklisted_domains pzero.domain[],
-  whitelisted_emails pzero.email[[],
-  blacklisted_emails pzer.email[],
+  whitelisted_emails pzero.email[],
+  blacklisted_emails pzero.email[],
   status pzero.org_status,
   handle pzero.valid_org_handle NOT NULL,
   add_policy smallint NOT NULL DEFAULT 0, -- 0 explicit, 1 -- discoverable, 2 -- shareable 3 -- discoverable and shareable
 );
+
 CREATE TABLE pzero.all_groups (
   LIKE pzero.id_base_loc_table including defaults including constraints,
-  LIKE pzero.domain_base including all,
+  LIKE pzero.domain_base including ALL,
   PRIMARY KEY (id, is_act)
 )
 PARTITION BY
   list (is_act);
 
-CREATE TABLE pzero.ENDPOINT_BASE (
+CREATE TABLE pzero.endpoint_base (
   headers pzero.key_values,
   variables pzero.key_values
 );
+
 -- Indexes will be created automatically by event trigger
 CREATE TABLE pzero.all_orgs (
   LIKE pzero.id_base_loc_table including defaults including constraints,
-  LIKE pzero.domain_base including all,
-  LIKE pzero.endpoint_base including all,
+  LIKE pzero.domain_base including ALL,
+  LIKE pzero.endpoint_base including ALL,
   website pzero.domain,
   favicon text,
   subscriber_tier_level pzero.subscriber_tier_level DEFAULT 'FREE',
@@ -448,10 +450,9 @@ PARTITION BY
 
 CREATE TABLE pzero.all_nhs (
   LIKE pzero.base_loc_table including defaults including constraints,
-  LIKE pzero.domain_base including all,
-  LIKE pzero.endpoint_base including all,
-  level smallint NOT NULL DEFAULT 0
-  PRIMARY KEY (id, is_act),
+  LIKE pzero.domain_base including ALL,
+  LIKE pzero.endpoint_base including ALL,
+  level smallint NOT NULL DEFAULT 0 PRIMARY KEY (id, is_act),
   UNIQUE (name, level, is_act)
 )
 PARTITION BY
@@ -615,7 +616,9 @@ VALUES
 
 -- Down Migration
 DROP TABLE IF EXISTS pzero.endpoints;
+
 DROP TABLE IF EXISTS pzero.all_nhs;
+
 DROP TABLE IF EXISTS pzero.sessions;
 
 DROP TABLE IF EXISTS pzero.users;

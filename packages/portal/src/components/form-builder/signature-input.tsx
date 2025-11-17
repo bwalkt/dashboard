@@ -27,10 +27,7 @@ export const disableTouchScroll = (canvas: HTMLCanvasElement) => {
 
 export const SCALE = 10
 
-export default function SignatureInput({
-  canvasRef: externalCanvasRef,
-  onSignatureChange,
-}: SignatureInputProps) {
+export default function SignatureInput({ canvasRef: externalCanvasRef, onSignatureChange }: SignatureInputProps) {
   const internalCanvasRef = useRef<HTMLCanvasElement>(null)
   const canvasRef = externalCanvasRef || internalCanvasRef
   const [isDrawing, setIsDrawing] = useState(false)
@@ -50,9 +47,7 @@ export default function SignatureInput({
       const isDarkClass = document.documentElement.classList.contains('dark')
       const isLightClass = document.documentElement.classList.contains('light')
 
-      const systemPrefersDark = window.matchMedia(
-        '(prefers-color-scheme: dark)',
-      ).matches
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
 
       const isDarkMode = isDarkClass || (!isLightClass && systemPrefersDark)
 
@@ -76,11 +71,7 @@ export default function SignatureInput({
     }
   }, [canvasRef])
 
-  const startDrawing = (
-    e:
-      | React.MouseEvent<HTMLCanvasElement>
-      | React.TouchEvent<HTMLCanvasElement>,
-  ) => {
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault()
     setIsDrawing(true)
     draw(e)
@@ -100,11 +91,7 @@ export default function SignatureInput({
     }
   }
 
-  const draw = (
-    e:
-      | React.MouseEvent<HTMLCanvasElement>
-      | React.TouchEvent<HTMLCanvasElement>,
-  ) => {
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault()
     if (!isDrawing) return
 

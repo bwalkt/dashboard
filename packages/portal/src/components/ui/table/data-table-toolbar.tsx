@@ -1,4 +1,3 @@
-
 import { Cross2Icon } from '@radix-ui/react-icons'
 import type { Column, Table } from '@tanstack/react-table'
 import * as React from 'react'

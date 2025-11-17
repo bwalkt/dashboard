@@ -62,21 +62,24 @@ const DEFAULT_ALLOWED_HEADERS = [
   "X-Custom-Header",
 ];
 
-const DEFAULT_EXPOSED_HEADERS = ["Content-Range", "X-Content-Range"];  
-function parserOnlyArray(
-  envVar: string | undefined,
-  def?: string[],
-): string[] {
+const DEFAULT_EXPOSED_HEADERS = ["Content-Range", "X-Content-Range"];
+function parserOnlyArray(envVar: string | undefined, def?: string[]): string[] {
   if (!envVar) {
     return def ?? [];
   }
   return envVar.split(",").map((item) => item.trim());
 }
-function parserArray(envVar: string | undefined, def: string): string | string[] {
+function parserArray(
+  envVar: string | undefined,
+  def: string,
+): string | string[] {
   if (!envVar) return def;
-  const vars = envVar.split(",").map((item) => item.trim()).filter(item => item.length > 0);
+  const vars = envVar
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
   if (vars.length === 0) return def;
-  return vars.length === 1 ? (vars[0] || def) : vars;
+  return vars.length === 1 ? vars[0] || def : vars;
 }
 export const config: EnvironmentConfig = {
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
@@ -99,8 +102,14 @@ export const config: EnvironmentConfig = {
   OAUTH_REDIRECT_URL: process.env.OAUTH_REDIRECT_URL || "http://localhost:1430",
   SERVER_BASE_URL: process.env.SERVER_BASE_URL || "http://localhost:8090",
   DOMAIN: domain,
-  POSTGRES_IDLE_TIMEOUT: parseInt(process.env.POSTGRES_IDLE_TIMEOUT || "30000", 10),
-  POSTGRES_CONNECTION_TIMEOUT: parseInt(process.env.POSTGRES_CONNECTION_TIMEOUT || "2000", 10),
+  POSTGRES_IDLE_TIMEOUT: parseInt(
+    process.env.POSTGRES_IDLE_TIMEOUT || "30000",
+    10,
+  ),
+  POSTGRES_CONNECTION_TIMEOUT: parseInt(
+    process.env.POSTGRES_CONNECTION_TIMEOUT || "2000",
+    10,
+  ),
   POSTGRES_MAX_CLIENTS: parseInt(process.env.POSTGRES_MAX_CLIENTS || "20", 10),
   CORS_ALLOWED_ORIGINS: parserArray(process.env.CORS_ALLOWED_ORIGINS, "*"),
   CORS_ALLOW_CREDENTIALS: process.env.CORS_ALLOW_CREDENTIALS === "true",
@@ -112,7 +121,7 @@ export const config: EnvironmentConfig = {
     process.env.CORS_ALLOWED_HEADERS,
     DEFAULT_ALLOWED_HEADERS,
   ),
-  EMAIL_EXPIRY_MINUTES: parseInt(process.env.EMAIL_EXPIRY_MINUTES || "100", 10) ,
+  EMAIL_EXPIRY_MINUTES: parseInt(process.env.EMAIL_EXPIRY_MINUTES || "100", 10),
 };
 
 /**

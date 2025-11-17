@@ -7,14 +7,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
-import {
-  Form,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { Form, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import SignatureInput from '@/components/ui/signature-input'
 
 const FormSchema = z.object({
@@ -49,13 +42,8 @@ export function SignatureForm() {
               <div>
                 <FormLabel>Sign here</FormLabel>
               </div>
-              <SignatureInput
-                canvasRef={canvasRef}
-                onSignatureChange={field.onChange}
-              />
-              <FormDescription>
-                Please provide your signature above
-              </FormDescription>
+              <SignatureInput canvasRef={canvasRef} onSignatureChange={field.onChange} />
+              <FormDescription>Please provide your signature above</FormDescription>
               <FormMessage />
             </FormItem>
           )}

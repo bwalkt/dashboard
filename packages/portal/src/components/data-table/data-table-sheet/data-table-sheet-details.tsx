@@ -1,99 +1,73 @@
-"use client";
+'use client'
 
-import { ChevronDown, ChevronUp, X } from "lucide-react";
-import * as React from "react";
-import { Kbd } from "@/components/custom/kbd";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/custom/sheet";
-import { useDataTable } from "@/components/data-table/data-table-provider";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { useSecondarySidebar } from "@/components/ui/sidebar";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { ChevronDown, ChevronUp, X } from 'lucide-react'
+import * as React from 'react'
+import { Kbd } from '@/components/custom/kbd'
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/custom/sheet'
+import { useDataTable } from '@/components/data-table/data-table-provider'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import { useSecondarySidebar } from '@/components/ui/sidebar'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 
 export interface DataTableSheetDetailsProps {
-  title?: React.ReactNode;
-  titleClassName?: string;
-  children?: React.ReactNode;
+  title?: React.ReactNode
+  titleClassName?: string
+  children?: React.ReactNode
 }
 
-export function DataTableSheetDetails({
-  title,
-  titleClassName,
-  children,
-}: DataTableSheetDetailsProps) {
-  const { table, rowSelection, isLoading } = useDataTable();
+export function DataTableSheetDetails({ title, titleClassName, children }: DataTableSheetDetailsProps) {
+  const { table, rowSelection, isLoading } = useDataTable()
 
-  const selectedRowKey = Object.keys(rowSelection)?.[0];
-  
+  const selectedRowKey = Object.keys(rowSelection)?.[0]
+
   // Auto-collapse primary sidebar when this sheet opens
-  useSecondarySidebar(!!selectedRowKey);
+  useSecondarySidebar(!!selectedRowKey)
 
   const selectedRow = React.useMemo(() => {
-    if (isLoading && !selectedRowKey) return;
-    return table
-      .getCoreRowModel()
-      .flatRows.find((row) => row.id === selectedRowKey);
-  }, [selectedRowKey, isLoading]);
+    if (isLoading && !selectedRowKey) return
+    return table.getCoreRowModel().flatRows.find(row => row.id === selectedRowKey)
+  }, [selectedRowKey, isLoading])
 
-  const index = table
-    .getCoreRowModel()
-    .flatRows.findIndex((row) => row.id === selectedRow?.id);
+  const index = table.getCoreRowModel().flatRows.findIndex(row => row.id === selectedRow?.id)
 
-  const nextId = React.useMemo(
-    () => table.getCoreRowModel().flatRows[index + 1]?.id,
-    [index, isLoading],
-  );
+  const nextId = React.useMemo(() => table.getCoreRowModel().flatRows[index + 1]?.id, [index, isLoading])
 
-  const prevId = React.useMemo(
-    () => table.getCoreRowModel().flatRows[index - 1]?.id,
-    [index, isLoading],
-  );
+  const prevId = React.useMemo(() => table.getCoreRowModel().flatRows[index - 1]?.id, [index, isLoading])
 
   const onPrev = React.useCallback(() => {
-    if (prevId) table.setRowSelection({ [prevId]: true });
-  }, [prevId, isLoading]);
+    if (prevId) table.setRowSelection({ [prevId]: true })
+  }, [prevId, isLoading])
 
   const onNext = React.useCallback(() => {
-    if (nextId) table.setRowSelection({ [nextId]: true });
-  }, [nextId, isLoading]);
+    if (nextId) table.setRowSelection({ [nextId]: true })
+  }, [nextId, isLoading])
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (!selectedRowKey) return;
+      if (!selectedRowKey) return
 
       // REMINDER: prevent dropdown navigation inside of sheet to change row selection
-      const activeElement = document.activeElement;
-      const isMenuActive = activeElement?.closest('[role="menu"]');
+      const activeElement = document.activeElement
+      const isMenuActive = activeElement?.closest('[role="menu"]')
 
-      if (isMenuActive) return;
+      if (isMenuActive) return
 
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        onPrev();
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        onPrev()
       }
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        onNext();
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        onNext()
       }
-    };
+    }
 
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, [selectedRowKey, onNext, onPrev]);
+    document.addEventListener('keydown', down)
+    return () => document.removeEventListener('keydown', down)
+  }, [selectedRowKey, onNext, onPrev])
 
   return (
     <Sheet
@@ -101,14 +75,12 @@ export function DataTableSheetDetails({
       onOpenChange={() => {
         // REMINDER: focus back to the row that was selected
         // We need to manually focus back due to missing Trigger component
-        const el = selectedRowKey
-          ? document.getElementById(selectedRowKey)
-          : null;
-        table.resetRowSelection();
+        const el = selectedRowKey ? document.getElementById(selectedRowKey) : null
+        table.resetRowSelection()
 
         // REMINDER: when navigating between tabs in the sheet and exit the sheet, the tab gets lost
         // We need a minimal delay to allow the sheet to close before focusing back to the row
-        setTimeout(() => el?.focus(), 0);
+        setTimeout(() => el?.focus(), 0)
       }}
     >
       <SheetContent
@@ -118,24 +90,14 @@ export function DataTableSheetDetails({
       >
         <SheetHeader className="sticky top-0 z-10 border-b bg-background p-4">
           <div className="flex items-center justify-between gap-2">
-            <SheetTitle className={cn(titleClassName, "truncate text-left")}>
-              {isLoading && !selectedRowKey ? (
-                <Skeleton className="h-7 w-36" />
-              ) : (
-                title
-              )}
+            <SheetTitle className={cn(titleClassName, 'truncate text-left')}>
+              {isLoading && !selectedRowKey ? <Skeleton className="h-7 w-36" /> : title}
             </SheetTitle>
             <div className="flex h-7 items-center gap-1">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      disabled={!prevId}
-                      onClick={onPrev}
-                    >
+                    <Button size="icon" variant="ghost" className="h-7 w-7" disabled={!prevId} onClick={onPrev}>
                       <ChevronUp className="h-5 w-5" />
                       <span className="sr-only">Previous</span>
                     </Button>
@@ -150,13 +112,7 @@ export function DataTableSheetDetails({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      disabled={!nextId}
-                      onClick={onNext}
-                    >
+                    <Button size="icon" variant="ghost" className="h-7 w-7" disabled={!nextId} onClick={onNext}>
                       <ChevronDown className="h-5 w-5" />
                       <span className="sr-only">Next</span>
                     </Button>
@@ -178,11 +134,9 @@ export function DataTableSheetDetails({
             </div>
           </div>
         </SheetHeader>
-        <SheetDescription className="sr-only">
-          Selected row details
-        </SheetDescription>
+        <SheetDescription className="sr-only">Selected row details</SheetDescription>
         <div className="p-4">{children}</div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

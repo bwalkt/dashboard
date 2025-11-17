@@ -24,7 +24,7 @@ export function PageLayout({
   onSidebarToggle,
   showBreadcrumbs,
   renderFilters,
-  style
+  style,
 }: PageLayoutProps) {
   const [showFilters, setShowFilters] = React.useState(hasFilters)
 
@@ -48,7 +48,7 @@ export function PageLayout({
           </div>
         </div>
       )}
-      
+
       {/* Main content */}
       <div className="flex flex-col flex-1">
         <PageHeader
@@ -59,7 +59,7 @@ export function PageLayout({
           onSidebarToggle={onSidebarToggle}
           showBreadcrumbs={showBreadcrumbs}
         />
-        
+
         <main className="flex-1 overflow-auto" style={style}>
           {children}
         </main>

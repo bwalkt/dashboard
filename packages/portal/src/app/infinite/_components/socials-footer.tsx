@@ -1,14 +1,10 @@
-import { Link as TanStackLink } from "@tanstack/react-router";
-import { Book, Command } from "lucide-react";
-import { Kbd } from "@/components/custom/kbd";
-import { Link } from "@/components/custom/link";
-import { ModeToggle } from "@/components/layout/ThemeToggle/theme-toggle";
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Link as TanStackLink } from '@tanstack/react-router'
+import { Book, Command } from 'lucide-react'
+import { Kbd } from '@/components/custom/kbd'
+import { Link } from '@/components/custom/link'
+import { ModeToggle } from '@/components/layout/ThemeToggle/theme-toggle'
+import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 export function SocialsFooter() {
   return (
@@ -32,48 +28,48 @@ export function SocialsFooter() {
         </Button>
       </div>
       <p className="text-center text-xs text-muted-foreground">
-        Powered by{" "}
+        Powered by{' '}
         <Link href="https://openstatus.dev" hideArrow>
           OpenStatus
         </Link>
       </p>
       <p className="text-center text-[10px] text-muted-foreground">
-        The project is in active development. For feedback, please{" "}
+        The project is in active development. For feedback, please{' '}
         <Link
           href="https://github.com/openstatusHQ/data-table-filters/issues/new"
           className="text-muted-foreground"
           hideArrow
         >
           open an issue
-        </Link>{" "}
+        </Link>{' '}
         on GitHub.
       </p>
     </div>
-  );
+  )
 }
 
 const hotkeys = [
-  { key: "K", description: "Toggle command input" },
-  { key: "B", description: "Toggle sidebar controls" },
+  { key: 'K', description: 'Toggle command input' },
+  { key: 'B', description: 'Toggle sidebar controls' },
   {
-    key: "U",
-    description: "Undo column state (order, visibility)",
+    key: 'U',
+    description: 'Undo column state (order, visibility)',
   },
   {
-    key: "J",
-    description: "Toggle live mode",
+    key: 'J',
+    description: 'Toggle live mode',
   },
-  { key: "Esc", description: "Reset table filters" },
+  { key: 'Esc', description: 'Reset table filters' },
   {
-    key: ".",
-    description: "Reset element focus to start",
+    key: '.',
+    description: 'Reset element focus to start',
   },
-];
+]
 
 function HotkeyOverview() {
   return (
     <ul className="divide-y">
-      {hotkeys.map((props) => {
+      {hotkeys.map(props => {
         return (
           <li key={props.key} className="grid grid-cols-4 gap-2 py-0.5">
             <span className="col-span-1 text-left">
@@ -82,12 +78,10 @@ function HotkeyOverview() {
                 <span>{props.key}</span>
               </Kbd>
             </span>
-            <span className="col-span-3 place-content-center text-xs text-muted-foreground">
-              {props.description}
-            </span>
+            <span className="col-span-3 place-content-center text-xs text-muted-foreground">{props.description}</span>
           </li>
-        );
+        )
       })}
     </ul>
-  );
+  )
 }

@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import * as React from 'react'
 import { useMediaQuery } from '@/hooks/use-media-query'
@@ -13,16 +13,10 @@ export interface AppLayoutProps {
   style?: React.CSSProperties
 }
 
-export function AppLayout({ 
-  children, 
-  title, 
-  description, 
-  hasFilters = false, 
-  style
-}: AppLayoutProps) {
+export function AppLayout({ children, title, description, hasFilters = false, style }: AppLayoutProps) {
   const [showFilters, setShowFilters] = React.useState(hasFilters)
-  const isMobile = useMediaQuery("(max-width: 768px)")
-  
+  const isMobile = useMediaQuery('(max-width: 768px)')
+
   React.useEffect(() => {
     setShowFilters(hasFilters)
   }, [hasFilters])
@@ -40,7 +34,7 @@ export function AppLayout({
           </div>
         </div>
       )}
-      
+
       {/* Main layout area */}
       <MainLayout
         title={title}

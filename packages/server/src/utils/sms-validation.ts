@@ -1,5 +1,5 @@
-import type { FastifyReply } from "fastify";
 import type { ErrorResponse } from "@pzero/shared";
+import type { FastifyReply } from "fastify";
 import { redis } from "../config/redis";
 import { smsService } from "../services/sms.service";
 
@@ -8,7 +8,7 @@ import { smsService } from "../services/sms.service";
  */
 export async function validatePhoneNumber(
   phone: string,
-  reply: FastifyReply
+  reply: FastifyReply,
 ): Promise<boolean> {
   if (!phone || !smsService.validatePhoneFormat(phone)) {
     reply.status(400).send({
@@ -27,7 +27,7 @@ export async function validatePhoneNumber(
 export async function checkSmsRateLimit(
   phone: string,
   reply: FastifyReply,
-  includeTtl: boolean = false
+  includeTtl: boolean = false,
 ): Promise<boolean> {
   const rateLimitKey = `sms_verification_rate:${phone}`;
   const isRateLimited = await redis.exists(rateLimitKey);

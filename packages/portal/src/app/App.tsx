@@ -18,7 +18,6 @@ import '@/styles/theme.css'
 // Configure NProgress
 NProgress.configure({ showSpinner: false })
 
-
 /**
  * Render the themed application shell with notification UI, global progress indicator, and route configuration.
  *

@@ -1,9 +1,9 @@
-import { useMemo } from "react";
-import PageContainer from "@/components/layout/page-container";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { BarGraphSkeleton } from "./bar-graph-skeleton";
+import { useMemo } from 'react'
+import PageContainer from '@/components/layout/page-container'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { BarGraphSkeleton } from './bar-graph-skeleton'
 
 /**
  * Render the overview dashboard for the admin portal.
@@ -13,8 +13,6 @@ import { BarGraphSkeleton } from "./bar-graph-skeleton";
  * @returns The JSX element representing the overview dashboard page.
  */
 export default function OverViewPage() {
-  
-
   return (
     <PageContainer>
       <div className="flex flex-1 flex-col space-y-2">
@@ -22,9 +20,7 @@ export default function OverViewPage() {
           <div className="flex items-center space-x-4"></div>
         </div>
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 px-0 md:grid-cols-2 xl:grid-cols-4">
-           
-          </div>
+          <div className="grid grid-cols-1 gap-4 px-0 md:grid-cols-2 xl:grid-cols-4"></div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
             <div className="col-span-4">
               <BarGraphSkeleton />

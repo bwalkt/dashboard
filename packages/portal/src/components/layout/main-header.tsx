@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import { IconFilter, IconFilterOff } from '@tabler/icons-react'
 import { MenuIcon } from 'lucide-react'
@@ -18,14 +18,14 @@ export interface MainHeaderProps {
   onToggleFilters?: () => void
 }
 
-export function MainHeader({ 
-  title, 
-  description, 
-  hasFilters = false, 
+export function MainHeader({
+  title,
+  description,
+  hasFilters = false,
   showFilters = false,
-  onToggleFilters
+  onToggleFilters,
 }: MainHeaderProps) {
-  const isMobile = useMediaQuery("(max-width: 768px)")
+  const isMobile = useMediaQuery('(max-width: 768px)')
   const { setOpenMobile } = useSidebar()
 
   return (
@@ -34,12 +34,7 @@ export function MainHeader({
         <div className="flex items-center gap-2">
           {isMobile ? (
             // Mobile: Single hamburger menu that opens mobile sidebar
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => setOpenMobile(true)}
-            >
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setOpenMobile(true)}>
               <MenuIcon className="w-4 h-4" />
             </Button>
           ) : (
@@ -50,20 +45,12 @@ export function MainHeader({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={onToggleFilters}
-                      >
-                        {showFilters ? (
-                          <IconFilterOff className="h-4 w-4" />
-                        ) : (
-                          <IconFilter className="h-4 w-4" />
-                        )}
+                      <Button variant="ghost" size="icon" onClick={onToggleFilters}>
+                        {showFilters ? <IconFilterOff className="h-4 w-4" /> : <IconFilter className="h-4 w-4" />}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
-                      <p>{showFilters ? "Hide Filters" : "Show Filters"}</p>
+                      <p>{showFilters ? 'Hide Filters' : 'Show Filters'}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -71,9 +58,7 @@ export function MainHeader({
             </>
           )}
         </div>
-        {(title || description) && (
-          <DataTableTitle title={title || ""} description={description} />
-        )}
+        {(title || description) && <DataTableTitle title={title || ''} description={description} />}
         {!isMobile && (
           <div className="ml-auto">
             <SearchInput />

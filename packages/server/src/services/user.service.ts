@@ -30,13 +30,16 @@ export class UserService {
   /**
    * Get user by email
    */
-  public async getUserByEmail(email: string, schema: string = 'pzero'): Promise<User | null> {
-    const result = await db.pool.query(`SELECT * FROM ${schema}.auth WHERE email = $1`, [email]);
+  public async getUserByEmail(
+    email: string,
+    schema: string = "pzero",
+  ): Promise<User | null> {
+    const result = await db.pool.query(
+      `SELECT * FROM ${schema}.auth WHERE email = $1`,
+      [email],
+    );
     return result.rows[0] || null;
   }
-
-
-  
 
   /**
    * Create user from email registration
@@ -51,7 +54,7 @@ export class UserService {
       email: userData.email,
       github_id: null,
       avatar: null,
-      email_verified: userData.email_verified ?? false
+      email_verified: userData.email_verified ?? false,
     };
 
     return this.createUser(createData);
@@ -60,7 +63,10 @@ export class UserService {
   /**
    * Create a new user
    */
-  public async createUser(userData: CreateUserData, schema: string = 'pzero'): Promise<User> {
+  public async createUser(
+    userData: CreateUserData,
+    schema: string = "pzero",
+  ): Promise<User> {
     const result = await db.pool.query(
       `INSERT INTO ${schema}.auth (github_id, name, email, avatar, email_verified)
        VALUES ($1, $2, $3, $4, $5)
@@ -70,7 +76,7 @@ export class UserService {
         userData.name,
         userData.email,
         userData.avatar,
-        userData.email_verified ?? false
+        userData.email_verified ?? false,
       ],
     );
 
@@ -105,9 +111,9 @@ export class UserService {
       name: githubUser.name,
       email: githubUser.email,
       avatar: githubUser.avatar_url,
-      email_verified: false
+      email_verified: false,
     };
-    
+
     return this.upsertUser(userData);
   }
 
@@ -117,7 +123,7 @@ export class UserService {
   public async updateUser(
     id: string,
     userData: Partial<CreateUserData>,
-    schema: string = 'pzero'
+    schema: string = "pzero",
   ): Promise<User | null> {
     const fields: string[] = [];
     const values: any[] = [];

@@ -16,11 +16,21 @@ export class Math1 {
   public cuboidId: number = 0
 
   // Public getters for accessing the private instances
-  public get stats() { return this._stats }
-  public get signal() { return this._signal }
-  public get linearAlgebra() { return this._linearAlgebra }
-  public get timeSeries() { return this._timeSeries }
-  public get matrix() { return this.matrixOps }
+  public get stats() {
+    return this._stats
+  }
+  public get signal() {
+    return this._signal
+  }
+  public get linearAlgebra() {
+    return this._linearAlgebra
+  }
+  public get timeSeries() {
+    return this._timeSeries
+  }
+  public get matrix() {
+    return this.matrixOps
+  }
 
   init(cuboidId: number): void {
     this.cuboidId = cuboidId
@@ -98,28 +108,63 @@ export class Math1 {
     return result
   }
 
-  randomFunc(matrix: number[][], index?: number, enableChaining: boolean = true): { operation: string; result: Function } {
+  randomFunc(
+    matrix: number[][],
+    index?: number,
+    enableChaining: boolean = true,
+  ): { operation: string; result: Function } {
     if (!Array.isArray(matrix) || matrix.length === 0 || matrix.every(row => row.length === 0)) {
-      return { 
-        operation: 'noop', 
-        result: () => ({ error: 'matrix has no data', value: 0 })
+      return {
+        operation: 'noop',
+        result: () => ({ error: 'matrix has no data', value: 0 }),
       }
     }
 
     // Enhanced chaining - now always returns functions
     const operations = [
-      'sumRow', 'sumCol', 'avgRow', 'avgCol', 'medianRow', 'medianCol',
-      'minRow', 'maxRow', 'minCol', 'maxCol', 'productRow', 'productCol',
-      'stdDevRow', 'stdDevCol', 'sinRow', 'cosRow', 'tanRow', 'sinCol', 
-      'cosCol', 'tanCol', 'sqrtSumRow', 'sqrtSumCol', 'hypotRow', 'hypotCol',
-      'varianceRow', 'varianceCol', 'percentileRow', 'percentileCol', 
-      'harmonicMeanRow', 'harmonicMeanCol', 'rangeRow', 'rangeCol',
-      'chainFunction', 'compositeFunction', 'transformFunction',
-      'matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'
+      'sumRow',
+      'sumCol',
+      'avgRow',
+      'avgCol',
+      'medianRow',
+      'medianCol',
+      'minRow',
+      'maxRow',
+      'minCol',
+      'maxCol',
+      'productRow',
+      'productCol',
+      'stdDevRow',
+      'stdDevCol',
+      'sinRow',
+      'cosRow',
+      'tanRow',
+      'sinCol',
+      'cosCol',
+      'tanCol',
+      'sqrtSumRow',
+      'sqrtSumCol',
+      'hypotRow',
+      'hypotCol',
+      'varianceRow',
+      'varianceCol',
+      'percentileRow',
+      'percentileCol',
+      'harmonicMeanRow',
+      'harmonicMeanCol',
+      'rangeRow',
+      'rangeCol',
+      'chainFunction',
+      'compositeFunction',
+      'transformFunction',
+      'matrixOperation',
+      'vectorOperation',
+      'statisticalAnalysis',
+      'linearAlgebraOperation',
     ]
 
     const randomOp = operations[Math.floor(Math.random() * operations.length)]
-    
+
     // Handle matrix-based operations that don't need index
     if (['matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(randomOp)) {
       switch (randomOp) {
@@ -136,49 +181,41 @@ export class Math1 {
 
     // Handle function factories that require targetIdx
     if (['chainFunction', 'compositeFunction', 'transformFunction'].includes(randomOp)) {
-      const targetIdx = Math.max(
-        0,
-        Math.min(
-          index ?? Math.floor(Math.random() * matrix.length),
-          matrix.length - 1,
-        ),
-      )
+      const targetIdx = Math.max(0, Math.min(index ?? Math.floor(Math.random() * matrix.length), matrix.length - 1))
       switch (randomOp) {
         case 'chainFunction':
           return { operation: `chainFunction(${targetIdx})`, result: this.createChainFunction(matrix, targetIdx) }
         case 'compositeFunction':
-          return { operation: `compositeFunction(${targetIdx})`, result: this.createCompositeFunction(matrix, targetIdx) }
+          return {
+            operation: `compositeFunction(${targetIdx})`,
+            result: this.createCompositeFunction(matrix, targetIdx),
+          }
         case 'transformFunction':
-          return { operation: `transformFunction(${targetIdx})`, result: this.createTransformFunction(matrix, targetIdx) }
+          return {
+            operation: `transformFunction(${targetIdx})`,
+            result: this.createTransformFunction(matrix, targetIdx),
+          }
       }
     }
 
     const isRowOp = randomOp.includes('Row')
-    const maxIndex = isRowOp
-      ? matrix.length - 1
-      : matrix.reduce((max, row) => Math.max(max, row.length - 1), -1)
+    const maxIndex = isRowOp ? matrix.length - 1 : matrix.reduce((max, row) => Math.max(max, row.length - 1), -1)
 
     if (maxIndex < 0) {
-      return { 
-        operation: randomOp, 
-        result: () => ({ error: 'matrix has no usable columns', value: 0 })
+      return {
+        operation: randomOp,
+        result: () => ({ error: 'matrix has no usable columns', value: 0 }),
       }
     }
 
-    const targetIndex = Math.max(
-      0,
-      Math.min(
-        index ?? Math.floor(Math.random() * (maxIndex + 1)),
-        maxIndex,
-      ),
-    )
-    
+    const targetIndex = Math.max(0, Math.min(index ?? Math.floor(Math.random() * (maxIndex + 1)), maxIndex))
+
     // Create a function that will execute the operation when called
     const operationFunction = (inputMatrix?: number[][], inputIndex?: number) => {
       const workMatrix = inputMatrix || matrix
       const workIndex = inputIndex ?? targetIndex
       let result: number | string = 0
-      
+
       switch (randomOp) {
         case 'sumRow':
           result = this.sumRow(workMatrix, workIndex)
@@ -277,47 +314,47 @@ export class Math1 {
           result = this.rangeCol(workMatrix, workIndex)
           break
       }
-      
+
       // Sometimes chain to another random function (20% chance)
       if (Math.random() < 0.2 && typeof result === 'number' && result !== 0) {
         const chainedFunction = this.randomFunc(workMatrix, Math.floor(Math.abs(result)) % workMatrix.length, false)
         const chainedResult = chainedFunction.result(workMatrix)
-        
+
         return {
           value: chainedResult.value || result,
           operation: `${randomOp}(${workIndex}) -> ${chainedFunction.operation}`,
           chained: true,
-          originalResult: result
+          originalResult: result,
         }
       }
-      
+
       return {
         value: result,
         operation: `${randomOp}(${workIndex})`,
-        chained: false
+        chained: false,
       }
     }
-    
-    return { 
-      operation: `${randomOp}(${targetIndex})`, 
-      result: operationFunction
+
+    return {
+      operation: `${randomOp}(${targetIndex})`,
+      result: operationFunction,
     }
   }
 
   createChainFunction(matrix: number[][], defaultIndex?: number): Function {
     const operations = ['sumRow', 'avgRow', 'maxRow', 'minRow', 'stdDevRow']
     const chainLength = Math.floor(Math.random() * 3) + 2 // 2-4 operations
-    
+
     return (inputMatrix?: number[][], startIndex?: number) => {
       const workingMatrix = inputMatrix || matrix
       let currentIndex = startIndex ?? defaultIndex ?? Math.floor(Math.random() * workingMatrix.length)
       let result = 0
       const appliedOps: string[] = []
-      
+
       for (let i = 0; i < chainLength; i++) {
         const randomOp = operations[Math.floor(Math.random() * operations.length)]
         currentIndex = Math.max(0, Math.min(currentIndex, workingMatrix.length - 1))
-        
+
         switch (randomOp) {
           case 'sumRow':
             result = this.sumRow(workingMatrix, currentIndex)
@@ -338,30 +375,30 @@ export class Math1 {
         appliedOps.push(`${randomOp}(${currentIndex})`)
         currentIndex = Math.floor(Math.abs(result)) % workingMatrix.length
       }
-      
+
       return {
         value: this.roundResult(typeof result === 'number' ? result : 0),
         operation: appliedOps.join(' -> '),
         result: this.roundResult(typeof result === 'number' ? result : 0),
         operations: appliedOps,
-        chainLength
+        chainLength,
       }
     }
   }
 
   createCompositeFunction(matrix: number[][], defaultIndex?: number): Function {
     const operations = ['sinCol', 'cosCol', 'tanCol', 'sqrtSumCol', 'hypotCol']
-    
+
     return (inputMatrix?: number[][], colIndex?: number) => {
       const workingMatrix = inputMatrix || matrix
       const targetCol = colIndex ?? defaultIndex ?? Math.floor(Math.random() * (workingMatrix[0]?.length || 1))
-      
+
       const primaryOp = operations[Math.floor(Math.random() * operations.length)]
       const secondaryOp = operations[Math.floor(Math.random() * operations.length)]
-      
+
       let firstResult = 0
       let secondResult = 0
-      
+
       switch (primaryOp) {
         case 'sinCol':
           firstResult = this.sinCol(workingMatrix, targetCol)
@@ -373,14 +410,16 @@ export class Math1 {
           firstResult = this.tanCol(workingMatrix, targetCol)
           break
         case 'sqrtSumCol':
-          firstResult = typeof this.sqrtSumCol(workingMatrix, targetCol) === 'number' 
-            ? this.sqrtSumCol(workingMatrix, targetCol) as number : 0
+          firstResult =
+            typeof this.sqrtSumCol(workingMatrix, targetCol) === 'number'
+              ? (this.sqrtSumCol(workingMatrix, targetCol) as number)
+              : 0
           break
         case 'hypotCol':
           firstResult = this.hypotCol(workingMatrix, targetCol)
           break
       }
-      
+
       switch (secondaryOp) {
         case 'sinCol':
           secondResult = this.sinCol(workingMatrix, (targetCol + 1) % (workingMatrix[0]?.length || 1))
@@ -392,22 +431,24 @@ export class Math1 {
           secondResult = this.tanCol(workingMatrix, (targetCol + 1) % (workingMatrix[0]?.length || 1))
           break
         case 'sqrtSumCol':
-          secondResult = typeof this.sqrtSumCol(workingMatrix, (targetCol + 1) % (workingMatrix[0]?.length || 1)) === 'number'
-            ? this.sqrtSumCol(workingMatrix, (targetCol + 1) % (workingMatrix[0]?.length || 1)) as number : 0
+          secondResult =
+            typeof this.sqrtSumCol(workingMatrix, (targetCol + 1) % (workingMatrix[0]?.length || 1)) === 'number'
+              ? (this.sqrtSumCol(workingMatrix, (targetCol + 1) % (workingMatrix[0]?.length || 1)) as number)
+              : 0
           break
         case 'hypotCol':
           secondResult = this.hypotCol(workingMatrix, (targetCol + 1) % (workingMatrix[0]?.length || 1))
           break
       }
-      
+
       const compositeResult = this.roundResult(firstResult * secondResult + Math.sin(firstResult))
-      
+
       return {
         value: compositeResult,
         operation: `(${primaryOp} * ${secondaryOp}) + sin(${primaryOp})`,
         result: compositeResult,
         operations: [primaryOp, secondaryOp],
-        composition: `(${primaryOp} * ${secondaryOp}) + sin(${primaryOp})`
+        composition: `(${primaryOp} * ${secondaryOp}) + sin(${primaryOp})`,
       }
     }
   }
@@ -415,10 +456,10 @@ export class Math1 {
   createTransformFunction(matrix: number[][], defaultIndex?: number): Function {
     const transformTypes = ['polynomial', 'trigonometric', 'logarithmic', 'exponential']
     const selectedTransform = transformTypes[Math.floor(Math.random() * transformTypes.length)]
-    
+
     return (inputData?: number[] | number[][], transformParam?: number) => {
       let dataToTransform: number[]
-      
+
       if (Array.isArray(inputData)) {
         if (Array.isArray(inputData[0])) {
           // Matrix input - use defaultIndex row if provided, else first row
@@ -432,13 +473,13 @@ export class Math1 {
         // Use matrix data
         dataToTransform = matrix[0] || []
       }
-      
-      const param = transformParam ?? (Math.random() * 5 + 1)
+
+      const param = transformParam ?? Math.random() * 5 + 1
       const transformedData: number[] = []
-      
+
       for (const value of dataToTransform) {
         let transformed = 0
-        
+
         switch (selectedTransform) {
           case 'polynomial':
             transformed = Math.pow(value, param) + param * value + 1
@@ -453,10 +494,10 @@ export class Math1 {
             transformed = Math.exp(value / param) - 1
             break
         }
-        
+
         transformedData.push(this.roundResult(transformed))
       }
-      
+
       // Return first element as value for consistency with other functions
       // But also include the full result array for backward compatibility
       return {
@@ -465,27 +506,30 @@ export class Math1 {
         result: transformedData,
         transform: selectedTransform,
         parameter: this.roundResult(param),
-        originalLength: dataToTransform.length
+        originalLength: dataToTransform.length,
       }
     }
   }
 
   private sumRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length) return this.productRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length)
+      return this.productRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const result = matrix[rowIndex].reduce((sum, val) => sum + val, 0)
     if (result === 0) return this.productRow(matrix, rowIndex)
     return result
   }
 
   private sumCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.productCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.productCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const result = matrix.reduce((sum, row) => sum + (row[colIndex] || 0), 0)
     if (result === 0) return this.productCol(matrix, colIndex)
     return result
   }
 
   private avgRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0) return this.medianRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0)
+      return this.medianRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const sum = matrix[rowIndex].reduce((sum, val) => sum + val, 0)
     const result = sum / matrix[rowIndex].length
     if (result === 0) return this.medianRow(matrix, rowIndex)
@@ -494,7 +538,8 @@ export class Math1 {
   }
 
   private avgCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.medianCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.medianCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const sum = matrix.reduce((sum, row) => sum + (row[colIndex] || 0), 0)
     const result = sum / matrix.length
     if (result === 0) return this.medianCol(matrix, colIndex)
@@ -503,36 +548,36 @@ export class Math1 {
   }
 
   private medianRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length) return this.minRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length)
+      return this.minRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const sorted = [...matrix[rowIndex]].sort((a, b) => a - b)
     const mid = Math.floor(sorted.length / 2)
-    const result = sorted.length % 2 === 0 
-      ? (sorted[mid - 1] + sorted[mid]) / 2 
-      : sorted[mid]
+    const result = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
     if (result === 0) return this.maxRow(matrix, rowIndex)
     return result
   }
 
   private medianCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.minCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.minCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const colValues = matrix.map(row => row[colIndex] || 0).sort((a, b) => a - b)
     const mid = Math.floor(colValues.length / 2)
-    const result = colValues.length % 2 === 0 
-      ? (colValues[mid - 1] + colValues[mid]) / 2 
-      : colValues[mid]
+    const result = colValues.length % 2 === 0 ? (colValues[mid - 1] + colValues[mid]) / 2 : colValues[mid]
     if (result === 0) return this.maxCol(matrix, colIndex)
     return result
   }
 
   private minRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0) return this.rangeRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0)
+      return this.rangeRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const result = Math.min(...matrix[rowIndex])
     if (result === 0) return this.stdDevRow(matrix, rowIndex)
     return result
   }
 
   private maxRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0) return this.rangeRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0)
+      return this.rangeRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const result = Math.max(...matrix[rowIndex])
     if (result === 0) return this.varianceRow(matrix, rowIndex)
     if (!isFinite(result)) return this.hypotRow(matrix, rowIndex)
@@ -540,7 +585,8 @@ export class Math1 {
   }
 
   private minCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.rangeCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.rangeCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const colValues = matrix.map(row => row[colIndex] || 0)
     const result = Math.min(...colValues)
     if (result === 0) return this.stdDevCol(matrix, colIndex)
@@ -548,7 +594,8 @@ export class Math1 {
   }
 
   private maxCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.rangeCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.rangeCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const colValues = matrix.map(row => row[colIndex] || 0)
     const result = Math.max(...colValues)
     if (result === 0) return this.varianceCol(matrix, colIndex)
@@ -557,7 +604,8 @@ export class Math1 {
   }
 
   private productRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length) return this.hypotRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length)
+      return this.hypotRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const result = matrix[rowIndex].reduce((product, val) => product * val, 1)
     if (result === 0) return matrix[rowIndex].reduce((sum, val) => sum + Math.abs(val), 0)
     if (!isFinite(result)) return this.hypotRow(matrix, rowIndex)
@@ -565,7 +613,8 @@ export class Math1 {
   }
 
   private productCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.hypotCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.hypotCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const result = matrix.reduce((product, row) => product * (row[colIndex] || 0), 1)
     if (result === 0) return matrix.reduce((sum, row) => sum + Math.abs(row[colIndex] || 0), 0)
     if (!isFinite(result)) return this.hypotCol(matrix, colIndex)
@@ -573,7 +622,8 @@ export class Math1 {
   }
 
   private stdDevRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0) return this.varianceRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0)
+      return this.varianceRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const avg = matrix[rowIndex].reduce((sum, val) => sum + val, 0) / matrix[rowIndex].length
     const variance = matrix[rowIndex].reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / matrix[rowIndex].length
     const result = Math.sqrt(variance)
@@ -583,7 +633,8 @@ export class Math1 {
   }
 
   private stdDevCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.varianceCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.varianceCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const colValues = matrix.map(row => row[colIndex] || 0)
     const avg = colValues.reduce((sum, val) => sum + val, 0) / colValues.length
     const variance = colValues.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / colValues.length
@@ -598,64 +649,71 @@ export class Math1 {
   }
 
   private sinRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0) return this.cosRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0)
+      return this.cosRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const avg = matrix[rowIndex].reduce((sum, val) => sum + val, 0) / matrix[rowIndex].length
-    const result = this.roundResult(Math.sin(avg * Math.PI / 180))
-    if (result === 0) return this.roundResult(Math.cos(avg * Math.PI / 180))
-    if (!isFinite(result)) return this.roundResult(Math.tan(avg * Math.PI / 180))
+    const result = this.roundResult(Math.sin((avg * Math.PI) / 180))
+    if (result === 0) return this.roundResult(Math.cos((avg * Math.PI) / 180))
+    if (!isFinite(result)) return this.roundResult(Math.tan((avg * Math.PI) / 180))
     return result
   }
 
   private cosRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0) return this.sinRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0)
+      return this.sinRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const avg = matrix[rowIndex].reduce((sum, val) => sum + val, 0) / matrix[rowIndex].length
-    const result = this.roundResult(Math.cos(avg * Math.PI / 180))
-    if (result === 0) return this.roundResult(Math.sin(avg * Math.PI / 180))
-    if (!isFinite(result)) return this.roundResult(Math.tan(avg * Math.PI / 180))
+    const result = this.roundResult(Math.cos((avg * Math.PI) / 180))
+    if (result === 0) return this.roundResult(Math.sin((avg * Math.PI) / 180))
+    if (!isFinite(result)) return this.roundResult(Math.tan((avg * Math.PI) / 180))
     return result
   }
 
   private tanRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0) return this.sinRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0)
+      return this.sinRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const avg = matrix[rowIndex].reduce((sum, val) => sum + val, 0) / matrix[rowIndex].length
-    const result = this.roundResult(Math.tan(avg * Math.PI / 180))
-    if (result === 0) return this.roundResult(Math.sin(avg * Math.PI / 180))
-    if (!isFinite(result)) return this.roundResult(Math.cos(avg * Math.PI / 180))
+    const result = this.roundResult(Math.tan((avg * Math.PI) / 180))
+    if (result === 0) return this.roundResult(Math.sin((avg * Math.PI) / 180))
+    if (!isFinite(result)) return this.roundResult(Math.cos((avg * Math.PI) / 180))
     return result
   }
 
   private sinCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.cosCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.cosCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const colValues = matrix.map(row => row[colIndex] || 0)
     const avg = colValues.reduce((sum, val) => sum + val, 0) / colValues.length
-    const result = this.roundResult(Math.sin(avg * Math.PI / 180))
-    if (result === 0) return this.roundResult(Math.cos(avg * Math.PI / 180))
-    if (!isFinite(result)) return this.roundResult(Math.tan(avg * Math.PI / 180))
+    const result = this.roundResult(Math.sin((avg * Math.PI) / 180))
+    if (result === 0) return this.roundResult(Math.cos((avg * Math.PI) / 180))
+    if (!isFinite(result)) return this.roundResult(Math.tan((avg * Math.PI) / 180))
     return result
   }
 
   private cosCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.sinCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.sinCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const colValues = matrix.map(row => row[colIndex] || 0)
     const avg = colValues.reduce((sum, val) => sum + val, 0) / colValues.length
-    const result = this.roundResult(Math.cos(avg * Math.PI / 180))
-    if (result === 0) return this.roundResult(Math.sin(avg * Math.PI / 180))
-    if (!isFinite(result)) return this.roundResult(Math.tan(avg * Math.PI / 180))
+    const result = this.roundResult(Math.cos((avg * Math.PI) / 180))
+    if (result === 0) return this.roundResult(Math.sin((avg * Math.PI) / 180))
+    if (!isFinite(result)) return this.roundResult(Math.tan((avg * Math.PI) / 180))
     return result
   }
 
   private tanCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.sinCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.sinCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const colValues = matrix.map(row => row[colIndex] || 0)
     const avg = colValues.reduce((sum, val) => sum + val, 0) / colValues.length
-    const result = this.roundResult(Math.tan(avg * Math.PI / 180))
-    if (result === 0) return this.roundResult(Math.sin(avg * Math.PI / 180))
-    if (!isFinite(result)) return this.roundResult(Math.cos(avg * Math.PI / 180))
+    const result = this.roundResult(Math.tan((avg * Math.PI) / 180))
+    if (result === 0) return this.roundResult(Math.sin((avg * Math.PI) / 180))
+    if (!isFinite(result)) return this.roundResult(Math.cos((avg * Math.PI) / 180))
     return result
   }
 
   private sqrtSumRow(matrix: number[][], rowIndex: number): number | string {
-    if (rowIndex < 0 || rowIndex >= matrix.length) return this.hypotRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length)
+      return this.hypotRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const sum = matrix[rowIndex].reduce((sum, val) => sum + val, 0)
     if (sum < 0) {
       return `${this.roundResult(Math.sqrt(Math.abs(sum)))}i`
@@ -667,7 +725,8 @@ export class Math1 {
   }
 
   private sqrtSumCol(matrix: number[][], colIndex: number): number | string {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.hypotCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.hypotCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const sum = matrix.reduce((sum, row) => sum + (row[colIndex] || 0), 0)
     if (sum < 0) {
       return `${this.roundResult(Math.sqrt(Math.abs(sum)))}i`
@@ -679,7 +738,8 @@ export class Math1 {
   }
 
   private hypotRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length < 2) return this.varianceRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length < 2)
+      return this.varianceRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const values = matrix[rowIndex]
     const sumOfSquares = values.reduce((sum, val) => sum + val * val, 0)
     const result = this.roundResult(Math.sqrt(sumOfSquares))
@@ -689,7 +749,8 @@ export class Math1 {
   }
 
   private hypotCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length < 2 || colIndex < 0 || colIndex >= matrix[0].length) return this.varianceCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length < 2 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.varianceCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const colValues = matrix.map(row => row[colIndex] || 0)
     const sumOfSquares = colValues.reduce((sum, val) => sum + val * val, 0)
     const result = this.roundResult(Math.sqrt(sumOfSquares))
@@ -699,7 +760,8 @@ export class Math1 {
   }
 
   private varianceRow(matrix: number[][], rowIndex: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0) return this.rangeRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0)
+      return this.rangeRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const row = matrix[rowIndex]
     const mean = row.reduce((sum, val) => sum + val, 0) / row.length
     const sumOfSquaredDiffs = row.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0)
@@ -710,7 +772,8 @@ export class Math1 {
   }
 
   private varianceCol(matrix: number[][], colIndex: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.rangeCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.rangeCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const colValues = matrix.map(row => row[colIndex] || 0)
     const mean = colValues.reduce((sum, val) => sum + val, 0) / colValues.length
     const sumOfSquaredDiffs = colValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0)
@@ -721,10 +784,11 @@ export class Math1 {
   }
 
   private percentileRow(matrix: number[][], rowIndex: number, percentile: number): number {
-    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0) return this.medianRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0)
+      return this.medianRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const sorted = [...matrix[rowIndex]].sort((a, b) => a - b)
     const index = (percentile / 100) * (sorted.length - 1)
-    
+
     let result: number
     if (Number.isInteger(index)) {
       result = sorted[index]
@@ -734,17 +798,18 @@ export class Math1 {
       const weight = index - lower
       result = this.roundResult(sorted[lower] * (1 - weight) + sorted[upper] * weight)
     }
-    
+
     if (result === 0) return this.medianRow(matrix, rowIndex)
     if (!isFinite(result)) return this.maxRow(matrix, rowIndex)
     return result
   }
 
   private percentileCol(matrix: number[][], colIndex: number, percentile: number): number {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.medianCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.medianCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const colValues = matrix.map(row => row[colIndex] || 0).sort((a, b) => a - b)
     const index = (percentile / 100) * (colValues.length - 1)
-    
+
     let result: number
     if (Number.isInteger(index)) {
       result = colValues[index]
@@ -754,21 +819,22 @@ export class Math1 {
       const weight = index - lower
       result = this.roundResult(colValues[lower] * (1 - weight) + colValues[upper] * weight)
     }
-    
+
     if (result === 0) return this.medianCol(matrix, colIndex)
     if (!isFinite(result)) return this.maxCol(matrix, colIndex)
     return result
   }
 
   private harmonicMeanRow(matrix: number[][], rowIndex: number): number | string {
-    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0) return this.avgRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
+    if (rowIndex < 0 || rowIndex >= matrix.length || matrix[rowIndex].length === 0)
+      return this.avgRow(matrix, Math.max(0, Math.min(rowIndex, matrix.length - 1)))
     const row = matrix[rowIndex]
-    
+
     if (row.some(val => val === 0)) {
       return 'undefined (zero value)'
     }
-    
-    const sumOfReciprocals = row.reduce((sum, val) => sum + (1 / val), 0)
+
+    const sumOfReciprocals = row.reduce((sum, val) => sum + 1 / val, 0)
     const result = this.roundResult(row.length / sumOfReciprocals)
     if (result === 0) return this.avgRow(matrix, rowIndex)
     if (!isFinite(result)) return this.medianRow(matrix, rowIndex)
@@ -776,14 +842,15 @@ export class Math1 {
   }
 
   private harmonicMeanCol(matrix: number[][], colIndex: number): number | string {
-    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length) return this.avgCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
+    if (matrix.length === 0 || colIndex < 0 || colIndex >= matrix[0].length)
+      return this.avgCol(matrix, Math.max(0, Math.min(colIndex, matrix[0]?.length - 1 || 0)))
     const colValues = matrix.map(row => row[colIndex] || 0)
-    
+
     if (colValues.some(val => val === 0)) {
       return 'undefined (zero value)'
     }
-    
-    const sumOfReciprocals = colValues.reduce((sum, val) => sum + (1 / val), 0)
+
+    const sumOfReciprocals = colValues.reduce((sum, val) => sum + 1 / val, 0)
     const result = this.roundResult(colValues.length / sumOfReciprocals)
     if (result === 0) return this.avgCol(matrix, colIndex)
     if (!isFinite(result)) return this.medianCol(matrix, colIndex)
@@ -821,11 +888,11 @@ export class Math1 {
     if (m === 0) return 'empty matrix'
     const n = b[0]?.length || 0
     const p = b.length
-    
+
     if (p !== a[0].length) {
       return `dimension mismatch: ${a[0].length} != ${p}`
     }
-    
+
     const result: number[][] = []
     for (let i = 0; i < m; i++) {
       result[i] = []
@@ -849,7 +916,7 @@ export class Math1 {
     const rows = matrix.length
     const cols = matrix[0].length
     const result: number[][] = []
-    
+
     for (let j = 0; j < cols; j++) {
       result[j] = []
       for (let i = 0; i < rows; i++) {
@@ -868,12 +935,12 @@ export class Math1 {
     if (n === 0) return 'empty matrix'
     if (n !== matrix[0].length) return 'not square matrix'
     if (n > 10) return 'matrix too large for cofactor expansion'
-    
+
     if (n === 1) return matrix[0][0]
     if (n === 2) {
       return this.roundResult(matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0])
     }
-    
+
     let det = 0
     for (let j = 0; j < n; j++) {
       const minor = this.getMinor(matrix, 0, j)
@@ -889,7 +956,7 @@ export class Math1 {
   private getMinor(matrix: number[][], row: number, col: number): number[][] {
     const n = matrix.length
     const minor: number[][] = []
-    
+
     for (let i = 0; i < n; i++) {
       if (i === row) continue
       const minorRow: number[] = []
@@ -918,7 +985,7 @@ export class Math1 {
     return [
       this.roundResult(a[1] * b[2] - a[2] * b[1]),
       this.roundResult(a[2] * b[0] - a[0] * b[2]),
-      this.roundResult(a[0] * b[1] - a[1] * b[0])
+      this.roundResult(a[0] * b[1] - a[1] * b[0]),
     ]
   }
 
@@ -939,19 +1006,19 @@ export class Math1 {
     const n = matrix.length
     if (n === 0) return 'empty matrix'
     if (n !== matrix[0].length) return 'not square matrix'
-    
+
     const det = this.matrixDeterminant(matrix)
     if (typeof det !== 'number' || det === 0) {
       return 'matrix is singular'
     }
-    
+
     if (n === 2) {
       return [
         [this.roundResult(matrix[1][1] / det), this.roundResult(-matrix[0][1] / det)],
-        [this.roundResult(-matrix[1][0] / det), this.roundResult(matrix[0][0] / det)]
+        [this.roundResult(-matrix[1][0] / det), this.roundResult(matrix[0][0] / det)],
       ]
     }
-    
+
     // For larger matrices, use Gauss-Jordan elimination
     return this.gaussJordanInverse(matrix)
   }
@@ -960,14 +1027,14 @@ export class Math1 {
     const n = matrix.length
     // Create augmented matrix [A | I]
     const augmented: number[][] = []
-    
+
     for (let i = 0; i < n; i++) {
       augmented[i] = [...matrix[i]]
       for (let j = 0; j < n; j++) {
         augmented[i].push(i === j ? 1 : 0)
       }
     }
-    
+
     // Forward elimination
     for (let i = 0; i < n; i++) {
       // Find pivot
@@ -977,19 +1044,19 @@ export class Math1 {
           maxRow = k
         }
       }
-      
+
       // Swap rows
-      [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]]
-      
+      ;[augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]]
+
       // Check for singular matrix
       if (Math.abs(augmented[i][i]) < 1e-10) return 'matrix is singular or numerically unstable'
-      
+
       // Scale pivot row
       const pivot = augmented[i][i]
       for (let j = 0; j < 2 * n; j++) {
         augmented[i][j] /= pivot
       }
-      
+
       // Eliminate column
       for (let k = 0; k < n; k++) {
         if (k !== i) {
@@ -1000,7 +1067,7 @@ export class Math1 {
         }
       }
     }
-    
+
     // Extract inverse from augmented matrix
     const inverse: number[][] = []
     for (let i = 0; i < n; i++) {
@@ -1009,7 +1076,7 @@ export class Math1 {
         inverse[i][j] = this.roundResult(augmented[i][j + n])
       }
     }
-    
+
     return inverse
   }
 
@@ -1017,22 +1084,22 @@ export class Math1 {
   loessSmoothing(x: number[], y: number[], bandwidth: number = 0.3): number[] | string {
     if (x.length !== y.length) return 'x and y must have same length'
     if (x.length < 3) return 'need at least 3 points'
-    
+
     const n = x.length
     const smoothed: number[] = []
-    
+
     for (let i = 0; i < n; i++) {
       // Calculate weights using tricube kernel
       const weights: number[] = []
       const distances: number[] = []
-      
+
       for (let j = 0; j < n; j++) {
         distances.push(Math.abs(x[j] - x[i]))
       }
-      
+
       const sortedDistances = [...distances].sort((a, b) => a - b)
       const h = sortedDistances[Math.max(0, Math.floor(bandwidth * n) - 1)] || sortedDistances[n - 1]
-      
+
       for (let j = 0; j < n; j++) {
         const u = distances[j] / h
         if (u < 1) {
@@ -1042,10 +1109,14 @@ export class Math1 {
           weights.push(0)
         }
       }
-      
+
       // Weighted linear regression
-      let sumW = 0, sumWX = 0, sumWY = 0, sumWXX = 0, sumWXY = 0
-      
+      let sumW = 0,
+        sumWX = 0,
+        sumWY = 0,
+        sumWXX = 0,
+        sumWXY = 0
+
       for (let j = 0; j < n; j++) {
         const w = weights[j]
         sumW += w
@@ -1054,7 +1125,7 @@ export class Math1 {
         sumWXX += w * x[j] * x[j]
         sumWXY += w * x[j] * y[j]
       }
-      
+
       if (sumW === 0) {
         smoothed.push(y[i])
       } else {
@@ -1066,25 +1137,25 @@ export class Math1 {
         smoothed.push(this.roundResult(slope * x[i] + intercept))
       }
     }
-    
+
     return smoothed
   }
 
   kernelDensityEstimation(data: number[], bandwidth?: number): (x: number) => number {
     const n = data.length
     if (n === 0) return () => 0
-    
+
     // Scott's rule for bandwidth if not provided
     const stdDev = this.statsStandardDeviation(data)
     const numStdDev = typeof stdDev === 'number' ? stdDev : 1
-    const rawBandwidth = bandwidth ?? (1.06 * numStdDev * Math.pow(n, -0.2))
+    const rawBandwidth = bandwidth ?? 1.06 * numStdDev * Math.pow(n, -0.2)
     const h = rawBandwidth > Number.EPSILON ? rawBandwidth : 1e-6
-    
+
     // Gaussian kernel
     const gaussianKernel = (u: number) => {
       return Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI)
     }
-    
+
     return (x: number) => {
       let sum = 0
       for (let i = 0; i < n; i++) {
@@ -1095,21 +1166,27 @@ export class Math1 {
     }
   }
 
-  kMeansClustering(data: number[][], k: number, maxIters: number = 100): {
-    clusters: number[][]
-    centroids: number[][]
-    assignments: number[]
-  } | string {
+  kMeansClustering(
+    data: number[][],
+    k: number,
+    maxIters: number = 100,
+  ):
+    | {
+        clusters: number[][]
+        centroids: number[][]
+        assignments: number[]
+      }
+    | string {
     if (data.length === 0) return 'empty data'
     if (k <= 0 || k > data.length) return 'invalid k value'
-    
+
     const n = data.length
     const d = data[0].length
-    
+
     // Initialize centroids randomly
     const centroids: number[][] = []
     const used = new Set<number>()
-    
+
     while (centroids.length < k) {
       const idx = Math.floor(Math.random() * n)
       if (!used.has(idx)) {
@@ -1117,42 +1194,42 @@ export class Math1 {
         centroids.push([...data[idx]])
       }
     }
-    
+
     let assignments = new Array(n).fill(-1)
     let changed = true
     let iter = 0
-    
+
     while (changed && iter < maxIters) {
       changed = false
-      
+
       // Assign points to nearest centroid
       for (let i = 0; i < n; i++) {
         let minDist = Infinity
         let closestCentroid = -1
-        
+
         for (let j = 0; j < k; j++) {
           let dist = 0
           for (let dim = 0; dim < d; dim++) {
             dist += Math.pow(data[i][dim] - centroids[j][dim], 2)
           }
           dist = Math.sqrt(dist)
-          
+
           if (dist < minDist) {
             minDist = dist
             closestCentroid = j
           }
         }
-        
+
         if (assignments[i] !== closestCentroid) {
           assignments[i] = closestCentroid
           changed = true
         }
       }
-      
+
       // Update centroids
       for (let j = 0; j < k; j++) {
         const clusterPoints = data.filter((_, idx) => assignments[idx] === j)
-        
+
         if (clusterPoints.length > 0) {
           for (let dim = 0; dim < d; dim++) {
             let sum = 0
@@ -1163,32 +1240,32 @@ export class Math1 {
           }
         }
       }
-      
+
       iter++
     }
-    
+
     // Create cluster arrays
     const clusters: number[][] = []
     for (let j = 0; j < k; j++) {
       clusters[j] = []
     }
-    
+
     for (let i = 0; i < n; i++) {
       const clusterIndex = assignments[i]
       if (clusterIndex >= 0 && clusterIndex < k) {
         clusters[clusterIndex].push(i)
       }
     }
-    
+
     return { clusters, centroids, assignments }
   }
 
   interquartileRange(numbers: number[]): number | string {
     if (numbers.length === 0) return 'empty array'
-    
+
     const q1 = this.statsPercentile(numbers, 25)
     const q3 = this.statsPercentile(numbers, 75)
-    
+
     if (typeof q1 === 'number' && typeof q3 === 'number') {
       return this.roundResult(q3 - q1)
     }
@@ -1201,7 +1278,7 @@ export class Math1 {
 
   movingAverage_OLD(data: number[], windowSize: number): number[] {
     if (windowSize <= 0 || windowSize > data.length) return data
-    
+
     const result: number[] = []
     for (let i = 0; i < data.length - windowSize + 1; i++) {
       let sum = 0
@@ -1220,36 +1297,36 @@ export class Math1 {
   exponentialSmoothing_OLD(data: number[], alpha: number = 0.3): number[] {
     if (data.length === 0) return []
     if (alpha <= 0 || alpha > 1) alpha = 0.3
-    
+
     const result: number[] = [data[0]]
-    
+
     for (let i = 1; i < data.length; i++) {
       const smoothed = alpha * data[i] + (1 - alpha) * result[i - 1]
       result.push(this.roundResult(smoothed))
     }
-    
+
     return result
   }
 
   autocorrelation(data: number[], lag: number): number | string {
     if (data.length === 0) return 'empty array'
     if (lag >= data.length) return 'lag too large'
-    
+
     const mean = data.reduce((sum, val) => sum + val, 0) / data.length
-    
+
     let numerator = 0
     let denominator = 0
-    
+
     for (let i = 0; i < data.length - lag; i++) {
       numerator += (data[i] - mean) * (data[i + lag] - mean)
     }
-    
+
     for (let i = 0; i < data.length; i++) {
       denominator += Math.pow(data[i] - mean, 2)
     }
-    
+
     if (denominator === 0) return 'no variance'
-    
+
     return this.roundResult(numerator / denominator)
   }
 
@@ -1267,7 +1344,7 @@ export class Math1 {
       const [u1, u2] = [Math.random(), Math.random()]
       const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
       const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2)
-      
+
       numbers.push(this.roundResult(z0 * stdDev + mean))
       if (numbers.length < count) {
         numbers.push(this.roundResult(z1 * stdDev + mean))
@@ -1280,14 +1357,14 @@ export class Math1 {
     if (arr1.length !== arr2.length || arr1.length === 0) {
       return 'Invalid arrays'
     }
-    
+
     const mean1 = arr1.reduce((sum, val) => sum + val, 0) / arr1.length
     const mean2 = arr2.reduce((sum, val) => sum + val, 0) / arr2.length
-    
+
     let numerator = 0
     let sumSq1 = 0
     let sumSq2 = 0
-    
+
     for (let i = 0; i < arr1.length; i++) {
       const diff1 = arr1[i] - mean1
       const diff2 = arr2[i] - mean2
@@ -1295,21 +1372,21 @@ export class Math1 {
       sumSq1 += diff1 * diff1
       sumSq2 += diff2 * diff2
     }
-    
+
     const denominator = Math.sqrt(sumSq1 * sumSq2)
     if (denominator === 0) {
       return 'undefined (no variance)'
     }
-    
+
     return this.roundResult(numerator / denominator)
   }
 
   randomSample<T>(array: T[], sampleSize: number): T[] {
     if (sampleSize >= array.length) return [...array]
-    
+
     const sample: T[] = []
     const indices = new Set<number>()
-    
+
     while (indices.size < sampleSize) {
       const randomIndex = Math.floor(Math.random() * array.length)
       if (!indices.has(randomIndex)) {
@@ -1317,7 +1394,7 @@ export class Math1 {
         sample.push(array[randomIndex])
       }
     }
-    
+
     return sample
   }
 
@@ -1326,7 +1403,7 @@ export class Math1 {
       // Handle degree conversions
       const degreePattern = /(\d+(?:\.\d+)?)\s*deg/g
       const convertedExpr = expression.replace(degreePattern, (match, deg) => {
-        return (parseFloat(deg) * Math.PI / 180).toString()
+        return ((parseFloat(deg) * Math.PI) / 180).toString()
       })
 
       // Handle unit conversions (inches to cm)
@@ -1348,7 +1425,7 @@ export class Math1 {
           }
           return Math.sqrt(value).toString()
         })
-        
+
         // If result contains 'i', return as complex number
         if (result.includes('i')) {
           return result
@@ -1365,38 +1442,37 @@ export class Math1 {
         .replace(/\^/g, '**')
 
       const result = eval(mathExpression)
-      
+
       // Return the actual result, including 0
       if (result === 0) {
         return this.roundResult(result)
       }
-      
+
       if (!isFinite(result)) {
         // Return a different mathematical function when result is infinity
         const alternatives = [
-          'sqrt(16)',     // 4
-          'pow(3, 2)',    // 9
-          'cos(0 deg)',   // 1
-          'sin(90 deg)',  // 1
-          '7 + 1',        // 8
-          '3 * 3',        // 9
-          '12 / 3',       // 4
-          'sqrt(25)'      // 5
+          'sqrt(16)', // 4
+          'pow(3, 2)', // 9
+          'cos(0 deg)', // 1
+          'sin(90 deg)', // 1
+          '7 + 1', // 8
+          '3 * 3', // 9
+          '12 / 3', // 4
+          'sqrt(25)', // 5
         ]
         const chosen = alternatives[Math.abs(expression.length) % alternatives.length]
         return this.evaluate(chosen)
       }
-      
-      return this.roundResult(result)
 
+      return this.roundResult(result)
     } catch (error) {
       // Return a simple mathematical function when there's an error
       const errorAlternatives = [
-        'sqrt(4)',      // 2
-        'pow(2, 2)',    // 4
-        '1 + 2',        // 3
-        '2 * 2',        // 4
-        '6 / 2'         // 3
+        'sqrt(4)', // 2
+        'pow(2, 2)', // 4
+        '1 + 2', // 3
+        '2 * 2', // 4
+        '6 / 2', // 3
       ]
       const chosen = errorAlternatives[Math.abs(expression.length) % errorAlternatives.length]
       return this.evaluate(chosen)
@@ -1484,7 +1560,7 @@ export class Math1 {
       const result = this._stats.extrema(numbers)
       return {
         min: this.roundResult(result.min),
-        max: this.roundResult(result.max)
+        max: this.roundResult(result.max),
       }
     } catch (error) {
       return 'calculation error'
@@ -1516,20 +1592,30 @@ export class Math1 {
   // Random statistical analysis function
   randomStatsFunc(numbers: number[]): { operation: string; result: Function } {
     if (numbers.length === 0) {
-      return { 
-        operation: 'noop', 
-        result: () => ({ error: 'no data', value: 0 })
+      return {
+        operation: 'noop',
+        result: () => ({ error: 'no data', value: 0 }),
       }
     }
 
     const operations = [
-      'average', 'median', 'mode', 'standardDeviation', 'variance', 
-      'harmonicMean', 'range', 'extrema', 'percentile25', 'percentile75',
-      'statsChainFunction', 'aggregateFunction', 'distributionFunction'
+      'average',
+      'median',
+      'mode',
+      'standardDeviation',
+      'variance',
+      'harmonicMean',
+      'range',
+      'extrema',
+      'percentile25',
+      'percentile75',
+      'statsChainFunction',
+      'aggregateFunction',
+      'distributionFunction',
     ]
 
     const randomOp = operations[Math.floor(Math.random() * operations.length)]
-    
+
     // Handle statistical function factories
     if (['statsChainFunction', 'aggregateFunction', 'distributionFunction'].includes(randomOp)) {
       switch (randomOp) {
@@ -1584,20 +1670,20 @@ export class Math1 {
       if (Math.random() < 0.25 && typeof result === 'number' && result !== 0) {
         const chainedStatsFunc = this.randomStatsFunc(workNumbers)
         const chainedResult = chainedStatsFunc.result(workNumbers)
-        
+
         return {
           value: chainedResult.value || result,
           operation: `${randomOp} -> ${chainedStatsFunc.operation}`,
           chained: true,
           originalResult: result,
-          chainedResult: chainedResult.value
+          chainedResult: chainedResult.value,
         }
       }
 
       return {
         value: result,
         operation: randomOp,
-        chained: false
+        chained: false,
       }
     }
 
@@ -1607,17 +1693,17 @@ export class Math1 {
   createStatsChainFunction(numbers: number[]): Function {
     const operations = ['average', 'median', 'standardDeviation', 'variance', 'range']
     const chainLength = Math.floor(Math.random() * 4) + 2 // 2-5 operations
-    
+
     return (inputNumbers?: number[]) => {
       const workNumbers = inputNumbers || numbers
       let currentData = [...workNumbers]
       const appliedOps: string[] = []
       const results: (number | string)[] = []
-      
+
       for (let i = 0; i < chainLength; i++) {
         const randomOp = operations[Math.floor(Math.random() * operations.length)]
         let result: number | string = 0
-        
+
         switch (randomOp) {
           case 'average':
             result = this.statsAverage(currentData)
@@ -1635,21 +1721,21 @@ export class Math1 {
             result = this.statsRange(currentData)
             break
         }
-        
+
         appliedOps.push(randomOp)
         results.push(result)
-        
+
         // Use result to modify the data for next iteration
         if (typeof result === 'number' && result > 0) {
           currentData = currentData.map(x => x * (result / 100))
         }
       }
-      
+
       return {
         finalResult: results[results.length - 1],
         operations: appliedOps,
         allResults: results,
-        chainLength
+        chainLength,
       }
     }
   }
@@ -1657,18 +1743,21 @@ export class Math1 {
   createAggregateFunction(numbers: number[]): Function {
     const aggregateTypes = ['sum', 'product', 'geometricMean', 'rootMeanSquare']
     const selectedAggregate = aggregateTypes[Math.floor(Math.random() * aggregateTypes.length)]
-    
+
     return (inputNumbers?: number[], weights?: number[]) => {
       const workNumbers = inputNumbers || numbers
       const workWeights = weights || workNumbers.map(() => 1)
       let result = 0
-      
+
       switch (selectedAggregate) {
         case 'sum':
           result = workNumbers.reduce((sum, val, idx) => sum + val * workWeights[idx % workWeights.length], 0)
           break
         case 'product':
-          result = workNumbers.reduce((prod, val, idx) => prod * Math.pow(val, workWeights[idx % workWeights.length]), 1)
+          result = workNumbers.reduce(
+            (prod, val, idx) => prod * Math.pow(val, workWeights[idx % workWeights.length]),
+            1,
+          )
           break
         case 'geometricMean':
           const product = workNumbers.reduce((prod, val) => prod * Math.abs(val), 1)
@@ -1679,12 +1768,12 @@ export class Math1 {
           result = Math.sqrt(sumOfSquares / workNumbers.length)
           break
       }
-      
+
       return {
         result: this.roundResult(result),
         aggregateType: selectedAggregate,
         inputSize: workNumbers.length,
-        weightedCalculation: weights !== undefined
+        weightedCalculation: weights !== undefined,
       }
     }
   }
@@ -1692,67 +1781,71 @@ export class Math1 {
   createDistributionFunction(numbers: number[]): Function {
     const distributionTypes = ['histogram', 'quantiles', 'outliers', 'zscore']
     const selectedType = distributionTypes[Math.floor(Math.random() * distributionTypes.length)]
-    
+
     return (inputNumbers?: number[], bins?: number) => {
       const workNumbers = inputNumbers || numbers
       const binCount = bins || Math.min(10, Math.max(3, Math.floor(workNumbers.length / 3)))
-      
+
       switch (selectedType) {
         case 'histogram':
           const min = Math.min(...workNumbers)
           const max = Math.max(...workNumbers)
           const binWidth = (max - min) / binCount
           const histogram = new Array(binCount).fill(0)
-          
+
           workNumbers.forEach(num => {
             const binIndex = Math.min(Math.floor((num - min) / binWidth), binCount - 1)
             histogram[binIndex]++
           })
-          
+
           return {
             histogram,
             binWidth: this.roundResult(binWidth),
             range: { min, max },
-            totalCount: workNumbers.length
+            totalCount: workNumbers.length,
           }
-          
+
         case 'quantiles':
           const sorted = [...workNumbers].sort((a, b) => a - b)
           const quantiles = [0.25, 0.5, 0.75, 0.9, 0.95].map(q => {
             const index = q * (sorted.length - 1)
             return sorted[Math.floor(index)]
           })
-          
+
           return {
             quantiles: quantiles.map(q => this.roundResult(q)),
             percentiles: [25, 50, 75, 90, 95],
-            distributionType: 'quantiles'
+            distributionType: 'quantiles',
           }
-          
+
         case 'outliers':
           const mean = workNumbers.reduce((sum, val) => sum + val, 0) / workNumbers.length
-          const stdDev = Math.sqrt(workNumbers.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / workNumbers.length)
+          const stdDev = Math.sqrt(
+            workNumbers.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / workNumbers.length,
+          )
           const outliers = workNumbers.filter(val => Math.abs(val - mean) > 2 * stdDev)
-          
+
           return {
             outliers: outliers.map(o => this.roundResult(o)),
             outlierCount: outliers.length,
             threshold: this.roundResult(2 * stdDev),
-            mean: this.roundResult(mean)
+            mean: this.roundResult(mean),
           }
-          
+
         case 'zscore':
           const zMean = workNumbers.reduce((sum, val) => sum + val, 0) / workNumbers.length
-          const zStdDev = Math.sqrt(workNumbers.reduce((sum, val) => sum + Math.pow(val - zMean, 2), 0) / workNumbers.length)
+          const zStdDev = Math.sqrt(
+            workNumbers.reduce((sum, val) => sum + Math.pow(val - zMean, 2), 0) / workNumbers.length,
+          )
           const zScores = workNumbers.map(val => (val - zMean) / zStdDev)
-          
+
           return {
             zScores: zScores.map(z => this.roundResult(z)),
             mean: this.roundResult(zMean),
             standardDeviation: this.roundResult(zStdDev),
-            distributionType: 'zscore'
+            distributionType: 'zscore',
           }
-          
+
         default:
           return { error: 'unknown distribution type' }
       }
@@ -1767,7 +1860,7 @@ export class Math1 {
   } {
     const uniform = this.generateRandomNumbers(size, 1, 100)
     const normal = this.generateNormalDistribution(size, 50, 15)
-    
+
     // Generate exponential distribution using inverse transform
     const exponential: number[] = []
     for (let i = 0; i < size; i++) {
@@ -1782,10 +1875,10 @@ export class Math1 {
   createMatrixOperationFunction(matrix: number[][]): Function {
     const operations = ['multiply', 'transpose', 'determinant', 'inverse', 'eigenvalue']
     const selectedOp = operations[Math.floor(Math.random() * operations.length)]
-    
+
     return (inputMatrix?: number[][]) => {
       const workMatrix = inputMatrix || matrix
-      
+
       switch (selectedOp) {
         case 'multiply':
           // Create a random compatible matrix for multiplication
@@ -1801,17 +1894,17 @@ export class Math1 {
           return {
             operation: 'matrix multiplication',
             result: typeof result === 'string' ? result : result,
-            dimensions: typeof result === 'string' ? null : `${result.length}x${result[0].length}`
+            dimensions: typeof result === 'string' ? null : `${result.length}x${result[0].length}`,
           }
-          
+
         case 'transpose':
           const transposed = this.matrixTranspose(workMatrix)
           return {
             operation: 'matrix transpose',
             result: transposed,
-            dimensions: `${transposed.length}x${transposed[0]?.length || 0}`
+            dimensions: `${transposed.length}x${transposed[0]?.length || 0}`,
           }
-          
+
         case 'determinant':
           // Use a square submatrix if necessary
           const size = Math.min(workMatrix.length, workMatrix[0]?.length || 0, 3)
@@ -1823,9 +1916,9 @@ export class Math1 {
           return {
             operation: 'matrix determinant',
             result: det,
-            matrixSize: size
+            matrixSize: size,
           }
-          
+
         case 'inverse':
           // Use a square submatrix
           const invSize = Math.min(workMatrix.length, workMatrix[0]?.length || 0, 3)
@@ -1837,9 +1930,9 @@ export class Math1 {
           return {
             operation: 'matrix inverse',
             result: inverse,
-            success: typeof inverse !== 'string'
+            success: typeof inverse !== 'string',
           }
-          
+
         case 'eigenvalue':
           // Simple power iteration for dominant eigenvalue
           const eigSize = Math.min(workMatrix.length, workMatrix[0]?.length || 0)
@@ -1847,10 +1940,10 @@ export class Math1 {
           for (let i = 0; i < eigSize; i++) {
             eigMatrix[i] = workMatrix[i].slice(0, eigSize)
           }
-          
+
           let v = new Array(eigSize).fill(1)
           let eigenvalue = 0
-          
+
           for (let iter = 0; iter < 20; iter++) {
             const Av: number[] = []
             for (let i = 0; i < eigSize; i++) {
@@ -1860,15 +1953,15 @@ export class Math1 {
               }
               Av.push(sum)
             }
-            
+
             eigenvalue = Math.sqrt(Av.reduce((sum, val) => sum + val * val, 0))
             v = Av.map(val => val / eigenvalue)
           }
-          
+
           return {
             operation: 'dominant eigenvalue',
             result: this.roundResult(eigenvalue),
-            iterations: 20
+            iterations: 20,
           }
       }
     }
@@ -1877,39 +1970,39 @@ export class Math1 {
   createVectorOperationFunction(matrix: number[][]): Function {
     const operations = ['dot', 'cross', 'normalize', 'projection', 'angle']
     const selectedOp = operations[Math.floor(Math.random() * operations.length)]
-    
+
     return (inputMatrix?: number[][]) => {
       const workMatrix = inputMatrix || matrix
-      
+
       // Extract two vectors from the matrix
       const v1 = workMatrix[0] || [1, 0, 0]
       const v2 = workMatrix[1] || workMatrix[0] || [0, 1, 0]
-      
+
       switch (selectedOp) {
         case 'dot':
           const dot = this.dotProduct(v1.slice(0, 3), v2.slice(0, 3))
           return {
             operation: 'dot product',
             result: dot,
-            vectors: { v1: v1.slice(0, 3), v2: v2.slice(0, 3) }
+            vectors: { v1: v1.slice(0, 3), v2: v2.slice(0, 3) },
           }
-          
+
         case 'cross':
           const cross = this.crossProduct(v1.slice(0, 3), v2.slice(0, 3))
           return {
             operation: 'cross product',
             result: cross,
-            vectors: { v1: v1.slice(0, 3), v2: v2.slice(0, 3) }
+            vectors: { v1: v1.slice(0, 3), v2: v2.slice(0, 3) },
           }
-          
+
         case 'normalize':
           const normalized = this.vectorNormalize(v1)
           return {
             operation: 'vector normalization',
             result: normalized,
-            originalLength: this.vectorLength(v1)
+            originalLength: this.vectorLength(v1),
           }
-          
+
         case 'projection':
           // Project v1 onto v2
           const dotProd = this.dotProduct(v1, v2)
@@ -1917,7 +2010,7 @@ export class Math1 {
           if (v2LengthSq === 0) {
             return {
               operation: 'vector projection',
-              result: 'cannot project onto zero vector'
+              result: 'cannot project onto zero vector',
             }
           }
           const scalar = typeof dotProd === 'number' ? dotProd / v2LengthSq : 0
@@ -1925,28 +2018,28 @@ export class Math1 {
           return {
             operation: 'vector projection',
             result: projection,
-            scalar: this.roundResult(scalar)
+            scalar: this.roundResult(scalar),
           }
-          
+
         case 'angle':
           const dot2 = this.dotProduct(v1, v2)
           const len1 = this.vectorLength(v1)
           const len2 = this.vectorLength(v2)
-          
+
           if (len1 === 0 || len2 === 0 || typeof dot2 !== 'number') {
             return {
               operation: 'angle between vectors',
-              result: 'undefined (zero vector)'
+              result: 'undefined (zero vector)',
             }
           }
-          
+
           const cosAngle = dot2 / (len1 * len2)
           const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle)))
-          
+
           return {
             operation: 'angle between vectors',
             radians: this.roundResult(angle),
-            degrees: this.roundResult(angle * 180 / Math.PI)
+            degrees: this.roundResult((angle * 180) / Math.PI),
           }
       }
     }
@@ -1955,10 +2048,10 @@ export class Math1 {
   createStatisticalAnalysisFunction(matrix: number[][]): Function {
     const operations = ['loess', 'kde', 'kmeans', 'iqr', 'movingAverage', 'exponentialSmoothing', 'autocorrelation']
     const selectedOp = operations[Math.floor(Math.random() * operations.length)]
-    
+
     return (inputData?: number[][] | number[]) => {
       let data: number[] = []
-      
+
       if (Array.isArray(inputData)) {
         if (Array.isArray(inputData[0])) {
           data = (inputData as number[][])[0] || []
@@ -1968,7 +2061,7 @@ export class Math1 {
       } else {
         data = matrix[0] || []
       }
-      
+
       switch (selectedOp) {
         case 'loess':
           // Generate x values if not provided
@@ -1978,9 +2071,9 @@ export class Math1 {
             operation: 'LOESS smoothing',
             result: loessSmoothed,
             bandwidth: 0.4,
-            originalLength: data.length
+            originalLength: data.length,
           }
-          
+
         case 'kde':
           const kde = this.kernelDensityEstimation(data)
           const testPoints = [-2, -1, 0, 1, 2].map(z => {
@@ -1992,57 +2085,57 @@ export class Math1 {
           return {
             operation: 'kernel density estimation',
             result: density,
-            bandwidth: 'Scott\'s rule'
+            bandwidth: "Scott's rule",
           }
-          
+
         case 'kmeans':
           // Use matrix data for k-means
-          const kData = inputData && Array.isArray(inputData[0]) ? inputData as number[][] : matrix
+          const kData = inputData && Array.isArray(inputData[0]) ? (inputData as number[][]) : matrix
           const k = Math.min(3, Math.max(2, Math.floor(kData.length / 3)))
           const clusters = this.kMeansClustering(kData, k)
           return {
             operation: 'k-means clustering',
             result: clusters,
-            k: k
+            k: k,
           }
-          
+
         case 'iqr':
           const iqr = this.interquartileRange(data)
           return {
             operation: 'interquartile range',
             result: iqr,
             q1: this.statsPercentile(data, 25),
-            q3: this.statsPercentile(data, 75)
+            q3: this.statsPercentile(data, 75),
           }
-          
+
         case 'movingAverage':
           const windowSize = Math.min(5, Math.max(2, Math.floor(data.length / 3)))
           const ma = this.movingAverage(data, windowSize)
           return {
             operation: 'moving average',
             result: ma,
-            windowSize: windowSize
+            windowSize: windowSize,
           }
-          
+
         case 'exponentialSmoothing':
           const alpha = 0.3
           const expSmoothed = this.exponentialSmoothing(data, alpha)
           return {
             operation: 'exponential smoothing',
             result: expSmoothed,
-            alpha: alpha
+            alpha: alpha,
           }
-          
+
         case 'autocorrelation':
           const lags = [1, 2, 3, 5].filter(lag => lag < data.length)
           const correlations = lags.map(lag => ({
             lag,
-            correlation: this.autocorrelation(data, lag)
+            correlation: this.autocorrelation(data, lag),
           }))
           return {
             operation: 'autocorrelation',
             result: correlations,
-            dataLength: data.length
+            dataLength: data.length,
           }
       }
     }
@@ -2051,10 +2144,10 @@ export class Math1 {
   createLinearAlgebraFunction(matrix: number[][]): Function {
     const operations = ['lu', 'qr', 'svd', 'cholesky', 'gram-schmidt']
     const selectedOp = operations[Math.floor(Math.random() * operations.length)]
-    
+
     return (inputMatrix?: number[][]) => {
       const workMatrix = inputMatrix || matrix
-      
+
       switch (selectedOp) {
         case 'lu':
           // Simple LU decomposition for demonstration
@@ -2063,15 +2156,19 @@ export class Math1 {
           for (let i = 0; i < n; i++) {
             A[i] = workMatrix[i].slice(0, n)
           }
-          
-          const L: number[][] = Array(n).fill(null).map(() => Array(n).fill(0))
-          const U: number[][] = Array(n).fill(null).map(() => Array(n).fill(0))
-          
+
+          const L: number[][] = Array(n)
+            .fill(null)
+            .map(() => Array(n).fill(0))
+          const U: number[][] = Array(n)
+            .fill(null)
+            .map(() => Array(n).fill(0))
+
           // Initialize L diagonal to 1
           for (let i = 0; i < n; i++) {
             L[i][i] = 1
           }
-          
+
           // Doolittle algorithm
           for (let j = 0; j < n; j++) {
             for (let i = 0; i <= j; i++) {
@@ -2081,7 +2178,7 @@ export class Math1 {
               }
               U[i][j] = A[i][j] - sum
             }
-            
+
             for (let i = j + 1; i < n; i++) {
               let sum = 0
               for (let k = 0; k < j; k++) {
@@ -2091,27 +2188,29 @@ export class Math1 {
                 return {
                   operation: 'LU decomposition',
                   error: 'matrix is singular or requires pivoting',
-                  size: n
+                  size: n,
                 }
               }
               L[i][j] = (A[i][j] - sum) / U[j][j]
             }
           }
-          
+
           return {
             operation: 'LU decomposition',
             L: L.map(row => row.map(val => this.roundResult(val))),
             U: U.map(row => row.map(val => this.roundResult(val))),
-            size: n
+            size: n,
           }
-          
+
         case 'qr':
           // Gram-Schmidt QR decomposition
           const m = workMatrix.length
           const n2 = workMatrix[0]?.length || 0
           const Q: number[][] = []
-          const R: number[][] = Array(n2).fill(null).map(() => Array(n2).fill(0))
-          
+          const R: number[][] = Array(n2)
+            .fill(null)
+            .map(() => Array(n2).fill(0))
+
           // Copy columns of A
           const cols: number[][] = []
           for (let j = 0; j < n2; j++) {
@@ -2120,24 +2219,24 @@ export class Math1 {
               cols[j][i] = workMatrix[i][j]
             }
           }
-          
+
           // Gram-Schmidt process
           for (let j = 0; j < n2; j++) {
             let v = [...cols[j]]
-            
+
             for (let i = 0; i < j; i++) {
               const dot = this.dotProduct(cols[j], Q[i])
               R[i][j] = typeof dot === 'number' ? dot : 0
-              
+
               for (let k = 0; k < m; k++) {
                 v[k] -= R[i][j] * Q[i][k]
               }
             }
-            
+
             R[j][j] = this.vectorLength(v)
             Q[j] = this.vectorNormalize(v)
           }
-          
+
           // Convert Q to matrix form
           const Qmatrix: number[][] = []
           for (let i = 0; i < m; i++) {
@@ -2146,24 +2245,24 @@ export class Math1 {
               Qmatrix[i][j] = Q[j][i] || 0
             }
           }
-          
+
           return {
             operation: 'QR decomposition',
             Q: Qmatrix.map(row => row.map(val => this.roundResult(val))),
             R: R.map(row => row.map(val => this.roundResult(val))),
-            dimensions: `${m}x${n2}`
+            dimensions: `${m}x${n2}`,
           }
-          
+
         case 'svd':
           // Simplified SVD demonstration (power iteration for largest singular value)
           const svdM = workMatrix.length
           const svdN = workMatrix[0]?.length || 0
           const minDim = Math.min(svdM, svdN)
-          
+
           let u = new Array(svdM).fill(0).map(() => Math.random())
           let v = new Array(svdN).fill(0).map(() => Math.random())
           let sigma = 0
-          
+
           // Power iteration
           for (let iter = 0; iter < 20; iter++) {
             // v = A^T u
@@ -2175,10 +2274,10 @@ export class Math1 {
               }
               newV.push(sum)
             }
-            
+
             const vNorm = this.vectorLength(newV)
             v = newV.map(val => val / vNorm)
-            
+
             // u = A v
             const newU: number[] = []
             for (let i = 0; i < svdM; i++) {
@@ -2188,23 +2287,23 @@ export class Math1 {
               }
               newU.push(sum)
             }
-            
+
             sigma = this.vectorLength(newU)
             u = newU.map(val => val / sigma)
           }
-          
+
           return {
             operation: 'singular value decomposition (largest)',
             largestSingularValue: this.roundResult(sigma),
             leftVector: u.slice(0, 5).map(val => this.roundResult(val)),
-            rightVector: v.slice(0, 5).map(val => this.roundResult(val))
+            rightVector: v.slice(0, 5).map(val => this.roundResult(val)),
           }
-          
+
         case 'cholesky':
           // Cholesky decomposition for positive definite matrices
           const chN = Math.min(workMatrix.length, workMatrix[0]?.length || 0)
           const chA: number[][] = []
-          
+
           // Make symmetric positive definite matrix
           for (let i = 0; i < chN; i++) {
             chA[i] = []
@@ -2216,13 +2315,15 @@ export class Math1 {
               }
             }
           }
-          
-          const chL: number[][] = Array(chN).fill(null).map(() => Array(chN).fill(0))
-          
+
+          const chL: number[][] = Array(chN)
+            .fill(null)
+            .map(() => Array(chN).fill(0))
+
           for (let i = 0; i < chN; i++) {
             for (let j = 0; j <= i; j++) {
               let sum = 0
-              
+
               if (i === j) {
                 for (let k = 0; k < j; k++) {
                   sum += chL[j][k] * chL[j][k]
@@ -2236,32 +2337,32 @@ export class Math1 {
               }
             }
           }
-          
+
           return {
             operation: 'Cholesky decomposition',
             L: chL.map(row => row.map(val => this.roundResult(val))),
             size: chN,
             warning: 'input was modified to ensure positive definiteness',
-            modifiedMatrix: chA.map(row => row.map(val => this.roundResult(val)))
+            modifiedMatrix: chA.map(row => row.map(val => this.roundResult(val))),
           }
-          
+
         case 'gram-schmidt':
           // Orthogonalize matrix columns
           const gsM = workMatrix.length
           const gsN = workMatrix[0]?.length || 0
           const orthogonal: number[][] = []
-          
+
           for (let j = 0; j < gsN; j++) {
             let v: number[] = []
             for (let i = 0; i < gsM; i++) {
               v.push(workMatrix[i][j])
             }
-            
+
             // Subtract projections onto previous vectors
             for (let k = 0; k < j; k++) {
               const dot = this.dotProduct(v, orthogonal[k])
               const norm = this.dotProduct(orthogonal[k], orthogonal[k])
-              
+
               if (typeof dot === 'number' && typeof norm === 'number' && norm !== 0) {
                 const scalar = dot / norm
                 for (let i = 0; i < gsM; i++) {
@@ -2269,10 +2370,10 @@ export class Math1 {
                 }
               }
             }
-            
+
             orthogonal.push(this.vectorNormalize(v))
           }
-          
+
           // Convert to matrix form
           const orthMatrix: number[][] = []
           for (let i = 0; i < gsM; i++) {
@@ -2281,12 +2382,12 @@ export class Math1 {
               orthMatrix[i][j] = orthogonal[j][i] || 0
             }
           }
-          
+
           return {
             operation: 'Gram-Schmidt orthogonalization',
             result: orthMatrix.map(row => row.map(val => this.roundResult(val))),
             dimensions: `${gsM}x${gsN}`,
-            orthonormal: true
+            orthonormal: true,
           }
       }
     }
@@ -2344,7 +2445,7 @@ export class Math1 {
       if (imaginary === -1) return '-i'
       return `${imaginary}i`
     }
-    
+
     const imagPart = imaginary === 1 ? 'i' : imaginary === -1 ? '-i' : `${imaginary}i`
     const sign = imaginary >= 0 ? '+' : ''
     return `${real}${sign}${imagPart}`

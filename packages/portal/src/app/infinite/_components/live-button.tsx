@@ -1,80 +1,74 @@
-"use client";
+'use client'
 
-import type { FetchPreviousPageOptions } from "@tanstack/react-query";
-import { CirclePause, CirclePlay } from "lucide-react";
-import { useQueryStates } from "nuqs";
-import * as React from "react";
-import { useDataTable } from "@/components/data-table/data-table-provider";
-import { Button } from "@/components/ui/button";
-import { useHotKey } from "@/hooks/use-hot-key";
-import { cn } from "@/lib/utils";
-import { searchParamsParser } from "../search-params";
+import type { FetchPreviousPageOptions } from '@tanstack/react-query'
+import { CirclePause, CirclePlay } from 'lucide-react'
+import { useQueryStates } from 'nuqs'
+import * as React from 'react'
+import { useDataTable } from '@/components/data-table/data-table-provider'
+import { Button } from '@/components/ui/button'
+import { useHotKey } from '@/hooks/use-hot-key'
+import { cn } from '@/lib/utils'
+import { searchParamsParser } from '../search-params'
 
-const REFRESH_INTERVAL = 4_000;
+const REFRESH_INTERVAL = 4_000
 
 interface LiveButtonProps {
-  fetchPreviousPage?: (
-    options?: FetchPreviousPageOptions | undefined,
-  ) => Promise<unknown>;
+  fetchPreviousPage?: (options?: FetchPreviousPageOptions | undefined) => Promise<unknown>
 }
 
 export function LiveButton({ fetchPreviousPage }: LiveButtonProps) {
-  const [{ live, date, sort }, setSearch] = useQueryStates(searchParamsParser);
-  const { table } = useDataTable();
+  const [{ live, date, sort }, setSearch] = useQueryStates(searchParamsParser)
+  const { table } = useDataTable()
 
   const handleClick = React.useCallback(() => {
-    setSearch((prev) => ({
+    setSearch(prev => ({
       ...prev,
       live: !prev.live,
       date: null,
       sort: null,
-    }));
-    table.getColumn("date")?.setFilterValue(undefined);
-    table.resetSorting();
-  }, [setSearch, table]);
+    }))
+    table.getColumn('date')?.setFilterValue(undefined)
+    table.resetSorting()
+  }, [setSearch, table])
 
-  useHotKey(handleClick, "j");
+  useHotKey(handleClick, 'j')
 
   React.useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout
 
     async function fetchData() {
       if (live) {
-        await fetchPreviousPage?.();
-        timeoutId = setTimeout(fetchData, REFRESH_INTERVAL);
+        await fetchPreviousPage?.()
+        timeoutId = setTimeout(fetchData, REFRESH_INTERVAL)
       } else {
-        clearTimeout(timeoutId);
+        clearTimeout(timeoutId)
       }
     }
 
-    fetchData();
+    fetchData()
 
     return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [live, fetchPreviousPage]);
+      clearTimeout(timeoutId)
+    }
+  }, [live, fetchPreviousPage])
 
   // REMINDER: make sure to reset live when date is set
   // TODO: test properly
   React.useEffect(() => {
     if ((date || sort) && live) {
-      setSearch((prev) => ({ ...prev, live: null }));
+      setSearch(prev => ({ ...prev, live: null }))
     }
-  }, [date, sort, live, setSearch]);
+  }, [date, sort, live, setSearch])
 
   return (
     <Button
-      className={cn(live && "border-info text-info hover:text-info")}
+      className={cn(live && 'border-info text-info hover:text-info')}
       onClick={handleClick}
       variant="outline"
       size="sm"
     >
-      {live ? (
-        <CirclePause className="mr-2 h-4 w-4" />
-      ) : (
-        <CirclePlay className="mr-2 h-4 w-4" />
-      )}
+      {live ? <CirclePause className="mr-2 h-4 w-4" /> : <CirclePlay className="mr-2 h-4 w-4" />}
       Live
     </Button>
-  );
+  )
 }

@@ -21,14 +21,12 @@ export default function MainHeader({ title, description, onFilterToggle }: MainH
   return (
     <header className="flex h-16 shrink-0 items-center gap-4 border-b bg-background px-4">
       <SidebarTrigger className="-ml-1" />
-      
+
       <div className="flex-1">
         <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-        {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
-        )}
+        {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
-      
+
       <Button
         variant="outline"
         size="sm"

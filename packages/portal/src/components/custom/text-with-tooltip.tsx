@@ -1,57 +1,45 @@
-import { TooltipPortal } from "@radix-ui/react-tooltip";
-import React, { useEffect, useRef, useState } from "react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { TooltipPortal } from '@radix-ui/react-tooltip'
+import React, { useEffect, useRef, useState } from 'react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 
 interface TextWithTooltipProps {
-  text: string | number;
-  className?: string;
+  text: string | number
+  className?: string
 }
 
 export function TextWithTooltip({ text, className }: TextWithTooltipProps) {
-  const [isTruncated, setIsTruncated] = useState<boolean>(false);
-  const textRef = useRef<HTMLDivElement>(null);
+  const [isTruncated, setIsTruncated] = useState<boolean>(false)
+  const textRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const checkTruncation = () => {
       if (textRef.current) {
-        const { scrollWidth, clientWidth } = textRef.current;
-        setIsTruncated(scrollWidth > clientWidth);
+        const { scrollWidth, clientWidth } = textRef.current
+        setIsTruncated(scrollWidth > clientWidth)
       }
-    };
-
-    const resizeObserver = new ResizeObserver(() => {
-      checkTruncation();
-    });
-
-    if (textRef.current) {
-      resizeObserver.observe(textRef.current);
     }
 
-    checkTruncation();
+    const resizeObserver = new ResizeObserver(() => {
+      checkTruncation()
+    })
+
+    if (textRef.current) {
+      resizeObserver.observe(textRef.current)
+    }
+
+    checkTruncation()
 
     return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
+      resizeObserver.disconnect()
+    }
+  }, [])
 
   return (
     <TooltipProvider delayDuration={100} disableHoverableContent>
       <Tooltip>
         <TooltipTrigger disabled={!isTruncated} asChild>
-          <div
-            ref={textRef}
-            className={cn(
-              "truncate",
-              !isTruncated && "pointer-events-none",
-              className
-            )}
-          >
+          <div ref={textRef} className={cn('truncate', !isTruncated && 'pointer-events-none', className)}>
             {text}
           </div>
         </TooltipTrigger>
@@ -60,5 +48,5 @@ export function TextWithTooltip({ text, className }: TextWithTooltipProps) {
         </TooltipPortal>
       </Tooltip>
     </TooltipProvider>
-  );
+  )
 }

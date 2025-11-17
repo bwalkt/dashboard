@@ -1,13 +1,13 @@
-import { flexRender, type Table as TanstackTable } from "@tanstack/react-table";
-import type * as React from "react";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DataTablePagination } from "@/components/ui/table/data-table-pagination";
-import { getCommonPinningStyles } from "@/lib/data-table";
+import { flexRender, type Table as TanstackTable } from '@tanstack/react-table'
+import type * as React from 'react'
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { DataTablePagination } from '@/components/ui/table/data-table-pagination'
+import { getCommonPinningStyles } from '@/lib/data-table'
 
-interface DataTableProps<TData> extends React.ComponentProps<"div"> {
-  table: TanstackTable<TData>;
-  actionBar?: React.ReactNode;
+interface DataTableProps<TData> extends React.ComponentProps<'div'> {
+  table: TanstackTable<TData>
+  actionBar?: React.ReactNode
 }
 
 export function DataTable<TData>({ table, actionBar, children }: DataTableProps<TData>) {
@@ -19,9 +19,9 @@ export function DataTable<TData>({ table, actionBar, children }: DataTableProps<
           <ScrollArea className="h-full w-full">
             <Table>
               <TableHeader className="bg-muted sticky top-0 z-10">
-                {table.getHeaderGroups().map((headerGroup) => (
+                {table.getHeaderGroups().map(headerGroup => (
                   <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
+                    {headerGroup.headers.map(header => (
                       <TableHead
                         key={header.id}
                         colSpan={header.colSpan}
@@ -37,9 +37,9 @@ export function DataTable<TData>({ table, actionBar, children }: DataTableProps<
               </TableHeader>
               <TableBody>
                 {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                      {row.getVisibleCells().map((cell) => (
+                  table.getRowModel().rows.map(row => (
+                    <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                      {row.getVisibleCells().map(cell => (
                         <TableCell
                           key={cell.id}
                           style={{
@@ -69,5 +69,5 @@ export function DataTable<TData>({ table, actionBar, children }: DataTableProps<
         {actionBar && table.getFilteredSelectedRowModel().rows.length > 0 && actionBar}
       </div>
     </div>
-  );
+  )
 }

@@ -245,7 +245,7 @@ describe('Math1', () => {
         [1, 2, 3, 4],
         [5, 6, 7, 8],
         [9, 10, 11, 12],
-        [13, 14, 15, 16]
+        [13, 14, 15, 16],
       ]
 
       console.log('\n========== Random Function Test Results ==========')
@@ -263,16 +263,27 @@ describe('Math1', () => {
         console.log(`  Function: ${result.operation}`)
         console.log(`  Result: ${JSON.stringify(executed)}`)
         console.log('')
-        
+
         // Verify result is a function that returns a proper object
         expect(typeof result.result).toBe('function')
         expect(executed).toBeDefined()
         // Different factory functions return different structures
-        const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
-                        executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
-                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined ||
-                        executed.largestSingularValue !== undefined || executed.leftVector !== undefined || executed.rightVector !== undefined
+        const hasValue =
+          executed.value !== undefined ||
+          executed.result !== undefined ||
+          executed.finalResult !== undefined ||
+          executed.histogram !== undefined ||
+          executed.quantiles !== undefined ||
+          executed.outliers !== undefined ||
+          executed.zScores !== undefined ||
+          executed.error !== undefined ||
+          executed.operation !== undefined ||
+          executed.data !== undefined ||
+          executed.correlation !== undefined ||
+          executed.vectors !== undefined ||
+          executed.largestSingularValue !== undefined ||
+          executed.leftVector !== undefined ||
+          executed.rightVector !== undefined
         expect(hasValue).toBe(true)
       }
 
@@ -281,19 +292,19 @@ describe('Math1', () => {
       const rowResult = math1.randomFunc(matrix, 1)
       const executedRow = rowResult.result()
       console.log(`  Fixed index 1: ${rowResult.operation} = ${JSON.stringify(executedRow)}`)
-      
+
       // Test with edge cases
       const edgeMatrix = [
         [-5, 0, 10],
         [-2, 3, -8],
-        [0, 0, 0]
+        [0, 0, 0],
       ]
-      
+
       console.log('\nEdge case matrix with negatives and zeros:')
       edgeMatrix.forEach((row, i) => {
         console.log(`  Row ${i}: [${row.join(', ')}]`)
       })
-      
+
       const edgeResult = math1.randomFunc(edgeMatrix, 0)
       const executedEdge = edgeResult.result()
       console.log(`  Result: ${edgeResult.operation} = ${JSON.stringify(executedEdge)}`)
@@ -301,40 +312,55 @@ describe('Math1', () => {
     })
 
     it('should handle all operation types correctly', () => {
-      const matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
-      
+      const matrix = [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9],
+      ]
+
       console.log('\n========== Testing All Operations ==========')
       console.log('Test Matrix:')
       matrix.forEach((row, i) => {
         console.log(`  Row ${i}: [${row.join(', ')}]`)
       })
       console.log('')
-      
+
       // We can't directly test each operation since randomFunc is random,
       // but we can verify multiple calls work
       const results = new Set()
       for (let i = 0; i < 100; i++) {
         const result = math1.randomFunc(matrix, 1)
         results.add(result.operation.split('(')[0])
-        
+
         // Verify each function returns a proper function
         expect(typeof result.result).toBe('function')
         const executed = result.result()
         expect(executed).toBeDefined()
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
-        const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
-                        executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
-                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+        const hasValue =
+          executed.value !== undefined ||
+          executed.result !== undefined ||
+          executed.finalResult !== undefined ||
+          executed.histogram !== undefined ||
+          executed.quantiles !== undefined ||
+          executed.outliers !== undefined ||
+          executed.zScores !== undefined ||
+          executed.error !== undefined ||
+          executed.operation !== undefined ||
+          executed.data !== undefined ||
+          executed.correlation !== undefined ||
+          executed.vectors !== undefined
         expect(hasValue).toBe(true)
       }
-      
+
       console.log('Operations encountered in 100 random calls:')
-      Array.from(results).sort().forEach(op => {
-        console.log(`  - ${op}`)
-      })
+      Array.from(results)
+        .sort()
+        .forEach(op => {
+          console.log(`  - ${op}`)
+        })
       console.log('============================================\n')
-      
+
       // At least some variety should be present
       expect(results.size).toBeGreaterThan(1)
     })
@@ -343,7 +369,7 @@ describe('Math1', () => {
   describe('advanced mathematical functions', () => {
     it('should test evaluate function with various expressions', () => {
       console.log('\n========== Advanced Math Function Tests ==========')
-      
+
       const testCases = [
         { expr: 'sqrt(3**2 + 4**2)', expected: 5, desc: 'Pythagorean theorem' },
         { expr: 'sqrt(-4)', expected: '2i', desc: 'Complex square root' },
@@ -353,7 +379,7 @@ describe('Math1', () => {
         { expr: 'tan(45 deg)', expected: 1, desc: 'Tangent of 45 degrees' },
         { expr: 'sqrt(16)', expected: 4, desc: 'Simple square root' },
         { expr: 'sin(0 deg)', expected: 0, desc: 'Sine of 0 degrees' },
-        { expr: 'cos(0 deg)', expected: 1, desc: 'Cosine of 0 degrees' }
+        { expr: 'cos(0 deg)', expected: 1, desc: 'Cosine of 0 degrees' },
       ]
 
       testCases.forEach(testCase => {
@@ -362,7 +388,7 @@ describe('Math1', () => {
         console.log(`    Expression: ${testCase.expr}`)
         console.log(`    Result: ${result}`)
         console.log(`    Expected: ${testCase.expected}`)
-        
+
         if (typeof testCase.expected === 'string') {
           expect(result).toBe(testCase.expected)
         } else {
@@ -370,25 +396,25 @@ describe('Math1', () => {
         }
         console.log('')
       })
-      
+
       console.log('=============================================\n')
     })
 
     it('should test trigonometric functions on matrix data', () => {
       console.log('\n========== Trigonometric Matrix Operations ==========')
-      
+
       const matrix = [
-        [30, 45, 60],  // Common angles in degrees
+        [30, 45, 60], // Common angles in degrees
         [0, 90, 180],
-        [270, 360, 45]
+        [270, 360, 45],
       ]
-      
+
       console.log('Test Matrix (angles in degrees):')
       matrix.forEach((row, i) => {
         console.log(`  Row ${i}: [${row.join(', ')}]`)
       })
       console.log('')
-      
+
       // Test trigonometric operations
       const trigTests = [
         { op: 'sinRow', index: 0, desc: 'Sine of row 0 average' },
@@ -396,9 +422,9 @@ describe('Math1', () => {
         { op: 'tanRow', index: 0, desc: 'Tangent of row 0 average' },
         { op: 'sinCol', index: 1, desc: 'Sine of column 1 average' },
         { op: 'cosCol', index: 1, desc: 'Cosine of column 1 average' },
-        { op: 'tanCol', index: 1, desc: 'Tangent of column 1 average' }
+        { op: 'tanCol', index: 1, desc: 'Tangent of column 1 average' },
       ]
-      
+
       trigTests.forEach(test => {
         // Call the specific operation through randomFunc with forced selection
         let result
@@ -422,66 +448,66 @@ describe('Math1', () => {
             result = (math1 as any).tanCol(matrix, test.index)
             break
         }
-        
+
         console.log(`  ${test.desc}: ${result}`)
         expect(typeof result).toBe('number')
         expect(isNaN(result)).toBe(false)
       })
-      
+
       console.log('===================================================\n')
     })
 
     it('should test complex number and special functions', () => {
       console.log('\n========== Complex Numbers & Special Functions ==========')
-      
+
       const matrix = [
-        [3, 4, 5],      // Perfect for Pythagorean
-        [-1, -2, -3],   // Negative numbers for complex sqrt
-        [1, 1, 1]       // Simple values
+        [3, 4, 5], // Perfect for Pythagorean
+        [-1, -2, -3], // Negative numbers for complex sqrt
+        [1, 1, 1], // Simple values
       ]
-      
+
       console.log('Test Matrix:')
       matrix.forEach((row, i) => {
         console.log(`  Row ${i}: [${row.join(', ')}]`)
       })
       console.log('')
-      
+
       // Test sqrt operations
       const sqrtSumRow0 = (math1 as any).sqrtSumRow(matrix, 0)
       const sqrtSumRow1 = (math1 as any).sqrtSumRow(matrix, 1)
       const hypotRow0 = (math1 as any).hypotRow(matrix, 0)
       const hypotCol0 = (math1 as any).hypotCol(matrix, 0)
-      
+
       console.log(`  Square root of row 0 sum (3+4+5=12): ${sqrtSumRow0}`)
       console.log(`  Square root of row 1 sum (-1-2-3=-6): ${sqrtSumRow1}`)
       console.log(`  Hypotenuse of row 0 (sqrt(3²+4²+5²)): ${hypotRow0}`)
       console.log(`  Hypotenuse of column 0 (sqrt(3²+(-1)²+1²)): ${hypotCol0}`)
-      
+
       // Verify results
       expect(sqrtSumRow0).toBe(Math.round(Math.sqrt(12) * 1000) / 1000)
-      expect(sqrtSumRow1).toBe('2.449i')  // sqrt(6)i rounded
+      expect(sqrtSumRow1).toBe('2.449i') // sqrt(6)i rounded
       expect(typeof hypotRow0).toBe('number')
       expect(typeof hypotCol0).toBe('number')
-      
+
       console.log('========================================================\n')
     })
   })
 
   describe('new statistical functions', () => {
     let testMatrix: number[][]
-    
+
     beforeEach(() => {
       testMatrix = [
         [1, 2, 3, 4],
-        [5, 6, 7, 8], 
-        [9, 10, 11, 12]
+        [5, 6, 7, 8],
+        [9, 10, 11, 12],
       ]
     })
 
     it('should calculate variance for rows and columns', () => {
       const variance0Row = (math1 as any).varianceRow(testMatrix, 0)
       const variance1Col = (math1 as any).varianceCol(testMatrix, 1)
-      
+
       expect(typeof variance0Row).toBe('number')
       expect(typeof variance1Col).toBe('number')
       expect(variance0Row).toBeGreaterThan(0)
@@ -491,7 +517,7 @@ describe('Math1', () => {
     it('should calculate percentiles for rows and columns', () => {
       const percentile75Row = (math1 as any).percentileRow(testMatrix, 1, 75)
       const percentile25Col = (math1 as any).percentileCol(testMatrix, 2, 25)
-      
+
       expect(typeof percentile75Row).toBe('number')
       expect(typeof percentile25Col).toBe('number')
       expect(percentile75Row).toBe(7.25)
@@ -501,7 +527,7 @@ describe('Math1', () => {
     it('should calculate harmonic mean for valid data', () => {
       const harmonicMeanRow = (math1 as any).harmonicMeanRow(testMatrix, 0)
       const harmonicMeanCol = (math1 as any).harmonicMeanCol(testMatrix, 0)
-      
+
       expect(typeof harmonicMeanRow).toBe('number')
       expect(typeof harmonicMeanCol).toBe('number')
       expect(harmonicMeanRow).toBeGreaterThan(0)
@@ -509,36 +535,40 @@ describe('Math1', () => {
     })
 
     it('should handle harmonic mean with zero values', () => {
-      const matrixWithZero = [[0, 1, 2], [3, 4, 5]]
+      const matrixWithZero = [
+        [0, 1, 2],
+        [3, 4, 5],
+      ]
       const harmonicMeanRow = (math1 as any).harmonicMeanRow(matrixWithZero, 0)
-      
+
       expect(harmonicMeanRow).toBe('undefined (zero value)')
     })
 
     it('should calculate range for rows and columns', () => {
       const rangeRow = (math1 as any).rangeRow(testMatrix, 1)
       const rangeCol = (math1 as any).rangeCol(testMatrix, 2)
-      
+
       expect(rangeRow).toBe(3)
       expect(rangeCol).toBe(8)
     })
 
     it('should include new operations in randomFunc', () => {
       const operations = new Set()
-      
+
       for (let i = 0; i < 50; i++) {
         const result = math1.randomFunc(testMatrix, 0)
         operations.add(result.operation.split('(')[0])
-        
+
         // Verify each result is a function
         expect(typeof result.result).toBe('function')
         const executed = result.result()
         expect(executed).toBeDefined()
       }
-      
-      const hasNewOperations = ['varianceRow', 'percentileRow', 'harmonicMeanRow', 'rangeRow']
-        .some(op => operations.has(op))
-      
+
+      const hasNewOperations = ['varianceRow', 'percentileRow', 'harmonicMeanRow', 'rangeRow'].some(op =>
+        operations.has(op),
+      )
+
       expect(hasNewOperations).toBe(true)
     })
   })
@@ -546,7 +576,7 @@ describe('Math1', () => {
   describe('random number generation functions', () => {
     it('should generate random numbers within specified range', () => {
       const randomNumbers = math1.generateRandomNumbers(10, 1, 100)
-      
+
       expect(randomNumbers.length).toBe(10)
       randomNumbers.forEach(num => {
         expect(num).toBeGreaterThanOrEqual(1)
@@ -557,12 +587,12 @@ describe('Math1', () => {
 
     it('should generate numbers with normal distribution', () => {
       const normalNumbers = math1.generateNormalDistribution(100, 50, 10)
-      
+
       expect(normalNumbers.length).toBe(100)
-      
+
       const mean = normalNumbers.reduce((sum, num) => sum + num, 0) / normalNumbers.length
       expect(Math.abs(mean - 50)).toBeLessThan(5)
-      
+
       normalNumbers.forEach(num => {
         expect(typeof num).toBe('number')
         expect(isNaN(num)).toBe(false)
@@ -571,9 +601,9 @@ describe('Math1', () => {
 
     it('should generate normal distribution with default parameters', () => {
       const defaultNormal = math1.generateNormalDistribution(50)
-      
+
       expect(defaultNormal.length).toBe(50)
-      
+
       const mean = defaultNormal.reduce((sum, num) => sum + num, 0) / defaultNormal.length
       expect(Math.abs(mean)).toBeLessThan(1)
     })
@@ -583,7 +613,7 @@ describe('Math1', () => {
     it('should calculate correlation between arrays', () => {
       const arr1 = [1, 2, 3, 4, 5]
       const arr2 = [2, 4, 6, 8, 10]
-      
+
       const correlation = math1.correlationBetweenArrays(arr1, arr2)
       expect(correlation).toBe(1)
     })
@@ -591,7 +621,7 @@ describe('Math1', () => {
     it('should handle negative correlation', () => {
       const arr1 = [1, 2, 3, 4, 5]
       const arr2 = [10, 8, 6, 4, 2]
-      
+
       const correlation = math1.correlationBetweenArrays(arr1, arr2)
       expect(correlation).toBe(-1)
     })
@@ -599,7 +629,7 @@ describe('Math1', () => {
     it('should handle invalid arrays', () => {
       const arr1 = [1, 2, 3]
       const arr2 = [1, 2]
-      
+
       const correlation = math1.correlationBetweenArrays(arr1, arr2)
       expect(correlation).toBe('Invalid arrays')
     })
@@ -607,7 +637,7 @@ describe('Math1', () => {
     it('should handle no variance case', () => {
       const arr1 = [5, 5, 5, 5]
       const arr2 = [1, 2, 3, 4]
-      
+
       const correlation = math1.correlationBetweenArrays(arr1, arr2)
       expect(correlation).toBe('undefined (no variance)')
     })
@@ -617,12 +647,12 @@ describe('Math1', () => {
     it('should return random sample of specified size', () => {
       const array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
       const sample = math1.randomSample(array, 5)
-      
+
       expect(sample.length).toBe(5)
       sample.forEach(item => {
         expect(array).toContain(item)
       })
-      
+
       const uniqueItems = new Set(sample)
       expect(uniqueItems.size).toBe(5)
     })
@@ -630,7 +660,7 @@ describe('Math1', () => {
     it('should return full array when sample size exceeds array length', () => {
       const array = [1, 2, 3]
       const sample = math1.randomSample(array, 10)
-      
+
       expect(sample.length).toBe(3)
       expect(sample).toEqual(array)
     })
@@ -638,7 +668,7 @@ describe('Math1', () => {
     it('should work with string arrays', () => {
       const stringArray = ['apple', 'banana', 'cherry', 'date', 'elderberry']
       const sample = math1.randomSample(stringArray, 3)
-      
+
       expect(sample.length).toBe(3)
       sample.forEach(item => {
         expect(stringArray).toContain(item)
@@ -649,34 +679,34 @@ describe('Math1', () => {
   describe('integration tests for new functions', () => {
     it('should demonstrate comprehensive statistical analysis workflow', () => {
       console.log('\n========== Statistical Analysis Workflow ==========')
-      
+
       const data = math1.generateRandomNumbers(20, 1, 100)
       console.log(`Generated data: [${data.slice(0, 10).join(', ')}...]`)
-      
+
       const normalData = math1.generateNormalDistribution(20, 50, 15)
       console.log(`Normal distribution data: [${normalData.slice(0, 5).join(', ')}...]`)
-      
+
       const correlation = math1.correlationBetweenArrays(data, normalData)
       console.log(`Correlation between datasets: ${correlation}`)
-      
+
       const sample = math1.randomSample(data, 10)
       console.log(`Random sample (n=10): [${sample.join(', ')}]`)
-      
+
       const matrix = [data.slice(0, 10), normalData.slice(0, 10)]
       console.log('\nMatrix operations:')
-      
+
       const variance0 = (math1 as any).varianceRow(matrix, 0)
       const variance1 = (math1 as any).varianceRow(matrix, 1)
       console.log(`Variance row 0: ${variance0}`)
       console.log(`Variance row 1: ${variance1}`)
-      
+
       const percentile75_0 = (math1 as any).percentileRow(matrix, 0, 75)
       const percentile75_1 = (math1 as any).percentileRow(matrix, 1, 75)
       console.log(`75th percentile row 0: ${percentile75_0}`)
       console.log(`75th percentile row 1: ${percentile75_1}`)
-      
+
       console.log('=============================================\n')
-      
+
       expect(typeof correlation).toBe('number')
       expect(sample.length).toBe(10)
       expect(typeof variance0).toBe('number')
@@ -687,54 +717,79 @@ describe('Math1', () => {
   describe('randomFunc edge cases and stack overflow fixes', () => {
     it('should handle empty matrix without stack overflow', () => {
       const result = math1.randomFunc([], 0)
-      
+
       expect(result.operation).toBe('noop')
       expect(typeof result.result).toBe('function')
-      
+
       const executed = result.result()
       expect(executed.error).toBe('matrix has no data')
     })
 
     it('should handle matrix with all empty rows', () => {
       const result = math1.randomFunc([[], [], []], 0)
-      
+
       expect(result.operation).toBe('noop')
       expect(typeof result.result).toBe('function')
-      
+
       const executed = result.result()
       expect(executed.error).toBe('matrix has no data')
     })
 
     it('should handle out-of-range row index', () => {
-      const matrix = [[1, 2], [3, 4]]
+      const matrix = [
+        [1, 2],
+        [3, 4],
+      ]
       const result = math1.randomFunc(matrix, 10)
-      
+
       expect(typeof result.operation).toBe('string')
       expect(typeof result.result).toBe('function')
       expect(result.operation).toContain('(1)')
-      
+
       const executed = result.result()
       expect(executed.value !== undefined).toBe(true)
     })
 
     it('should handle out-of-range column index for column operations', () => {
-      const matrix = [[1, 2], [3, 4]]
+      const matrix = [
+        [1, 2],
+        [3, 4],
+      ]
       for (let i = 0; i < 20; i++) {
         const result = math1.randomFunc(matrix, 10)
-        
+
         expect(typeof result.operation).toBe('string')
         expect(typeof result.result).toBe('function')
-        
+
         const executed = result.result()
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
-        const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
-                        executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
-                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+        const hasValue =
+          executed.value !== undefined ||
+          executed.result !== undefined ||
+          executed.finalResult !== undefined ||
+          executed.histogram !== undefined ||
+          executed.quantiles !== undefined ||
+          executed.outliers !== undefined ||
+          executed.zScores !== undefined ||
+          executed.error !== undefined ||
+          executed.operation !== undefined ||
+          executed.data !== undefined ||
+          executed.correlation !== undefined ||
+          executed.vectors !== undefined
         expect(hasValue).toBe(true)
-        
+
         // Function factories have different operation names that don't contain indices
-        if (!['chainFunction', 'compositeFunction', 'transformFunction', 'matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(result.operation)) {
+        if (
+          ![
+            'chainFunction',
+            'compositeFunction',
+            'transformFunction',
+            'matrixOperation',
+            'vectorOperation',
+            'statisticalAnalysis',
+            'linearAlgebraOperation',
+          ].includes(result.operation)
+        ) {
           if (result.operation.includes('Col')) {
             expect(result.operation).toContain('(1)')
           } else {
@@ -748,89 +803,131 @@ describe('Math1', () => {
       const raggedMatrix = [
         [1, 2, 3, 4],
         [5, 6],
-        [7, 8, 9]
+        [7, 8, 9],
       ]
-      
+
       for (let i = 0; i < 10; i++) {
         const result = math1.randomFunc(raggedMatrix)
-        
+
         expect(typeof result.operation).toBe('string')
         expect(typeof result.result).toBe('function')
-        
+
         const executed = result.result()
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
-        const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
-                        executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
-                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+        const hasValue =
+          executed.value !== undefined ||
+          executed.result !== undefined ||
+          executed.finalResult !== undefined ||
+          executed.histogram !== undefined ||
+          executed.quantiles !== undefined ||
+          executed.outliers !== undefined ||
+          executed.zScores !== undefined ||
+          executed.error !== undefined ||
+          executed.operation !== undefined ||
+          executed.data !== undefined ||
+          executed.correlation !== undefined ||
+          executed.vectors !== undefined
         expect(hasValue).toBe(true)
       }
     })
 
     it('should not fall into infinite recursion chains', () => {
-      const zeroMatrix = [[0, 0], [0, 0]]
-      
+      const zeroMatrix = [
+        [0, 0],
+        [0, 0],
+      ]
+
       for (let i = 0; i < 5; i++) {
         const result = math1.randomFunc(zeroMatrix, 0)
-        
+
         expect(typeof result.operation).toBe('string')
         expect(typeof result.result).toBe('function')
-        
+
         const executed = result.result()
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
-        const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
-                        executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
-                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+        const hasValue =
+          executed.value !== undefined ||
+          executed.result !== undefined ||
+          executed.finalResult !== undefined ||
+          executed.histogram !== undefined ||
+          executed.quantiles !== undefined ||
+          executed.outliers !== undefined ||
+          executed.zScores !== undefined ||
+          executed.error !== undefined ||
+          executed.operation !== undefined ||
+          executed.data !== undefined ||
+          executed.correlation !== undefined ||
+          executed.vectors !== undefined
         expect(hasValue).toBe(true)
       }
     })
 
     it('should handle single column matrix', () => {
       const singleColMatrix = [[1], [2], [3]]
-      
+
       const result = math1.randomFunc(singleColMatrix)
-      
+
       expect(typeof result.operation).toBe('string')
       expect(typeof result.result).toBe('function')
-      
+
       const executed = result.result()
-      const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
-                      executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                      executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
-                      executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+      const hasValue =
+        executed.value !== undefined ||
+        executed.result !== undefined ||
+        executed.finalResult !== undefined ||
+        executed.histogram !== undefined ||
+        executed.quantiles !== undefined ||
+        executed.outliers !== undefined ||
+        executed.zScores !== undefined ||
+        executed.error !== undefined ||
+        executed.operation !== undefined ||
+        executed.data !== undefined ||
+        executed.correlation !== undefined ||
+        executed.vectors !== undefined
       expect(hasValue).toBe(true)
     })
 
     it('should handle single row matrix', () => {
       const singleRowMatrix = [[1, 2, 3, 4, 5]]
-      
+
       const result = math1.randomFunc(singleRowMatrix)
-      
+
       expect(typeof result.operation).toBe('string')
       expect(typeof result.result).toBe('function')
-      
+
       const executed = result.result()
-      const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
-                      executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                      executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
-                      executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+      const hasValue =
+        executed.value !== undefined ||
+        executed.result !== undefined ||
+        executed.finalResult !== undefined ||
+        executed.histogram !== undefined ||
+        executed.quantiles !== undefined ||
+        executed.outliers !== undefined ||
+        executed.zScores !== undefined ||
+        executed.error !== undefined ||
+        executed.operation !== undefined ||
+        executed.data !== undefined ||
+        executed.correlation !== undefined ||
+        executed.vectors !== undefined
       expect(hasValue).toBe(true)
     })
 
     it('should clamp indices to valid ranges', () => {
-      const matrix = [[1, 2, 3], [4, 5, 6]]
-      
+      const matrix = [
+        [1, 2, 3],
+        [4, 5, 6],
+      ]
+
       const resultRowOutOfRange = math1.randomFunc(matrix, 5)
-      
+
       // Complex operations and function factories may have different index handling
       const complexOps = ['matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation']
       const functionFactories = ['chainFunction', 'compositeFunction', 'transformFunction']
-      
+
       if (!complexOps.includes(resultRowOutOfRange.operation)) {
         // Check if it's a function factory (they show up with their name in the operation)
         const isFactory = functionFactories.some(factory => resultRowOutOfRange.operation.includes(factory))
-        
+
         if (!isFactory) {
           if (resultRowOutOfRange.operation.includes('Row')) {
             expect(resultRowOutOfRange.operation).toContain('(1)')
@@ -842,7 +939,7 @@ describe('Math1', () => {
           expect(resultRowOutOfRange.operation).toMatch(/\((0|1)\)/)
         }
       }
-      
+
       const resultNegativeIndex = math1.randomFunc(matrix, -1)
       // Complex operations and function factories may have different index handling
       if (!complexOps.includes(resultNegativeIndex.operation)) {
@@ -854,20 +951,42 @@ describe('Math1', () => {
           expect(resultNegativeIndex.operation).toMatch(/\((0|1)\)/)
         }
       }
-      
+
       // Verify functions work
       const executed1 = resultRowOutOfRange.result()
       const executed2 = resultNegativeIndex.result()
-      const hasValue1 = executed1.value !== undefined || executed1.result !== undefined || executed1.finalResult !== undefined ||
-                       executed1.histogram !== undefined || executed1.quantiles !== undefined || executed1.outliers !== undefined || 
-                       executed1.zScores !== undefined || executed1.error !== undefined || executed1.operation !== undefined ||
-                       executed1.data !== undefined || executed1.correlation !== undefined || executed1.vectors !== undefined ||
-                       executed1.largestSingularValue !== undefined || executed1.leftVector !== undefined || executed1.rightVector !== undefined
-      const hasValue2 = executed2.value !== undefined || executed2.result !== undefined || executed2.finalResult !== undefined ||
-                       executed2.histogram !== undefined || executed2.quantiles !== undefined || executed2.outliers !== undefined || 
-                       executed2.zScores !== undefined || executed2.error !== undefined || executed2.operation !== undefined ||
-                       executed2.data !== undefined || executed2.correlation !== undefined || executed2.vectors !== undefined ||
-                       executed2.largestSingularValue !== undefined || executed2.leftVector !== undefined || executed2.rightVector !== undefined
+      const hasValue1 =
+        executed1.value !== undefined ||
+        executed1.result !== undefined ||
+        executed1.finalResult !== undefined ||
+        executed1.histogram !== undefined ||
+        executed1.quantiles !== undefined ||
+        executed1.outliers !== undefined ||
+        executed1.zScores !== undefined ||
+        executed1.error !== undefined ||
+        executed1.operation !== undefined ||
+        executed1.data !== undefined ||
+        executed1.correlation !== undefined ||
+        executed1.vectors !== undefined ||
+        executed1.largestSingularValue !== undefined ||
+        executed1.leftVector !== undefined ||
+        executed1.rightVector !== undefined
+      const hasValue2 =
+        executed2.value !== undefined ||
+        executed2.result !== undefined ||
+        executed2.finalResult !== undefined ||
+        executed2.histogram !== undefined ||
+        executed2.quantiles !== undefined ||
+        executed2.outliers !== undefined ||
+        executed2.zScores !== undefined ||
+        executed2.error !== undefined ||
+        executed2.operation !== undefined ||
+        executed2.data !== undefined ||
+        executed2.correlation !== undefined ||
+        executed2.vectors !== undefined ||
+        executed2.largestSingularValue !== undefined ||
+        executed2.leftVector !== undefined ||
+        executed2.rightVector !== undefined
       expect(hasValue1).toBe(true)
       expect(hasValue2).toBe(true)
     })
@@ -1082,24 +1201,43 @@ describe('Math1', () => {
     describe('randomStatsFunc', () => {
       it('should perform random statistical operations and return functions', () => {
         const result = math1.randomStatsFunc(testData)
-        
+
         expect(typeof result.operation).toBe('string')
         expect(typeof result.result).toBe('function')
-        
+
         // Execute the function to get the actual result
         const executed = result.result()
         expect(executed).toBeDefined()
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
-        const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
-                        executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
-                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+        const hasValue =
+          executed.value !== undefined ||
+          executed.result !== undefined ||
+          executed.finalResult !== undefined ||
+          executed.histogram !== undefined ||
+          executed.quantiles !== undefined ||
+          executed.outliers !== undefined ||
+          executed.zScores !== undefined ||
+          executed.error !== undefined ||
+          executed.operation !== undefined ||
+          executed.data !== undefined ||
+          executed.correlation !== undefined ||
+          executed.vectors !== undefined
         expect(hasValue).toBe(true)
-        
+
         const validOperations = [
-          'average', 'median', 'mode', 'standardDeviation', 'variance', 
-          'harmonicMean', 'range', 'extrema', 'percentile25', 'percentile75',
-          'statsChainFunction', 'aggregateFunction', 'distributionFunction'
+          'average',
+          'median',
+          'mode',
+          'standardDeviation',
+          'variance',
+          'harmonicMean',
+          'range',
+          'extrema',
+          'percentile25',
+          'percentile75',
+          'statsChainFunction',
+          'aggregateFunction',
+          'distributionFunction',
         ]
         expect(validOperations.includes(result.operation)).toBe(true)
       })
@@ -1108,7 +1246,7 @@ describe('Math1', () => {
         const result = math1.randomStatsFunc([])
         expect(result.operation).toBe('noop')
         expect(typeof result.result).toBe('function')
-        
+
         const executed = result.result()
         expect(executed.error).toBe('no data')
         expect(executed.value).toBe(0)
@@ -1117,7 +1255,7 @@ describe('Math1', () => {
       it('should handle invalid data for harmonic mean', () => {
         const dataWithZero = [1, 0, 3, 4, 5]
         let foundHarmonicMean = false
-        
+
         for (let i = 0; i < 50; i++) {
           const result = math1.randomStatsFunc(dataWithZero)
           if (result.operation === 'harmonicMean') {
@@ -1133,7 +1271,7 @@ describe('Math1', () => {
     describe('generateStatisticalSample', () => {
       it('should generate three types of distributions', () => {
         const sample = math1.generateStatisticalSample(20)
-        
+
         expect(sample.uniform.length).toBe(20)
         expect(sample.normal.length).toBe(20)
         expect(sample.exponential.length).toBe(20)
@@ -1156,7 +1294,7 @@ describe('Math1', () => {
 
       it('should use default size when not specified', () => {
         const sample = math1.generateStatisticalSample()
-        
+
         expect(sample.uniform.length).toBe(20)
         expect(sample.normal.length).toBe(20)
         expect(sample.exponential.length).toBe(20)
@@ -1165,7 +1303,7 @@ describe('Math1', () => {
       it('should generate different samples on multiple calls', () => {
         const sample1 = math1.generateStatisticalSample(10)
         const sample2 = math1.generateStatisticalSample(10)
-        
+
         expect(sample1.uniform).not.toEqual(sample2.uniform)
         expect(sample1.normal).not.toEqual(sample2.normal)
         expect(sample1.exponential).not.toEqual(sample2.exponential)
@@ -1176,16 +1314,18 @@ describe('Math1', () => {
   describe('integration tests for ts-stats functions', () => {
     it('should demonstrate complete statistical analysis workflow', () => {
       console.log('\n========== TS-Stats Statistical Analysis ==========')
-      
+
       const sample = math1.generateStatisticalSample(50)
-      console.log(`Generated ${sample.uniform.length} uniform, ${sample.normal.length} normal, and ${sample.exponential.length} exponential values`)
-      
+      console.log(
+        `Generated ${sample.uniform.length} uniform, ${sample.normal.length} normal, and ${sample.exponential.length} exponential values`,
+      )
+
       const datasets = [
         { name: 'uniform', data: sample.uniform },
         { name: 'normal', data: sample.normal },
-        { name: 'exponential', data: sample.exponential }
+        { name: 'exponential', data: sample.exponential },
       ]
-      
+
       datasets.forEach(dataset => {
         console.log(`\n${dataset.name.toUpperCase()} DISTRIBUTION:`)
         console.log(`  Average: ${math1.statsAverage(dataset.data)}`)
@@ -1193,27 +1333,27 @@ describe('Math1', () => {
         console.log(`  Std Dev: ${math1.statsStandardDeviation(dataset.data)}`)
         console.log(`  Variance: ${math1.statsVariance(dataset.data)}`)
         console.log(`  Range: ${math1.statsRange(dataset.data)}`)
-        
+
         const extrema = math1.statsExtrema(dataset.data)
         if (typeof extrema === 'object' && extrema !== null && 'min' in extrema) {
           console.log(`  Min: ${extrema.min}, Max: ${extrema.max}`)
         }
-        
+
         console.log(`  25th percentile: ${math1.statsPercentile(dataset.data, 25)}`)
         console.log(`  75th percentile: ${math1.statsPercentile(dataset.data, 75)}`)
       })
-      
+
       console.log('\nCORRELATION ANALYSIS:')
       console.log(`  Uniform vs Normal: ${math1.statsCorrelation(sample.uniform, sample.normal)}`)
       console.log(`  Normal vs Exponential: ${math1.statsCorrelation(sample.normal, sample.exponential)}`)
       console.log(`  Uniform vs Exponential: ${math1.statsCorrelation(sample.uniform, sample.exponential)}`)
-      
+
       console.log('\nRANDOM STATISTICAL OPERATIONS:')
       for (let i = 0; i < 3; i++) {
         const randomOp = math1.randomStatsFunc(sample.uniform)
         console.log(`  ${randomOp.operation}: ${JSON.stringify(randomOp.result)}`)
       }
-      
+
       console.log('================================================\n')
     })
   })
@@ -1221,12 +1361,12 @@ describe('Math1', () => {
   describe('enhanced function chaining system', () => {
     let testMatrix: number[][]
     let testNumbers: number[]
-    
+
     beforeEach(() => {
       testMatrix = [
         [1, 2, 3, 4],
-        [5, 6, 7, 8], 
-        [9, 10, 11, 12]
+        [5, 6, 7, 8],
+        [9, 10, 11, 12],
       ]
       testNumbers = [10, 20, 30, 40, 50]
     })
@@ -1234,23 +1374,35 @@ describe('Math1', () => {
     it('should always return functions from randomFunc', () => {
       for (let i = 0; i < 10; i++) {
         const result = math1.randomFunc(testMatrix)
-        
+
         expect(typeof result.operation).toBe('string')
         expect(typeof result.result).toBe('function')
-        
+
         // Execute the function to verify it works
         const executed = result.result()
         expect(executed).toBeDefined()
         // Different factory functions return different structures
-        const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
-                        executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
-                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+        const hasValue =
+          executed.value !== undefined ||
+          executed.result !== undefined ||
+          executed.finalResult !== undefined ||
+          executed.histogram !== undefined ||
+          executed.quantiles !== undefined ||
+          executed.outliers !== undefined ||
+          executed.zScores !== undefined ||
+          executed.error !== undefined ||
+          executed.operation !== undefined ||
+          executed.data !== undefined ||
+          executed.correlation !== undefined ||
+          executed.vectors !== undefined
         expect(hasValue).toBe(true)
         // Operation might be in different properties depending on the function type
-        const hasOperation = typeof executed.operation === 'string' || Array.isArray(executed.operations) || 
-                            typeof executed.aggregateType === 'string' || typeof executed.transform === 'string' ||
-                            typeof executed.distributionType === 'string'
+        const hasOperation =
+          typeof executed.operation === 'string' ||
+          Array.isArray(executed.operations) ||
+          typeof executed.aggregateType === 'string' ||
+          typeof executed.transform === 'string' ||
+          typeof executed.distributionType === 'string'
         expect(hasOperation).toBe(true)
       }
     })
@@ -1258,26 +1410,40 @@ describe('Math1', () => {
     it('should always return functions from randomStatsFunc', () => {
       for (let i = 0; i < 10; i++) {
         const result = math1.randomStatsFunc(testNumbers)
-        
+
         expect(typeof result.operation).toBe('string')
         expect(typeof result.result).toBe('function')
-        
+
         // Execute the function to verify it works
         const executed = result.result()
         expect(executed).toBeDefined()
         // Different factory functions return different structures (value, result, finalResult, histogram, quantiles, outliers, zScores)
-        const hasValue = executed.value !== undefined || executed.result !== undefined || executed.finalResult !== undefined ||
-                        executed.histogram !== undefined || executed.quantiles !== undefined || executed.outliers !== undefined || 
-                        executed.zScores !== undefined || executed.error !== undefined || executed.operation !== undefined ||
-                        executed.data !== undefined || executed.correlation !== undefined || executed.vectors !== undefined
+        const hasValue =
+          executed.value !== undefined ||
+          executed.result !== undefined ||
+          executed.finalResult !== undefined ||
+          executed.histogram !== undefined ||
+          executed.quantiles !== undefined ||
+          executed.outliers !== undefined ||
+          executed.zScores !== undefined ||
+          executed.error !== undefined ||
+          executed.operation !== undefined ||
+          executed.data !== undefined ||
+          executed.correlation !== undefined ||
+          executed.vectors !== undefined
         expect(hasValue).toBe(true)
         // Different factory functions return different operation structures
         // Some functions might not have explicit operation strings but contain meaningful data
-        const hasOperation = typeof executed.operation === 'string' || Array.isArray(executed.operations) || 
-                            typeof executed.aggregateType === 'string' || typeof executed.transform === 'string' ||
-                            typeof executed.distributionType === 'string' || 
-                            executed.histogram !== undefined || executed.quantiles !== undefined || 
-                            executed.outliers !== undefined || executed.zScores !== undefined
+        const hasOperation =
+          typeof executed.operation === 'string' ||
+          Array.isArray(executed.operations) ||
+          typeof executed.aggregateType === 'string' ||
+          typeof executed.transform === 'string' ||
+          typeof executed.distributionType === 'string' ||
+          executed.histogram !== undefined ||
+          executed.quantiles !== undefined ||
+          executed.outliers !== undefined ||
+          executed.zScores !== undefined
         expect(hasOperation).toBe(true)
       }
     })
@@ -1285,49 +1451,49 @@ describe('Math1', () => {
     it('should create chain functions that execute multiple operations', () => {
       const chainFunc = math1.createChainFunction(testMatrix)
       expect(typeof chainFunc).toBe('function')
-      
+
       const result = chainFunc()
       expect(result).toBeDefined()
       expect(typeof result.result).toBe('number')
       expect(Array.isArray(result.operations)).toBe(true)
       expect(result.operations.length).toBeGreaterThan(1)
       expect(typeof result.chainLength).toBe('number')
-      
+
       console.log(`Chain function result:`, result)
     })
 
     it('should create composite functions that combine operations', () => {
       const compositeFunc = math1.createCompositeFunction(testMatrix)
       expect(typeof compositeFunc).toBe('function')
-      
+
       const result = compositeFunc()
       expect(result).toBeDefined()
       expect(typeof result.result).toBe('number')
       expect(Array.isArray(result.operations)).toBe(true)
       expect(result.operations.length).toBe(2)
       expect(typeof result.composition).toBe('string')
-      
+
       console.log(`Composite function result:`, result)
     })
 
     it('should create transform functions that modify data', () => {
       const transformFunc = math1.createTransformFunction(testMatrix)
       expect(typeof transformFunc).toBe('function')
-      
+
       const result = transformFunc()
       expect(result).toBeDefined()
       expect(Array.isArray(result.result)).toBe(true)
       expect(typeof result.transform).toBe('string')
       expect(typeof result.parameter).toBe('number')
       expect(typeof result.originalLength).toBe('number')
-      
+
       console.log(`Transform function result:`, result)
     })
 
     it('should create stats chain functions with multiple statistical operations', () => {
       const statsChainFunc = math1.createStatsChainFunction(testNumbers)
       expect(typeof statsChainFunc).toBe('function')
-      
+
       const result = statsChainFunc()
       expect(result).toBeDefined()
       expect(result.finalResult !== undefined).toBe(true)
@@ -1335,32 +1501,32 @@ describe('Math1', () => {
       expect(Array.isArray(result.allResults)).toBe(true)
       expect(typeof result.chainLength).toBe('number')
       expect(result.operations.length).toBe(result.allResults.length)
-      
+
       console.log(`Stats chain function result:`, result)
     })
 
     it('should create aggregate functions with different aggregation types', () => {
       const aggregateFunc = math1.createAggregateFunction(testNumbers)
       expect(typeof aggregateFunc).toBe('function')
-      
+
       const result = aggregateFunc()
       expect(result).toBeDefined()
       expect(typeof result.result).toBe('number')
       expect(typeof result.aggregateType).toBe('string')
       expect(typeof result.inputSize).toBe('number')
       expect(typeof result.weightedCalculation).toBe('boolean')
-      
+
       console.log(`Aggregate function result:`, result)
     })
 
     it('should create distribution functions that analyze data patterns', () => {
       const distributionFunc = math1.createDistributionFunction(testNumbers)
       expect(typeof distributionFunc).toBe('function')
-      
+
       const result = distributionFunc()
       expect(result).toBeDefined()
       expect(result.error === undefined).toBe(true) // Should not have error
-      
+
       // Different distribution types have different structures
       if ('histogram' in result) {
         expect(Array.isArray(result.histogram)).toBe(true)
@@ -1376,77 +1542,122 @@ describe('Math1', () => {
         expect(Array.isArray(result.zScores)).toBe(true)
         expect(typeof result.mean).toBe('number')
       }
-      
+
       console.log(`Distribution function result:`, result)
     })
 
     it('should demonstrate function chaining with random selection', () => {
       console.log('\n========== Function Chaining Demonstration ==========')
-      
+
       for (let i = 0; i < 5; i++) {
         const matrixFunc = math1.randomFunc(testMatrix)
         const statsFunc = math1.randomStatsFunc(testNumbers)
-        
+
         const matrixResult = matrixFunc.result()
         const statsResult = statsFunc.result()
-        
+
         console.log(`\nTest ${i + 1}:`)
         console.log(`  Matrix Function: ${matrixFunc.operation}`)
         console.log(`  Matrix Result: ${JSON.stringify(matrixResult).substring(0, 100)}...`)
         console.log(`  Stats Function: ${statsFunc.operation}`)
         console.log(`  Stats Result: ${JSON.stringify(statsResult).substring(0, 100)}...`)
-        
+
         expect(typeof matrixFunc.result).toBe('function')
         expect(typeof statsFunc.result).toBe('function')
         // Different factory functions return different structures
-        const matrixHasValue = matrixResult.value !== undefined || matrixResult.result !== undefined || matrixResult.finalResult !== undefined ||
-                              matrixResult.histogram !== undefined || matrixResult.quantiles !== undefined || matrixResult.outliers !== undefined || 
-                              matrixResult.zScores !== undefined || matrixResult.error !== undefined || matrixResult.operation !== undefined ||
-                              matrixResult.data !== undefined || matrixResult.correlation !== undefined || matrixResult.vectors !== undefined
-        const statsHasValue = statsResult.value !== undefined || statsResult.result !== undefined || statsResult.finalResult !== undefined ||
-                             statsResult.histogram !== undefined || statsResult.quantiles !== undefined || statsResult.outliers !== undefined || 
-                             statsResult.zScores !== undefined || statsResult.error !== undefined || statsResult.operation !== undefined ||
-                             statsResult.data !== undefined || statsResult.correlation !== undefined || statsResult.vectors !== undefined
+        const matrixHasValue =
+          matrixResult.value !== undefined ||
+          matrixResult.result !== undefined ||
+          matrixResult.finalResult !== undefined ||
+          matrixResult.histogram !== undefined ||
+          matrixResult.quantiles !== undefined ||
+          matrixResult.outliers !== undefined ||
+          matrixResult.zScores !== undefined ||
+          matrixResult.error !== undefined ||
+          matrixResult.operation !== undefined ||
+          matrixResult.data !== undefined ||
+          matrixResult.correlation !== undefined ||
+          matrixResult.vectors !== undefined
+        const statsHasValue =
+          statsResult.value !== undefined ||
+          statsResult.result !== undefined ||
+          statsResult.finalResult !== undefined ||
+          statsResult.histogram !== undefined ||
+          statsResult.quantiles !== undefined ||
+          statsResult.outliers !== undefined ||
+          statsResult.zScores !== undefined ||
+          statsResult.error !== undefined ||
+          statsResult.operation !== undefined ||
+          statsResult.data !== undefined ||
+          statsResult.correlation !== undefined ||
+          statsResult.vectors !== undefined
         expect(matrixHasValue).toBe(true)
         expect(statsHasValue).toBe(true)
       }
-      
+
       console.log('=====================================================\n')
     })
 
     it('should handle function execution with different parameters', () => {
       const matrixFunc = math1.randomFunc(testMatrix)
       const statsFunc = math1.randomStatsFunc(testNumbers)
-      
+
       // Test with original parameters
       const result1 = matrixFunc.result()
       const result2 = statsFunc.result()
-      
+
       // Test with new parameters
-      const newMatrix = [[100, 200], [300, 400]]
+      const newMatrix = [
+        [100, 200],
+        [300, 400],
+      ]
       const newNumbers = [1, 2, 3]
-      
+
       const result3 = matrixFunc.result(newMatrix, 0)
       const result4 = statsFunc.result(newNumbers)
-      
+
       // Different factory functions return different structures
-      const result1HasValue = result1.value !== undefined || result1.result !== undefined || result1.finalResult !== undefined ||
-                              result1.histogram !== undefined || result1.quantiles !== undefined || result1.outliers !== undefined || 
-                              result1.zScores !== undefined || result1.error !== undefined
-      const result2HasValue = result2.value !== undefined || result2.result !== undefined || result2.finalResult !== undefined ||
-                              result2.histogram !== undefined || result2.quantiles !== undefined || result2.outliers !== undefined || 
-                              result2.zScores !== undefined || result2.error !== undefined
-      const result3HasValue = result3.value !== undefined || result3.result !== undefined || result3.finalResult !== undefined ||
-                              result3.histogram !== undefined || result3.quantiles !== undefined || result3.outliers !== undefined || 
-                              result3.zScores !== undefined || result3.error !== undefined
-      const result4HasValue = result4.value !== undefined || result4.result !== undefined || result4.finalResult !== undefined ||
-                              result4.histogram !== undefined || result4.quantiles !== undefined || result4.outliers !== undefined || 
-                              result4.zScores !== undefined || result4.error !== undefined
+      const result1HasValue =
+        result1.value !== undefined ||
+        result1.result !== undefined ||
+        result1.finalResult !== undefined ||
+        result1.histogram !== undefined ||
+        result1.quantiles !== undefined ||
+        result1.outliers !== undefined ||
+        result1.zScores !== undefined ||
+        result1.error !== undefined
+      const result2HasValue =
+        result2.value !== undefined ||
+        result2.result !== undefined ||
+        result2.finalResult !== undefined ||
+        result2.histogram !== undefined ||
+        result2.quantiles !== undefined ||
+        result2.outliers !== undefined ||
+        result2.zScores !== undefined ||
+        result2.error !== undefined
+      const result3HasValue =
+        result3.value !== undefined ||
+        result3.result !== undefined ||
+        result3.finalResult !== undefined ||
+        result3.histogram !== undefined ||
+        result3.quantiles !== undefined ||
+        result3.outliers !== undefined ||
+        result3.zScores !== undefined ||
+        result3.error !== undefined
+      const result4HasValue =
+        result4.value !== undefined ||
+        result4.result !== undefined ||
+        result4.finalResult !== undefined ||
+        result4.histogram !== undefined ||
+        result4.quantiles !== undefined ||
+        result4.outliers !== undefined ||
+        result4.zScores !== undefined ||
+        result4.error !== undefined
       expect(result1HasValue).toBe(true)
       expect(result2HasValue).toBe(true)
       expect(result3HasValue).toBe(true)
       expect(result4HasValue).toBe(true)
-      
+
       // Results should potentially be different with different inputs
       console.log('Original matrix result:', result1)
       console.log('New matrix result:', result3)
@@ -1456,12 +1667,12 @@ describe('Math1', () => {
 
     it('should handle function chaining within randomFunc', () => {
       let chainedFunctionFound = false
-      
+
       // Try multiple times to find a chained function (20% chance per call)
       for (let i = 0; i < 50 && !chainedFunctionFound; i++) {
         const result = math1.randomFunc(testMatrix)
         const executed = result.result()
-        
+
         if (executed.chained === true) {
           chainedFunctionFound = true
           expect(typeof executed.originalResult).toBe('number')
@@ -1469,19 +1680,19 @@ describe('Math1', () => {
           console.log('Found chained function:', executed)
         }
       }
-      
+
       // At least verify basic functionality even if we don't find a chain
       expect(typeof math1.randomFunc).toBe('function')
     })
 
     it('should handle function chaining within randomStatsFunc', () => {
       let chainedFunctionFound = false
-      
+
       // Try multiple times to find a chained function (25% chance per call)
       for (let i = 0; i < 50 && !chainedFunctionFound; i++) {
         const result = math1.randomStatsFunc(testNumbers)
         const executed = result.result()
-        
+
         if (executed.chained === true) {
           chainedFunctionFound = true
           expect(executed.originalResult !== undefined).toBe(true)
@@ -1489,7 +1700,7 @@ describe('Math1', () => {
           console.log('Found chained stats function:', executed)
         }
       }
-      
+
       // At least verify basic functionality even if we don't find a chain
       expect(typeof math1.randomStatsFunc).toBe('function')
     })

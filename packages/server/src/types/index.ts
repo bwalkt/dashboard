@@ -17,4 +17,3 @@ export interface GitHubTokenResponse {
   token_type: string;
   scope: string;
 }
-

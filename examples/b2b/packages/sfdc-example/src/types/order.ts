@@ -221,4 +221,3 @@ export type Order = z.infer<typeof OrderSchema>
 export type OrderQueryResponse = z.infer<typeof OrderQueryResponseSchema>
 export type OrderCreateRequest = z.infer<typeof OrderCreateRequestSchema>
 export type OrderUpdateRequest = z.infer<typeof OrderUpdateRequestSchema>
-

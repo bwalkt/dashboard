@@ -6,8 +6,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <Main 
-      title="Settings" 
+    <Main
+      title="Settings"
       description="Configure application preferences and options"
       onFilterToggle={handleFilterToggle}
     >

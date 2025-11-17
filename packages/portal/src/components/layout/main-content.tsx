@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import * as React from 'react'
 import { Breadcrumbs } from '../breadcrumbs'
@@ -16,7 +16,7 @@ export function MainContent({ children, style }: MainContentProps) {
           <Breadcrumbs />
         </div>
       )}
-      
+
       <main className="flex-1 overflow-auto" style={style}>
         {children}
       </main>

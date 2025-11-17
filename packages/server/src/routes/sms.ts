@@ -1,11 +1,11 @@
 import type { ErrorResponse } from "@pzero/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { redis } from "../config/redis";
-import { 
-  validatePhoneNumber, 
-  checkSmsRateLimit, 
-  sendSmsVerification, 
-  resendSmsVerification 
+import {
+  checkSmsRateLimit,
+  resendSmsVerification,
+  sendSmsVerification,
+  validatePhoneNumber,
 } from "../utils/sms-validation";
 
 export async function smsRoutes(fastify: FastifyInstance): Promise<void> {

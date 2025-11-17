@@ -12,12 +12,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import {
-  DropzoneOptions,
-  DropzoneState,
-  FileRejection,
-  useDropzone,
-} from 'react-dropzone'
+import { DropzoneOptions, DropzoneState, FileRejection, useDropzone } from 'react-dropzone'
 import { toast } from 'sonner'
 import { buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,22 +49,9 @@ type FileUploaderProps = {
   orientation?: 'horizontal' | 'vertical'
 }
 
-export const FileUploader = forwardRef<
-  HTMLDivElement,
-  FileUploaderProps & React.HTMLAttributes<HTMLDivElement>
->(
+export const FileUploader = forwardRef<HTMLDivElement, FileUploaderProps & React.HTMLAttributes<HTMLDivElement>>(
   (
-    {
-      className,
-      dropzoneOptions,
-      value,
-      onValueChange,
-      reSelect,
-      orientation = 'vertical',
-      children,
-      dir,
-      ...props
-    },
+    { className, dropzoneOptions, value, onValueChange, reSelect, orientation = 'vertical', children, dir, ...props },
     ref,
   ) => {
     const [isFileTooBig, setIsFileTooBig] = useState(false)
@@ -115,19 +97,9 @@ export const FileUploader = forwardRef<
           setActiveIndex(nextIndex < 0 ? value.length - 1 : nextIndex)
         }
 
-        const prevKey =
-          orientation === 'horizontal'
-            ? direction === 'ltr'
-              ? 'ArrowLeft'
-              : 'ArrowRight'
-            : 'ArrowUp'
+        const prevKey = orientation === 'horizontal' ? (direction === 'ltr' ? 'ArrowLeft' : 'ArrowRight') : 'ArrowUp'
 
-        const nextKey =
-          orientation === 'horizontal'
-            ? direction === 'ltr'
-              ? 'ArrowRight'
-              : 'ArrowLeft'
-            : 'ArrowDown'
+        const nextKey = orientation === 'horizontal' ? (direction === 'ltr' ? 'ArrowRight' : 'ArrowLeft') : 'ArrowDown'
 
         if (e.key === nextKey) {
           moveNext()
@@ -168,7 +140,7 @@ export const FileUploader = forwardRef<
           newValues.splice(0, newValues.length)
         }
 
-        files.forEach((file) => {
+        files.forEach(file => {
           if (newValues.length < maxFiles) {
             newValues.push(file)
           }
@@ -179,9 +151,7 @@ export const FileUploader = forwardRef<
         if (rejectedFiles.length > 0) {
           for (let i = 0; i < rejectedFiles.length; i++) {
             if (rejectedFiles[i].errors[0]?.code === 'file-too-large') {
-              toast.error(
-                `File is too large. Max size is ${maxSize / 1024 / 1024}MB`,
-              )
+              toast.error(`File is too large. Max size is ${maxSize / 1024 / 1024}MB`)
               break
             }
             if (rejectedFiles[i].errors[0]?.message) {
@@ -229,13 +199,9 @@ export const FileUploader = forwardRef<
           ref={ref}
           tabIndex={0}
           onKeyDownCapture={handleKeyDown}
-          className={cn(
-            'grid w-full focus:outline-none overflow-hidden ',
-            className,
-            {
-              'gap-2': value && value.length > 0,
-            },
-          )}
+          className={cn('grid w-full focus:outline-none overflow-hidden ', className, {
+            'gap-2': value && value.length > 0,
+          })}
           dir={dir}
           {...props}
         >
@@ -248,90 +214,77 @@ export const FileUploader = forwardRef<
 
 FileUploader.displayName = 'FileUploader'
 
-export const FileUploaderContent = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ children, className, ...props }, ref) => {
-  const { orientation } = useFileUpload()
-  const containerRef = useRef<HTMLDivElement>(null)
+export const FileUploaderContent = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ children, className, ...props }, ref) => {
+    const { orientation } = useFileUpload()
+    const containerRef = useRef<HTMLDivElement>(null)
 
-  return (
-    <div
-      className={cn('w-full px-1')}
-      ref={containerRef}
-      aria-description="content file holder"
-    >
-      <div
-        {...props}
-        ref={ref}
-        className={cn(
-          'flex rounded-xl gap-1',
-          orientation === 'horizontal' ? 'flex-raw flex-wrap' : 'flex-col',
-          className,
-        )}
-      >
-        {children}
+    return (
+      <div className={cn('w-full px-1')} ref={containerRef} aria-description="content file holder">
+        <div
+          {...props}
+          ref={ref}
+          className={cn(
+            'flex rounded-xl gap-1',
+            orientation === 'horizontal' ? 'flex-raw flex-wrap' : 'flex-col',
+            className,
+          )}
+        >
+          {children}
+        </div>
       </div>
-    </div>
-  )
-})
+    )
+  },
+)
 
 FileUploaderContent.displayName = 'FileUploaderContent'
 
-export const FileUploaderItem = forwardRef<
-  HTMLDivElement,
-  { index: number } & React.HTMLAttributes<HTMLDivElement>
->(({ className, index, children, ...props }, ref) => {
-  const { removeFileFromSet, activeIndex, direction } = useFileUpload()
-  const isSelected = index === activeIndex
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        buttonVariants({ variant: 'ghost' }),
-        'h-6 p-1 justify-between cursor-pointer relative',
-        className,
-        isSelected ? 'bg-muted' : '',
-      )}
-      {...props}
-    >
-      <div className="font-medium leading-none tracking-tight flex items-center gap-1.5 h-full w-full">
-        {children}
-      </div>
-      <button
-        type="button"
+export const FileUploaderItem = forwardRef<HTMLDivElement, { index: number } & React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, index, children, ...props }, ref) => {
+    const { removeFileFromSet, activeIndex, direction } = useFileUpload()
+    const isSelected = index === activeIndex
+    return (
+      <div
+        ref={ref}
         className={cn(
-          'absolute',
-          direction === 'rtl' ? 'top-1 left-1' : 'top-1 right-1',
+          buttonVariants({ variant: 'ghost' }),
+          'h-6 p-1 justify-between cursor-pointer relative',
+          className,
+          isSelected ? 'bg-muted' : '',
         )}
-        onClick={() => removeFileFromSet(index)}
+        {...props}
       >
-        <span className="sr-only">remove item {index}</span>
-        <RemoveIcon className="w-4 h-4 hover:stroke-destructive duration-200 ease-in-out" />
-      </button>
-    </div>
-  )
-})
+        <div className="font-medium leading-none tracking-tight flex items-center gap-1.5 h-full w-full">
+          {children}
+        </div>
+        <button
+          type="button"
+          className={cn('absolute', direction === 'rtl' ? 'top-1 left-1' : 'top-1 right-1')}
+          onClick={() => removeFileFromSet(index)}
+        >
+          <span className="sr-only">remove item {index}</span>
+          <RemoveIcon className="w-4 h-4 hover:stroke-destructive duration-200 ease-in-out" />
+        </button>
+      </div>
+    )
+  },
+)
 
 FileUploaderItem.displayName = 'FileUploaderItem'
 
-export const FileInput = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, children, ...props }, ref) => {
-  const { dropzoneState, isFileTooBig, isLOF } = useFileUpload()
-  const rootProps = isLOF ? {} : dropzoneState.getRootProps()
-  return (
-    <div
-      ref={ref}
-      {...props}
-      className={`relative w-full ${
-        isLOF ? 'opacity-50 cursor-not-allowed ' : 'cursor-pointer '
-      }`}
-    >
+export const FileInput = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, children, ...props }, ref) => {
+    const { dropzoneState, isFileTooBig, isLOF } = useFileUpload()
+    const rootProps = isLOF ? {} : dropzoneState.getRootProps()
+    return (
       <div
-        className={cn(
-          `w-full rounded-lg duration-300 ease-in-out
+        ref={ref}
+        {...props}
+        className={`relative w-full ${isLOF ? 'opacity-50 cursor-not-allowed ' : 'cursor-pointer '}`}
+      >
+        <div
+          className={cn(
+            `w-full rounded-lg duration-300 ease-in-out
          ${
            dropzoneState.isDragAccept
              ? 'border-green-500'
@@ -339,20 +292,21 @@ export const FileInput = forwardRef<
                ? 'border-red-500'
                : 'border-gray-300'
          }`,
-          className,
-        )}
-        {...rootProps}
-      >
-        {children}
+            className,
+          )}
+          {...rootProps}
+        >
+          {children}
+        </div>
+        <Input
+          ref={dropzoneState.inputRef}
+          disabled={isLOF}
+          {...dropzoneState.getInputProps()}
+          className={`${isLOF ? 'cursor-not-allowed' : ''}`}
+        />
       </div>
-      <Input
-        ref={dropzoneState.inputRef}
-        disabled={isLOF}
-        {...dropzoneState.getInputProps()}
-        className={`${isLOF ? 'cursor-not-allowed' : ''}`}
-      />
-    </div>
-  )
-})
+    )
+  },
+)
 
 FileInput.displayName = 'FileInput'

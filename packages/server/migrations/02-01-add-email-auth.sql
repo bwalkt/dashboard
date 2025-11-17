@@ -1,6 +1,5 @@
 -- Migration: Add email authentication support
 -- This migration adds email verification and allows null github_id for email-only users
-
 -- Check if users table exists (simpler table used by the application)
 DO $$
 BEGIN
@@ -58,5 +57,6 @@ BEGIN
 END $$;
 
 -- Add comment for documentation
-COMMENT ON COLUMN users.email_verified IS 'Indicates whether the user has verified their email address';
-COMMENT ON COLUMN users.github_id IS 'GitHub ID for OAuth users, NULL for email-only users';
+comment ON COLUMN users.email_verified IS 'Indicates whether the user has verified their email address';
+
+comment ON COLUMN users.github_id IS 'GitHub ID for OAuth users, NULL for email-only users';

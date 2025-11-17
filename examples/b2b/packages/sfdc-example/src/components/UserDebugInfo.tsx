@@ -1,10 +1,10 @@
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/AuthContext'
 
 export function UserDebugInfo() {
-  const { user } = useAuth();
+  const { user } = useAuth()
 
   if (!user) {
-    return <div>No user data</div>;
+    return <div>No user data</div>
   }
 
   return (
@@ -18,16 +18,16 @@ export function UserDebugInfo() {
           <strong>ID:</strong> {user.id}
         </div>
         <div>
-          <strong>Full Name:</strong> {user.user_metadata?.full_name || "Not set"}
+          <strong>Full Name:</strong> {user.user_metadata?.full_name || 'Not set'}
         </div>
         <div>
-          <strong>Name:</strong> {user.user_metadata?.name || "Not set"}
+          <strong>Name:</strong> {user.user_metadata?.name || 'Not set'}
         </div>
         <div>
-          <strong>Avatar URL:</strong> {user.user_metadata?.avatar_url || "Not set"}
+          <strong>Avatar URL:</strong> {user.user_metadata?.avatar_url || 'Not set'}
         </div>
         <div>
-          <strong>Picture:</strong> {user.user_metadata?.picture || "Not set"}
+          <strong>Picture:</strong> {user.user_metadata?.picture || 'Not set'}
         </div>
         <div>
           <strong>Raw Metadata:</strong>
@@ -35,5 +35,5 @@ export function UserDebugInfo() {
         <pre className="text-xs bg-white p-2 rounded overflow-auto">{JSON.stringify(user.user_metadata, null, 2)}</pre>
       </div>
     </div>
-  );
+  )
 }

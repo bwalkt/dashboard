@@ -1,6 +1,6 @@
-import type { TextField } from "@radix-ui/themes"
-import type { z } from "zod"
-import type { LucideIconCompType } from "../icons/lucide-icon"
+import type { TextField } from '@radix-ui/themes'
+import type { z } from 'zod'
+import type { LucideIconCompType } from '../icons/lucide-icon'
 
 export interface FullStepProps extends StepProps, StepInternalConfig {}
 
@@ -9,7 +9,7 @@ type IconType = LucideIconCompType | React.ComponentType<any> | undefined
 export type Field = {
   name: string
   label: string
-  type?: TextField.RootProps["type"] | "textarea"
+  type?: TextField.RootProps['type'] | 'textarea'
   initialValue?: string
   validation?: z.ZodSchema<string>
 }
@@ -46,7 +46,7 @@ export type StepProps = React.HTMLAttributes<HTMLLIElement> & {
   label?: string | React.ReactNode
   description?: string
   icon?: IconType
-  state?: "loading" | "error"
+  state?: 'loading' | 'error'
   checkIcon?: IconType
   errorIcon?: IconType
   isCompletedStep?: boolean
@@ -84,31 +84,31 @@ type StepInternalConfig = {
 }
 
 export type StepOptions = {
-  orientation?: "vertical" | "horizontal"
-  state?: "loading" | "error"
+  orientation?: 'vertical' | 'horizontal'
+  state?: 'loading' | 'error'
   responsive?: boolean
   checkIcon?: IconType
   errorIcon?: IconType
   onClickStep?: (step: number, setStep: (step: number) => void) => void
   mobileBreakpoint?: string
-  variant?: "circle" | "circle-alt" | "line"
+  variant?: 'circle' | 'circle-alt' | 'line'
   expandVerticalSteps?: boolean
-  size?: "sm" | "md" | "lg"
+  size?: 'sm' | 'md' | 'lg'
   styles?: {
-    "main-container"?: string
-    "horizontal-step"?: string
-    "horizontal-step-container"?: string
-    "vertical-step"?: string
-    "vertical-step-container"?: string
-    "vertical-step-content"?: string
-    "step-button-container"?: string
-    "step-label-container"?: string
-    "step-label"?: string
-    "step-description"?: string
+    'main-container'?: string
+    'horizontal-step'?: string
+    'horizontal-step-container'?: string
+    'vertical-step'?: string
+    'vertical-step-container'?: string
+    'vertical-step-content'?: string
+    'step-button-container'?: string
+    'step-label-container'?: string
+    'step-label'?: string
+    'step-description'?: string
   }
   variables?: {
-    "--step-icon-size"?: string
-    "--step-gap"?: string
+    '--step-icon-size'?: string
+    '--step-gap'?: string
   }
   scrollTracking?: boolean
 }

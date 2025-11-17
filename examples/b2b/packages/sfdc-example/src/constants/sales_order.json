@@ -189,7 +189,7 @@
     "Product_Id": "PROD008",
     "Quantity": 10,
     "Unit_Price": 599.99,
-    "Total_Amount": 5999.90,
+    "Total_Amount": 5999.9,
     "Order_Date": "2025-09-02",
     "Status": "Completed",
     "Ship_Date": "2025-09-04",

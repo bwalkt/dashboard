@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { createContext, useContext, useEffect, useRef, useState } from "react"
-import type { StepperProps } from "./stepper-types"
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import type { StepperProps } from './stepper-types'
 
 interface StepperContextValue extends StepperProps {
   clickable?: boolean
@@ -15,7 +15,7 @@ interface StepperContextValue extends StepperProps {
 }
 
 type StepperContextProviderProps = {
-  value: Omit<StepperContextValue, "activeStep">
+  value: Omit<StepperContextValue, 'activeStep'>
   children: React.ReactNode
 }
 
@@ -37,17 +37,17 @@ const StepperContext = createContext<
 })
 
 const StepperProvider = ({ value, children }: StepperContextProviderProps) => {
-  const isError = value.state === "error"
-  const isLoading = value.state === "loading"
+  const isError = value.state === 'error'
+  const isLoading = value.state === 'loading'
 
   const [activeStep, setActiveStep] = useState(value.initialStep)
 
   const nextStep = () => {
-    setActiveStep((prev) => prev + 1)
+    setActiveStep(prev => prev + 1)
   }
 
   const prevStep = () => {
-    setActiveStep((prev) => prev - 1)
+    setActiveStep(prev => prev - 1)
   }
 
   const resetSteps = () => {
@@ -96,7 +96,7 @@ function useStepper() {
   const context = useContext(StepperContext)
 
   if (context === undefined) {
-    throw new Error("useStepper must be used within a StepperProvider")
+    throw new Error('useStepper must be used within a StepperProvider')
   }
 
   const { children, className, ...rest } = context

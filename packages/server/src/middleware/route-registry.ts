@@ -9,21 +9,26 @@ export interface RouteInfo {
  */
 const PUBLIC_ROUTES = new Set([
   // Auth routes (registration, login, etc.)
-  '/auth/register',
-  '/auth/register/verify',
-  '/auth/login',
-  '/auth/callback/github',
-  '/auth/refresh',
-  
+  "/auth/register",
+  "/auth/register/verify",
+  "/auth/login",
+  "/auth/callback/github",
+  "/auth/refresh",
+
+  // SMS verification routes
+  "/sms/verify",
+  "/sms/verify/confirm",
+  "/sms/verify/resend",
+
   // Email routes (if any are public)
-  '/email/verify',
-  
+  "/email/verify",
+
   // Static assets and health checks
-  '/health',
-  '/public',
-  '/docs',
-  '/assets',
-  
+  "/health",
+  "/public",
+  "/docs",
+  "/assets",
+
   // Add new public routes here as needed
 ]);
 
@@ -31,9 +36,9 @@ const PUBLIC_ROUTES = new Set([
  * Route patterns for public routes (support wildcards)
  */
 const PUBLIC_ROUTE_PATTERNS = [
-  '/assets/', // All asset paths
-  '/public/', // All public paths
-  '/docs/',   // Documentation paths
+  "/assets/", // All asset paths
+  "/public/", // All public paths
+  "/docs/", // Documentation paths
 ];
 
 /**
@@ -53,9 +58,9 @@ export function isPublicPath(path: string): boolean {
   if (PUBLIC_ROUTES.has(path)) {
     return true;
   }
-  
+
   // Check against route patterns
-  return PUBLIC_ROUTE_PATTERNS.some(pattern => path.startsWith(pattern));
+  return PUBLIC_ROUTE_PATTERNS.some((pattern) => path.startsWith(pattern));
 }
 
 /**

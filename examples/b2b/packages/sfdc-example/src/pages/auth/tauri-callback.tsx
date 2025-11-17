@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 const TauriCallbackPage = () => {
-
   const [hasRun, setHasRun] = useState(false)
   const [searchParams] = useSearchParams()
   useEffect(() => {
@@ -20,12 +19,7 @@ const TauriCallbackPage = () => {
     }
   }, [hasRun, searchParams])
 
-
-
-
-  return (
-    <div>Redirecting...</div>
-  )
+  return <div>Redirecting...</div>
 }
 
 export default TauriCallbackPage

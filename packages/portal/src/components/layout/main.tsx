@@ -11,11 +11,7 @@ interface MainLayoutProps {
 export default function Main({ title, description, onFilterToggle, children }: MainLayoutProps) {
   return (
     <div className="flex flex-col h-full">
-      <MainHeader 
-        title={title}
-        description={description}
-        onFilterToggle={onFilterToggle}
-      />
+      <MainHeader title={title} description={description} onFilterToggle={onFilterToggle} />
       {children}
     </div>
   )

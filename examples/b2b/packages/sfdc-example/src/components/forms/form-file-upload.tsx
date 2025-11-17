@@ -1,27 +1,20 @@
-'use client';
+'use client'
 
-import { FieldPath, FieldValues } from 'react-hook-form';
-import { FileUploader, FileUploaderProps } from '@/components/file-uploader';
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form';
-import { BaseFormFieldProps, FileUploadConfig } from '@/types/base-form';
+import { FieldPath, FieldValues } from 'react-hook-form'
+import { FileUploader, FileUploaderProps } from '@/components/file-uploader'
+import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { BaseFormFieldProps, FileUploadConfig } from '@/types/base-form'
 
 interface FormFileUploadProps<
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > extends BaseFormFieldProps<TFieldValues, TName> {
-  config?: FileUploadConfig;
+  config?: FileUploadConfig
 }
 
 function FormFileUpload<
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >({
   control,
   name,
@@ -30,17 +23,9 @@ function FormFileUpload<
   required,
   config,
   disabled,
-  className
+  className,
 }: FormFileUploadProps<TFieldValues, TName>) {
-  const {
-    maxSize,
-    acceptedTypes,
-    multiple,
-    maxFiles,
-    onUpload,
-    progresses,
-    ...restConfig
-  } = config || {};
+  const { maxSize, acceptedTypes, multiple, maxFiles, onUpload, progresses, ...restConfig } = config || {}
 
   return (
     <FormField
@@ -51,7 +36,7 @@ function FormFileUpload<
           {label && (
             <FormLabel>
               {label}
-              {required && <span className='ml-1 text-red-500'>*</span>}
+              {required && <span className="ml-1 text-red-500">*</span>}
             </FormLabel>
           )}
 
@@ -61,10 +46,7 @@ function FormFileUpload<
               onValueChange={field.onChange}
               onUpload={onUpload}
               progresses={progresses}
-              accept={acceptedTypes?.reduce(
-                (acc, type) => ({ ...acc, [type]: [] }),
-                {}
-              )}
+              accept={acceptedTypes?.reduce((acc, type) => ({ ...acc, [type]: [] }), {})}
               maxSize={maxSize}
               maxFiles={maxFiles}
               multiple={multiple}
@@ -78,7 +60,7 @@ function FormFileUpload<
         </FormItem>
       )}
     />
-  );
+  )
 }
 
-export { FormFileUpload, type FileUploadConfig };
+export { FormFileUpload, type FileUploadConfig }

@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   })
 
   const { mutateAsync: signIn } = useMutation({
-    mutationFn: async (data: { email: string}) => {
+    mutationFn: async (data: { email: string }) => {
       const response = await api.post('/auth/login', data)
       return response.data
     },

@@ -357,7 +357,10 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     "/auth/register",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { email, name } = request.body as { email: string; name?: string };
+        const { email, name } = request.body as {
+          email: string;
+          name?: string;
+        };
 
         // Validate email format
         if (!email || !emailService.validateEmailFormat(email)) {
@@ -377,13 +380,19 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         }
 
         // Generate verification code
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const verificationCode = Math.floor(
+          100000 + Math.random() * 900000,
+        ).toString();
         const expirySeconds = config.EMAIL_EXPIRY_MINUTES * 60;
         // Store verification data in Redis with 10 minute expiration
         const redisKey = `email_registration:${email}`;
         await redis.set(
           redisKey,
-          JSON.stringify({ code: verificationCode, name, createdAt: new Date().toISOString() }),
+          JSON.stringify({
+            code: verificationCode,
+            name,
+            createdAt: new Date().toISOString(),
+          }),
           expirySeconds,
         );
 
@@ -391,7 +400,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         await emailService.sendConfirmationCodeEmail({
           to: email,
           confirmationCode: verificationCode,
-          recipientName: name || '',
+          recipientName: name || "",
         });
 
         return reply.send({
@@ -462,7 +471,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         const { accessToken, refreshToken } = authService.generateTokenPair(
           user.id,
           "", // No GitHub ID for email users
-          user.email
+          user.email,
         );
 
         // Set JWT tokens as cookies
@@ -525,7 +534,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         }
 
         // Generate verification code
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const verificationCode = Math.floor(
+          100000 + Math.random() * 900000,
+        ).toString();
 
         // Store verification code in Redis
         const expirySeconds = config.EMAIL_EXPIRY_MINUTES * 60;
@@ -607,7 +618,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         const { accessToken, refreshToken } = authService.generateTokenPair(
           user.id,
           user.github_id || "",
-          user.email
+          user.email,
         );
 
         // Set JWT tokens as cookies

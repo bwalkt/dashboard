@@ -2,17 +2,17 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
-import helmet from '@fastify/helmet';
+import helmet from "@fastify/helmet";
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { db } from "./config/database";
-import { validateEnvironment } from "./config/env";
+import { config, validateEnvironment } from "./config/env";
 import { redis } from "./config/redis";
+import headerValidationPlugin from "./middleware/header-validation";
 import { authRoutes } from "./routes/auth";
 import { emailRoutes } from "./routes/email";
 import { proxyRoutes } from "./routes/proxy";
-import { config } from "./config/env";
-import headerValidationPlugin from "./middleware/header-validation";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -39,7 +39,7 @@ export default async function (
     preflightContinue: false,
     optionsSuccessStatus: 204,
   });
-    // Security plugins
+  // Security plugins
   await fastify.register(helmet, {
     contentSecurityPolicy: {
       directives: {

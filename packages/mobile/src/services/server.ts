@@ -1,4 +1,4 @@
-//TODO 1. add threads for each endpoint, 2. keep track of thread status. 3. add 
+//TODO 1. add threads for each endpoint, 2. keep track of thread status. 3. add
 
 import { SERVER_PORT } from '@env'
 import { type Endpoint, type EndpointStatus, endpointStatuses } from '@pzero/shared/pzero'
@@ -102,7 +102,7 @@ class HTTPServer extends ZStorage {
     const parsedEndpoint: Endpoint = typeof data === 'string' ? JSON.parse(data) : data
     this.setItem({ key: id, data: parsedEndpoint })
     this.endpoints.set(id, parsedEndpoint)
-    if ((endpoint.status !== parsedEndpoint.status)) {
+    if (endpoint.status !== parsedEndpoint.status) {
       await this.maybeToggleServer()
       console.log(`Endpoint ${id} verified status changed to ${parsedEndpoint.status}`)
     }
@@ -116,15 +116,14 @@ class HTTPServer extends ZStorage {
   }
   getServableEndpoints() {
     return Array.from(this.endpoints.values()).filter(
-      (e) =>
-        !e.dateRevoked &&
-        (e.status === endpointStatuses.active || e.status === endpointStatuses.verified)
+      e => !e.dateRevoked && (e.status === endpointStatuses.active || e.status === endpointStatuses.verified),
     )
   }
   getActiveEndpoints() {
     return Array.from(this.endpoints.values()).filter(
-      endpoint => !endpoint.dateRevoked && 
-        (endpoint.status === endpointStatuses.verified || endpoint.status === endpointStatuses.active)
+      endpoint =>
+        !endpoint.dateRevoked &&
+        (endpoint.status === endpointStatuses.verified || endpoint.status === endpointStatuses.active),
     )
   }
   async maybeToggleServer() {
@@ -132,9 +131,9 @@ class HTTPServer extends ZStorage {
     if (canServe) {
       try {
         await this.start()
-        } catch (error) {
-         console.error('Failed to start server:', error)
-       }
+      } catch (error) {
+        console.error('Failed to start server:', error)
+      }
     } else {
       await this.stop()
     }
@@ -143,10 +142,10 @@ class HTTPServer extends ZStorage {
     return Array.from(this.endpoints.values()).filter(endpoint => endpoint.dateRevoked)
   }
   async removeEndpoint(id: string) {
-     this.endpoints.delete(id)
-     this.removeItem(id)
+    this.endpoints.delete(id)
+    this.removeItem(id)
     await this.maybeToggleServer()
-   }
+  }
   getEndpointStatus(id: string): EndpointStatus | null {
     const endpoint = this.endpoints.get(id)
     if (!endpoint) {
@@ -237,7 +236,7 @@ class HTTPServer extends ZStorage {
    * Stop the server
    */
   stop(): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       if (!this.isRunning) {
         resolve()
         return
@@ -304,7 +303,8 @@ class HTTPServer extends ZStorage {
     }
 
     // Generate accept key using RN-compatible crypto
-    const acceptKey = crypto.createHash('sha1')
+    const acceptKey = crypto
+      .createHash('sha1')
       .update(key + WEBSOCKET_MAGIC_STRING)
       .digest('base64')
 
@@ -414,8 +414,8 @@ class HTTPServer extends ZStorage {
       header = Buffer.alloc(10)
       header[0] = 0x81
       header[1] = 127
-      header.writeUInt32BE(0, 2)              // High 32 bits (zero for payloads < 4GB)
-      header.writeUInt32BE(payloadLength, 6)  // Low 32 bits
+      header.writeUInt32BE(0, 2) // High 32 bits (zero for payloads < 4GB)
+      header.writeUInt32BE(payloadLength, 6) // Low 32 bits
     }
 
     socket.write(Buffer.concat([header, payload]))
@@ -439,8 +439,8 @@ class HTTPServer extends ZStorage {
       header = Buffer.alloc(10)
       header[0] = 0x8a
       header[1] = 127
-      header.writeUInt32BE(0, 2)              // High 32 bits (zero for payloads < 4GB)
-      header.writeUInt32BE(payloadLength, 6)  // Low 32 bits
+      header.writeUInt32BE(0, 2) // High 32 bits (zero for payloads < 4GB)
+      header.writeUInt32BE(payloadLength, 6) // Low 32 bits
     }
 
     socket.write(Buffer.concat([header, payload]))
@@ -453,9 +453,7 @@ class HTTPServer extends ZStorage {
     console.log(`${request.method} ${request.path}`)
 
     // Get verified endpoints
-    const endpoints = this.getAllEndpoints().filter(
-      (e) => e.status === endpointStatuses.verified
-    )
+    const endpoints = this.getAllEndpoints().filter(e => e.status === endpointStatuses.verified)
 
     // Route request based on endpoints
     const endpoint = this.matchEndpoint(request.path, endpoints)

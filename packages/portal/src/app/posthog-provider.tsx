@@ -24,13 +24,13 @@ export function PostHogProviderWrapper({ children }: PostHogProviderWrapperProps
       autocapture: true,
       session_recording: {
         maskAllInputs: true,
-        maskTextContent: false
+        maskTextContent: false,
       },
-      loaded: (posthog) => {
+      loaded: posthog => {
         if (import.meta.env.DEV) {
           posthog.debug()
         }
-      }
+      },
     })
   }, [])
 

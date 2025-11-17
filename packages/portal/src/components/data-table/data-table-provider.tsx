@@ -7,56 +7,47 @@ import type {
   SortingState,
   Table,
   VisibilityState,
-} from "@tanstack/react-table";
-import { createContext, useContext, useMemo } from "react";
-import { DataTableFilterField } from "@/components/data-table/types";
-import { ControlsProvider } from "../../providers/controls";
+} from '@tanstack/react-table'
+import { createContext, useContext, useMemo } from 'react'
+import { DataTableFilterField } from '@/components/data-table/types'
+import { ControlsProvider } from '../../providers/controls'
 
 // REMINDER: read about how to move controlled state out of the useReactTable hook
 // https://github.com/TanStack/table/discussions/4005#discussioncomment-7303569
 
 interface DataTableStateContextType {
-  columnFilters: ColumnFiltersState;
-  sorting: SortingState;
-  rowSelection: RowSelectionState;
-  columnOrder: string[];
-  columnVisibility: VisibilityState;
-  pagination: PaginationState;
-  expanded: ExpandedState;
-  enableColumnOrdering: boolean;
-  enableExpanding: boolean;
+  columnFilters: ColumnFiltersState
+  sorting: SortingState
+  rowSelection: RowSelectionState
+  columnOrder: string[]
+  columnVisibility: VisibilityState
+  pagination: PaginationState
+  expanded: ExpandedState
+  enableColumnOrdering: boolean
+  enableExpanding: boolean
 }
 
 interface DataTableBaseContextType<TData = unknown, TValue = unknown> {
-  table: Table<TData>;
-  filterFields: DataTableFilterField<TData>[];
-  columns: ColumnDef<TData, TValue>[];
-  isLoading?: boolean;
-  getFacetedUniqueValues?: (
-    table: Table<TData>,
-    columnId: string,
-  ) => Map<string, number>;
-  getFacetedMinMaxValues?: (
-    table: Table<TData>,
-    columnId: string,
-  ) => undefined | [number, number];
+  table: Table<TData>
+  filterFields: DataTableFilterField<TData>[]
+  columns: ColumnDef<TData, TValue>[]
+  isLoading?: boolean
+  getFacetedUniqueValues?: (table: Table<TData>, columnId: string) => Map<string, number>
+  getFacetedMinMaxValues?: (table: Table<TData>, columnId: string) => undefined | [number, number]
 }
 
 interface DataTableContextType<TData = unknown, TValue = unknown>
   extends DataTableStateContextType,
     DataTableBaseContextType<TData, TValue> {}
 
-export const DataTableContext = createContext<DataTableContextType<
-  any,
-  any
-> | null>(null);
+export const DataTableContext = createContext<DataTableContextType<any, any> | null>(null)
 
 export function DataTableProvider<TData, TValue>({
   children,
   ...props
 }: Partial<DataTableStateContextType> &
   DataTableBaseContextType<TData, TValue> & {
-    children: React.ReactNode;
+    children: React.ReactNode
   }) {
   const value = useMemo(
     () => ({
@@ -88,21 +79,21 @@ export function DataTableProvider<TData, TValue>({
       props.getFacetedUniqueValues,
       props.getFacetedMinMaxValues,
     ],
-  );
+  )
 
   return (
     <DataTableContext.Provider value={value}>
       <ControlsProvider>{children}</ControlsProvider>
     </DataTableContext.Provider>
-  );
+  )
 }
 
 export function useDataTable<TData, TValue>() {
-  const context = useContext(DataTableContext);
+  const context = useContext(DataTableContext)
 
   if (!context) {
-    throw new Error("useDataTable must be used within a DataTableProvider");
+    throw new Error('useDataTable must be used within a DataTableProvider')
   }
 
-  return context as DataTableContextType<TData, TValue>;
+  return context as DataTableContextType<TData, TValue>
 }

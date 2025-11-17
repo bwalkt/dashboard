@@ -33,51 +33,51 @@ export default function SignUpViewPage() {
   }, [user, loading, navigate])
 
   const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+    e.preventDefault()
+
     if (emailSent) {
       // Handle OTP verification
       if (otpCode.length !== 6) {
-        toast.error('Please enter a 6-digit verification code');
-        return;
+        toast.error('Please enter a 6-digit verification code')
+        return
       }
-      
-      setIsLoading(true);
+
+      setIsLoading(true)
       try {
         const result = await api.post('/auth/register/verify', {
           email: email,
-          code: otpCode
-        });
-        
-        toast.success('Registration successful!');
-        navigate({ to: '/dashboard/overview', replace: true });
+          code: otpCode,
+        })
+
+        toast.success('Registration successful!')
+        navigate({ to: '/dashboard/overview', replace: true })
       } catch (error) {
-        console.error('Verification error:', error);
-        toast.error('Invalid or expired verification code. Please try again.');
+        console.error('Verification error:', error)
+        toast.error('Invalid or expired verification code. Please try again.')
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
     } else {
       // Handle initial registration
-      const formEmail = (e.target as any).email.value;
-      const formName = (e.target as any).fullName.value;
-      
-      setIsLoading(true);
+      const formEmail = (e.target as any).email.value
+      const formName = (e.target as any).fullName.value
+
+      setIsLoading(true)
       try {
         const result = await signUp({
           email: formEmail,
           name: formName,
-        });
-        
-        setEmail(formEmail);
-        setName(formName);
-        setEmailSent(true);
-        toast.success('Check your email for verification code');
+        })
+
+        setEmail(formEmail)
+        setName(formName)
+        setEmailSent(true)
+        toast.success('Check your email for verification code')
       } catch (error) {
-        console.error('Sign up error:', error);
-        toast.error('Failed to sign up. Please try again.');
+        console.error('Sign up error:', error)
+        toast.error('Failed to sign up. Please try again.')
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
     }
   }
@@ -101,13 +101,13 @@ export default function SignUpViewPage() {
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input 
-                    id="fullName" 
-                    type="text" 
-                    placeholder="Enter your full name" 
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="Enter your full name"
                     defaultValue={name}
                     disabled={emailSent}
-                    required 
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -116,22 +116,17 @@ export default function SignUpViewPage() {
                     id="email"
                     type="email"
                     placeholder="your_mail+test@example.com"
-                    defaultValue={email || "your_mail+test@example.com"}
+                    defaultValue={email || 'your_mail+test@example.com'}
                     disabled={emailSent}
                     required
                   />
                 </div>
-                
+
                 {emailSent && (
                   <div className="space-y-2">
                     <Label htmlFor="otpCode">Verification Code</Label>
                     <div className="flex justify-center">
-                      <InputOTP
-                        maxLength={6}
-                        value={otpCode}
-                        onChange={(value) => setOtpCode(value)}
-                        autoFocus
-                      >
+                      <InputOTP maxLength={6} value={otpCode} onChange={value => setOtpCode(value)} autoFocus>
                         <InputOTPGroup>
                           <InputOTPSlot index={0} />
                           <InputOTPSlot index={1} />
@@ -147,7 +142,7 @@ export default function SignUpViewPage() {
                     </p>
                   </div>
                 )}
-               
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'Processing...' : emailSent ? 'Verify Code' : 'Register'}
                 </Button>
@@ -161,7 +156,6 @@ export default function SignUpViewPage() {
                   <span className="bg-background text-muted-foreground px-2">Or continue with</span>
                 </div>
               </div>
-
 
               <div className="mt-4 text-center text-sm">
                 Already have an account?{' '}

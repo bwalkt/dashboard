@@ -1,20 +1,17 @@
-"use client";
+'use client'
 
-import { useMemo } from "react";
-import type { DateRange } from "react-day-picker";
-import { DatePickerWithRange } from "@/components/custom/date-picker-with-range";
-import { useDataTable } from "@/components/data-table/data-table-provider";
-import { isArrayOfDates } from "@/lib/is-array";
-import type { DataTableTimerangeFilterField } from "./types";
+import { useMemo } from 'react'
+import type { DateRange } from 'react-day-picker'
+import { DatePickerWithRange } from '@/components/custom/date-picker-with-range'
+import { useDataTable } from '@/components/data-table/data-table-provider'
+import { isArrayOfDates } from '@/lib/is-array'
+import type { DataTableTimerangeFilterField } from './types'
 
-export function DataTableFilterTimerange<TData>({
-  value: _value,
-  presets,
-}: DataTableTimerangeFilterField<TData>) {
-  const value = _value as string;
-  const { table, columnFilters } = useDataTable();
-  const column = table.getColumn(value);
-  const filterValue = columnFilters.find((i) => i.id === value)?.value;
+export function DataTableFilterTimerange<TData>({ value: _value, presets }: DataTableTimerangeFilterField<TData>) {
+  const value = _value as string
+  const { table, columnFilters } = useDataTable()
+  const column = table.getColumn(value)
+  const filterValue = columnFilters.find(i => i.id === value)?.value
 
   const date: DateRange | undefined = useMemo(
     () =>
@@ -24,17 +21,17 @@ export function DataTableFilterTimerange<TData>({
           ? { from: filterValue?.[0], to: filterValue?.[1] }
           : undefined,
     [filterValue],
-  );
+  )
 
   const setDate = (date: DateRange | undefined) => {
-    if (!date) return; // TODO: remove from search params if columnFilter is removed
+    if (!date) return // TODO: remove from search params if columnFilter is removed
     if (date.from && !date.to) {
-      column?.setFilterValue([date.from]);
+      column?.setFilterValue([date.from])
     }
     if (date.to && date.from) {
-      column?.setFilterValue([date.from, date.to]);
+      column?.setFilterValue([date.from, date.to])
     }
-  };
+  }
 
-  return <DatePickerWithRange {...{ date, setDate, presets }} />;
+  return <DatePickerWithRange {...{ date, setDate, presets }} />
 }

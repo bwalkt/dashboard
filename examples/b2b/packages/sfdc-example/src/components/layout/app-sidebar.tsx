@@ -1,9 +1,17 @@
 // User management imports
-import { IconBell, IconChevronRight, IconChevronsDown, IconCreditCard, IconLogout, IconPhotoUp, IconUserCircle } from "@tabler/icons-react";
-import * as React from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  IconBell,
+  IconChevronRight,
+  IconChevronsDown,
+  IconCreditCard,
+  IconLogout,
+  IconPhotoUp,
+  IconUserCircle,
+} from '@tabler/icons-react'
+import * as React from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +20,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Sidebar,
   SidebarContent,
@@ -27,71 +35,72 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
-} from "@/components/ui/sidebar";
-import { UserAvatarProfile } from "@/components/user-avatar-profile";
-import { navItems } from "@/constants/data";
-import { useAuth } from "@/contexts/AuthContext";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { Icons } from "../icons";
-import { OrgSwitcher } from "../org-switcher";
+} from '@/components/ui/sidebar'
+import { UserAvatarProfile } from '@/components/user-avatar-profile'
+import { navItems } from '@/constants/data'
+import { useAuth } from '@/contexts/AuthContext'
+import { useMediaQuery } from '@/hooks/use-media-query'
+import { Icons } from '../icons'
+import { OrgSwitcher } from '../org-switcher'
 export const company = {
-  name: "Acme Inc",
+  name: 'Acme Inc',
   logo: IconPhotoUp,
-  plan: "Enterprise",
-};
+  plan: 'Enterprise',
+}
 
 const tenants = [
-  { id: "1", name: "Acme Inc" },
-  { id: "2", name: "Beta Corp" },
-  { id: "3", name: "Gamma Ltd" },
-];
+  { id: '1', name: 'Acme Inc' },
+  { id: '2', name: 'Beta Corp' },
+  { id: '3', name: 'Gamma Ltd' },
+]
 
 export default function AppSidebar() {
-  const location = useLocation();
-  const pathname = location.pathname;
-  const { isOpen } = useMediaQuery();
-  const { user: authUser, signOut } = useAuth();
-  const navigate = useNavigate();
+  const location = useLocation()
+  const pathname = location.pathname
+  const { isOpen } = useMediaQuery()
+  const { user: authUser, signOut } = useAuth()
+  const navigate = useNavigate()
 
   const handleSwitchTenant = (_tenantId: string) => {
     // Tenant switching functionality would be implemented here
-  };
+  }
 
   const handleSignOut = async () => {
     try {
-      const { error } = await signOut();
+      const { error } = await signOut()
       if (error) {
-        toast.error("Failed to sign out: " + error.message);
+        toast.error('Failed to sign out: ' + error.message)
       } else {
-        toast.success("Signed out successfully");
-        navigate("/auth/sign-in");
+        toast.success('Signed out successfully')
+        navigate('/auth/sign-in')
       }
     } catch (error) {
-      toast.error("An unexpected error occurred");
-      console.error("Sign out error:", error);
+      toast.error('An unexpected error occurred')
+      console.error('Sign out error:', error)
     }
-  };
+  }
 
   // Create user object for UserAvatarProfile
   const user = authUser
     ? {
-        fullName: authUser.user_metadata?.full_name || authUser.user_metadata?.name || "User",
-        emailAddresses: [{ emailAddress: authUser.email || "user@example.com" }],
-        imageUrl: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || authUser.user_metadata?.avatar_url,
+        fullName: authUser.user_metadata?.full_name || authUser.user_metadata?.name || 'User',
+        emailAddresses: [{ emailAddress: authUser.email || 'user@example.com' }],
+        imageUrl:
+          authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || authUser.user_metadata?.avatar_url,
       }
     : {
-        fullName: "Dashboard User",
-        emailAddresses: [{ emailAddress: "user@example.com" }],
+        fullName: 'Dashboard User',
+        emailAddresses: [{ emailAddress: 'user@example.com' }],
         imageUrl: undefined,
-      };
+      }
 
   // Debug logging
 
-  const activeTenant = tenants[0];
+  const activeTenant = tenants[0]
 
   React.useEffect(() => {
     // Side effects based on sidebar state changes
-  }, [isOpen]);
+  }, [isOpen])
 
   return (
     <Sidebar collapsible="icon">
@@ -102,8 +111,8 @@ export default function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarMenu>
-            {navItems.map((item) => {
-              const Icon = item.icon ? Icons[item.icon] : Icons.logo;
+            {navItems.map(item => {
+              const Icon = item.icon ? Icons[item.icon] : Icons.logo
               return item?.items && item?.items?.length > 0 ? (
                 <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
                   <SidebarMenuItem>
@@ -116,7 +125,7 @@ export default function AppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {item.items?.map((subItem) => (
+                        {item.items?.map(subItem => (
                           <SidebarMenuSubItem key={subItem.title}>
                             <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
                               <Link to={subItem.url}>
@@ -138,7 +147,7 @@ export default function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              );
+              )
             })}
           </SidebarMenu>
         </SidebarGroup>
@@ -148,7 +157,10 @@ export default function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
                   {user && (
                     <div className="flex items-center gap-2">
                       <UserAvatarProfile user={user} />
@@ -161,7 +173,12 @@ export default function AppSidebar() {
                   <IconChevronsDown className="ml-auto size-4" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg" side="bottom" align="end" sideOffset={4}>
+              <DropdownMenuContent
+                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                side="bottom"
+                align="end"
+                sideOffset={4}
+              >
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="px-1 py-1.5">
                     {user && (
@@ -178,7 +195,7 @@ export default function AppSidebar() {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => navigate("/dashboard/profile")}>
+                  <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
                     <IconUserCircle className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
@@ -192,7 +209,7 @@ export default function AppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/dashboard/overview")}>
+                <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>
                   <IconUserCircle className="mr-2 h-4 w-4" />
                   <span>Home</span>
                 </DropdownMenuItem>
@@ -207,5 +224,5 @@ export default function AppSidebar() {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  );
+  )
 }

@@ -1,15 +1,15 @@
-import { useMemo } from "react";
-import PageContainer from "@/components/layout/page-container";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { useAutoGenerateOrders } from "@/hooks/use-auto-generate-orders";
-import { BarGraph } from "./bar-graph";
-import CompletedOrdersCard from "./cards/completed-orders-card";
-import TotalOrdersCard from "./cards/total-orders-card";
-import TotalProductsCard from "./cards/total-products-card";
-import TotalRevenueCard from "./cards/total-revenue-card";
-import { RecentSales } from "./recent-sales";
+import { useMemo } from 'react'
+import PageContainer from '@/components/layout/page-container'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { useAutoGenerateOrders } from '@/hooks/use-auto-generate-orders'
+import { BarGraph } from './bar-graph'
+import CompletedOrdersCard from './cards/completed-orders-card'
+import TotalOrdersCard from './cards/total-orders-card'
+import TotalProductsCard from './cards/total-products-card'
+import TotalRevenueCard from './cards/total-revenue-card'
+import { RecentSales } from './recent-sales'
 
 export default function OverViewPage() {
   const config = useMemo(
@@ -18,10 +18,10 @@ export default function OverViewPage() {
       minOrdersPerBatch: 1,
       maxOrdersPerBatch: 3,
     }),
-    []
-  );
+    [],
+  )
 
-  const { isRunning, totalGenerated, successRate, toggle } = useAutoGenerateOrders(config);
+  const { isRunning, totalGenerated, successRate, toggle } = useAutoGenerateOrders(config)
 
   return (
     <PageContainer>
@@ -64,5 +64,5 @@ export default function OverViewPage() {
         </div>
       </div>
     </PageContainer>
-  );
+  )
 }

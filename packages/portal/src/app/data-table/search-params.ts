@@ -7,26 +7,22 @@ import {
   parseAsString,
   parseAsStringLiteral,
   parseAsTimestamp,
-} from "nuqs/server";
-import { REGIONS } from "@/constants/region";
-import { TAGS } from "@/constants/tag";
+} from 'nuqs/server'
+import { REGIONS } from '@/constants/region'
+import { TAGS } from '@/constants/tag'
 // Note: import from 'nuqs/server' to avoid the "use client" directive
-import {
-  ARRAY_DELIMITER,
-  RANGE_DELIMITER,
-  SLIDER_DELIMITER,
-} from "@/lib/delimiters";
+import { ARRAY_DELIMITER, RANGE_DELIMITER, SLIDER_DELIMITER } from '@/lib/delimiters'
 
 export const parseAsSort = createParser({
   parse(queryValue) {
-    const [id, desc] = queryValue.split(".");
-    if (!id || !desc) return null;
-    return { id, desc: desc === "desc" };
+    const [id, desc] = queryValue.split('.')
+    if (!id || !desc) return null
+    return { id, desc: desc === 'desc' }
   },
   serialize(value) {
-    return `${value.id}.${value.desc ? "desc" : "asc"}`;
+    return `${value.id}.${value.desc ? 'desc' : 'asc'}`
   },
-});
+})
 
 export const searchParamsParser = {
   // FILTERS
@@ -38,8 +34,8 @@ export const searchParamsParser = {
   regions: parseAsArrayOf(parseAsStringLiteral(REGIONS), ARRAY_DELIMITER),
   tags: parseAsArrayOf(parseAsStringLiteral(TAGS), ARRAY_DELIMITER),
   date: parseAsArrayOf(parseAsTimestamp, RANGE_DELIMITER),
-};
+}
 
-export const searchParamsCache = createSearchParamsCache(searchParamsParser);
+export const searchParamsCache = createSearchParamsCache(searchParamsParser)
 
 // NOTE: check if `inferParserType` could be useful
