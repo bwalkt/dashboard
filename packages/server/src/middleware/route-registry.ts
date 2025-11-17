@@ -12,6 +12,8 @@ const PUBLIC_ROUTES = new Set([
   "/auth/register",
   "/auth/register/verify",
   "/auth/login",
+  "/auth/login/verify",
+  "/auth/logout",
   "/auth/callback/github",
   "/auth/refresh",
 

@@ -9,17 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TableRouteImport } from './routes/table'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
-import { Route as DataTableTreeRouteImport } from './routes/data-table.tree'
-import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
-import { Route as DashboardOverviewRouteImport } from './routes/dashboard/overview'
-import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
-import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
-import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
+import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
+import { Route as DashboardOverviewRouteImport } from './routes/dashboard/overview'
+import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
+import { Route as DataTableTreeRouteImport } from './routes/data-table.tree'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as TableRouteImport } from './routes/table'
 
 const TableRoute = TableRouteImport.update({
   id: '/table',
@@ -263,9 +263,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardIndexRoute: DashboardIndexRoute,
 }
 
-const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
-  DashboardRouteChildren,
-)
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(DashboardRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -276,6 +274,4 @@ const rootRouteChildren: RootRouteChildren = {
   AuthSignUpRoute: AuthSignUpRoute,
   DataTableTreeRoute: DataTableTreeRoute,
 }
-export const routeTree = rootRouteImport
-  ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+export const routeTree = rootRouteImport._addFileChildren(rootRouteChildren)._addFileTypes<FileRouteTypes>()

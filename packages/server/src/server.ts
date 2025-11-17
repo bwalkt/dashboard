@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import { db } from "./config/database";
+import { config } from "./config/env";
 import { redis } from "./config/redis";
 import app from "./index";
 
@@ -32,8 +33,7 @@ process.on("SIGINT", () => gracefulShutdown);
 
 // Start the server
 try {
-  const port = parseInt(process.env.PORT || "8080", 10);
-  await fastify.listen({ port, host: "0.0.0.0" });
+  await fastify.listen({ port: config.PORT, host: "0.0.0.0" });
 } catch (err) {
   fastify.log.error(err);
   await db.close();

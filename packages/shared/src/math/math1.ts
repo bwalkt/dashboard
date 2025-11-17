@@ -1044,7 +1044,6 @@ export class Math1 {
           maxRow = k
         }
       }
-
       // Swap rows
       ;[augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]]
 

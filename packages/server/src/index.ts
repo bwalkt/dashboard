@@ -12,6 +12,7 @@ import headerValidationPlugin from "./middleware/header-validation";
 import { authRoutes } from "./routes/auth";
 import { emailRoutes } from "./routes/email";
 import { proxyRoutes } from "./routes/proxy";
+import { smsRoutes } from "./routes/sms";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -53,24 +54,30 @@ export default async function (
 
   // Register cookie plugin for OAuth state management
   await fastify.register(cookie, {
-    secret: process.env.JWT_SECRET || "default-cookie-secret",
+    secret: config.JWT_SECRET,
   });
 
   // Register header validation plugin
   await fastify.register(headerValidationPlugin);
 
   // Register static file serving for assets (logo, etc.)
-  const sharedAssetsPath = join(__dirname, "../../shared/src/assets");
+  const assetsPath = join(__dirname, "assets");
   await fastify.register(fastifyStatic, {
-    root: sharedAssetsPath,
+    root: assetsPath,
     prefix: "/assets/",
     decorateReply: false,
+  });
+
+  // Health check route
+  fastify.get("/health", async (request, reply) => {
+    return { status: "ok", timestamp: new Date().toISOString() };
   });
 
   // Register routes
   await fastify.register(authRoutes);
   await fastify.register(emailRoutes);
   await fastify.register(proxyRoutes);
+  await fastify.register(smsRoutes);
 
   // Console log when server starts
   fastify.addHook("onReady", async () => {});

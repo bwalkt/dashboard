@@ -1,4 +1,5 @@
 import type { AccessTokenPayload, RefreshTokenPayload } from "@pzero/shared";
+import { config } from "../config/env";
 import { JWTService } from "./jwt.service";
 
 export class AuthService extends JWTService {
@@ -8,7 +9,7 @@ export class AuthService extends JWTService {
 
   constructor() {
     super();
-    this.jwtSecret = process.env.JWT_SECRET || "default-secret-key";
+    this.jwtSecret = config.JWT_SECRET;
   }
 
   /**

@@ -1,5 +1,6 @@
 import type { AuthenticatedRequest } from "@pzero/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { config } from "../config/env";
 import { authService } from "../services/auth.service";
 import { userService } from "../services/user.service";
 
@@ -14,7 +15,7 @@ export async function authenticateToken(
 ): Promise<void> {
   try {
     // Debug logs only in development environment
-    if (process.env.NODE_ENV === "development") {
+    if (config.NODE_ENV === "development") {
       console.log("Auth middleware - processing authentication request");
     }
 
@@ -34,7 +35,7 @@ export async function authenticateToken(
 
     const payload = authService.verifyAccessToken(token);
 
-    if (process.env.NODE_ENV === "development") {
+    if (config.NODE_ENV === "development") {
       console.log("Token verification successful for user:", payload?.userId);
     }
 

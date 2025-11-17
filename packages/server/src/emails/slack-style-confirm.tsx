@@ -10,16 +10,14 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { config } from "../config/env";
 
 interface SlackStyleConfirmEmailProps {
   confirmationCode?: string;
   recipientName?: string;
 }
 
-const baseUrl =
-  process.env.SERVER_BASE_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:8090";
+const baseUrl = config.SERVER_BASE_URL;
 
 export const SlackStyleConfirmEmail = ({
   confirmationCode = "123456",
