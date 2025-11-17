@@ -2,11 +2,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { db } from "./config/database";
-import { validateEnvironment } from "./config/env";
+import { config, validateEnvironment } from "./config/env";
 import { redis } from "./config/redis";
+import headerValidationPlugin from "./middleware/header-validation";
 import { authRoutes } from "./routes/auth";
 import { emailRoutes } from "./routes/email";
 import { proxyRoutes } from "./routes/proxy";
@@ -28,28 +30,34 @@ export default async function (
 
   // Register CORS plugin
   await fastify.register(cors, {
-    origin: true, // Allow all origins in development - you can restrict this in production
+    origin: config.CORS_ALLOWED_ORIGINS, // Allow all origins in development - you can restrict this in production
     credentials: true, // Allow credentials (cookies, authorization headers)
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "Accept",
-      "traceparent",
-      "x-client-type",
-      "tracestate",
-    ],
-    exposedHeaders: ["Content-Range", "X-Content-Range"],
+    allowedHeaders: config.CORS_ALLOWED_HEADERS,
+    exposedHeaders: config.CORS_EXPOSED_HEADERS,
     maxAge: 86400, // Cache preflight response for 1 day
     preflightContinue: false,
     optionsSuccessStatus: 204,
+  });
+  // Security plugins
+  await fastify.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
   });
 
   // Register cookie plugin for OAuth state management
   await fastify.register(cookie, {
     secret: process.env.JWT_SECRET || "default-cookie-secret",
   });
+
+  // Register header validation plugin
+  await fastify.register(headerValidationPlugin);
 
   // Register static file serving for assets (logo, etc.)
   const sharedAssetsPath = join(__dirname, "../../shared/src/assets");

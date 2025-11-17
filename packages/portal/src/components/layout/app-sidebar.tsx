@@ -73,20 +73,20 @@ interface AppSidebarProps {
 export default function AppSidebar({ filterFields: propFilterFields }: AppSidebarProps = {}) {
   const location = useLocation()
   const pathname = location.pathname
-  const isMobile = useMediaQuery("(max-width: 768px)")
+  const isMobile = useMediaQuery('(max-width: 768px)')
   const { user: authUser, signOut } = useAuth()
   const { setOpenMobile } = useSidebar()
   const navigate = useNavigate()
-  
+
   // Tab state management for mobile - default to 'filter' and persist in localStorage
   const [activeTab, setActiveTab] = React.useState<'filter' | 'menu'>(() => {
     const stored = localStorage.getItem('mobile-sidebar-tab')
     return (stored as 'filter' | 'menu') || 'filter'
   })
-  
+
   // State for dynamically loaded filter fields
   const [loadedFilterFields, setLoadedFilterFields] = React.useState<any[]>([])
-  
+
   // Get filter fields from DataTableContext if available
   const dataTableContext = React.useContext(DataTableContext)
   const contextFilterFields = dataTableContext?.filterFields
@@ -139,18 +139,18 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
   // Load filter fields for data table pages
   React.useEffect(() => {
     if (pathname.includes('/users') || pathname.includes('/dashboard/users')) {
-      import('@/app/data-table/constants').then((module) => {
+      import('@/app/data-table/constants').then(module => {
         setLoadedFilterFields(module.filterFields || [])
       })
     } else if (pathname.includes('/logs') || pathname.includes('/dashboard/logs')) {
-      import('@/app/infinite/constants').then((module) => {
+      import('@/app/infinite/constants').then(module => {
         setLoadedFilterFields(module.filterFields || [])
       })
     } else {
       setLoadedFilterFields([])
     }
   }, [pathname])
-  
+
   // Get filter fields - priority: props > context > loaded state
   let filterFields: any[] = propFilterFields || contextFilterFields || loadedFilterFields || []
 
@@ -168,7 +168,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
           <div className="p-4 border-b">
             <OrgSwitcher tenants={tenants} defaultTenant={activeTenant} onTenantSwitch={handleSwitchTenant} />
           </div>
-          
+
           {/* Tabs for Filter and Menu */}
           <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col flex-1">
             <TabsList className="grid w-full grid-cols-2 rounded-none border-b">
@@ -205,7 +205,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                           <CollapsibleContent>
                             <div className="ml-6 space-y-1 pt-2">
                               {item.items?.map(subItem => (
-                                <Link 
+                                <Link
                                   key={subItem.title}
                                   to={subItem.url}
                                   className="block p-2 text-sm hover:bg-accent rounded-md"
@@ -218,7 +218,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                           </CollapsibleContent>
                         </Collapsible>
                       ) : (
-                        <Link 
+                        <Link
                           key={item.title}
                           to={item.url}
                           className="flex items-center gap-2 p-2 hover:bg-accent rounded-md"
@@ -247,7 +247,12 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" side="top" align="end">
                       <DropdownMenuGroup>
-                        <DropdownMenuItem onClick={() => { navigate({ to: '/dashboard/settings' }); handleNavigation(); }}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            navigate({ to: '/dashboard/settings' })
+                            handleNavigation()
+                          }}
+                        >
                           <IconUserCircle className="mr-2 h-4 w-4" />
                           Profile
                         </DropdownMenuItem>
@@ -261,7 +266,12 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => { handleSignOut(); handleNavigation(); }}>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          handleSignOut()
+                          handleNavigation()
+                        }}
+                      >
                         <IconLogout className="mr-2 h-4 w-4" />
                         Sign out
                       </DropdownMenuItem>

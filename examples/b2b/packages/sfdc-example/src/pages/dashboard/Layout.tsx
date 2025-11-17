@@ -1,17 +1,17 @@
-import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import KBar from '@/components/kbar';
-import AppSidebar from '@/components/layout/app-sidebar';
-import Header from '@/components/layout/header';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { useEffect, useState } from 'react'
+import { Outlet } from 'react-router-dom'
+import KBar from '@/components/kbar'
+import AppSidebar from '@/components/layout/app-sidebar'
+import Header from '@/components/layout/header'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
 export default function DashboardLayout() {
-  const [defaultOpen, setDefaultOpen] = useState(true);
+  const [defaultOpen, setDefaultOpen] = useState(true)
 
   useEffect(() => {
-    const sidebarState = localStorage.getItem('sidebar_state');
-    setDefaultOpen(sidebarState === 'true');
-  }, []);
+    const sidebarState = localStorage.getItem('sidebar_state')
+    setDefaultOpen(sidebarState === 'true')
+  }, [])
 
   return (
     <KBar>
@@ -23,5 +23,5 @@ export default function DashboardLayout() {
         </SidebarInset>
       </SidebarProvider>
     </KBar>
-  );
+  )
 }

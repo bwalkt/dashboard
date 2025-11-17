@@ -1,18 +1,18 @@
-declare module "browser-tool" {
+declare module 'browser-tool' {
   interface BrowserInfo {
-    userAgent: string;
-    browserName?: string;
-    browserVersion?: string;
-    osName?: string;
-    osVersion?: string;
+    userAgent: string
+    browserName?: string
+    browserVersion?: string
+    osName?: string
+    osVersion?: string
   }
 
   interface BrowserTool {
     browser: {
-      getInfo: () => BrowserInfo;
-    };
+      getInfo: () => BrowserInfo
+    }
   }
 
-  const browserTool: BrowserTool;
-  export default browserTool;
+  const browserTool: BrowserTool
+  export default browserTool
 }

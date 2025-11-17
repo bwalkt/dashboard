@@ -1,20 +1,15 @@
-"use client";
+'use client'
 
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { Kbd } from "@/components/custom/kbd";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useHotKey } from "@/hooks/use-hot-key";
-import { useControls } from "@/providers/controls";
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Kbd } from '@/components/custom/kbd'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useHotKey } from '@/hooks/use-hot-key'
+import { useControls } from '@/providers/controls'
 
 export function DataTableToggleButton() {
-  const { open, setOpen } = useControls();
-  useHotKey(() => setOpen((prev) => !prev), "Meta+b");
+  const { open, setOpen } = useControls()
+  useHotKey(() => setOpen(prev => !prev), 'Meta+b')
 
   return (
     <TooltipProvider>
@@ -23,20 +18,16 @@ export function DataTableToggleButton() {
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => setOpen((prev) => !prev)}
-            aria-label={open ? "Close controls panel" : "Open controls panel"}
+            onClick={() => setOpen(prev => !prev)}
+            aria-label={open ? 'Close controls panel' : 'Open controls panel'}
             className="hidden sm:flex"
           >
-            {open ? (
-              <PanelLeftClose className="h-4 w-4" />
-            ) : (
-              <PanelLeftOpen className="h-4 w-4" />
-            )}
+            {open ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">
           <p>
-            Toggle controls with{" "}
+            Toggle controls with{' '}
             <Kbd className="ml-1 text-muted-foreground group-hover:text-accent-foreground">
               <span className="mr-1">⌘</span>
               <span>B</span>
@@ -45,5 +36,5 @@ export function DataTableToggleButton() {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
+  )
 }

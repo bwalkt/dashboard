@@ -1,17 +1,10 @@
-
 import { CreditCard as CreditCardIcon, Lock } from 'lucide-react'
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react'
 import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
 // Enhanced Card vendor SVG icons with better styling
@@ -75,36 +68,24 @@ const CardIcons = {
 }
 
 // Card style variants with improved base style
-export type CardStyle =
-  | 'base'
-  | 'shiny-silver'
-  | 'amex-green'
-  | 'amex-black'
-  | 'metal'
+export type CardStyle = 'base' | 'shiny-silver' | 'amex-green' | 'amex-black' | 'metal'
 
 const cardStyles: Record<CardStyle, string> = {
   // Base style matching shadcn card (white/clean)
   base: 'bg-card border text-card-foreground shadow-sm',
-  'shiny-silver':
-    'bg-gradient-to-br from-gray-300 via-gray-100 to-gray-300 border-gray-400 text-gray-800 shadow-2xl',
-  'amex-green':
-    'bg-gradient-to-br from-green-700 via-green-600 to-green-800 border-green-500 text-white shadow-xl',
-  'amex-black':
-    'bg-gradient-to-br from-gray-900 via-black to-gray-800 border-gray-600 text-white shadow-2xl',
+  'shiny-silver': 'bg-gradient-to-br from-gray-300 via-gray-100 to-gray-300 border-gray-400 text-gray-800 shadow-2xl',
+  'amex-green': 'bg-gradient-to-br from-green-700 via-green-600 to-green-800 border-green-500 text-white shadow-xl',
+  'amex-black': 'bg-gradient-to-br from-gray-900 via-black to-gray-800 border-gray-600 text-white shadow-2xl',
   metal:
     'bg-gradient-to-br from-slate-600 via-slate-500 to-slate-700 border-slate-400 text-white shadow-2xl backdrop-blur-sm',
 }
 
 const cardBackStyles: Record<CardStyle, string> = {
   base: 'bg-muted border text-muted-foreground shadow-sm',
-  'shiny-silver':
-    'bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 border-gray-500 text-gray-800',
-  'amex-green':
-    'bg-gradient-to-br from-green-800 via-green-700 to-green-900 border-green-600 text-white',
-  'amex-black':
-    'bg-gradient-to-br from-black via-gray-900 to-black border-gray-700 text-white',
-  metal:
-    'bg-gradient-to-br from-slate-700 via-slate-600 to-slate-800 border-slate-500 text-white',
+  'shiny-silver': 'bg-gradient-to-br from-gray-400 via-gray-200 to-gray-400 border-gray-500 text-gray-800',
+  'amex-green': 'bg-gradient-to-br from-green-800 via-green-700 to-green-900 border-green-600 text-white',
+  'amex-black': 'bg-gradient-to-br from-black via-gray-900 to-black border-gray-700 text-white',
+  metal: 'bg-gradient-to-br from-slate-700 via-slate-600 to-slate-800 border-slate-500 text-white',
 }
 
 export interface CreditCardValue {
@@ -173,8 +154,7 @@ const getCardType = (number: string): keyof typeof CardIcons => {
   }
 
   // American Express: starts with 34 or 37
-  if (cleanNumber.startsWith('34') || cleanNumber.startsWith('37'))
-    return 'amex'
+  if (cleanNumber.startsWith('34') || cleanNumber.startsWith('37')) return 'amex'
 
   // Discover: starts with 6011, 622126-622925, 644-649, 65
   if (
@@ -193,10 +173,7 @@ const getCardType = (number: string): keyof typeof CardIcons => {
   return 'generic'
 }
 
-const validateCreditCard = (
-  value: CreditCardValue,
-  cvvLabel: string,
-): ValidationErrors => {
+const validateCreditCard = (value: CreditCardValue, cvvLabel: string): ValidationErrors => {
   const errors: ValidationErrors = {}
 
   // Validate cardholder name
@@ -231,10 +208,7 @@ const validateCreditCard = (
     const expiryYear = parseInt(value.expiryYear)
     const expiryMonth = parseInt(value.expiryMonth)
 
-    if (
-      expiryYear < currentYear ||
-      (expiryYear === currentYear && expiryMonth < currentMonth)
-    ) {
+    if (expiryYear < currentYear || (expiryYear === currentYear && expiryMonth < currentMonth)) {
       errors.expiryYear = 'Card has expired'
     }
   }
@@ -296,10 +270,7 @@ function CreditCard({
     return { isValid, validationErrors }
   }
 
-  const handleInputChange = (
-    field: keyof CreditCardValue,
-    newValue: string,
-  ) => {
+  const handleInputChange = (field: keyof CreditCardValue, newValue: string) => {
     const updatedValue = { ...currentValue, [field]: newValue }
     onChange?.(updatedValue)
     validateAndUpdate(updatedValue)
@@ -383,8 +354,7 @@ function CreditCard({
     if (ref && 'current' in ref) {
       ref.current = {
         validate: handleValidate,
-        isValid: () =>
-          Object.keys(validateCreditCard(currentValue, cvvLabel)).length === 0,
+        isValid: () => Object.keys(validateCreditCard(currentValue, cvvLabel)).length === 0,
         focus: handleFocus,
         reset: handleReset,
         getErrors,
@@ -443,9 +413,7 @@ function CreditCard({
             )}
           >
             <div className="flex justify-between items-start">
-              <div
-                className={cn('w-12 h-8 rounded shadow-md', getChipColor())}
-              ></div>
+              <div className={cn('w-12 h-8 rounded shadow-md', getChipColor())}></div>
               {/* Vendor logo moved to top right for now, will be repositioned */}
             </div>
 
@@ -457,26 +425,18 @@ function CreditCard({
               {/* Bottom row: cardholder - expires - vendor logo */}
               <div className="flex justify-between items-end">
                 <div className="flex-1">
-                  <div className="text-xs opacity-70 uppercase font-medium">
-                    Card Holder
-                  </div>
-                  <div className="font-bold text-sm">
-                    {currentValue.cardholderName || 'YOUR NAME'}
-                  </div>
+                  <div className="text-xs opacity-70 uppercase font-medium">Card Holder</div>
+                  <div className="font-bold text-sm">{currentValue.cardholderName || 'YOUR NAME'}</div>
                 </div>
                 <div className="flex-1 text-center">
-                  <div className="text-xs opacity-70 uppercase font-medium">
-                    Expires
-                  </div>
+                  <div className="text-xs opacity-70 uppercase font-medium">Expires</div>
                   <div className="font-bold text-sm">
                     {currentValue.expiryMonth && currentValue.expiryYear
                       ? `${currentValue.expiryMonth}/${currentValue.expiryYear.slice(-2)}`
                       : 'MM/YY'}
                   </div>
                 </div>
-                <div className="flex-1 flex justify-end">
-                  {showVendor && CardIcons[cardType]}
-                </div>
+                <div className="flex-1 flex justify-end">{showVendor && CardIcons[cardType]}</div>
               </div>
             </div>
           </Card>
@@ -492,9 +452,7 @@ function CreditCard({
 
             <div className="flex justify-end items-center space-x-4">
               <div className="text-right">
-                <div className="text-xs opacity-70 uppercase font-medium">
-                  {cvvLabel}
-                </div>
+                <div className="text-xs opacity-70 uppercase font-medium">{cvvLabel}</div>
                 <div className="bg-white text-black px-3 py-1 rounded text-center font-mono font-bold">
                   {currentValue.cvv || '•••'}
                 </div>
@@ -511,17 +469,13 @@ function CreditCard({
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-2">
-            Cardholder Name
-          </label>
+          <label className="block text-sm font-medium mb-2">Cardholder Name</label>
           <Input
             ref={cardholderInputRef}
             type="text"
             placeholder="John Doe"
             value={currentValue.cardholderName}
-            onChange={(e) =>
-              handleInputChange('cardholderName', e.target.value.toUpperCase())
-            }
+            onChange={e => handleInputChange('cardholderName', e.target.value.toUpperCase())}
             onFocus={() => handleFieldFocus('cardholderName')}
             onBlur={handleFieldBlur}
             className={cn(
@@ -530,11 +484,7 @@ function CreditCard({
               errors.cardholderName && 'border-destructive',
             )}
           />
-          {errors.cardholderName && (
-            <p className="text-destructive text-xs mt-1">
-              {errors.cardholderName}
-            </p>
-          )}
+          {errors.cardholderName && <p className="text-destructive text-xs mt-1">{errors.cardholderName}</p>}
         </div>
 
         <div>
@@ -555,18 +505,13 @@ function CreditCard({
             )}
             maxLength={23}
           />
-          {errors.cardNumber && (
-            <p className="text-destructive text-xs mt-1">{errors.cardNumber}</p>
-          )}
+          {errors.cardNumber && <p className="text-destructive text-xs mt-1">{errors.cardNumber}</p>}
         </div>
 
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Month</label>
-            <Select
-              value={currentValue.expiryMonth}
-              onValueChange={(value) => handleInputChange('expiryMonth', value)}
-            >
+            <Select value={currentValue.expiryMonth} onValueChange={value => handleInputChange('expiryMonth', value)}>
               <SelectTrigger
                 className={cn(
                   'transition-all duration-200',
@@ -577,26 +522,19 @@ function CreditCard({
                 <SelectValue placeholder="MM" />
               </SelectTrigger>
               <SelectContent>
-                {months.map((month) => (
+                {months.map(month => (
                   <SelectItem key={month.value} value={month.value}>
                     {month.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {errors.expiryMonth && (
-              <p className="text-destructive text-xs mt-1">
-                {errors.expiryMonth}
-              </p>
-            )}
+            {errors.expiryMonth && <p className="text-destructive text-xs mt-1">{errors.expiryMonth}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-2">Year</label>
-            <Select
-              value={currentValue.expiryYear}
-              onValueChange={(value) => handleInputChange('expiryYear', value)}
-            >
+            <Select value={currentValue.expiryYear} onValueChange={value => handleInputChange('expiryYear', value)}>
               <SelectTrigger
                 className={cn(
                   'transition-all duration-200',
@@ -607,18 +545,14 @@ function CreditCard({
                 <SelectValue placeholder="YYYY" />
               </SelectTrigger>
               <SelectContent>
-                {years.map((year) => (
+                {years.map(year => (
                   <SelectItem key={year} value={year.toString()}>
                     {year}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {errors.expiryYear && (
-              <p className="text-destructive text-xs mt-1">
-                {errors.expiryYear}
-              </p>
-            )}
+            {errors.expiryYear && <p className="text-destructive text-xs mt-1">{errors.expiryYear}</p>}
           </div>
 
           <div>
@@ -628,7 +562,7 @@ function CreditCard({
               type="text"
               placeholder="123"
               value={currentValue.cvv}
-              onChange={(e) => {
+              onChange={e => {
                 const value = e.target.value.replace(/\D/g, '')
                 if (value.length <= (cardType === 'amex' ? 4 : 3)) {
                   handleInputChange('cvv', value)
@@ -643,9 +577,7 @@ function CreditCard({
               )}
               maxLength={cardType === 'amex' ? 4 : 3}
             />
-            {errors.cvv && (
-              <p className="text-destructive text-xs mt-1">{errors.cvv}</p>
-            )}
+            {errors.cvv && <p className="text-destructive text-xs mt-1">{errors.cvv}</p>}
           </div>
         </div>
       </div>

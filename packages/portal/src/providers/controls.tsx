@@ -1,19 +1,19 @@
-import { createContext, useContext } from "react";
-import { useSecondarySidebar } from "@/components/ui/sidebar";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { createContext, useContext } from 'react'
+import { useSecondarySidebar } from '@/components/ui/sidebar'
+import { useLocalStorage } from '@/hooks/use-local-storage'
 
 interface ControlsContextType {
-  open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  open: boolean
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>
 }
 
-export const ControlsContext = createContext<ControlsContextType | null>(null);
+export const ControlsContext = createContext<ControlsContextType | null>(null)
 
 export function ControlsProvider({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useLocalStorage("data-table-controls", true);
-  
+  const [open, setOpen] = useLocalStorage('data-table-controls', true)
+
   // Auto-collapse primary sidebar when controls panel is open
-  useSecondarySidebar(open);
+  useSecondarySidebar(open)
 
   return (
     <ControlsContext.Provider value={{ open, setOpen }}>
@@ -26,15 +26,15 @@ export function ControlsProvider({ children }: { children: React.ReactNode }) {
         {children}
       </div>
     </ControlsContext.Provider>
-  );
+  )
 }
 
 export function useControls() {
-  const context = useContext(ControlsContext);
+  const context = useContext(ControlsContext)
 
   if (!context) {
-    throw new Error("useControls must be used within a ControlsProvider");
+    throw new Error('useControls must be used within a ControlsProvider')
   }
 
-  return context as ControlsContextType;
+  return context as ControlsContextType
 }

@@ -18,13 +18,13 @@ interface PageHeaderProps {
   showBreadcrumbs?: boolean
 }
 
-export function PageHeader({ 
-  title, 
-  description, 
+export function PageHeader({
+  title,
+  description,
   showFilters = false,
   onFilterToggle,
   onSidebarToggle,
-  showBreadcrumbs = false
+  showBreadcrumbs = false,
 }: PageHeaderProps) {
   const [filtersOpen, setFiltersOpen] = React.useState(showFilters)
 
@@ -48,12 +48,7 @@ export function PageHeader({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onSidebarToggle}
-                    className="-ml-1 size-7"
-                  >
+                  <Button variant="ghost" size="icon" onClick={onSidebarToggle} className="-ml-1 size-7">
                     <PanelLeftIcon className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -80,20 +75,12 @@ export function PageHeader({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleFilterToggle}
-                  >
-                    {filtersOpen ? (
-                      <IconFilterOff className="h-4 w-4" />
-                    ) : (
-                      <IconFilter className="h-4 w-4" />
-                    )}
+                  <Button variant="ghost" size="icon" onClick={handleFilterToggle}>
+                    {filtersOpen ? <IconFilterOff className="h-4 w-4" /> : <IconFilter className="h-4 w-4" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p>{filtersOpen ? "Hide Filters" : "Show Filters"}</p>
+                  <p>{filtersOpen ? 'Hide Filters' : 'Show Filters'}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -104,9 +91,7 @@ export function PageHeader({
         {(title || description) && (
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-            {description && (
-              <p className="text-sm text-muted-foreground">{description}</p>
-            )}
+            {description && <p className="text-sm text-muted-foreground">{description}</p>}
           </div>
         )}
 

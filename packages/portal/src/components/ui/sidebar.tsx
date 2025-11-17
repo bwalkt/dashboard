@@ -68,67 +68,64 @@ function SidebarProvider({
   children,
   ...props
 }: React.ComponentProps<'div'> & {
-  defaultOpen?: boolean;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  defaultOpen?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
-  const isMobile = useIsMobile();
-  const [openMobile, setOpenMobile] = React.useState(false);
-  const [hasSecondarySidebar, setHasSecondarySidebar] = React.useState(false);
+  const isMobile = useIsMobile()
+  const [openMobile, setOpenMobile] = React.useState(false)
+  const [hasSecondarySidebar, setHasSecondarySidebar] = React.useState(false)
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen);
-  
+  const [_open, _setOpen] = React.useState(defaultOpen)
+
   // Initialize from localStorage after mount
   React.useEffect(() => {
     if (openProp === undefined) {
-      const saved = localStorage.getItem(SIDEBAR_COOKIE_NAME);
+      const saved = localStorage.getItem(SIDEBAR_COOKIE_NAME)
       if (saved !== null) {
-        _setOpen(saved === 'true');
+        _setOpen(saved === 'true')
       }
     }
-  }, [openProp]);
-  const open = openProp ?? _open;
+  }, [openProp])
+  const open = openProp ?? _open
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
-      const openState = typeof value === 'function' ? value(open) : value;
+      const openState = typeof value === 'function' ? value(open) : value
       if (setOpenProp) {
-        setOpenProp(openState);
+        setOpenProp(openState)
       } else {
-        _setOpen(openState);
+        _setOpen(openState)
       }
 
       // This sets localStorage to keep the sidebar state.
-      localStorage.setItem(SIDEBAR_COOKIE_NAME, String(openState));
+      localStorage.setItem(SIDEBAR_COOKIE_NAME, String(openState))
     },
-    [setOpenProp, open]
-  );
+    [setOpenProp, open],
+  )
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-  }, [isMobile, setOpen, setOpenMobile]);
+    return isMobile ? setOpenMobile(open => !open) : setOpen(open => !open)
+  }, [isMobile, setOpen, setOpenMobile])
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-        (event.metaKey || event.ctrlKey)
-      ) {
-        event.preventDefault();
-        toggleSidebar();
+      if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault()
+        toggleSidebar()
       }
-    };
+    }
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar]);
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [toggleSidebar])
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
-  const state = open ? 'expanded' : 'collapsed';
+  const state = open ? 'expanded' : 'collapsed'
 
   // Auto-collapse primary sidebar when secondary sidebar opens - DISABLED
   // React.useEffect(() => {
@@ -147,34 +144,41 @@ function SidebarProvider({
       setOpenMobile,
       toggleSidebar,
       hasSecondarySidebar,
-      setHasSecondarySidebar
+      setHasSecondarySidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, hasSecondarySidebar, setHasSecondarySidebar]
-  );
+    [
+      state,
+      open,
+      setOpen,
+      isMobile,
+      openMobile,
+      setOpenMobile,
+      toggleSidebar,
+      hasSecondarySidebar,
+      setHasSecondarySidebar,
+    ],
+  )
 
   return (
     <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
         <div
-          data-slot='sidebar-wrapper'
+          data-slot="sidebar-wrapper"
           style={
             {
               '--sidebar-width': SIDEBAR_WIDTH,
               '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
-              ...style
+              ...style,
             } as React.CSSProperties
           }
-          className={cn(
-            'group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full',
-            className
-          )}
+          className={cn('group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full', className)}
           {...props}
         >
           {children}
         </div>
       </TooltipProvider>
     </SidebarContext.Provider>
-  );
+  )
 }
 
 /**
@@ -853,19 +857,19 @@ function SidebarMenuSubButton({
 
 /**
  * Hook to control secondary sidebar behavior and auto-collapse primary sidebar.
- * 
+ *
  * @param isOpen - Whether the secondary sidebar is currently open
  * @returns Object with setters to control secondary sidebar state
  */
 function useSecondarySidebar(isOpen: boolean) {
   const { setHasSecondarySidebar } = useSidebar()
-  
+
   React.useEffect(() => {
     setHasSecondarySidebar(isOpen)
   }, [isOpen, setHasSecondarySidebar])
-  
+
   return {
-    setSecondarySidebarOpen: setHasSecondarySidebar
+    setSecondarySidebarOpen: setHasSecondarySidebar,
   }
 }
 

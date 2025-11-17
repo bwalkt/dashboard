@@ -1,16 +1,16 @@
-import { useNavigate } from "react-router-dom";
-import { AutoGenerateToggle } from "@/components/auto-order-generator";
-import { Icons } from "@/components/icons";
-import { QuickOrderGenerator } from "@/components/order-generator";
-import { Button } from "@/components/ui/button";
-import OrderListingPage from "@/features/orders/components/order-listing";
+import { useNavigate } from 'react-router-dom'
+import { AutoGenerateToggle } from '@/components/auto-order-generator'
+import { Icons } from '@/components/icons'
+import { QuickOrderGenerator } from '@/components/order-generator'
+import { Button } from '@/components/ui/button'
+import OrderListingPage from '@/features/orders/components/order-listing'
 
 export default function OrdersPage() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const handleCreateOrder = () => {
-    navigate("/dashboard/orders/new");
-  };
+    navigate('/dashboard/orders/new')
+  }
 
   return (
     <div className="container p-4">
@@ -29,5 +29,5 @@ export default function OrdersPage() {
       </div>
       <OrderListingPage />
     </div>
-  );
+  )
 }

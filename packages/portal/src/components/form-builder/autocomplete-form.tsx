@@ -6,14 +6,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import Autocomplete from '@/components/ui/autocomplete'
 import { Button } from '@/components/ui/button'
-import {
-  Form,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { Form, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 
 const FormSchema = z.object({
   framework: z.string().min(1, { message: 'Please select a framework' }),
@@ -47,9 +40,7 @@ export function AutocompleteForm() {
                 <FormLabel>What is your favorite framework?</FormLabel>
               </div>
               <Autocomplete value={field.value} onChange={field.onChange} />
-              <FormDescription>
-                Please type and select your favorite framework?
-              </FormDescription>
+              <FormDescription>Please type and select your favorite framework?</FormDescription>
               <FormMessage />
             </FormItem>
           )}

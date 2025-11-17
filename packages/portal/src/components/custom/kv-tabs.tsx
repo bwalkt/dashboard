@@ -1,11 +1,11 @@
-import { Braces, TableProperties } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CopyToClipboardContainer } from "./copy-to-clipboard-container";
-import { KVTable } from "./kv-table";
+import { Braces, TableProperties } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { CopyToClipboardContainer } from './copy-to-clipboard-container'
+import { KVTable } from './kv-table'
 
 interface KVTabsProps {
-  data: Record<string, string>;
-  className?: string;
+  data: Record<string, string>
+  className?: string
 }
 
 export function KVTabs({ data, className }: KVTabsProps) {
@@ -32,13 +32,10 @@ export function KVTabs({ data, className }: KVTabsProps) {
       </TabsContent>
       <TabsContent value="raw" asChild>
         {/* REMINDER: either `overflow-auto whitespace-pre` or `whitespace-pre-wrap` - depends if we want to wrap the text or not */}
-        <CopyToClipboardContainer
-          variant="default"
-          className="overflow-auto whitespace-pre"
-        >
+        <CopyToClipboardContainer variant="default" className="overflow-auto whitespace-pre">
           {JSON.stringify(data, null, 2)}
         </CopyToClipboardContainer>
       </TabsContent>
     </Tabs>
-  );
+  )
 }

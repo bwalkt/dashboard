@@ -1,75 +1,74 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { createContext, useContext } from "react";
-import { api } from "@/lib/api";
-import { User } from "@/types";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import React, { createContext, useContext } from 'react'
+import { api } from '@/lib/api'
+import { User } from '@/types'
 
 interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  signInWithGitHub: () => Promise<{ data: string; error: any }>;
-  signOut: () => Promise<{ error: any }>;
+  user: User | null
+  loading: boolean
+  signInWithGitHub: () => Promise<{ data: string; error: any }>
+  signOut: () => Promise<{ error: any }>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   const { data: user, isLoading } = useQuery<User>({
-    queryKey: ["user"],
+    queryKey: ['user'],
     queryFn: async () => {
-      const { user } = await api.get<{ user: User }>("/auth/me", {
+      const { user } = await api.get<{ user: User }>('/auth/me', {
         headers: {
-          "X-Client-Type": "web",
+          'X-Client-Type': 'web',
         },
-
-      });
-      return user;
+      })
+      return user
     },
     retry: false,
-  });
+  })
 
   const { mutateAsync: signInWithGitHub } = useMutation<{ data: string; error: any }>({
     mutationFn: async () => {
-      const { authUrl } = await api.get<{ authUrl: string; state: string }>("/auth/login",);
-      return { data: authUrl, error: null };
+      const { authUrl } = await api.get<{ authUrl: string; state: string }>('/auth/login')
+      return { data: authUrl, error: null }
     },
     onSuccess: ({ data }) => {
-      window.location.href = data;
+      window.location.href = data
     },
-    onError: (error) => {
-      console.error(error);
+    onError: error => {
+      console.error(error)
     },
-  });
+  })
 
   const { mutateAsync: signOut } = useMutation({
     mutationFn: async () => {
-      await api.post("/auth/logout", undefined, { skipRefresh: true });
-      queryClient.clear();
-      return { error: null };
+      await api.post('/auth/logout', undefined, { skipRefresh: true })
+      queryClient.clear()
+      return { error: null }
     },
     onSuccess: () => {
-      window.location.href = "/auth/sign-in";
+      window.location.href = '/auth/sign-in'
     },
-    onError: (error) => {
-      console.error(error);
+    onError: error => {
+      console.error(error)
     },
-  });
+  })
 
   const value = {
     user: user ?? null,
     loading: isLoading,
     signInWithGitHub,
     signOut,
-  };
+  }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider')
   }
-  return context;
+  return context
 }

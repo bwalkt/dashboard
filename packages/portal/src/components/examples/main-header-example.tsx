@@ -7,8 +7,8 @@ export default function MainHeaderExample() {
 
   return (
     <div className="flex flex-col h-screen">
-      <MainHeader 
-        title="Dashboard Overview" 
+      <MainHeader
+        title="Dashboard Overview"
         description="Monitor your system metrics and performance data"
         onFilterToggle={handleFilterToggle}
       />

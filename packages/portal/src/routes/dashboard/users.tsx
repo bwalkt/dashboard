@@ -12,7 +12,7 @@ function RouteComponent() {
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <DefaultPage 
+      <DefaultPage
         searchParams={Promise.resolve(search as { [key: string]: string | string[] | undefined })}
         title="Users"
         description="Manage and monitor user accounts and their activity"

@@ -11,7 +11,7 @@ export default function AuthCallback() {
     // Server sets cookies and redirects here
     // We just need to invalidate the user query to refetch with new cookies
     queryClient.invalidateQueries({ queryKey: ['user'] })
-    
+
     // Navigate to dashboard
     navigate({ to: '/dashboard/overview', replace: true })
   }, [navigate, queryClient])

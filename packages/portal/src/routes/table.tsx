@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate  } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { DataTable } from '@/app/data-table'
 import { avatarColumns } from '@/app/data-table/avatar-columns'

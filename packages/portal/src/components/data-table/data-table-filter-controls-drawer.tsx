@@ -1,8 +1,8 @@
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { FilterIcon } from "lucide-react";
-import React from "react";
-import { Kbd } from "@/components/custom/kbd";
-import { Button } from "@/components/ui/button";
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { FilterIcon } from 'lucide-react'
+import React from 'react'
+import { Kbd } from '@/components/custom/kbd'
+import { Button } from '@/components/ui/button'
 import {
   Drawer,
   DrawerClose,
@@ -12,28 +12,23 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from "@/components/ui/drawer";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useHotKey } from "@/hooks/use-hot-key";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { DataTableFilterControls } from "./data-table-filter-controls";
-import { useDataTable } from "./data-table-provider";
+} from '@/components/ui/drawer'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useHotKey } from '@/hooks/use-hot-key'
+import { useMediaQuery } from '@/hooks/use-media-query'
+import { DataTableFilterControls } from './data-table-filter-controls'
+import { useDataTable } from './data-table-provider'
 
 export function DataTableFilterControlsDrawer() {
-  const triggerButtonRef = React.useRef<HTMLButtonElement>(null);
-  const isMobile = useMediaQuery("(max-width: 640px)");
-  
+  const triggerButtonRef = React.useRef<HTMLButtonElement>(null)
+  const isMobile = useMediaQuery('(max-width: 640px)')
+
   // Get the context data outside the portal to pass it to the drawer content
-  const { filterFields } = useDataTable();
+  const { filterFields } = useDataTable()
 
   useHotKey(() => {
-    triggerButtonRef.current?.click();
-  }, "b");
+    triggerButtonRef.current?.click()
+  }, 'b')
 
   return (
     <Drawer>
@@ -41,19 +36,14 @@ export function DataTableFilterControlsDrawer() {
         <Tooltip>
           <TooltipTrigger asChild>
             <DrawerTrigger asChild>
-              <Button
-                ref={isMobile ? triggerButtonRef : null}
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-              >
+              <Button ref={isMobile ? triggerButtonRef : null} variant="ghost" size="icon" className="h-9 w-9">
                 <FilterIcon className="w-4 h-4" />
               </Button>
             </DrawerTrigger>
           </TooltipTrigger>
           <TooltipContent side="right">
             <p>
-              Toggle controls with{" "}
+              Toggle controls with{' '}
               <Kbd className="ml-1 text-muted-foreground group-hover:text-accent-foreground">
                 <span className="mr-1">⌘</span>
                 <span>B</span>
@@ -81,5 +71,5 @@ export function DataTableFilterControlsDrawer() {
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
-  );
+  )
 }

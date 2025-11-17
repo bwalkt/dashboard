@@ -1,19 +1,25 @@
-import { useNavigate } from "react-router-dom";
-import { Icons } from "@/components/icons";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Order } from "@/types";
+import { useNavigate } from 'react-router-dom'
+import { Icons } from '@/components/icons'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Order } from '@/types'
 
 interface CellActionProps {
-  data: Order;
+  data: Order
 }
 
 export const CellAction: React.FC<CellActionProps> = ({ data }) => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const handleEdit = () => {
-    navigate(`/dashboard/orders/${data.Id}`);
-  };
+    navigate(`/dashboard/orders/${data.Id}`)
+  }
 
   return (
     <DropdownMenu>
@@ -31,5 +37,5 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
-};
+  )
+}

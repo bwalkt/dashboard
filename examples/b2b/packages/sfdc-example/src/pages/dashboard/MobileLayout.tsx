@@ -1,18 +1,18 @@
-import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import KBar from '@/components/kbar';
-import MobileAppSidebar from '@/components/layout/mobile-app-sidebar';
-import MobileHeader from '@/components/layout/mobile-header';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { useEffect, useState } from 'react'
+import { Outlet } from 'react-router-dom'
+import KBar from '@/components/kbar'
+import MobileAppSidebar from '@/components/layout/mobile-app-sidebar'
+import MobileHeader from '@/components/layout/mobile-header'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
 export default function MobileDashboardLayout() {
   // Force sidebar open for mobile testing
-  const [defaultOpen, setDefaultOpen] = useState(true);
+  const [defaultOpen, setDefaultOpen] = useState(true)
 
   useEffect(() => {
     // Always keep it open for now to debug
-    setDefaultOpen(true);
-  }, []);
+    setDefaultOpen(true)
+  }, [])
 
   return (
     <KBar>
@@ -28,5 +28,5 @@ export default function MobileDashboardLayout() {
         </div>
       </SidebarProvider>
     </KBar>
-  );
+  )
 }

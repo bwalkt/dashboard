@@ -1,5 +1,5 @@
-import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { useMutation } from '@tanstack/react-query'
+import { api } from '@/lib/api'
 
 export function useTauriAuth() {
   const {
@@ -8,24 +8,24 @@ export function useTauriAuth() {
     error,
   } = useMutation({
     mutationFn: async () => {
-      const { authUrl } = await api.get<{ authUrl: string }>("/auth/login", {
+      const { authUrl } = await api.get<{ authUrl: string }>('/auth/login', {
         headers: {
-          "X-Client-Type": "tauri",
+          'X-Client-Type': 'tauri',
         },
         skipAuth: true,
-      });
+      })
       // Redirect to GitHub; backend callback will set cookies then redirect to app home
-      window.location.href = authUrl;
-      return { success: true };
+      window.location.href = authUrl
+      return { success: true }
     },
-    onError: (error) => {
-      console.error("Tauri auth error:", error);
+    onError: error => {
+      console.error('Tauri auth error:', error)
     },
-  });
+  })
 
   return {
     signInWithGitHub,
     isLoading,
     error: error?.message || null,
-  };
+  }
 }

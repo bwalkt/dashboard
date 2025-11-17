@@ -22,7 +22,6 @@ function loadRecaptchaScript(): Promise<void> {
       resolve()
       return
     }
-
     // Set up the callback for when the script loads
     ;(window as any).onRecaptchaLoaded = () => {
       resolve()

@@ -1,18 +1,11 @@
-import { Button } from "@base"
-import { useStepper } from "./stepper"
+import { Button } from '@base'
+import { useStepper } from './stepper'
 
 // TODO import
 
 export function DemoStepper_Footer() {
-  const {
-    nextStep,
-    prevStep,
-    resetSteps,
-    hasCompletedAllSteps,
-    isLastStep,
-    isOptionalStep,
-    isDisabledStep,
-  } = useStepper()
+  const { nextStep, prevStep, resetSteps, hasCompletedAllSteps, isLastStep, isOptionalStep, isDisabledStep } =
+    useStepper()
 
   return (
     <>
@@ -28,16 +21,11 @@ export function DemoStepper_Footer() {
           </Button>
         ) : (
           <>
-            <Button
-              disabled={isDisabledStep}
-              onClick={prevStep}
-              size="1"
-              variant="soft"
-            >
+            <Button disabled={isDisabledStep} onClick={prevStep} size="1" variant="soft">
               Prev
             </Button>
             <Button size="1" onClick={nextStep}>
-              {isLastStep ? "Finish" : isOptionalStep ? "Skip" : "Next"}
+              {isLastStep ? 'Finish' : isOptionalStep ? 'Skip' : 'Next'}
             </Button>
           </>
         )}

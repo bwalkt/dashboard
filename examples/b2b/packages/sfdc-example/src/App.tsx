@@ -1,54 +1,61 @@
 // @ts-expect-error no declaration file
-import NProgress from "nprogress";
-import { useThemeConfig } from "@/components/active-theme";
-import Providers from "@/components/layout/providers";
-import ThemeProvider from "@/components/layout/ThemeToggle/theme-provider";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { Toaster } from "@/components/ui/sonner";
-import { fontVariables } from "@/lib/font";
-import { cn } from "@/lib/utils";
-import "nprogress/nprogress.css";
-import { NuqsAdapter } from "nuqs/adapters/react";
-import { useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import NProgress from 'nprogress'
+import { useThemeConfig } from '@/components/active-theme'
+import Providers from '@/components/layout/providers'
+import ThemeProvider from '@/components/layout/ThemeToggle/theme-provider'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { Toaster } from '@/components/ui/sonner'
+import { fontVariables } from '@/lib/font'
+import { cn } from '@/lib/utils'
+import 'nprogress/nprogress.css'
+import { NuqsAdapter } from 'nuqs/adapters/react'
+import { useEffect } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 // Import all CSS styles
-import "@/styles/globals.css";
-import "@/styles/theme.css";
+import '@/styles/globals.css'
+import '@/styles/theme.css'
 
 // Import pages
-import OrderViewPage from "./features/orders/components/order-view-page";
-import ProductViewPage from "./features/products/components/product-view-page";
-import CallbackPage from "./pages/auth/callback";
-import SignIn from "./pages/auth/SignIn";
-import SignUp from "./pages/auth/SignUp";
-import TauriCallbackPage from "./pages/auth/tauri-callback";
-import MobileDashboardLayout from "./pages/dashboard/MobileLayout";
-import Orders from "./pages/dashboard/Orders";
-import Overview from "./pages/dashboard/Overview";
-import Products from "./pages/dashboard/Products";
-import Settings from "./pages/dashboard/Settings";
+import OrderViewPage from './features/orders/components/order-view-page'
+import ProductViewPage from './features/products/components/product-view-page'
+import CallbackPage from './pages/auth/callback'
+import SignIn from './pages/auth/SignIn'
+import SignUp from './pages/auth/SignUp'
+import TauriCallbackPage from './pages/auth/tauri-callback'
+import MobileDashboardLayout from './pages/dashboard/MobileLayout'
+import Orders from './pages/dashboard/Orders'
+import Overview from './pages/dashboard/Overview'
+import Products from './pages/dashboard/Products'
+import Settings from './pages/dashboard/Settings'
 
 // Configure NProgress
-NProgress.configure({ showSpinner: false });
+NProgress.configure({ showSpinner: false })
 
 function ProgressBar() {
-  const location = useLocation();
+  const location = useLocation()
 
   useEffect(() => {
-    NProgress.start();
-    NProgress.done();
-  }, [location.pathname]);
+    NProgress.start()
+    NProgress.done()
+  }, [location.pathname])
 
-  return null;
+  return null
 }
 
 function ThemedAppContent() {
-  const { activeTheme } = useThemeConfig();
-  const isScaled = activeTheme?.endsWith("-scaled");
-  const isTauri = typeof window !== "undefined" && (window as any).__TAURI__;
+  const { activeTheme } = useThemeConfig()
+  const isScaled = activeTheme?.endsWith('-scaled')
+  const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__
   return (
-    <div className={cn("bg-background min-h-screen font-sans antialiased", `theme-${activeTheme}`, isScaled ? "theme-scaled" : "", fontVariables)}>
+    <div
+      className={cn(
+        'bg-background min-h-screen font-sans antialiased',
+        `theme-${activeTheme}`,
+        isScaled ? 'theme-scaled' : '',
+        fontVariables,
+      )}
+    >
       <Toaster />
       <ProgressBar />
       <Routes>
@@ -85,11 +92,11 @@ function ThemedAppContent() {
         <Route path="*" element={<Navigate to="/auth/sign-in" replace />} />
       </Routes>
     </div>
-  );
+  )
 }
 
 function AppContent() {
-  const activeThemeValue = localStorage.getItem("active_theme") || "default";
+  const activeThemeValue = localStorage.getItem('active_theme') || 'default'
 
   return (
     <ThemeProvider attribute="class" defaultTheme="blue" enableSystem disableTransitionOnChange enableColorScheme>
@@ -97,7 +104,7 @@ function AppContent() {
         <ThemedAppContent />
       </Providers>
     </ThemeProvider>
-  );
+  )
 }
 
 function App() {
@@ -107,7 +114,7 @@ function App() {
         <AppContent />
       </NuqsAdapter>
     </BrowserRouter>
-  );
+  )
 }
 
-export default App;
+export default App

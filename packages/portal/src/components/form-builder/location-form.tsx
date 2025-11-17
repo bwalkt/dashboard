@@ -7,20 +7,15 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
-import {
-  Form,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { Form, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import LocationSelector from '@/components/ui/location-input'
 
 const FormSchema = z.object({
   location: z.tuple([
     z.string().min(1, { message: 'Country is required' }),
-    z.string().optional(), // State name, optional
+    z
+      .string()
+      .optional(), // State name, optional
   ]),
 })
 
@@ -52,24 +47,16 @@ export function LocationForm() {
                 <FormLabel>Country Selector</FormLabel>
               </div>
               <LocationSelector
-                onCountryChange={(country) => {
+                onCountryChange={country => {
                   setCountryName(country?.name || '')
-                  form.setValue(field.name, [
-                    country?.name || '',
-                    form.getValues('location')[1] || '',
-                  ])
+                  form.setValue(field.name, [country?.name || '', form.getValues('location')[1] || ''])
                 }}
-                onStateChange={(state) => {
+                onStateChange={state => {
                   setStateName(state?.name || '')
-                  form.setValue(field.name, [
-                    form.getValues('location')[0] || '',
-                    state?.name || '',
-                  ])
+                  form.setValue(field.name, [form.getValues('location')[0] || '', state?.name || ''])
                 }}
               />
-              <FormDescription>
-                Please select state after selecting your country
-              </FormDescription>
+              <FormDescription>Please select state after selecting your country</FormDescription>
               <FormMessage />
             </FormItem>
           )}

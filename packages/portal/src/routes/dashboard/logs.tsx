@@ -16,6 +16,6 @@ export const Route = createFileRoute('/dashboard/logs')({
 
 function RouteComponent() {
   const search = Route.useSearch()
-  
+
   return <InfinitePage searchParams={search} />
 }

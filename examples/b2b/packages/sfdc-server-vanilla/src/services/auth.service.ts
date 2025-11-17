@@ -1,43 +1,43 @@
-import type { AccessTokenPayload, RefreshTokenPayload } from "@pzero/shared";
-import { JWTService } from "./jwt.service.js";
+import type { AccessTokenPayload, RefreshTokenPayload } from '@pzero/shared'
+import { JWTService } from './jwt.service.js'
 
 export class AuthService extends JWTService {
-  private readonly jwtSecret: string;
-  private readonly accessTokenExpiry = "1h";
-  private readonly refreshTokenExpiry = "30d";
+  private readonly jwtSecret: string
+  private readonly accessTokenExpiry = '1h'
+  private readonly refreshTokenExpiry = '30d'
 
   constructor() {
-    super();
+    super()
 
     // In production, JWT_SECRET is required
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === 'production') {
       if (!process.env.JWT_SECRET) {
-        throw new Error("JWT_SECRET environment variable is required in production");
+        throw new Error('JWT_SECRET environment variable is required in production')
       }
-      this.jwtSecret = process.env.JWT_SECRET;
+      this.jwtSecret = process.env.JWT_SECRET
     } else {
       // Development fallback
-      this.jwtSecret = process.env.JWT_SECRET || process.env.DEV_JWT_SECRET || "default-secret-key";
+      this.jwtSecret = process.env.JWT_SECRET || process.env.DEV_JWT_SECRET || 'default-secret-key'
     }
   }
 
   /**
    * Generate access token with SHA-512 algorithm for GitHub OAuth2
    */
-  public generateAccessToken(payload: Omit<AccessTokenPayload, "exp" | "iat">): string {
-    return this.createHMACToken(payload, this.jwtSecret, "HS512", this.accessTokenExpiry);
+  public generateAccessToken(payload: Omit<AccessTokenPayload, 'exp' | 'iat'>): string {
+    return this.createHMACToken(payload, this.jwtSecret, 'HS512', this.accessTokenExpiry)
   }
 
   /**
    * Generate refresh token with SHA-512 algorithm for GitHub OAuth2
    */
   public generateRefreshToken(userId: number): string {
-    const tokenPayload: Omit<RefreshTokenPayload, "exp" | "iat"> = {
+    const tokenPayload: Omit<RefreshTokenPayload, 'exp' | 'iat'> = {
       userId,
-      type: "refresh",
-    };
+      type: 'refresh',
+    }
 
-    return this.createHMACToken(tokenPayload, this.jwtSecret, "HS512", this.refreshTokenExpiry);
+    return this.createHMACToken(tokenPayload, this.jwtSecret, 'HS512', this.refreshTokenExpiry)
   }
 
   /**
@@ -45,17 +45,17 @@ export class AuthService extends JWTService {
    */
   public verifyAccessToken(token: string): AccessTokenPayload | null {
     try {
-      const decoded = this.verifyHMACToken(token, this.jwtSecret, "HS512") as AccessTokenPayload;
+      const decoded = this.verifyHMACToken(token, this.jwtSecret, 'HS512') as AccessTokenPayload
 
       // Additional validation
-      if (typeof decoded.userId !== "number" || typeof decoded.githubId !== "string") {
-        return null;
+      if (typeof decoded.userId !== 'number' || typeof decoded.githubId !== 'string') {
+        return null
       }
 
-      return decoded;
+      return decoded
     } catch (error) {
-      console.error("Token verification failed:", error);
-      return null;
+      console.error('Token verification failed:', error)
+      return null
     }
   }
 
@@ -64,17 +64,17 @@ export class AuthService extends JWTService {
    */
   public verifyRefreshToken(token: string): RefreshTokenPayload | null {
     try {
-      const decoded = this.verifyHMACToken(token, this.jwtSecret, "HS512") as RefreshTokenPayload;
+      const decoded = this.verifyHMACToken(token, this.jwtSecret, 'HS512') as RefreshTokenPayload
 
       // Additional validation
-      if (decoded.type !== "refresh" || typeof decoded.userId !== "number") {
-        return null;
+      if (decoded.type !== 'refresh' || typeof decoded.userId !== 'number') {
+        return null
       }
 
-      return decoded;
+      return decoded
     } catch (error) {
-      console.error("Refresh token verification failed:", error);
-      return null;
+      console.error('Refresh token verification failed:', error)
+      return null
     }
   }
 
@@ -83,15 +83,15 @@ export class AuthService extends JWTService {
    */
   public extractTokenFromHeader(authHeader: string | undefined): string | null {
     if (!authHeader) {
-      return null;
+      return null
     }
 
-    const parts = authHeader.split(" ");
-    if (parts.length !== 2 || parts[0] !== "Bearer") {
-      return null;
+    const parts = authHeader.split(' ')
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+      return null
     }
 
-    return parts[1] || null;
+    return parts[1] || null
   }
 
   /**
@@ -99,10 +99,10 @@ export class AuthService extends JWTService {
    */
   public extractTokenFromCookies(cookies: any): string | null {
     if (!cookies || !cookies.accessToken) {
-      return null;
+      return null
     }
 
-    return cookies.accessToken;
+    return cookies.accessToken
   }
 
   /**
@@ -110,10 +110,10 @@ export class AuthService extends JWTService {
    */
   public extractRefreshTokenFromCookies(cookies: any): string | null {
     if (!cookies || !cookies.refreshToken) {
-      return null;
+      return null
     }
 
-    return cookies.refreshToken;
+    return cookies.refreshToken
   }
 
   /**
@@ -122,25 +122,25 @@ export class AuthService extends JWTService {
   public generateTokenPair(
     userId: number,
     githubId: string,
-    email: string
+    email: string,
   ): {
-    accessToken: string;
-    refreshToken: string;
+    accessToken: string
+    refreshToken: string
   } {
     const accessToken = this.generateAccessToken({
       userId,
       githubId,
       email,
-    });
+    })
 
-    const refreshToken = this.generateRefreshToken(userId);
+    const refreshToken = this.generateRefreshToken(userId)
 
     return {
       accessToken,
       refreshToken,
-    };
+    }
   }
 }
 
 // Export singleton instance
-export const authService = new AuthService();
+export const authService = new AuthService()

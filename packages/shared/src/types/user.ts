@@ -3,19 +3,21 @@ import { z } from 'zod'
 // Zod schemas
 export const UserSchema = z.object({
   id: z.number(),
-  github_id: z.string(),
+  github_id: z.string().nullable(),
   name: z.string(),
   email: z.string().email(),
-  avatar: z.string().url(),
+  avatar: z.string().url().nullable(),
+  email_verified: z.boolean().optional().default(false),
   created_at: z.string(),
   updated_at: z.string(),
 })
 
 export const CreateUserDataSchema = z.object({
-  github_id: z.string(),
+  github_id: z.string().nullable(),
   name: z.string(),
   email: z.string().email(),
-  avatar: z.string().url(),
+  avatar: z.string().url().nullable(),
+  email_verified: z.boolean().optional().default(false),
 })
 
 // GitHub OAuth response schemas
@@ -30,7 +32,7 @@ export const GitHubUserSchema = z.object({
 // JWT Token payload schemas
 export const AccessTokenPayloadSchema = z.object({
   userId: z.number(),
-  githubId: z.string(),
+  githubId: z.string().nullable(),
   email: z.string().email(),
   exp: z.number(),
   iat: z.number(),

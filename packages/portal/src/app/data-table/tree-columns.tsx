@@ -1,23 +1,23 @@
-"use client";
+'use client'
 
-import type { ColumnDef } from "@tanstack/react-table";
-import { format, isSameDay } from "date-fns";
-import { Check, Minus } from "lucide-react";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { DataTableExpandableColumn } from "@/components/data-table/data-table-expandable-column";
-import { StatusCell } from "@/components/data-table/data-table-status-cell";
-import { TimelineCell } from "@/components/data-table/data-table-timeline-cell";
-import { Badge } from "@/components/ui/badge";
-import { tagColor } from "@/constants/tag";
-import { isArrayOfDates, isArrayOfNumbers } from "@/lib/is-array";
-import type { ColumnSchema } from "./types";
+import type { ColumnDef } from '@tanstack/react-table'
+import { format, isSameDay } from 'date-fns'
+import { Check, Minus } from 'lucide-react'
+import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header'
+import { DataTableExpandableColumn } from '@/components/data-table/data-table-expandable-column'
+import { StatusCell } from '@/components/data-table/data-table-status-cell'
+import { TimelineCell } from '@/components/data-table/data-table-timeline-cell'
+import { Badge } from '@/components/ui/badge'
+import { tagColor } from '@/constants/tag'
+import { isArrayOfDates, isArrayOfNumbers } from '@/lib/is-array'
+import type { ColumnSchema } from './types'
 
 export const treeColumns: ColumnDef<ColumnSchema & { subRows?: any[] }>[] = [
   {
-    id: "expand",
-    header: "",
+    id: 'expand',
+    header: '',
     cell: ({ row }) => {
-      return <DataTableExpandableColumn row={row} />;
+      return <DataTableExpandableColumn row={row} />
     },
     enableHiding: false,
     enableSorting: false,
@@ -27,260 +27,242 @@ export const treeColumns: ColumnDef<ColumnSchema & { subRows?: any[] }>[] = [
     maxSize: 40,
   },
   {
-    accessorKey: "name",
-    header: "Name",
+    accessorKey: 'name',
+    header: 'Name',
     enableHiding: false,
     cell: ({ row }) => {
-      const depth = row.depth || 0;
-      const name = row.getValue("name") as string;
+      const depth = row.depth || 0
+      const name = row.getValue('name') as string
       return (
-        <div 
-          style={{ paddingLeft: `${depth * 20}px` }}
-          className="flex items-center"
-        >
+        <div style={{ paddingLeft: `${depth * 20}px` }} className="flex items-center">
           {name}
         </div>
-      );
+      )
     },
   },
   {
-    accessorKey: "url",
-    header: "URL",
+    accessorKey: 'url',
+    header: 'URL',
     cell: ({ row }) => {
-      const value = row.getValue("url");
-      return <div className="max-w-[200px] truncate">{`${value}`}</div>;
+      const value = row.getValue('url')
+      return <div className="max-w-[200px] truncate">{`${value}`}</div>
     },
   },
   {
-    accessorKey: "regions",
-    header: "Regions",
+    accessorKey: 'regions',
+    header: 'Regions',
     cell: ({ row }) => {
-      const value = row.getValue("regions");
+      const value = row.getValue('regions')
       if (Array.isArray(value)) {
-        return <div className="text-muted-foreground">{value.join(", ")}</div>;
+        return <div className="text-muted-foreground">{value.join(', ')}</div>
       }
-      return <div className="text-muted-foreground">{`${value}`}</div>;
+      return <div className="text-muted-foreground">{`${value}`}</div>
     },
     filterFn: (row, id, value) => {
-      const array = row.getValue(id) as string[];
-      if (typeof value === "string") return array.includes(value);
+      const array = row.getValue(id) as string[]
+      if (typeof value === 'string') return array.includes(value)
       // up to the user to define either `.some` or `.every`
-      if (Array.isArray(value)) return value.some((i) => array.includes(i));
-      return false;
+      if (Array.isArray(value)) return value.some(i => array.includes(i))
+      return false
     },
   },
   {
-    accessorKey: "tags",
-    header: "Tags",
+    accessorKey: 'tags',
+    header: 'Tags',
     cell: ({ row }) => {
-      const value = row.getValue("tags") as string | string[];
+      const value = row.getValue('tags') as string | string[]
       if (Array.isArray(value)) {
         return (
           <div className="flex flex-wrap gap-1">
-            {value.map((v) => (
-              <Badge key={v} className={tagColor[v]?.badge || "text-gray-700 bg-gray-100 border-gray-200 hover:bg-gray-100"}>
+            {value.map(v => (
+              <Badge
+                key={v}
+                className={tagColor[v]?.badge || 'text-gray-700 bg-gray-100 border-gray-200 hover:bg-gray-100'}
+              >
                 {v}
               </Badge>
             ))}
           </div>
-        );
+        )
       }
-      return <Badge className={tagColor[value]?.badge || "text-gray-700 bg-gray-100 border-gray-200 hover:bg-gray-100"}>{value}</Badge>;
+      return (
+        <Badge className={tagColor[value]?.badge || 'text-gray-700 bg-gray-100 border-gray-200 hover:bg-gray-100'}>
+          {value}
+        </Badge>
+      )
     },
     filterFn: (row, id, value) => {
-      const array = row.getValue(id) as string[];
-      if (typeof value === "string") return array.includes(value);
+      const array = row.getValue(id) as string[]
+      if (typeof value === 'string') return array.includes(value)
       // up to the user to define either `.some` or `.every`
-      if (Array.isArray(value)) return value.some((i) => array.includes(i));
-      return false;
+      if (Array.isArray(value)) return value.some(i => array.includes(i))
+      return false
     },
   },
   {
-    accessorKey: "p95",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="P95" />
-    ),
+    accessorKey: 'p95',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="P95" />,
     cell: ({ row }) => {
-      const value = row.getValue("p95");
-      if (typeof value === "undefined") {
-        return <Minus className="h-4 w-4 text-muted-foreground/50" />;
+      const value = row.getValue('p95')
+      if (typeof value === 'undefined') {
+        return <Minus className="h-4 w-4 text-muted-foreground/50" />
       }
       return (
         <div>
           <span className="font-mono">{`${value}`}</span> ms
         </div>
-      );
+      )
     },
     filterFn: (row, id, value) => {
-      const rowValue = row.getValue(id) as number;
-      if (typeof value === "number") return value === Number(rowValue);
+      const rowValue = row.getValue(id) as number
+      if (typeof value === 'number') return value === Number(rowValue)
       if (Array.isArray(value) && isArrayOfNumbers(value)) {
         if (value.length === 1) {
-          return value[0] === rowValue;
+          return value[0] === rowValue
         } else {
-          const sorted = value.sort((a, b) => a - b);
-          return sorted[0] <= rowValue && rowValue <= sorted[1];
+          const sorted = value.sort((a, b) => a - b)
+          return sorted[0] <= rowValue && rowValue <= sorted[1]
         }
       }
-      return false;
+      return false
     },
   },
   {
-    accessorKey: "active",
-    header: "Active",
+    accessorKey: 'active',
+    header: 'Active',
     cell: ({ row }) => {
-      const value = row.getValue("active");
-      if (value) return <Check className="h-4 w-4" />;
-      return <Minus className="h-4 w-4 text-muted-foreground/50" />;
+      const value = row.getValue('active')
+      if (value) return <Check className="h-4 w-4" />
+      return <Minus className="h-4 w-4 text-muted-foreground/50" />
     },
     filterFn: (row, id, value) => {
-      const rowValue = row.getValue(id);
-      if (typeof value === "string") return value === String(rowValue);
-      if (typeof value === "boolean") return value === rowValue;
-      if (Array.isArray(value)) return value.includes(rowValue);
-      return false;
+      const rowValue = row.getValue(id)
+      if (typeof value === 'string') return value === String(rowValue)
+      if (typeof value === 'boolean') return value === rowValue
+      if (Array.isArray(value)) return value.includes(rowValue)
+      return false
     },
   },
   {
-    accessorKey: "public",
-    header: "Public",
+    accessorKey: 'public',
+    header: 'Public',
     cell: ({ row }) => {
-      const value = row.getValue("public");
-      if (value) return <Check className="h-4 w-4" />;
-      return <Minus className="h-4 w-4 text-muted-foreground/50" />;
+      const value = row.getValue('public')
+      if (value) return <Check className="h-4 w-4" />
+      return <Minus className="h-4 w-4 text-muted-foreground/50" />
     },
     filterFn: (row, id, value) => {
-      const rowValue = row.getValue(id);
-      if (typeof value === "string") return value === String(rowValue);
-      if (typeof value === "boolean") return value === rowValue;
-      if (Array.isArray(value)) return value.includes(rowValue);
-      return false;
+      const rowValue = row.getValue(id)
+      if (typeof value === 'string') return value === String(rowValue)
+      if (typeof value === 'boolean') return value === rowValue
+      if (Array.isArray(value)) return value.includes(rowValue)
+      return false
     },
   },
   {
-    accessorKey: "date",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Date" />
-    ),
+    accessorKey: 'date',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
     cell: ({ row }) => {
-      const value = row.getValue("date");
+      const value = row.getValue('date')
       return (
         <div className="text-xs text-muted-foreground" suppressHydrationWarning>
-          {format(new Date(`${value}`), "LLL dd, y HH:mm")}
+          {format(new Date(`${value}`), 'LLL dd, y HH:mm')}
         </div>
-      );
+      )
     },
     filterFn: (row, id, value) => {
-      const rowValue = row.getValue(id);
+      const rowValue = row.getValue(id)
       if (value instanceof Date && rowValue instanceof Date) {
-        return isSameDay(value, rowValue);
+        return isSameDay(value, rowValue)
       }
       if (Array.isArray(value)) {
         if (isArrayOfDates(value) && rowValue instanceof Date) {
-          if (value.length < 2) return false;
-          const sorted = [...value].sort((a, b) => a.getTime() - b.getTime());
-          return (
-            sorted[0].getTime() <= rowValue.getTime() &&
-            rowValue.getTime() <= sorted[1].getTime()
-          );
+          if (value.length < 2) return false
+          const sorted = [...value].sort((a, b) => a.getTime() - b.getTime())
+          return sorted[0].getTime() <= rowValue.getTime() && rowValue.getTime() <= sorted[1].getTime()
         }
       }
-      return false;
+      return false
     },
   },
   {
-    accessorKey: "timeline",
-    header: "Timeline",
+    accessorKey: 'timeline',
+    header: 'Timeline',
     cell: ({ row }) => {
-      const timeline = row.getValue("timeline");
+      const timeline = row.getValue('timeline')
       if (!timeline) {
-        return <div className="text-muted-foreground text-xs">No timeline</div>;
+        return <div className="text-muted-foreground text-xs">No timeline</div>
       }
-      return <TimelineCell timeline={timeline} compact maxItems={3} />;
+      return <TimelineCell timeline={timeline} compact maxItems={3} />
     },
     enableSorting: false,
     size: 200,
   },
   {
-    accessorKey: "employeeStatus",
-    header: "Employee Status",
+    accessorKey: 'employeeStatus',
+    header: 'Employee Status',
     cell: ({ row }) => {
-      const status = row.getValue("employeeStatus") as string;
-      if (!status) return null;
-      
+      const status = row.getValue('employeeStatus') as string
+      if (!status) return null
+
       const statusMapping: Record<string, any> = {
-        "Active": "active",
-        "Inactive": "inactive", 
-        "On Leave": "pending"
-      };
-      
-      return (
-        <StatusCell 
-          status={statusMapping[status] || "inactive"} 
-          size="sm"
-        />
-      );
+        Active: 'active',
+        Inactive: 'inactive',
+        'On Leave': 'pending',
+      }
+
+      return <StatusCell status={statusMapping[status] || 'inactive'} size="sm" />
     },
     filterFn: (row, id, value) => {
-      const rowValue = row.getValue(id);
-      if (typeof value === "string") return value === String(rowValue);
-      if (Array.isArray(value)) return value.includes(rowValue);
-      return false;
+      const rowValue = row.getValue(id)
+      if (typeof value === 'string') return value === String(rowValue)
+      if (Array.isArray(value)) return value.includes(rowValue)
+      return false
     },
   },
   {
-    accessorKey: "projectStatus",
-    header: "Project Status",
+    accessorKey: 'projectStatus',
+    header: 'Project Status',
     cell: ({ row }) => {
-      const status = row.getValue("projectStatus") as string;
-      if (!status) return null;
-      
+      const status = row.getValue('projectStatus') as string
+      if (!status) return null
+
       const statusMapping: Record<string, any> = {
-        "Planning": "todo",
-        "In Progress": "working",
-        "Completed": "done",
-        "On Hold": "stuck"
-      };
-      
-      return (
-        <StatusCell 
-          status={statusMapping[status] || "todo"} 
-          size="sm"
-        />
-      );
+        Planning: 'todo',
+        'In Progress': 'working',
+        Completed: 'done',
+        'On Hold': 'stuck',
+      }
+
+      return <StatusCell status={statusMapping[status] || 'todo'} size="sm" />
     },
     filterFn: (row, id, value) => {
-      const rowValue = row.getValue(id);
-      if (typeof value === "string") return value === String(rowValue);
-      if (Array.isArray(value)) return value.includes(rowValue);
-      return false;
+      const rowValue = row.getValue(id)
+      if (typeof value === 'string') return value === String(rowValue)
+      if (Array.isArray(value)) return value.includes(rowValue)
+      return false
     },
   },
   {
-    accessorKey: "priority",
-    header: "Priority",
+    accessorKey: 'priority',
+    header: 'Priority',
     cell: ({ row }) => {
-      const priority = row.getValue("priority") as string;
-      if (!priority) return null;
-      
+      const priority = row.getValue('priority') as string
+      if (!priority) return null
+
       const priorityMapping: Record<string, any> = {
-        "Low": "inactive",
-        "Medium": "working", 
-        "High": "stuck"
-      };
-      
-      return (
-        <StatusCell 
-          status={priorityMapping[priority] || "inactive"} 
-          size="sm"
-        />
-      );
+        Low: 'inactive',
+        Medium: 'working',
+        High: 'stuck',
+      }
+
+      return <StatusCell status={priorityMapping[priority] || 'inactive'} size="sm" />
     },
     filterFn: (row, id, value) => {
-      const rowValue = row.getValue(id);
-      if (typeof value === "string") return value === String(rowValue);
-      if (Array.isArray(value)) return value.includes(rowValue);
-      return false;
+      const rowValue = row.getValue(id)
+      if (typeof value === 'string') return value === String(rowValue)
+      if (Array.isArray(value)) return value.includes(rowValue)
+      return false
     },
   },
-];
+]

@@ -102,4 +102,3 @@ export type Product = z.infer<typeof ProductSchema>
 export type ProductCreateRequest = z.infer<typeof ProductCreateRequestSchema>
 export type ProductUpdateRequest = z.infer<typeof ProductUpdateRequestSchema>
 export type ProductQueryResponse = z.infer<typeof ProductQueryResponseSchema>
-

@@ -28,19 +28,7 @@ const sizeMap = {
 }
 
 export const Rating = React.forwardRef<HTMLDivElement, RatingProps>(
-  (
-    {
-      value,
-      onChange,
-      max = 5,
-      icon = 'star',
-      size = 'md',
-      readOnly = false,
-      className,
-      ...props
-    },
-    ref,
-  ) => {
+  ({ value, onChange, max = 5, icon = 'star', size = 'md', readOnly = false, className, ...props }, ref) => {
     const [hoverValue, setHoverValue] = React.useState<number | null>(null)
     const Icon = iconMap[icon]
 
@@ -84,14 +72,10 @@ export const Rating = React.forwardRef<HTMLDivElement, RatingProps>(
               onMouseEnter={() => handleMouseEnter(index + 1)}
               onMouseLeave={handleMouseLeave}
               onClick={() => handleClick(index + 1)}
-              onKeyDown={(e) => handleKeyDown(e, index + 1)}
+              onKeyDown={e => handleKeyDown(e, index + 1)}
               role={readOnly ? undefined : 'button'}
               tabIndex={readOnly ? -1 : 0}
-              aria-label={
-                readOnly
-                  ? `${index + 1} out of ${max}`
-                  : `Rate ${index + 1} out of ${max}`
-              }
+              aria-label={readOnly ? `${index + 1} out of ${max}` : `Rate ${index + 1} out of ${max}`}
             />
           )
         })}

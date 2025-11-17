@@ -7,7 +7,7 @@
     "Phone": "555-0101",
     "Territory": "North America",
     "Hire_Date": "2023-03-15",
-    "Quota_Target": 500000.00,
+    "Quota_Target": 500000.0,
     "Commission_Rate": 0.08
   },
   {
@@ -18,7 +18,7 @@
     "Phone": "555-0102",
     "Territory": "Asia Pacific",
     "Hire_Date": "2022-11-20",
-    "Quota_Target": 450000.00,
+    "Quota_Target": 450000.0,
     "Commission_Rate": 0.08
   },
   {
@@ -29,7 +29,7 @@
     "Phone": "555-0103",
     "Territory": "Europe",
     "Hire_Date": "2023-06-10",
-    "Quota_Target": 480000.00,
+    "Quota_Target": 480000.0,
     "Commission_Rate": 0.075
   },
   {
@@ -40,7 +40,7 @@
     "Phone": "555-0104",
     "Territory": "North America",
     "Hire_Date": "2022-08-25",
-    "Quota_Target": 520000.00,
+    "Quota_Target": 520000.0,
     "Commission_Rate": 0.085
   },
   {
@@ -51,7 +51,7 @@
     "Phone": "555-0105",
     "Territory": "Asia Pacific",
     "Hire_Date": "2023-01-12",
-    "Quota_Target": 460000.00,
+    "Quota_Target": 460000.0,
     "Commission_Rate": 0.08
   },
   {
@@ -62,7 +62,7 @@
     "Phone": "555-0106",
     "Territory": "Latin America",
     "Hire_Date": "2023-04-18",
-    "Quota_Target": 420000.00,
+    "Quota_Target": 420000.0,
     "Commission_Rate": 0.075
   },
   {
@@ -73,7 +73,7 @@
     "Phone": "555-0107",
     "Territory": "Europe",
     "Hire_Date": "2022-12-05",
-    "Quota_Target": 490000.00,
+    "Quota_Target": 490000.0,
     "Commission_Rate": 0.08
   },
   {
@@ -84,7 +84,7 @@
     "Phone": "555-0108",
     "Territory": "North America",
     "Hire_Date": "2023-02-28",
-    "Quota_Target": 510000.00,
+    "Quota_Target": 510000.0,
     "Commission_Rate": 0.085
   },
   {
@@ -95,7 +95,7 @@
     "Phone": "555-0109",
     "Territory": "Latin America",
     "Hire_Date": "2023-05-22",
-    "Quota_Target": 440000.00,
+    "Quota_Target": 440000.0,
     "Commission_Rate": 0.075
   },
   {
@@ -106,7 +106,7 @@
     "Phone": "555-0110",
     "Territory": "Asia Pacific",
     "Hire_Date": "2022-10-14",
-    "Quota_Target": 470000.00,
+    "Quota_Target": 470000.0,
     "Commission_Rate": 0.08
   }
 ]

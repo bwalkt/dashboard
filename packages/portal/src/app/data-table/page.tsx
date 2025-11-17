@@ -1,20 +1,12 @@
-import * as React from "react";
-import { DataTable } from ".";
-import { columns } from "./columns";
-import { filterFields } from "./constants";
-import { data } from "./data";
-import { searchParamsCache } from "./search-params";
-import { Skeleton } from "./skeleton";
+import * as React from 'react'
+import { DataTable } from '.'
+import { columns } from './columns'
+import { filterFields } from './constants'
+import { data } from './data'
+import { searchParamsCache } from './search-params'
+import { Skeleton } from './skeleton'
 
-function PageContent({ 
-  search, 
-  title, 
-  description 
-}: { 
-  search: any; 
-  title?: string; 
-  description?: string; 
-}) {
+function PageContent({ search, title, description }: { search: any; title?: string; description?: string }) {
   return (
     <DataTable
       columns={columns}
@@ -37,19 +29,15 @@ export default async function Page({
   title,
   description,
 }: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-  title?: string;
-  description?: string;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+  title?: string
+  description?: string
 }) {
-  const search = searchParamsCache.parse(await searchParams);
+  const search = searchParamsCache.parse(await searchParams)
 
   return (
     <React.Suspense fallback={<Skeleton />}>
-      <PageContent 
-        search={search}
-        title={title}
-        description={description}
-      />
+      <PageContent search={search} title={title} description={description} />
     </React.Suspense>
-  );
+  )
 }

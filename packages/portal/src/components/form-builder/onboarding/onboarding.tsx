@@ -1,8 +1,8 @@
-import { useMediaQuery } from "@hooks/use-media-query"
-import { StepperProvider } from "@incmix/ui/stepper"
-import { useEffect, useState } from "react"
-import { formSchema } from "./form-schema"
-import { StepForm } from "./step-form"
+import { useMediaQuery } from '@hooks/use-media-query'
+import { StepperProvider } from '@incmix/ui/stepper'
+import { useEffect, useState } from 'react'
+import { formSchema } from './form-schema'
+import { StepForm } from './step-form'
 
 export type OnboardingProps = {
   onComplete: (data: any, userData: any) => Promise<void>
@@ -13,22 +13,22 @@ export const Onboarding = ({ onComplete, onError }: OnboardingProps) => {
   const [stepData, setStepData] = useState<Record<number, any>>({})
   const [userData, setUserData] = useState<any>(null)
   const [isLoadingUserData, setIsLoadingUserData] = useState(true)
-  const isDesktop = useMediaQuery("(min-width: 768px)")
+  const isDesktop = useMediaQuery('(min-width: 768px)')
 
   useEffect(() => {
     // Retrieve user data from localStorage
     try {
-      const raw = localStorage.getItem("signupUserData")
+      const raw = localStorage.getItem('signupUserData')
       if (raw) {
         setUserData(JSON.parse(raw))
       } else {
         // No signup data found
-        const error = new Error("No signup data found. Please sign up first.")
+        const error = new Error('No signup data found. Please sign up first.')
         console.error(error.message)
         onError?.(error)
       }
     } catch (e) {
-      console.error("Corrupted signupUserData in localStorage", e)
+      console.error('Corrupted signupUserData in localStorage', e)
       onError?.(e instanceof Error ? e : new Error(String(e)))
     } finally {
       setIsLoadingUserData(false)
@@ -37,7 +37,7 @@ export const Onboarding = ({ onComplete, onError }: OnboardingProps) => {
 
   const handleFinalSubmit = async (finalData: Record<number, any>) => {
     if (!userData) {
-      const error = new Error("User data not found for onboarding. Please sign up again.")
+      const error = new Error('User data not found for onboarding. Please sign up again.')
       console.error(error.message)
       onError?.(error)
       return
@@ -52,44 +52,44 @@ export const Onboarding = ({ onComplete, onError }: OnboardingProps) => {
     const completeData = {
       ...onboardingData,
       userId: userData.userId,
-      email: userData.email
+      email: userData.email,
     }
-
-
 
     try {
       // Call the onComplete callback with the combined data
       await onComplete(completeData, userData)
     } catch (error) {
-      console.error("Onboarding submission error:", error)
+      console.error('Onboarding submission error:', error)
       onError?.(error instanceof Error ? error : new Error(String(error)))
     }
   }
 
   if (isLoadingUserData) {
-    return <div className="flex h-screen items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-    </div>
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    )
   }
 
   if (!userData) {
-    return <div className="flex h-screen items-center justify-center">
-      <div className="text-center">
-        <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
-          No signup data found. Please sign up first.
-        </p>
-        <a href="/signup" className="text-blue-500 hover:text-blue-600 underline">
-          Go to Sign Up
-        </a>
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">No signup data found. Please sign up first.</p>
+          <a href="/signup" className="text-blue-500 hover:text-blue-600 underline">
+            Go to Sign Up
+          </a>
+        </div>
       </div>
-    </div>
+    )
   }
 
   return (
     <div className="h-screen w-full bg-white dark:bg-gray-900">
       <StepperProvider
         value={{
-          steps: formSchema.steps.map((step) => ({
+          steps: formSchema.steps.map(step => ({
             label: step.label,
             icon: typeof step.stepIcon === 'string' ? undefined : step.stepIcon,
             description: typeof step.stepIcon === 'string' ? step.stepIcon : undefined,

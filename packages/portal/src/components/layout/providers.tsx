@@ -5,7 +5,13 @@ import { useState } from 'react'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ActiveThemeProvider } from '../active-theme'
 
-export default function Providers({ activeThemeValue, children }: { activeThemeValue: string; children: React.ReactNode }) {
+export default function Providers({
+  activeThemeValue,
+  children,
+}: {
+  activeThemeValue: string
+  children: React.ReactNode
+}) {
   // Create a client inside the component to ensure proper initialization
   const [queryClient] = useState(
     () =>
@@ -17,8 +23,8 @@ export default function Providers({ activeThemeValue, children }: { activeThemeV
             refetchOnWindowFocus: false,
           },
         },
-      })
-  );
+      }),
+  )
 
   return (
     <QueryClientProvider client={queryClient}>

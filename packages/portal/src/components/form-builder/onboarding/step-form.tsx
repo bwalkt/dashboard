@@ -1,9 +1,9 @@
-import { Separator } from "@base"
-import { z } from "zod"
-import { AuthWrapper } from "../auth-wrapper"
-import AutoForm from "../auto-form"
-import { useStepper } from "../stepper"
-import { StepperFooter } from "./stepper-footer"
+import { Separator } from '@base'
+import { z } from 'zod'
+import { AuthWrapper } from '../auth-wrapper'
+import AutoForm from '../auto-form'
+import { useStepper } from '../stepper'
+import { StepperFooter } from './stepper-footer'
 
 interface StepFormProps {
   steps: any[]
@@ -12,12 +12,7 @@ interface StepFormProps {
   onFinalSubmit: (data: Record<number, any>) => void
 }
 
-export const StepForm = ({
-  steps,
-  stepData,
-  setStepData,
-  onFinalSubmit,
-}: StepFormProps) => {
+export const StepForm = ({ steps, stepData, setStepData, onFinalSubmit }: StepFormProps) => {
   const { nextStep, activeStep, isLastStep } = useStepper()
 
   // Get current step
@@ -25,7 +20,7 @@ export const StepForm = ({
 
   // Handle form values change
   const handleValuesChange = (values: any) => {
-    setStepData((prev) => ({
+    setStepData(prev => ({
       ...prev,
       [activeStep]: values,
     }))
@@ -54,8 +49,8 @@ export const StepForm = ({
   }
 
   // Configure title and subtitle based on step
-  const title = ""
-  const subtitle = activeStep === 0 ? "Hi! Welcome to Incmix" : step.label
+  const title = ''
+  const subtitle = activeStep === 0 ? 'Hi! Welcome to Incmix' : step.label
 
   // Map current step index to the correct image number after removal of Account Details step
   const getStepImageNumber = (currentStep: number) => {
@@ -71,7 +66,7 @@ export const StepForm = ({
       image={`step${getStepImageNumber(activeStep)}`}
       step={activeStep + 1}
       showFooterLinks={false}
-      totalSteps={steps.length }
+      totalSteps={steps.length}
     >
       {/* Pass JSON schema directly to AutoForm */}
       <AutoForm

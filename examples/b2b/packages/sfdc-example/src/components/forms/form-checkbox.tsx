@@ -1,27 +1,20 @@
-'use client';
+'use client'
 
-import { FieldPath, FieldValues } from 'react-hook-form';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form';
-import { BaseFormFieldProps } from '@/types/base-form';
+import { FieldPath, FieldValues } from 'react-hook-form'
+import { Checkbox } from '@/components/ui/checkbox'
+import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { BaseFormFieldProps } from '@/types/base-form'
 
 interface FormCheckboxProps<
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > extends BaseFormFieldProps<TFieldValues, TName> {
-  checkboxLabel?: string;
+  checkboxLabel?: string
 }
 
 function FormCheckbox<
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >({
   control,
   name,
@@ -30,27 +23,21 @@ function FormCheckbox<
   required,
   checkboxLabel,
   disabled,
-  className
+  className,
 }: FormCheckboxProps<TFieldValues, TName>) {
   return (
     <FormField
       control={control}
       name={name}
       render={({ field }) => (
-        <FormItem
-          className={`flex flex-row items-start space-y-0 space-x-3 ${className}`}
-        >
+        <FormItem className={`flex flex-row items-start space-y-0 space-x-3 ${className}`}>
           <FormControl>
-            <Checkbox
-              checked={field.value}
-              onCheckedChange={field.onChange}
-              disabled={disabled}
-            />
+            <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={disabled} />
           </FormControl>
-          <div className='space-y-1 leading-none'>
+          <div className="space-y-1 leading-none">
             <FormLabel>
               {checkboxLabel || label}
-              {required && <span className='ml-1 text-red-500'>*</span>}
+              {required && <span className="ml-1 text-red-500">*</span>}
             </FormLabel>
             {description && <FormDescription>{description}</FormDescription>}
           </div>
@@ -58,7 +45,7 @@ function FormCheckbox<
         </FormItem>
       )}
     />
-  );
+  )
 }
 
-export { FormCheckbox };
+export { FormCheckbox }

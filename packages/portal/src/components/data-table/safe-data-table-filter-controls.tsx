@@ -1,25 +1,23 @@
-"use client";
+'use client'
 
-import React from "react";
-import { DataTableFilterControls } from "./data-table-filter-controls";
-import { DataTableContext } from "./data-table-provider";
-import type { DataTableFilterField } from "./types";
+import React from 'react'
+import { DataTableFilterControls } from './data-table-filter-controls'
+import { DataTableContext } from './data-table-provider'
+import type { DataTableFilterField } from './types'
 
 interface SafeDataTableFilterControlsProps {
   filterFields?: DataTableFilterField<any>[]
 }
 
 export function SafeDataTableFilterControls({ filterFields: propFilterFields }: SafeDataTableFilterControlsProps) {
-  const context = React.useContext(DataTableContext);
-  
+  const context = React.useContext(DataTableContext)
+
   // If we're not in a DataTableProvider context, show a fallback message
   if (!context) {
     if (!propFilterFields || propFilterFields.length === 0) {
-      return (
-        <div className="text-muted-foreground text-sm">No filters available</div>
-      );
+      return <div className="text-muted-foreground text-sm">No filters available</div>
     }
-    
+
     // Show static filter display when outside DataTableProvider
     return (
       <div className="space-y-4">
@@ -49,13 +47,11 @@ export function SafeDataTableFilterControls({ filterFields: propFilterFields }: 
             </div>
           ))}
         </div>
-        <div className="text-xs text-muted-foreground">
-          Note: Navigate to the page to use interactive filters.
-        </div>
+        <div className="text-xs text-muted-foreground">Note: Navigate to the page to use interactive filters.</div>
       </div>
-    );
+    )
   }
-  
+
   // If we're in a DataTableProvider context, use the full filter controls
-  return <DataTableFilterControls filterFields={propFilterFields} />;
+  return <DataTableFilterControls filterFields={propFilterFields} />
 }

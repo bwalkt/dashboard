@@ -1,12 +1,13 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/AuthContext'
-import GithubSignInButton from './github-auth-button'
+import { api } from '@/lib/api'
 
 /**
  * Render the sign-up page with a local form and a GitHub OAuth sign-in option.
@@ -17,7 +18,12 @@ import GithubSignInButton from './github-auth-button'
  */
 export default function SignUpViewPage() {
   const navigate = useNavigate()
-  const { user, loading } = useAuth()
+  const { user, loading, signUp } = useAuth()
+  const [emailSent, setEmailSent] = useState(false)
+  const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
+  const [otpCode, setOtpCode] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -26,10 +32,54 @@ export default function SignUpViewPage() {
     }
   }, [user, loading, navigate])
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    // For demo purposes, we'll just show a message since we're focusing on GitHub OAuth
-    toast.info('Please use GitHub OAuth to sign up')
+
+    if (emailSent) {
+      // Handle OTP verification
+      if (otpCode.length !== 6) {
+        toast.error('Please enter a 6-digit verification code')
+        return
+      }
+
+      setIsLoading(true)
+      try {
+        const result = await api.post('/auth/register/verify', {
+          email: email,
+          code: otpCode,
+        })
+
+        toast.success('Registration successful!')
+        navigate({ to: '/dashboard/overview', replace: true })
+      } catch (error) {
+        console.error('Verification error:', error)
+        toast.error('Invalid or expired verification code. Please try again.')
+      } finally {
+        setIsLoading(false)
+      }
+    } else {
+      // Handle initial registration
+      const formEmail = (e.target as any).email.value
+      const formName = (e.target as any).fullName.value
+
+      setIsLoading(true)
+      try {
+        const result = await signUp({
+          email: formEmail,
+          name: formName,
+        })
+
+        setEmail(formEmail)
+        setName(formName)
+        setEmailSent(true)
+        toast.success('Check your email for verification code')
+      } catch (error) {
+        console.error('Sign up error:', error)
+        toast.error('Failed to sign up. Please try again.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
   }
 
   return (
@@ -51,7 +101,14 @@ export default function SignUpViewPage() {
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" type="text" placeholder="Enter your full name" required />
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="Enter your full name"
+                    defaultValue={name}
+                    disabled={emailSent}
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -59,20 +116,35 @@ export default function SignUpViewPage() {
                     id="email"
                     type="email"
                     placeholder="your_mail+test@example.com"
-                    defaultValue="your_mail+test@example.com"
+                    defaultValue={email || 'your_mail+test@example.com'}
+                    disabled={emailSent}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" placeholder="Create a password" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input id="confirmPassword" type="password" placeholder="Confirm your password" required />
-                </div>
-                <Button type="submit" className="w-full">
-                  Sign Up
+
+                {emailSent && (
+                  <div className="space-y-2">
+                    <Label htmlFor="otpCode">Verification Code</Label>
+                    <div className="flex justify-center">
+                      <InputOTP maxLength={6} value={otpCode} onChange={value => setOtpCode(value)} autoFocus>
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} />
+                          <InputOTPSlot index={1} />
+                          <InputOTPSlot index={2} />
+                          <InputOTPSlot index={3} />
+                          <InputOTPSlot index={4} />
+                          <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                    <p className="text-sm text-muted-foreground text-center">
+                      Enter the 6-digit code sent to your email
+                    </p>
+                  </div>
+                )}
+
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Processing...' : emailSent ? 'Verify Code' : 'Register'}
                 </Button>
               </form>
 
@@ -84,8 +156,6 @@ export default function SignUpViewPage() {
                   <span className="bg-background text-muted-foreground px-2">Or continue with</span>
                 </div>
               </div>
-
-              <GithubSignInButton />
 
               <div className="mt-4 text-center text-sm">
                 Already have an account?{' '}

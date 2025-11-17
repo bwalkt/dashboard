@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-import type { EnvironmentConfig } from "../types/index";
 
 // Load environment variables from .env file only when running locally (not in Docker)
 // In Docker, environment variables are provided at runtime via docker-compose
@@ -17,6 +16,71 @@ const domain =
     .replace(/\/$/, "")
     .split(":")[0] || "localhost";
 
+// Environment variables
+export interface EnvironmentConfig {
+  POSTGRES_IDLE_TIMEOUT: number;
+  POSTGRES_CONNECTION_TIMEOUT: number;
+  GITHUB_CLIENT_ID: string;
+  GITHUB_CLIENT_SECRET: string;
+  JWT_SECRET: string;
+  POSTGRES_HOST: string;
+  POSTGRES_PORT: number;
+  POSTGRES_USER: string;
+  POSTGRES_PASSWORD: string;
+  POSTGRES_DB: string;
+  REDIS_HOST: string;
+  REDIS_PORT: number;
+  BREVO_API_KEY: string;
+  BREVO_SENDER_EMAIL: string;
+  BREVO_SENDER_NAME: string;
+  SIGNALWIRE_PROJECT_ID: string;
+  SIGNALWIRE_TOKEN: string;
+  SIGNALWIRE_PHONE_NUMBER: string;
+  PORT?: number;
+  OAUTH_REDIRECT_URL: string;
+  SERVER_BASE_URL?: string;
+  DOMAIN?: string;
+  POSTGRES_MAX_CLIENTS?: number;
+  CORS_ALLOWED_ORIGINS: string | string[];
+  CORS_ALLOW_CREDENTIALS?: boolean;
+  CORS_EXPOSED_HEADERS: string[];
+  CORS_ALLOWED_HEADERS: string[];
+  EMAIL_EXPIRY_MINUTES: number;
+}
+const DEFAULT_ALLOWED_HEADERS = [
+  "Content-Type",
+  "Authorization",
+  "X-Requested-With",
+  "Accept",
+  "traceparent",
+  "x-client-type",
+  "x-auth-token",
+  "tracestate",
+  "X-Custom-Auth",
+  "x-grpc-web",
+  "x-grpc-web-accept-encoding",
+  "X-Custom-Header",
+];
+
+const DEFAULT_EXPOSED_HEADERS = ["Content-Range", "X-Content-Range"];
+function parserOnlyArray(envVar: string | undefined, def?: string[]): string[] {
+  if (!envVar) {
+    return def ?? [];
+  }
+  return envVar.split(",").map((item) => item.trim());
+}
+function parserArray(
+  envVar: string | undefined,
+  def: string,
+): string | string[] {
+  if (!envVar) return def;
+  const vars = envVar
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+  if (vars.length === 0) return def;
+  return vars.length === 1 ? vars[0] || def : vars;
+}
 export const config: EnvironmentConfig = {
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || "",
@@ -35,9 +99,29 @@ export const config: EnvironmentConfig = {
   SIGNALWIRE_PROJECT_ID: process.env.SIGNALWIRE_PROJECT_ID || "",
   SIGNALWIRE_TOKEN: process.env.SIGNALWIRE_TOKEN || "",
   SIGNALWIRE_PHONE_NUMBER: process.env.SIGNALWIRE_PHONE_NUMBER || "",
-  OAUTH_REDIRECT_URL: process.env.OAUTH_REDIRECT_URL || "http://localhost:1420",
+  OAUTH_REDIRECT_URL: process.env.OAUTH_REDIRECT_URL || "http://localhost:1430",
   SERVER_BASE_URL: process.env.SERVER_BASE_URL || "http://localhost:8090",
   DOMAIN: domain,
+  POSTGRES_IDLE_TIMEOUT: parseInt(
+    process.env.POSTGRES_IDLE_TIMEOUT || "30000",
+    10,
+  ),
+  POSTGRES_CONNECTION_TIMEOUT: parseInt(
+    process.env.POSTGRES_CONNECTION_TIMEOUT || "2000",
+    10,
+  ),
+  POSTGRES_MAX_CLIENTS: parseInt(process.env.POSTGRES_MAX_CLIENTS || "20", 10),
+  CORS_ALLOWED_ORIGINS: parserArray(process.env.CORS_ALLOWED_ORIGINS, "*"),
+  CORS_ALLOW_CREDENTIALS: process.env.CORS_ALLOW_CREDENTIALS === "true",
+  CORS_EXPOSED_HEADERS: parserOnlyArray(
+    process.env.CORS_EXPOSED_HEADERS,
+    DEFAULT_EXPOSED_HEADERS,
+  ),
+  CORS_ALLOWED_HEADERS: parserOnlyArray(
+    process.env.CORS_ALLOWED_HEADERS,
+    DEFAULT_ALLOWED_HEADERS,
+  ),
+  EMAIL_EXPIRY_MINUTES: parseInt(process.env.EMAIL_EXPIRY_MINUTES || "100", 10),
 };
 
 /**

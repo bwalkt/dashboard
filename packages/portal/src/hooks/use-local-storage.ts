@@ -1,50 +1,47 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react'
 
 function getItemFromLocalStorage(key: string) {
-  const item = window?.localStorage.getItem(key);
-  if (!item) return null;
-  
+  const item = window?.localStorage.getItem(key)
+  if (!item) return null
+
   try {
-    return JSON.parse(item);
+    return JSON.parse(item)
   } catch {
-    console.warn(`Failed to parse localStorage item "${key}"`);
-    return null;
+    console.warn(`Failed to parse localStorage item "${key}"`)
+    return null
   }
 }
 
-export function useLocalStorage<T>(
-  key: string,
-  initialValue: T
-): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const [storedValue, setStoredValue] = useState(initialValue);
+export function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [storedValue, setStoredValue] = useState(initialValue)
 
   useEffect(() => {
     // initialize
-    if (typeof window !== "undefined") {
-      const stored = getItemFromLocalStorage(key);
-      if (stored !== null) setStoredValue(stored);
+    if (typeof window !== 'undefined') {
+      const stored = getItemFromLocalStorage(key)
+      if (stored !== null) setStoredValue(stored)
     }
-  }, [key]);
+  }, [key])
 
   const setValue: React.Dispatch<React.SetStateAction<T>> = useCallback(
-    (value) => {
+    value => {
       if (value instanceof Function) {
         setStoredValue((prev: T) => {
-          const newValue = value(prev);
+          const newValue = value(prev)
           // Save to localStorage
-          window.localStorage.setItem(key, JSON.stringify(newValue));
-          return newValue;
-        });
+          window.localStorage.setItem(key, JSON.stringify(newValue))
+          return newValue
+        })
       } else {
-        setStoredValue(value);
+        setStoredValue(value)
         // Save to localStorage
-        window.localStorage.setItem(key, JSON.stringify(value));
+        window.localStorage.setItem(key, JSON.stringify(value))
       }
     },
-    [key, setStoredValue]
-  );
+    [key, setStoredValue],
+  )
 
-  return [storedValue, setValue];
+  return [storedValue, setValue]
 }

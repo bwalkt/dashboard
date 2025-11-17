@@ -1,19 +1,8 @@
 import { Check, ChevronsUpDown } from 'lucide-react'
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 // Import JSON data directly
 import countries from '@/data/countries.json'
@@ -72,14 +61,8 @@ interface LocationSelectorProps {
   onStateChange?: (state: StateProps | null) => void
 }
 
-const LocationSelector = ({
-  disabled,
-  onCountryChange,
-  onStateChange,
-}: LocationSelectorProps) => {
-  const [selectedCountry, setSelectedCountry] = useState<CountryProps | null>(
-    null,
-  )
+const LocationSelector = ({ disabled, onCountryChange, onStateChange }: LocationSelectorProps) => {
+  const [selectedCountry, setSelectedCountry] = useState<CountryProps | null>(null)
   const [selectedState, setSelectedState] = useState<StateProps | null>(null)
   const [openCountryDropdown, setOpenCountryDropdown] = useState(false)
   const [openStateDropdown, setOpenStateDropdown] = useState(false)
@@ -89,9 +72,7 @@ const LocationSelector = ({
   const statesData = states as StateProps[]
 
   // Filter states for selected country
-  const availableStates = statesData.filter(
-    (state) => state.country_id === selectedCountry?.id,
-  )
+  const availableStates = statesData.filter(state => state.country_id === selectedCountry?.id)
 
   const handleCountrySelect = (country: CountryProps | null) => {
     setSelectedCountry(country)
@@ -135,7 +116,7 @@ const LocationSelector = ({
               <CommandEmpty>No country found.</CommandEmpty>
               <CommandGroup>
                 <ScrollArea className="h-[300px]">
-                  {countriesData.map((country) => (
+                  {countriesData.map(country => (
                     <CommandItem
                       key={country.id}
                       value={country.name}
@@ -150,12 +131,7 @@ const LocationSelector = ({
                         <span>{country.name}</span>
                       </div>
                       <Check
-                        className={cn(
-                          'h-4 w-4',
-                          selectedCountry?.id === country.id
-                            ? 'opacity-100'
-                            : 'opacity-0',
-                        )}
+                        className={cn('h-4 w-4', selectedCountry?.id === country.id ? 'opacity-100' : 'opacity-0')}
                       />
                     </CommandItem>
                   ))}
@@ -178,11 +154,7 @@ const LocationSelector = ({
               disabled={disabled || !selectedCountry}
               className="w-full justify-between"
             >
-              {selectedState ? (
-                <span>{selectedState.name}</span>
-              ) : (
-                <span>Select State...</span>
-              )}
+              {selectedState ? <span>{selectedState.name}</span> : <span>Select State...</span>}
               <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -193,7 +165,7 @@ const LocationSelector = ({
                 <CommandEmpty>No state found.</CommandEmpty>
                 <CommandGroup>
                   <ScrollArea className="h-[300px]">
-                    {availableStates.map((state) => (
+                    {availableStates.map(state => (
                       <CommandItem
                         key={state.id}
                         value={state.name}
@@ -205,12 +177,7 @@ const LocationSelector = ({
                       >
                         <span>{state.name}</span>
                         <Check
-                          className={cn(
-                            'h-4 w-4',
-                            selectedState?.id === state.id
-                              ? 'opacity-100'
-                              : 'opacity-0',
-                          )}
+                          className={cn('h-4 w-4', selectedState?.id === state.id ? 'opacity-100' : 'opacity-0')}
                         />
                       </CommandItem>
                     ))}

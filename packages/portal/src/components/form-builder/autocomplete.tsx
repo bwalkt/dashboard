@@ -8,7 +8,7 @@ import { useDebounce } from '@/hooks/use-debounce'
 
 // Simulated API call
 const fetchSuggestions = async (query: string): Promise<string[]> => {
-  await new Promise((resolve) => setTimeout(resolve, 300)) // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 300)) // Simulate network delay
   const allSuggestions = [
     'React',
     'Redux',
@@ -31,9 +31,7 @@ const fetchSuggestions = async (query: string): Promise<string[]> => {
     'Jest',
     'Cypress',
   ]
-  return allSuggestions.filter((suggestion) =>
-    suggestion.toLowerCase().includes(query.toLowerCase()),
-  )
+  return allSuggestions.filter(suggestion => suggestion.toLowerCase().includes(query.toLowerCase()))
 }
 
 interface AutoCompleteProps {
@@ -78,12 +76,10 @@ export default function Autocomplete({ value = '', onChange }: AutoCompleteProps
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setSelectedIndex((prev) =>
-        prev < suggestions.length - 1 ? prev + 1 : prev,
-      )
+      setSelectedIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : prev))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1))
+      setSelectedIndex(prev => (prev > 0 ? prev - 1 : -1))
     } else if (e.key === 'Enter' && selectedIndex >= 0) {
       const chosen: string = suggestions[selectedIndex]
       setQuery(chosen)
@@ -133,20 +129,12 @@ export default function Autocomplete({ value = '', onChange }: AutoCompleteProps
           aria-controls="suggestions-list"
           aria-expanded={suggestions.length > 0}
         />
-        <Button
-          size="icon"
-          variant="ghost"
-          className="absolute right-0 top-0 h-full"
-          aria-label="Search"
-        >
+        <Button size="icon" variant="ghost" className="absolute right-0 top-0 h-full" aria-label="Search">
           <Search className="h-4 w-4" />
         </Button>
       </div>
       {isLoading && isFocused && (
-        <div
-          className="mt-2 p-2 bg-background border rounded-md shadow-sm absolute z-10"
-          aria-live="polite"
-        >
+        <div className="mt-2 p-2 bg-background border rounded-md shadow-sm absolute z-10" aria-live="polite">
           Loading...
         </div>
       )}
@@ -159,9 +147,7 @@ export default function Autocomplete({ value = '', onChange }: AutoCompleteProps
           {suggestions.map((suggestion, index) => (
             <li
               key={suggestion}
-              className={`px-4 py-2 cursor-pointer hover:bg-muted ${
-                index === selectedIndex ? 'bg-muted' : ''
-              }`}
+              className={`px-4 py-2 cursor-pointer hover:bg-muted ${index === selectedIndex ? 'bg-muted' : ''}`}
               onClick={() => handleSuggestionClick(suggestion)}
               role="option"
               aria-selected={index === selectedIndex}

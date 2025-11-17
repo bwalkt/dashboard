@@ -1,34 +1,30 @@
-import { z } from "zod";
-import { LEVELS } from "@/constants/levels";
-import { METHODS } from "@/constants/method";
-import { REGIONS } from "@/constants/region";
-import {
-  ARRAY_DELIMITER,
-  RANGE_DELIMITER,
-  SLIDER_DELIMITER,
-} from "@/lib/delimiters";
+import { z } from 'zod'
+import { LEVELS } from '@/constants/levels'
+import { METHODS } from '@/constants/method'
+import { REGIONS } from '@/constants/region'
+import { ARRAY_DELIMITER, RANGE_DELIMITER, SLIDER_DELIMITER } from '@/lib/delimiters'
 
 // https://github.com/colinhacks/zod/issues/2985#issue-2008642190
 const stringToBoolean = z
   .string()
   .toLowerCase()
-  .transform((val) => {
+  .transform(val => {
     try {
-      return JSON.parse(val);
+      return JSON.parse(val)
     } catch (e) {
-      console.log(e);
-      return undefined;
+      console.log(e)
+      return undefined
     }
   })
-  .pipe(z.boolean().optional());
+  .pipe(z.boolean().optional())
 
 export const timingSchema = z.object({
-  "timing.dns": z.number(),
-  "timing.connection": z.number(),
-  "timing.tls": z.number(),
-  "timing.ttfb": z.number(),
-  "timing.transfer": z.number(),
-});
+  'timing.dns': z.number(),
+  'timing.connection': z.number(),
+  'timing.tls': z.number(),
+  'timing.ttfb': z.number(),
+  'timing.transfer': z.number(),
+})
 
 export const columnSchema = z
   .object({
@@ -45,84 +41,84 @@ export const columnSchema = z
     message: z.string().optional(),
     percentile: z.number().optional(),
   })
-  .merge(timingSchema);
+  .merge(timingSchema)
 
-export type ColumnSchema = z.infer<typeof columnSchema>;
-export type TimingSchema = z.infer<typeof timingSchema>;
+export type ColumnSchema = z.infer<typeof columnSchema>
+export type TimingSchema = z.infer<typeof timingSchema>
 
 // TODO: can we get rid of this in favor of nuqs search-params?
 export const columnFilterSchema = z.object({
   level: z
     .string()
-    .transform((val) => val.split(ARRAY_DELIMITER))
+    .transform(val => val.split(ARRAY_DELIMITER))
     .pipe(z.enum(LEVELS).array())
     .optional(),
   method: z
     .string()
-    .transform((val) => val.split(ARRAY_DELIMITER))
+    .transform(val => val.split(ARRAY_DELIMITER))
     .pipe(z.enum(METHODS).array())
     .optional(),
   host: z.string().optional(),
   pathname: z.string().optional(),
   latency: z
     .string()
-    .transform((val) => val.split(SLIDER_DELIMITER))
+    .transform(val => val.split(SLIDER_DELIMITER))
     .pipe(z.coerce.number().array().max(2))
     .optional(),
-  "timing.dns": z
+  'timing.dns': z
     .string()
-    .transform((val) => val.split(SLIDER_DELIMITER))
+    .transform(val => val.split(SLIDER_DELIMITER))
     .pipe(z.coerce.number().array().max(2))
     .optional(),
-  "timing.connection": z
+  'timing.connection': z
     .string()
-    .transform((val) => val.split(SLIDER_DELIMITER))
+    .transform(val => val.split(SLIDER_DELIMITER))
     .pipe(z.coerce.number().array().max(2))
     .optional(),
-  "timing.tls": z
+  'timing.tls': z
     .string()
-    .transform((val) => val.split(SLIDER_DELIMITER))
+    .transform(val => val.split(SLIDER_DELIMITER))
     .pipe(z.coerce.number().array().max(2))
     .optional(),
-  "timing.ttfb": z
+  'timing.ttfb': z
     .string()
-    .transform((val) => val.split(SLIDER_DELIMITER))
+    .transform(val => val.split(SLIDER_DELIMITER))
     .pipe(z.coerce.number().array().max(2))
     .optional(),
-  "timing.transfer": z
+  'timing.transfer': z
     .string()
-    .transform((val) => val.split(SLIDER_DELIMITER))
+    .transform(val => val.split(SLIDER_DELIMITER))
     .pipe(z.coerce.number().array().max(2))
     .optional(),
   status: z
     .string()
-    .transform((val) => val.split(ARRAY_DELIMITER))
+    .transform(val => val.split(ARRAY_DELIMITER))
     .pipe(z.coerce.number().array())
     .optional(),
   regions: z
     .string()
-    .transform((val) => val.split(ARRAY_DELIMITER))
+    .transform(val => val.split(ARRAY_DELIMITER))
     .pipe(z.enum(REGIONS).array())
     .optional(),
   date: z
     .string()
-    .transform((val) => val.split(RANGE_DELIMITER).map(Number))
+    .transform(val => val.split(RANGE_DELIMITER).map(Number))
     .pipe(z.coerce.date().array())
     .optional(),
-});
+})
 
-export type ColumnFilterSchema = z.infer<typeof columnFilterSchema>;
+export type ColumnFilterSchema = z.infer<typeof columnFilterSchema>
 
 export const facetMetadataSchema = z.object({
   rows: z.array(z.object({ value: z.any(), total: z.number() })),
   total: z.number(),
   min: z.number().optional(),
   max: z.number().optional(),
-});
+})
 
-export type FacetMetadataSchema = z.infer<typeof facetMetadataSchema>;
+export type FacetMetadataSchema = z.infer<typeof facetMetadataSchema>
 
-export type BaseChartSchema = { timestamp: number; [key: string]: number };
+export type BaseChartSchema = { timestamp: number; [key: string]: number }
 
 export const timelineChartSchema = z.object({
   timestamp: z.number(), // UNIX
@@ -131,9 +127,9 @@ export const timelineChartSchema = z.object({
       ...acc,
       [level]: z.number().default(0),
     }),
-    {} as Record<(typeof LEVELS)[number], z.ZodNumber>
+    {} as Record<(typeof LEVELS)[number], z.ZodNumber>,
   ),
   // REMINDER: make sure to have the `timestamp` field in the object
-}) satisfies z.ZodType<BaseChartSchema>;
+}) satisfies z.ZodType<BaseChartSchema>
 
-export type TimelineChartSchema = z.infer<typeof timelineChartSchema>;
+export type TimelineChartSchema = z.infer<typeof timelineChartSchema>

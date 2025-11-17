@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
-import { ArrowRight, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Link } from '@tanstack/react-router'
+import { ArrowRight, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,5 +15,5 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </Button>
       {children}
     </>
-  );
+  )
 }

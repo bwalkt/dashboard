@@ -1,9 +1,8 @@
-import { Button } from "@base"
-import { useStepper } from "../stepper"
+import { Button } from '@base'
+import { useStepper } from '../stepper'
 
 export function StepperFooter() {
-  const { prevStep, resetSteps, hasCompletedAllSteps, activeStep, isLastStep } =
-    useStepper()
+  const { prevStep, resetSteps, hasCompletedAllSteps, activeStep, isLastStep } = useStepper()
 
   return (
     <div className="mt-8 flex w-full justify-between gap-2">
@@ -32,7 +31,7 @@ export function StepperFooter() {
             type="submit"
             className={`${activeStep > 0 ? 'w-2/3' : 'w-full'} rounded-md bg-blue-500 py-2 text-white hover:bg-blue-600 font-medium text-base h-[42px]`}
           >
-            {activeStep === 0 ? "Continue" : isLastStep ? "Finish" : "Continue"}
+            {activeStep === 0 ? 'Continue' : isLastStep ? 'Finish' : 'Continue'}
           </Button>
         </>
       )}

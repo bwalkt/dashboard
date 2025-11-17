@@ -1,16 +1,16 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export default function ProfileViewPage() {
   // Mock user data
   const mockUser = {
-    fullName: "Dashboard User",
-    emailAddress: "user@example.com",
+    fullName: 'Dashboard User',
+    emailAddress: 'user@example.com',
     imageUrl: undefined,
-  };
+  }
 
   return (
     <div className="flex w-full flex-col p-4 space-y-6">
@@ -23,7 +23,9 @@ export default function ProfileViewPage() {
           <div className="flex items-center space-x-4">
             <Avatar className="h-20 w-20">
               <AvatarImage src={mockUser.imageUrl} alt={mockUser.fullName} />
-              <AvatarFallback className="text-lg">{mockUser.fullName?.slice(0, 2)?.toUpperCase() || "DU"}</AvatarFallback>
+              <AvatarFallback className="text-lg">
+                {mockUser.fullName?.slice(0, 2)?.toUpperCase() || 'DU'}
+              </AvatarFallback>
             </Avatar>
             <div>
               <h3 className="text-lg font-medium">{mockUser.fullName}</h3>
@@ -49,5 +51,5 @@ export default function ProfileViewPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

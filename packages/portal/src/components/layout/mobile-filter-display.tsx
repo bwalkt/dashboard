@@ -34,9 +34,7 @@ export function MobileFilterDisplay({ filterFields }: MobileFilterDisplayProps) 
           </div>
         ))}
       </div>
-      <div className="text-xs text-muted-foreground">
-        Note: Use the main data table interface to apply filters.
-      </div>
+      <div className="text-xs text-muted-foreground">Note: Use the main data table interface to apply filters.</div>
     </div>
   )
 }

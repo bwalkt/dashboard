@@ -8,15 +8,7 @@ import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { CreditCard, type CreditCardValue } from '@/components/ui/credit-card'
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 
 // Enhanced validation schema
 const FormSchema = z
@@ -29,7 +21,7 @@ const FormSchema = z
     cardNumber: z
       .string()
       .min(1, 'Card number is required')
-      .refine((value) => {
+      .refine(value => {
         const cleanNumber = value.replace(/\s/g, '')
         return /^\d{13,19}$/.test(cleanNumber)
       }, 'Invalid card number format'),
@@ -37,7 +29,7 @@ const FormSchema = z
     expiryMonth: z
       .string()
       .min(1, 'Expiry month is required')
-      .refine((value) => {
+      .refine(value => {
         const month = parseInt(value)
         return month >= 1 && month <= 12
       }, 'Invalid month'),
@@ -45,7 +37,7 @@ const FormSchema = z
     expiryYear: z
       .string()
       .min(1, 'Expiry year is required')
-      .refine((value) => {
+      .refine(value => {
         const year = parseInt(value)
         const currentYear = new Date().getFullYear()
         return year >= currentYear && year <= currentYear + 20
@@ -55,12 +47,12 @@ const FormSchema = z
       .string()
       .min(3, 'CVV must be at least 3 digits')
       .max(4, 'CVV must be at most 4 digits')
-      .refine((value) => /^\d+$/.test(value), 'CVV must contain only digits'),
+      .refine(value => /^\d+$/.test(value), 'CVV must contain only digits'),
   })
 
   // Add expiry date validation
   .refine(
-    (data) => {
+    data => {
       if (!data.expiryMonth || !data.expiryYear) return true // Let individual field validation handle this
 
       const currentDate = new Date()
@@ -69,10 +61,7 @@ const FormSchema = z
       const expiryYear = parseInt(data.expiryYear)
       const expiryMonth = parseInt(data.expiryMonth)
 
-      return (
-        expiryYear > currentYear ||
-        (expiryYear === currentYear && expiryMonth >= currentMonth)
-      )
+      return expiryYear > currentYear || (expiryYear === currentYear && expiryMonth >= currentMonth)
     },
     {
       message: 'Card has expired',
@@ -131,12 +120,8 @@ export function CreditCardForm() {
     toast.success(
       <div className="space-y-2">
         <p className="font-semibold">Payment Information Submitted</p>
-        <p className="text-sm text-muted-foreground">
-          Card ending in {maskedNumber.slice(-4)}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Cardholder: {data.cardholderName}
-        </p>
+        <p className="text-sm text-muted-foreground">Card ending in {maskedNumber.slice(-4)}</p>
+        <p className="text-sm text-muted-foreground">Cardholder: {data.cardholderName}</p>
         <p className="text-sm text-muted-foreground">
           Expires: {data.expiryMonth}/{data.expiryYear.slice(-2)}
         </p>
@@ -170,10 +155,7 @@ export function CreditCardForm() {
                     className="w-full"
                   />
                 </FormControl>
-                <FormDescription>
-                  All fields are required. Your information is secure and
-                  encrypted.
-                </FormDescription>
+                <FormDescription>All fields are required. Your information is secure and encrypted.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -181,37 +163,15 @@ export function CreditCardForm() {
 
           {/* Hidden fields to capture validation errors */}
           <div className="hidden">
-            <FormField
-              control={form.control}
-              name="cardNumber"
-              render={() => <FormMessage />}
-            />
-            <FormField
-              control={form.control}
-              name="expiryMonth"
-              render={() => <FormMessage />}
-            />
-            <FormField
-              control={form.control}
-              name="expiryYear"
-              render={() => <FormMessage />}
-            />
-            <FormField
-              control={form.control}
-              name="cvv"
-              render={() => <FormMessage />}
-            />
+            <FormField control={form.control} name="cardNumber" render={() => <FormMessage />} />
+            <FormField control={form.control} name="expiryMonth" render={() => <FormMessage />} />
+            <FormField control={form.control} name="expiryYear" render={() => <FormMessage />} />
+            <FormField control={form.control} name="cvv" render={() => <FormMessage />} />
           </div>
 
           <div className="space-y-4">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={!form.formState.isValid || !isCardValid}
-            >
-              {form.formState.isSubmitting
-                ? 'Processing...'
-                : 'Process Payment'}
+            <Button type="submit" className="w-full" disabled={!form.formState.isValid || !isCardValid}>
+              {form.formState.isSubmitting ? 'Processing...' : 'Process Payment'}
             </Button>
           </div>
         </form>

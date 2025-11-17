@@ -1,14 +1,14 @@
-import { useNavigate } from "react-router-dom";
-import { Icons } from "@/components/icons";
-import { Button } from "@/components/ui/button";
-import ProductListingPage from "@/features/products/components/product-listing";
+import { useNavigate } from 'react-router-dom'
+import { Icons } from '@/components/icons'
+import { Button } from '@/components/ui/button'
+import ProductListingPage from '@/features/products/components/product-listing'
 
 export default function ProductsPage() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const handleCreateProduct = () => {
-    navigate("/dashboard/products/new");
-  };
+    navigate('/dashboard/products/new')
+  }
 
   return (
     <div className="container p-4">
@@ -21,5 +21,5 @@ export default function ProductsPage() {
       </div>
       <ProductListingPage />
     </div>
-  );
+  )
 }

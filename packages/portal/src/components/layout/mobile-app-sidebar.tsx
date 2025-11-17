@@ -72,7 +72,7 @@ export default function MobileAppSidebar() {
   const pathname = location.pathname
   const { isOpen } = useMediaQuery()
   const navigate = useNavigate()
-  
+
   // Tab state management - default to 'filter' and persist in localStorage
   const [activeTab, setActiveTab] = React.useState<'filter' | 'menu'>(() => {
     const stored = localStorage.getItem('mobile-sidebar-tab')
@@ -96,7 +96,7 @@ export default function MobileAppSidebar() {
   }, [isOpen])
 
   const { user } = useAuth()
-  
+
   // Safely get filter fields from context
   let filterFields: any[] = []
   try {
@@ -106,7 +106,7 @@ export default function MobileAppSidebar() {
     // Not in DataTable context
   }
 
-  const isMobile = useMediaQuery("(max-width: 768px)")
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   if (isMobile) {
     // On mobile, return the tabs directly (not wrapped in Sidebar since that creates its own Sheet)
@@ -115,7 +115,7 @@ export default function MobileAppSidebar() {
         <div className="p-4 border-b">
           <OrgSwitcher tenants={tenants} defaultTenant={activeTenant} onTenantSwitch={handleSwitchTenant} />
         </div>
-        
+
         {/* Tabs for Filter and Menu */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col flex-1">
           <TabsList className="grid w-full grid-cols-2 rounded-none border-b">
@@ -156,7 +156,7 @@ export default function MobileAppSidebar() {
                         <CollapsibleContent>
                           <div className="ml-6 space-y-1 pt-2">
                             {item.items?.map(subItem => (
-                              <Link 
+                              <Link
                                 key={subItem.title}
                                 to={subItem.url}
                                 className="block p-2 text-sm hover:bg-accent rounded-md"
@@ -168,7 +168,7 @@ export default function MobileAppSidebar() {
                         </CollapsibleContent>
                       </Collapsible>
                     ) : (
-                      <Link 
+                      <Link
                         key={item.title}
                         to={item.url}
                         className="flex items-center gap-2 p-2 hover:bg-accent rounded-md"

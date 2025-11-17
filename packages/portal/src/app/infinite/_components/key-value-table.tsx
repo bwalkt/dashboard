@@ -1,14 +1,9 @@
-import { Check, Copy } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from "@/components/custom/table";
-import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
+import { Check, Copy } from 'lucide-react'
+import { Table, TableBody, TableCell, TableRow } from '@/components/custom/table'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 
 interface KeyValueTableProps {
-  data: Record<string, string>;
+  data: Record<string, string>
 }
 export function KeyValueTable({ data }: KeyValueTableProps) {
   return (
@@ -17,47 +12,41 @@ export function KeyValueTable({ data }: KeyValueTableProps) {
         <Table>
           <TableBody>
             {Object.entries(data).map(([key, value]) => {
-              return <RowAction key={key} label={key} value={value} />;
+              return <RowAction key={key} label={key} value={value} />
             })}
           </TableBody>
         </Table>
       </div>
     </div>
-  );
+  )
 }
 
 function RowAction({ label, value }: { label: string; value: string }) {
-  const { copy, isCopied } = useCopyToClipboard();
+  const { copy, isCopied } = useCopyToClipboard()
 
   return (
     <TableRow
       role="button"
       tabIndex={0}
       className="group *:border-border hover:bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&>:not(:last-child)]:border-r text-left"
-      onClick={(event) => {
-        event.stopPropagation();
-        copy(value);
+      onClick={event => {
+        event.stopPropagation()
+        copy(value)
       }}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          copy(value);
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          copy(value)
         }
       }}
     >
-      <TableCell className="bg-muted/50 py-1 font-medium font-mono">
-        {label}
-      </TableCell>
+      <TableCell className="bg-muted/50 py-1 font-medium font-mono">{label}</TableCell>
       <TableCell className="relative py-1 font-mono">
         {value}
         <div className="absolute top-1.5 right-1.5 invisible group-hover:visible group-focus-visible:visible backdrop-blur-sm bg-background p-0.5 rounded-sm border border-border">
-          {!isCopied ? (
-            <Copy className="h-3 w-3" />
-          ) : (
-            <Check className="h-3 w-3" />
-          )}
+          {!isCopied ? <Copy className="h-3 w-3" /> : <Check className="h-3 w-3" />}
         </div>
       </TableCell>
     </TableRow>
-  );
+  )
 }

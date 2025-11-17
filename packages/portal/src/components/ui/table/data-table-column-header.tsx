@@ -1,4 +1,3 @@
-
 import { CaretSortIcon, ChevronDownIcon, ChevronUpIcon, Cross2Icon } from '@radix-ui/react-icons'
 import type { Column } from '@tanstack/react-table'
 import { EyeOff } from 'lucide-react'

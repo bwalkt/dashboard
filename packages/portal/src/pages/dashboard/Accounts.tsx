@@ -13,11 +13,7 @@ export default function AccountsPage() {
   }
 
   return (
-    <Main 
-      title="Accounts" 
-      description="Manage user accounts and permissions"
-      onFilterToggle={handleFilterToggle}
-    >
+    <Main title="Accounts" description="Manage user accounts and permissions" onFilterToggle={handleFilterToggle}>
       <div className="p-6">
         <p>Accounts page content goes here</p>
       </div>

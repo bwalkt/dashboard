@@ -74,4 +74,3 @@ export type AuthResponse = z.infer<typeof AuthResponseSchema>
 export type UserResponse = z.infer<typeof UserResponseSchema>
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>
 export type AuthenticatedRequest = z.infer<typeof AuthenticatedRequestSchema>
-

@@ -1,40 +1,40 @@
-"use client";
+'use client'
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormCheckbox } from "./form-checkbox";
-import { type CheckboxGroupOption, FormCheckboxGroup } from "./form-checkbox-group";
-import { FormDatePicker } from "./form-date-picker";
-import { type FileUploadConfig, FormFileUpload } from "./form-file-upload";
-import { FormInput } from "./form-input";
-import { FormRadioGroup, type RadioGroupOption } from "./form-radio-group";
-import { type FormOption, FormSelect } from "./form-select";
-import { FormSlider } from "./form-slider";
-import { FormSwitch } from "./form-switch";
-import { FormTextarea } from "./form-textarea";
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { FormCheckbox } from './form-checkbox'
+import { type CheckboxGroupOption, FormCheckboxGroup } from './form-checkbox-group'
+import { FormDatePicker } from './form-date-picker'
+import { type FileUploadConfig, FormFileUpload } from './form-file-upload'
+import { FormInput } from './form-input'
+import { FormRadioGroup, type RadioGroupOption } from './form-radio-group'
+import { type FormOption, FormSelect } from './form-select'
+import { FormSlider } from './form-slider'
+import { FormSwitch } from './form-switch'
+import { FormTextarea } from './form-textarea'
 
 // Demo form schema
 const demoFormSchema = z.object({
   // Basic inputs
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.email("Invalid email address"),
-  age: z.number().min(18, "Must be at least 18 years old"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.email('Invalid email address'),
+  age: z.number().min(18, 'Must be at least 18 years old'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
 
   // Textarea
-  bio: z.string().min(10, "Bio must be at least 10 characters"),
+  bio: z.string().min(10, 'Bio must be at least 10 characters'),
 
   // Select
-  country: z.string().min(1, "Please select a country"),
+  country: z.string().min(1, 'Please select a country'),
 
   // Checkbox group
-  interests: z.array(z.string()).min(1, "Select at least one interest"),
+  interests: z.array(z.string()).min(1, 'Select at least one interest'),
 
   // Radio group
-  gender: z.string().min(1, "Please select gender"),
+  gender: z.string().min(1, 'Please select gender'),
 
   // Switch
   newsletter: z.boolean(),
@@ -46,89 +46,111 @@ const demoFormSchema = z.object({
   birthDate: z.date().optional(),
 
   // Single checkbox
-  terms: z.boolean().refine((val) => val === true, "You must accept the terms"),
+  terms: z.boolean().refine(val => val === true, 'You must accept the terms'),
 
   // File upload
   avatar: z.array(z.any()).optional(),
-});
+})
 
-type DemoFormData = z.infer<typeof demoFormSchema>;
+type DemoFormData = z.infer<typeof demoFormSchema>
 
 // Demo options
 const countryOptions: FormOption[] = [
-  { value: "us", label: "United States" },
-  { value: "ca", label: "Canada" },
-  { value: "uk", label: "United Kingdom" },
-  { value: "au", label: "Australia" },
-  { value: "de", label: "Germany" },
-  { value: "fr", label: "France" },
-];
+  { value: 'us', label: 'United States' },
+  { value: 'ca', label: 'Canada' },
+  { value: 'uk', label: 'United Kingdom' },
+  { value: 'au', label: 'Australia' },
+  { value: 'de', label: 'Germany' },
+  { value: 'fr', label: 'France' },
+]
 
 const interestOptions: CheckboxGroupOption[] = [
-  { value: "technology", label: "Technology" },
-  { value: "sports", label: "Sports" },
-  { value: "music", label: "Music" },
-  { value: "travel", label: "Travel" },
-  { value: "cooking", label: "Cooking" },
-  { value: "reading", label: "Reading" },
-];
+  { value: 'technology', label: 'Technology' },
+  { value: 'sports', label: 'Sports' },
+  { value: 'music', label: 'Music' },
+  { value: 'travel', label: 'Travel' },
+  { value: 'cooking', label: 'Cooking' },
+  { value: 'reading', label: 'Reading' },
+]
 
 const genderOptions: RadioGroupOption[] = [
-  { value: "male", label: "Male" },
-  { value: "female", label: "Female" },
-  { value: "other", label: "Other" },
-  { value: "prefer-not-to-say", label: "Prefer not to say" },
-];
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'other', label: 'Other' },
+  { value: 'prefer-not-to-say', label: 'Prefer not to say' },
+]
 
 const fileUploadConfig: FileUploadConfig = {
   maxSize: 5000000, // 5MB
-  acceptedTypes: ["image/jpeg", "image/png", "image/webp"],
+  acceptedTypes: ['image/jpeg', 'image/png', 'image/webp'],
   multiple: false,
   maxFiles: 1,
-};
+}
 
 export default function DemoForm() {
   const form = useForm<DemoFormData>({
     resolver: zodResolver(demoFormSchema),
     defaultValues: {
-      name: "",
-      email: "",
+      name: '',
+      email: '',
       age: 18,
-      password: "",
-      bio: "",
-      country: "",
+      password: '',
+      bio: '',
+      country: '',
       interests: [],
-      gender: "",
+      gender: '',
       newsletter: false,
       rating: 5,
       birthDate: undefined,
       terms: false,
       avatar: [],
     },
-  });
+  })
 
   const onSubmit = (data: DemoFormData) => {
-    alert("Form submitted successfully! Check console for data.");
-  };
+    alert('Form submitted successfully! Check console for data.')
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl font-bold">Reusable Form Components Demo</CardTitle>
-          <p className="text-muted-foreground">See how these components reduce boilerplate from 15+ lines to just 5-8 lines per field</p>
+          <p className="text-muted-foreground">
+            See how these components reduce boilerplate from 15+ lines to just 5-8 lines per field
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Inputs */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormInput control={form.control} name="name" label="Full Name" placeholder="Enter your full name" required />
+              <FormInput
+                control={form.control}
+                name="name"
+                label="Full Name"
+                placeholder="Enter your full name"
+                required
+              />
 
-              <FormInput control={form.control} name="email" type="email" label="Email Address" placeholder="Enter your email" required />
+              <FormInput
+                control={form.control}
+                name="email"
+                type="email"
+                label="Email Address"
+                placeholder="Enter your email"
+                required
+              />
 
               <FormInput control={form.control} name="age" type="number" label="Age" min={18} max={100} required />
 
-              <FormInput control={form.control} name="password" type="password" label="Password" placeholder="Enter your password" required />
+              <FormInput
+                control={form.control}
+                name="password"
+                type="password"
+                label="Password"
+                placeholder="Enter your password"
+                required
+              />
             </div>
 
             {/* Textarea */}
@@ -147,7 +169,14 @@ export default function DemoForm() {
             />
 
             {/* Select */}
-            <FormSelect control={form.control} name="country" label="Country" placeholder="Select your country" options={countryOptions} required />
+            <FormSelect
+              control={form.control}
+              name="country"
+              label="Country"
+              placeholder="Select your country"
+              options={countryOptions}
+              required
+            />
 
             {/* Checkbox Group */}
             <FormCheckboxGroup
@@ -162,7 +191,14 @@ export default function DemoForm() {
             />
 
             {/* Radio Group */}
-            <FormRadioGroup control={form.control} name="gender" label="Gender" options={genderOptions} orientation="horizontal" required />
+            <FormRadioGroup
+              control={form.control}
+              name="gender"
+              label="Gender"
+              options={genderOptions}
+              orientation="horizontal"
+              required
+            />
 
             {/* Switch */}
             <FormSwitch
@@ -182,7 +218,7 @@ export default function DemoForm() {
                 min: 0,
                 max: 10,
                 step: 0.5,
-                formatValue: (value) => `${value}/10`,
+                formatValue: value => `${value}/10`,
               }}
               showValue={true}
             />
@@ -195,7 +231,7 @@ export default function DemoForm() {
               description="Your date of birth (optional)"
               config={{
                 maxDate: new Date(),
-                placeholder: "Select your birth date",
+                placeholder: 'Select your birth date',
               }}
             />
 
@@ -240,5 +276,5 @@ export default function DemoForm() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
