@@ -1,12 +1,12 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
 import { createHash } from 'crypto';
-import { getAllowedPaths } from './route-registry';
+import { isPublicPath } from './route-registry';
+import { redis } from '../config/redis';
+import { JWTService } from '../services/jwt.service';
+import { config } from '../config/env';
 
-// Rate limiting storage (in production, use Redis)
-const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
-const tokenCache = new Map<string, { valid: boolean; expires: number }>();
-const allowedPaths = getAllowedPaths();
+// Route registry now uses declarative approach - no need to cache paths
 
 interface HeaderValidationOptions {
   enableRateLimit?: boolean;
@@ -51,32 +51,50 @@ const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = asyn
            'unknown';
   }
 
-  function checkRateLimit(clientIP: string): boolean {
+  async function checkRateLimit(clientIP: string): Promise<boolean> {
     const now = Date.now();
     const windowSize = 60000; // 1 minute
     const maxRequests = options.maxRequestsPerMinute!;
+    const redisKey = `rate_limit:${clientIP}`;
 
-    const existing = rateLimitMap.get(clientIP);
-    
-    if (!existing || now - existing.windowStart > windowSize) {
-      rateLimitMap.set(clientIP, { count: 1, windowStart: now });
+    try {
+      const existingData = await redis.get(redisKey);
+      const existing = existingData ? JSON.parse(existingData) : null;
+      
+      if (!existing || now - existing.windowStart > windowSize) {
+        const newData = { count: 1, windowStart: now };
+        await redis.set(redisKey, JSON.stringify(newData), Math.ceil(windowSize / 1000));
+        return true;
+      }
+
+      if (existing.count >= maxRequests) {
+        return false;
+      }
+
+      existing.count++;
+      await redis.set(redisKey, JSON.stringify(existing), Math.ceil((existing.windowStart + windowSize - now) / 1000));
       return true;
+    } catch (error) {
+      console.warn('Redis rate limit check failed, allowing request:', error);
+      return true; // Fail open for availability
     }
-
-    if (existing.count >= maxRequests) {
-      return false;
-    }
-
-    existing.count++;
-    return true;
   }
 
   async function validateCustomToken(token: string): Promise<boolean> {
     // Check cache first
     if (options.enableTokenCache) {
-      const cached = tokenCache.get(token);
-      if (cached && cached.expires > Date.now()) {
-        return cached.valid;
+      try {
+        const redisKey = `token_cache:${createHash('sha256').update(token).digest('hex').substring(0, 16)}`;
+        const cachedData = await redis.get(redisKey);
+        
+        if (cachedData) {
+          const cached = JSON.parse(cachedData);
+          if (cached.expires > Date.now()) {
+            return cached.valid;
+          }
+        }
+      } catch (error) {
+        console.warn('Redis token cache check failed:', error);
       }
     }
 
@@ -85,19 +103,40 @@ const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = asyn
 
     // Cache result
     if (options.enableTokenCache) {
-      tokenCache.set(token, {
-        valid: isValid,
-        expires: Date.now() + options.tokenCacheTTL!
-      });
+      try {
+        const redisKey = `token_cache:${createHash('sha256').update(token).digest('hex').substring(0, 16)}`;
+        const cacheData = {
+          valid: isValid,
+          expires: Date.now() + options.tokenCacheTTL!
+        };
+        await redis.set(redisKey, JSON.stringify(cacheData), Math.ceil(options.tokenCacheTTL! / 1000));
+      } catch (error) {
+        console.warn('Redis token cache set failed:', error);
+      }
     }
 
     return isValid;
   }
 
   function performTokenValidation(token: string): boolean {
-    if (token === 'secret-value-123') return true;
-    if (token.startsWith('valid-') && token.length > 10) return true;
-    return false;
+    try {
+      const jwtService = new JWTService();
+      
+      // Verify JWT token using the JWT_SECRET from environment
+      const decoded = jwtService.verifyHMACToken(token, config.JWT_SECRET);
+      
+      // Check if token is not expired
+      const now = Math.floor(Date.now() / 1000);
+      if (decoded.exp && decoded.exp < now) {
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      // Invalid JWT token
+      console.debug('Custom auth token validation failed:', error);
+      return false;
+    }
   }
 
   function generateFingerprint(request: FastifyRequest): string {
@@ -114,13 +153,54 @@ const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = asyn
     return createHash('sha256').update(combined).digest('hex').substring(0, 16);
   }
 
-  function isAllowedPath(path: string): boolean {
-    return allowedPaths.some(allowed => path.startsWith(allowed));
-  }
+  // isPublicPath is now imported from route-registry - no need for local function
 
   function hasValidJWTCookie(request: FastifyRequest): boolean {
-    const cookies = request.headers.cookie || '';
-    return cookies.includes('accessToken=') || cookies.includes('refreshToken=');
+    try {
+      const cookieHeader = request.headers.cookie || '';
+      
+      // Parse cookies manually or use a cookie parser
+      const cookies: { [key: string]: string } = {};
+      cookieHeader.split(';').forEach(cookie => {
+        const [name, value] = cookie.trim().split('=');
+        if (name && value) {
+          cookies[name] = decodeURIComponent(value);
+        }
+      });
+      
+      const jwtService = new JWTService();
+      
+      // Check accessToken first
+      if (cookies.accessToken) {
+        try {
+          const decoded = jwtService.verifyHMACToken(cookies.accessToken, config.JWT_SECRET);
+          const now = Math.floor(Date.now() / 1000);
+          if (!decoded.exp || decoded.exp > now) {
+            return true;
+          }
+        } catch (error) {
+          console.debug('Access token validation failed:', error);
+        }
+      }
+      
+      // Fallback to refreshToken if accessToken is invalid/missing
+      if (cookies.refreshToken) {
+        try {
+          const decoded = jwtService.verifyHMACToken(cookies.refreshToken, config.JWT_SECRET);
+          const now = Math.floor(Date.now() / 1000);
+          if (!decoded.exp || decoded.exp > now) {
+            return true;
+          }
+        } catch (error) {
+          console.debug('Refresh token validation failed:', error);
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.debug('Cookie parsing failed:', error);
+      return false;
+    }
   }
 
   function isSuspiciousBot(request: FastifyRequest): boolean {
@@ -145,7 +225,7 @@ const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = asyn
     }
 
     // Rate limiting
-    if (options.enableRateLimit && !checkRateLimit(clientIP)) {
+    if (options.enableRateLimit && !(await checkRateLimit(clientIP))) {
       return reply.status(429).send({ 
         error: 'Rate limit exceeded',
         retryAfter: 60 
@@ -179,8 +259,8 @@ const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = asyn
       }
     }
 
-    // Check for allowed paths (no auth required)
-    if (isAllowedPath(request.url)) {
+    // Check for public paths (no auth required)
+    if (isPublicPath(request.url)) {
       return; // Continue to handler
     }
 
@@ -207,35 +287,14 @@ const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = asyn
     });
   });
 
-  // Cleanup function
-  const cleanup = () => {
-    const now = Date.now();
-    
-    // Clean expired tokens
-    for (const [token, data] of tokenCache.entries()) {
-      if (data.expires < now) {
-        tokenCache.delete(token);
-      }
-    }
-
-    // Clean old rate limit windows
-    for (const [ip, data] of rateLimitMap.entries()) {
-      if (now - data.windowStart > 120000) { // 2 minutes old
-        rateLimitMap.delete(ip);
-      }
-    }
-  };
-
-  // Setup cleanup interval
-  const cleanupInterval = setInterval(cleanup, 60000); // Every minute
-
+  // Redis handles TTL automatically, so no cleanup needed
   // Clean up on close
   fastify.addHook('onClose', async () => {
-    clearInterval(cleanupInterval);
+    // Redis cleanup is handled by TTL
   });
 };
 
 export default fp(headerValidationPlugin, {
-  fastify: '4.x',
+  fastify: '>=4.0.0 <6.0.0',
   name: 'header-validation'
 });

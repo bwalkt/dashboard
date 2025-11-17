@@ -527,9 +527,10 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         // Generate verification code
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Store verification code in Redis with 10 minute expiration
+        // Store verification code in Redis
+        const expirySeconds = config.EMAIL_EXPIRY_MINUTES * 60;
         const redisKey = `email_login:${email}`;
-        await redis.set(redisKey, verificationCode, 600);
+        await redis.set(redisKey, verificationCode, expirySeconds);
 
         // Send verification email
         await emailService.sendConfirmationCodeEmail({
@@ -541,7 +542,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.send({
           message: "Verification code sent to email",
           email,
-          expiresIn: 600, // seconds
+          expiresIn: expirySeconds,
         });
       } catch (error) {
         console.error("Login error:", error);

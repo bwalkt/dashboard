@@ -85,6 +85,10 @@ class RedisManager {
     const result = await this.client.exists(key);
     return result === 1;
   }
+
+  public async ttl(key: string): Promise<number> {
+    return this.client.ttl(key);
+  }
 }
 
 // Export singleton instance

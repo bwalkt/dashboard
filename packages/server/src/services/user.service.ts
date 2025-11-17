@@ -6,25 +6,32 @@ export class UserService {
    * Get user by GitHub ID
    */
   public async getUserByGithubId(githubId: string): Promise<User | null> {
-    return db.getUserByGithubId(githubId);
+    const result = await db.pool.query(
+      "SELECT * FROM users WHERE github_id = $1",
+      [githubId],
+    );
+    return result.rows[0] || null;
   }
 
   /**
    * Get user by internal ID
    */
-  public async getUserById(id: string, schema: string = 'pzero'): Promise<User | null> {
-    
-    const result = await db.pool.query(`SELECT * FROM ${schema}.auth WHERE id = $1`, [
-      id,
-    ]);
-    return result?.rows[0] || null;
+  public async getUserById(
+    id: number,
+    schema: string = "pzero",
+  ): Promise<User | null> {
+    const result = await db.pool.query(
+      `SELECT * FROM ${schema}.auth WHERE id = $1`,
+      [id],
+    );
+    return result.rows[0] || null;
   }
 
   /**
    * Get user by email
    */
-  public async getUserByEmail(email: string): Promise<User | null> {
-    const result = await db.pool.query(`SELECT * from public.users where email=$1`, [email])
+  public async getUserByEmail(email: string, schema: string = 'pzero'): Promise<User | null> {
+    const result = await db.pool.query(`SELECT * FROM ${schema}.auth WHERE email = $1`, [email]);
     return result.rows[0] || null;
   }
 
@@ -42,18 +49,66 @@ export class UserService {
     const createData: CreateUserData = {
       name: userData.name,
       email: userData.email,
-      github_id: "",
-      avatar: ""
+      github_id: null,
+      avatar: null,
+      email_verified: userData.email_verified ?? false
     };
 
-    return db.createUser(createData);
+    return this.createUser(createData);
   }
 
   /**
    * Create a new user
    */
-  public async createUser(userData: CreateUserData): Promise<User> {
-    return db.createUser(userData);
+  public async createUser(userData: CreateUserData, schema: string = 'pzero'): Promise<User> {
+    const result = await db.pool.query(
+      `INSERT INTO ${schema}.auth (github_id, name, email, avatar, email_verified)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [
+        userData.github_id,
+        userData.name,
+        userData.email,
+        userData.avatar,
+        userData.email_verified ?? false
+      ],
+    );
+
+    return result.rows[0];
+  }
+
+  /**
+   * Upsert user (insert or update on conflict)
+   */
+  public async upsertUser(userData: CreateUserData): Promise<User> {
+    const result = await db.pool.query(
+      `INSERT INTO users (github_id, name, email, avatar)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (github_id)
+       DO UPDATE SET
+         name = EXCLUDED.name,
+         email = EXCLUDED.email,
+         avatar = EXCLUDED.avatar,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [userData.github_id, userData.name, userData.email, userData.avatar],
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * Upsert user from GitHub data
+   */
+  public async upsertUserFromGitHub(githubUser: GitHubUser): Promise<User> {
+    const userData: CreateUserData = {
+      github_id: githubUser.id,
+      name: githubUser.name,
+      email: githubUser.email,
+      avatar: githubUser.avatar_url,
+      email_verified: false
+    };
+    
+    return this.upsertUser(userData);
   }
 
   /**
@@ -80,12 +135,18 @@ export class UserService {
       fields.push(`avatar = $${paramCount++}`);
       values.push(userData.avatar);
     }
+
+    if (fields.length === 0) {
+      // Nothing to update
+      return null;
+    }
+
     values.push(id);
 
     const result = await db.pool.query(
-      `UPDATE ${schema}.users
+      `UPDATE ${schema}.auth
        SET ${fields.join(", ")}
-       WHERE id = $${id}
+       WHERE id = $${paramCount}
        RETURNING *`,
       values,
     );

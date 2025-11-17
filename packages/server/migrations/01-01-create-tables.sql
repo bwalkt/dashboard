@@ -412,8 +412,8 @@ CREATE TABLE PZERO.DOMAIN_BASE (
   whitelisted_emails pzero.email[[],
   blacklisted_emails pzer.email[],
   status pzero.org_status,
-  handle pzero.valid_org_handle NOT NULL
-  add_policy smallint NOT NULL DEFAULT 0, 0-- explicite, 1 -- disacoverable, 2 -- shareable 3 -- discoverable and shareable
+  handle pzero.valid_org_handle NOT NULL,
+  add_policy smallint NOT NULL DEFAULT 0, -- 0 explicit, 1 -- discoverable, 2 -- shareable 3 -- discoverable and shareable
 );
 CREATE TABLE pzero.all_groups (
   LIKE pzero.id_base_loc_table including defaults including constraints,
@@ -422,10 +422,11 @@ CREATE TABLE pzero.all_groups (
 )
 PARTITION BY
   list (is_act);
+
 CREATE TABLE pzero.ENDPOINT_BASE (
   headers pzero.key_values,
   variables pzero.key_values
-)
+);
 -- Indexes will be created automatically by event trigger
 CREATE TABLE pzero.all_orgs (
   LIKE pzero.id_base_loc_table including defaults including constraints,

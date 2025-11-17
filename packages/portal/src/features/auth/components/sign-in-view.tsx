@@ -19,7 +19,7 @@ import GithubSignInButton from './github-auth-button'
  */
 export default function SignInViewPage(_props: {}) {
   const navigate = useNavigate()
-  const { user, loading } = useAuth()
+  const { user, loading, signIn } = useAuth()
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -30,11 +30,9 @@ export default function SignInViewPage(_props: {}) {
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault()
-    useAuth().signIn({
+    signIn({
       email: (e.target as any).email.value,
     })
-    // For demo purposes, we'll just show a message since we're focusing on GitHub OAuth
-    toast.info('Please use GitHub OAuth to sign in')
   }
 
   return (

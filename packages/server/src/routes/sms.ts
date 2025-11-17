@@ -1,7 +1,12 @@
 import type { ErrorResponse } from "@pzero/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { redis } from "../config/redis";
-import { smsService } from "../services/sms.service";
+import { 
+  validatePhoneNumber, 
+  checkSmsRateLimit, 
+  sendSmsVerification, 
+  resendSmsVerification 
+} from "../utils/sms-validation";
 
 export async function smsRoutes(fastify: FastifyInstance): Promise<void> {
   /**
@@ -15,45 +20,18 @@ export async function smsRoutes(fastify: FastifyInstance): Promise<void> {
         const { phone } = request.body as { phone: string };
 
         // Validate phone number format
-        if (!phone || !smsService.validatePhoneFormat(phone)) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message:
-              "Invalid phone number format. Please use E.164 format (e.g., +12345678900)",
-          } as ErrorResponse);
+        if (!(await validatePhoneNumber(phone, reply))) {
+          return;
         }
 
-        // Check rate limiting - allow resend only once every 60 seconds
-        const rateLimitKey = `sms_verification_rate:${phone}`;
-        const isRateLimited = await redis.exists(rateLimitKey);
-
-        if (isRateLimited) {
-          return reply.status(429).send({
-            error: "Too Many Requests",
-            message: "Please wait before requesting another verification code",
-          } as ErrorResponse);
+        // Check rate limiting
+        if (!(await checkSmsRateLimit(phone, reply))) {
+          return;
         }
 
-        // Set rate limit (60 seconds)
-        await redis.set(rateLimitKey, "1", 60);
-
-        // Generate verification code
-        const verificationCode = smsService.generateVerificationCode();
-
-        // Store verification code in Redis with 10 minute expiration
-        const redisKey = `phone_verification:${phone}`;
-        await redis.set(redisKey, verificationCode, 600);
-
-        // Send SMS with verification code
-        await smsService.sendVerificationCode({
-          to: phone,
-          code: verificationCode,
-        });
-
-        return reply.send({
-          message: "Verification code sent successfully",
-          expiresIn: 600, // seconds
-        });
+        // Send SMS verification
+        const result = await sendSmsVerification(phone);
+        return reply.send(result);
       } catch (error) {
         console.error("Phone verification error:", error);
         return reply.status(500).send({
@@ -130,46 +108,18 @@ export async function smsRoutes(fastify: FastifyInstance): Promise<void> {
         const { phone } = request.body as { phone: string };
 
         // Validate phone number format
-        if (!phone || !smsService.validatePhoneFormat(phone)) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message:
-              "Invalid phone number format. Please use E.164 format (e.g., +12345678900)",
-          } as ErrorResponse);
+        if (!(await validatePhoneNumber(phone, reply))) {
+          return;
         }
 
-        // Check rate limiting - allow resend only once every 60 seconds
-        const rateLimitKey = `sms_verification_rate:${phone}`;
-        const isRateLimited = await redis.exists(rateLimitKey);
-
-        if (isRateLimited) {
-          const ttl = await redis.ttl(rateLimitKey);
-          return reply.status(429).send({
-            error: "Too Many Requests",
-            message: `Please wait ${ttl} seconds before requesting another verification code`,
-          } as ErrorResponse);
+        // Check rate limiting with TTL information
+        if (!(await checkSmsRateLimit(phone, reply, true))) {
+          return;
         }
 
-        // Set rate limit (60 seconds)
-        await redis.set(rateLimitKey, "1", 60);
-
-        // Generate new verification code
-        const verificationCode = smsService.generateVerificationCode();
-
-        // Store verification code in Redis with 10 minute expiration
-        const redisKey = `phone_verification:${phone}`;
-        await redis.set(redisKey, verificationCode, 600);
-
-        // Send SMS with verification code
-        await smsService.sendVerificationCode({
-          to: phone,
-          code: verificationCode,
-        });
-
-        return reply.send({
-          message: "Verification code resent successfully",
-          expiresIn: 600, // seconds
-        });
+        // Resend SMS verification
+        const result = await resendSmsVerification(phone);
+        return reply.send(result);
       } catch (error) {
         console.error("Phone verification resend error:", error);
         return reply.status(500).send({

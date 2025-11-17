@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-import type { EnvironmentConfig } from "../types/index";
 
 // Load environment variables from .env file only when running locally (not in Docker)
 // In Docker, environment variables are provided at runtime via docker-compose
@@ -42,44 +41,42 @@ export interface EnvironmentConfig {
   SERVER_BASE_URL?: string;
   DOMAIN?: string;
   POSTGRES_MAX_CLIENTS?: number;
-  CORS_ALLOW_ORIGINS?: string | string[];
+  CORS_ALLOWED_ORIGINS: string | string[];
   CORS_ALLOW_CREDENTIALS?: boolean;
-  CORS_EXPOSED_HEADERS?: string | string[];
-  CORS_ALLOWED_HEADERS?: string | string[];
+  CORS_EXPOSED_HEADERS: string[];
+  CORS_ALLOWED_HEADERS: string[];
   EMAIL_EXPIRY_MINUTES: number;
 }
 const DEFAULT_ALLOWED_HEADERS = [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "Accept",
-      "traceparent",
-      "x-client-type",
-      "x-auth-token",
-      "tracestate",
-      "X-Custom-Auth",
-      "x-grpc-web",
-      "x-grpc-web-accept-encoding",
-      "X-Custom-Header"
-  ];
-const DEFAULT_EXPOSED_HEADERS = [
-      "Content-Range",
-      "X-Content-Range"
-  ];  
-function parserOnlyArray(envVar: string | undefined, def?: string): string[]  {
+  "Content-Type",
+  "Authorization",
+  "X-Requested-With",
+  "Accept",
+  "traceparent",
+  "x-client-type",
+  "x-auth-token",
+  "tracestate",
+  "X-Custom-Auth",
+  "x-grpc-web",
+  "x-grpc-web-accept-encoding",
+  "X-Custom-Header",
+];
+
+const DEFAULT_EXPOSED_HEADERS = ["Content-Range", "X-Content-Range"];  
+function parserOnlyArray(
+  envVar: string | undefined,
+  def?: string[],
+): string[] {
   if (!envVar) {
-    if (def) {
-      return [def]
-     } else {
-       return [];
-    }
+    return def ?? [];
   }
-  return  envVar.split(",").map((item) => item.trim());
+  return envVar.split(",").map((item) => item.trim());
 }
-function parserArray(envVar: string | undefined, def?: string): string[] | string | undefined {
-  if (!envVar) return def || undefined;
-  const vars = envVar.split(",").map((item) => item.trim());
-  return vars.length === 1 ? vars[0] : vars;
+function parserArray(envVar: string | undefined, def: string): string | string[] {
+  if (!envVar) return def;
+  const vars = envVar.split(",").map((item) => item.trim()).filter(item => item.length > 0);
+  if (vars.length === 0) return def;
+  return vars.length === 1 ? (vars[0] || def) : vars;
 }
 export const config: EnvironmentConfig = {
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
@@ -107,8 +104,14 @@ export const config: EnvironmentConfig = {
   POSTGRES_MAX_CLIENTS: parseInt(process.env.POSTGRES_MAX_CLIENTS || "20", 10),
   CORS_ALLOWED_ORIGINS: parserArray(process.env.CORS_ALLOWED_ORIGINS, "*"),
   CORS_ALLOW_CREDENTIALS: process.env.CORS_ALLOW_CREDENTIALS === "true",
-  CORS_EXPOSED_HEADERS: parserOnlyArray(process.env.CORS_EXPOSED_HEADERS, DEFAULT_EXPOSED_HEADERS.join(",")),
-  CORS_ALLOWED_HEADERS: parserOnlyArray(process.env.CORS_ALLOWED_HEADERS, DEFAULT_ALLOWED_HEADERS.join(",")),
+  CORS_EXPOSED_HEADERS: parserOnlyArray(
+    process.env.CORS_EXPOSED_HEADERS,
+    DEFAULT_EXPOSED_HEADERS,
+  ),
+  CORS_ALLOWED_HEADERS: parserOnlyArray(
+    process.env.CORS_ALLOWED_HEADERS,
+    DEFAULT_ALLOWED_HEADERS,
+  ),
   EMAIL_EXPIRY_MINUTES: parseInt(process.env.EMAIL_EXPIRY_MINUTES || "100", 10) ,
 };
 

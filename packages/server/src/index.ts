@@ -12,6 +12,7 @@ import { authRoutes } from "./routes/auth";
 import { emailRoutes } from "./routes/email";
 import { proxyRoutes } from "./routes/proxy";
 import { config } from "./config/env";
+import headerValidationPlugin from "./middleware/header-validation";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -54,6 +55,9 @@ export default async function (
   await fastify.register(cookie, {
     secret: process.env.JWT_SECRET || "default-cookie-secret",
   });
+
+  // Register header validation plugin
+  await fastify.register(headerValidationPlugin);
 
   // Register static file serving for assets (logo, etc.)
   const sharedAssetsPath = join(__dirname, "../../shared/src/assets");
