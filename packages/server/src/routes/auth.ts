@@ -24,16 +24,16 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     redirectStateCookieName: "oauth_state",
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: config.NODE_ENV === "production",
       sameSite: "lax",
-      ...(process.env.DOMAIN && { domain: process.env.DOMAIN }),
+      ...(config.DOMAIN && { domain: config.DOMAIN }),
       path: "/",
       maxAge: 3600, // 1 hour
     },
     credentials: {
       client: {
-        id: process.env.GITHUB_CLIENT_ID!,
-        secret: process.env.GITHUB_CLIENT_SECRET!,
+        id: config.GITHUB_CLIENT_ID!,
+        secret: config.GITHUB_CLIENT_SECRET!,
       },
 
       auth: {
@@ -45,11 +45,11 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     },
     callbackUri: (() => {
       // Extract base URL from OAUTH_REDIRECT_URL (e.g., http://localhost:1430/auth/sign-in -> http://localhost:1430)
-      if (process.env.FRONTEND_URL) {
-        const url = new URL(process.env.FRONTEND_URL);
+      if (config.FRONTEND_URL) {
+        const url = new URL(config.FRONTEND_URL);
         return `${url.protocol}//${url.host}/auth/callback`;
       }
-      return `${process.env.SERVER_BASE_URL}/auth/callback`;
+      return `${config.SERVER_BASE_URL}/auth/callback`;
     })(),
     scope: ["user:email"],
   });
@@ -72,7 +72,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         // Debug: Log the state being set
         reply.setCookie("oauth_state", state, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: config.NODE_ENV === "production",
           sameSite: "lax",
           maxAge: 600, // 10 minutes
           path: "/",
@@ -179,24 +179,24 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         const oAuthRedirectUrl =
           config.OAUTH_REDIRECT_URL || "http://localhost:1430/auth/sign-in";
 
-        if (process.env.NODE_ENV !== "production") {
+        if (config.NODE_ENV !== "production") {
           console.log(
             "Setting cookies - accessToken:",
             accessToken?.substring(0, 20) + "...",
           );
-          console.log("Setting cookies - domain:", process.env.NODE_ENV);
+          console.log("Setting cookies - domain:", config.NODE_ENV);
         }
 
         reply.setCookie("accessToken", accessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: config.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
           maxAge: 3600, // 1 hour
         });
         reply.setCookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: config.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
           maxAge: 3600 * 24 * 30, // 30 days
@@ -286,7 +286,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         // Set JWT tokens as cookies
         reply.setCookie("accessToken", accessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: config.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
           maxAge: 3600, // 1 hour
@@ -294,7 +294,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         reply.setCookie("refreshToken", newRefreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: config.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
           maxAge: 3600 * 24 * 30, // 30 days
@@ -318,11 +318,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    * POST /auth/logout
    * Logout user (invalidate tokens)
    */
-  fastify.post(
+  fastify.get(
     "/auth/logout",
-    {
-      preHandler: authenticateToken,
-    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         // Clear JWT cookies
@@ -362,8 +359,16 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           name?: string;
         };
 
+        // Validate required fields
+        if (!email || !name) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Name and email are required",
+          } as ErrorResponse);
+        }
+
         // Validate email format
-        if (!email || !emailService.validateEmailFormat(email)) {
+        if (!emailService.validateEmailFormat(email)) {
           return reply.status(400).send({
             error: "Bad Request",
             message: "Invalid email address",
@@ -477,7 +482,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         // Set JWT tokens as cookies
         reply.setCookie("accessToken", accessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: config.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
           maxAge: 3600, // 1 hour
@@ -485,7 +490,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         reply.setCookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: config.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
           maxAge: 3600 * 24 * 30, // 30 days
@@ -624,7 +629,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         // Set JWT tokens as cookies
         reply.setCookie("accessToken", accessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: config.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
           maxAge: 3600, // 1 hour
@@ -632,7 +637,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         reply.setCookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: config.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
           maxAge: 3600 * 24 * 30, // 30 days

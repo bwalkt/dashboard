@@ -251,6 +251,14 @@ const headerValidationPlugin: FastifyPluginAsync<
         request.headers["x-server-fingerprint"] = fingerprint;
       }
 
+      // Bot detection (check before auth to catch bots early)
+      if (isSuspiciousBot(request)) {
+        return reply.status(403).send({
+          error: "Suspicious bot detected",
+          reason: "user-agent-pattern",
+        });
+      }
+
       // Rate limiting
       if (options.enableRateLimit && !(await checkRateLimit(clientIP))) {
         return reply.status(429).send({
@@ -297,14 +305,6 @@ const headerValidationPlugin: FastifyPluginAsync<
         reply.header("x-validation-method", "jwt-cookie");
         request.user = { authenticated: true, method: "jwt-cookie" };
         return; // Continue to handler
-      }
-
-      // Bot detection
-      if (isSuspiciousBot(request)) {
-        return reply.status(403).send({
-          error: "Suspicious bot detected",
-          reason: "user-agent-pattern",
-        });
       }
 
       // No valid authentication found

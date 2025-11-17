@@ -1,6 +1,7 @@
 import { lookup } from "dns/promises";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { parse as parseQuery } from "querystring";
+import { config } from "../config/env";
 
 // Security constants
 const MaxResponseSize = 10 * 1024 * 1024; // 10MB
@@ -298,7 +299,7 @@ function isHostnameInAllowedDomains(
   targetHost: string,
   targetPort: string,
 ): boolean {
-  const allowedDomainsStr = process.env.ALLOWED_DOMAINS;
+  const allowedDomainsStr = config.ALLOWED_DOMAINS;
   if (!allowedDomainsStr) {
     return false;
   }
@@ -424,7 +425,7 @@ async function isValidDomain(targetURL: string): Promise<boolean> {
   }
 
   // Get allowed domains from environment variable
-  const allowedDomainsStr = process.env.ALLOWED_DOMAINS;
+  const allowedDomainsStr = config.ALLOWED_DOMAINS;
   if (!allowedDomainsStr) {
     // If no domains are configured, deny all requests for security
     return false;
@@ -799,7 +800,7 @@ async function proxyHandler(
     }
 
     // Get cookie domain override from environment variable
-    const cookieDomainOverride = process.env.COOKIE_DOMAIN;
+    const cookieDomainOverride = config.COOKIE_DOMAIN;
 
     // Copy headers from target server response to proxy response
     // Skip certain headers that should be set by the proxy itself

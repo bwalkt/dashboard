@@ -18,6 +18,7 @@ const domain =
 
 // Environment variables
 export interface EnvironmentConfig {
+  NODE_ENV: string;
   POSTGRES_IDLE_TIMEOUT: number;
   POSTGRES_CONNECTION_TIMEOUT: number;
   GITHUB_CLIENT_ID: string;
@@ -36,16 +37,19 @@ export interface EnvironmentConfig {
   SIGNALWIRE_PROJECT_ID: string;
   SIGNALWIRE_TOKEN: string;
   SIGNALWIRE_PHONE_NUMBER: string;
-  PORT?: number;
+  PORT: number;
   OAUTH_REDIRECT_URL: string;
-  SERVER_BASE_URL?: string;
-  DOMAIN?: string;
+  SERVER_BASE_URL: string;
+  FRONTEND_URL: string | undefined;
+  DOMAIN: string;
   POSTGRES_MAX_CLIENTS?: number;
   CORS_ALLOWED_ORIGINS: string | string[];
   CORS_ALLOW_CREDENTIALS?: boolean;
   CORS_EXPOSED_HEADERS: string[];
   CORS_ALLOWED_HEADERS: string[];
   EMAIL_EXPIRY_MINUTES: number;
+  ALLOWED_DOMAINS: string | undefined;
+  COOKIE_DOMAIN: string | undefined;
 }
 const DEFAULT_ALLOWED_HEADERS = [
   "Content-Type",
@@ -82,6 +86,7 @@ function parserArray(
   return vars.length === 1 ? vars[0] || def : vars;
 }
 export const config: EnvironmentConfig = {
+  NODE_ENV: process.env.NODE_ENV || "development",
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || "",
   JWT_SECRET:
@@ -99,8 +104,10 @@ export const config: EnvironmentConfig = {
   SIGNALWIRE_PROJECT_ID: process.env.SIGNALWIRE_PROJECT_ID || "",
   SIGNALWIRE_TOKEN: process.env.SIGNALWIRE_TOKEN || "",
   SIGNALWIRE_PHONE_NUMBER: process.env.SIGNALWIRE_PHONE_NUMBER || "",
+  PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : 8090,
   OAUTH_REDIRECT_URL: process.env.OAUTH_REDIRECT_URL || "http://localhost:1430",
   SERVER_BASE_URL: process.env.SERVER_BASE_URL || "http://localhost:8090",
+  FRONTEND_URL: process.env.FRONTEND_URL,
   DOMAIN: domain,
   POSTGRES_IDLE_TIMEOUT: parseInt(
     process.env.POSTGRES_IDLE_TIMEOUT || "30000",
@@ -122,6 +129,8 @@ export const config: EnvironmentConfig = {
     DEFAULT_ALLOWED_HEADERS,
   ),
   EMAIL_EXPIRY_MINUTES: parseInt(process.env.EMAIL_EXPIRY_MINUTES || "100", 10),
+  ALLOWED_DOMAINS: process.env.ALLOWED_DOMAINS,
+  COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
 };
 
 /**

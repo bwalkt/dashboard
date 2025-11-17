@@ -8,7 +8,13 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "prettier --write .",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:auth": "vitest run test/routes/auth.test.ts",
+    "test:sms": "vitest run test/routes/sms.test.ts",
+    "test:middleware": "vitest run test/middleware/",
     "build": "tsc",
     "start": "fastify start dist/index.js --port 8090",
     "dev": "tsx watch src/server.ts",
@@ -58,10 +64,15 @@
     "@types/node-pg-migrate": "^2.3.1",
     "@types/pg": "^8.11.10",
     "@types/react": "^18.3.18",
+    "@types/supertest": "^6.0.3",
+    "@vitest/ui": "^4.0.9",
+    "c8": "^10.1.3",
     "prettier": "catalog:",
     "prettier-plugin-sql": "0.19.2",
+    "supertest": "^7.1.4",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "catalog:"
   },
   "prettier": {
     "plugins": [
