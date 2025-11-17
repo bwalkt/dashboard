@@ -714,4 +714,90 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
     },
   );
+
+  // Centrifuge authentication validation endpoint
+  fastify.post(
+    "/auth/validate-token",
+    {
+      schema: {
+        summary: "Validate authentication token for Centrifuge",
+        tags: ["auth", "centrifuge"],
+        body: {
+          type: "object",
+          properties: {
+            token: { type: "string" },
+          },
+          required: ["token"],
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              valid: { type: "boolean" },
+              user: {
+                type: "object",
+                properties: {
+                  id: { type: "number" },
+                  email: { type: "string" },
+                  name: { type: "string" },
+                  role: { type: "array", items: { type: "string" } },
+                  verified: { type: "boolean" },
+                },
+              },
+            },
+          },
+          401: {
+            type: "object",
+            properties: {
+              valid: { type: "boolean" },
+              error: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<{ Body: { token: string } }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const { token } = request.body;
+
+        if (!token) {
+          return reply.status(401).send({
+            valid: false,
+            error: "Token is required",
+          });
+        }
+
+        // Validate token using auth service
+        const result = await authService.validateToken(token);
+
+        if (!result.valid || !result.user) {
+          return reply.status(401).send({
+            valid: false,
+            error: "Invalid or expired token",
+          });
+        }
+
+        // Return user information for Centrifuge
+        return reply.status(200).send({
+          valid: true,
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            role: result.user.role || [],
+            verified: result.user.verified || false,
+          },
+        });
+      } catch (error) {
+        console.error("Token validation error:", error);
+        return reply.status(401).send({
+          valid: false,
+          error: "Token validation failed",
+        });
+      }
+    },
+  );
 }

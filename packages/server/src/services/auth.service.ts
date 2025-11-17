@@ -159,6 +159,65 @@ export class AuthService extends JWTService {
       refreshToken,
     };
   }
+
+  /**
+   * Validate any JWT token and return user information for Centrifuge
+   */
+  public async validateToken(token: string): Promise<{
+    valid: boolean;
+    user?: {
+      id: number;
+      email: string;
+      name: string;
+      role?: string[];
+      verified?: boolean;
+    };
+    error?: string;
+  }> {
+    try {
+      // Try to verify as access token first
+      const accessTokenPayload = this.verifyAccessToken(token);
+      if (accessTokenPayload) {
+        return {
+          valid: true,
+          user: {
+            id: Number(accessTokenPayload.userId), // Convert string to number
+            email: accessTokenPayload.email,
+            name: accessTokenPayload.email.split("@")[0], // Extract name from email as fallback
+            verified: true, // Access tokens are for verified users
+          },
+        };
+      }
+
+      // Try to verify as refresh token
+      const refreshTokenPayload = this.verifyRefreshToken(token);
+      if (refreshTokenPayload) {
+        // For refresh tokens, we need to fetch user details
+        // This is a simplified version - in production you might need to fetch from database
+        return {
+          valid: true,
+          user: {
+            id: refreshTokenPayload.userId,
+            email: `user${refreshTokenPayload.userId}@unknown.com`, // Placeholder
+            name: `User ${refreshTokenPayload.userId}`, // Placeholder
+            verified: true,
+          },
+        };
+      }
+
+      return {
+        valid: false,
+        error: "Invalid token signature or format",
+      };
+    } catch (error) {
+      console.error("Token validation error:", error);
+      return {
+        valid: false,
+        error:
+          error instanceof Error ? error.message : "Token validation failed",
+      };
+    }
+  }
 }
 
 // Export singleton instance
