@@ -416,7 +416,7 @@ describe("Auth Routes", () => {
         if (verifyResponse.status === 500) {
           // This is expected in test environment without full database
           expect(verifyResponse.body.message).toContain(
-            "Failed to complete registration",
+            "Failed to create user account",
           );
         }
       });

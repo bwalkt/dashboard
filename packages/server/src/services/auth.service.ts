@@ -194,7 +194,7 @@ export class AuthService extends JWTService {
           user: {
             id: accessTokenPayload.userId,
             email: accessTokenPayload.email,
-            name: accessTokenPayload.email.split("@")[0], // Extract name from email as fallback
+            name: accessTokenPayload.email?.split("@")[0] || "User", // Extract name from email as fallback
             verified: true, // Access tokens are for verified users
           },
         };
