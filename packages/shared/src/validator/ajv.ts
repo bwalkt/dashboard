@@ -319,3 +319,4 @@ export const MigrationHelpers = {
 export const userValidator = createValidator(CommonSchemas.user as any)
 export const productValidator = createValidator(CommonSchemas.product as any)
 export const apiResponseValidator = createValidator(CommonSchemas.apiResponse as any)
+// End of ajv.ts
