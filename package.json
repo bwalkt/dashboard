@@ -39,6 +39,10 @@
     "ignoredBuiltDependencies": [
       "core-js",
       "react-native-nitro-modules"
+    ],
+    "onlyBuiltDependencies": [
+      "@abandonware/noble",
+      "grpc-tools"
     ]
   }
 }

@@ -343,8 +343,8 @@ describe('AJV Validation System', () => {
 
         const result = validateData(CommonSchemas.user, userData)
         expect(result.success).toBe(true)
-        expect(result.data!.profile).toBeDefined()
-        expect(result.data!.custom_field).toBe('value')
+        expect((result.data as any).profile).toBeDefined()
+        expect((result.data as any).custom_field).toBe('value')
       })
     })
 
@@ -486,7 +486,7 @@ describe('AJV Validation System', () => {
         })
 
         expect(result.success).toBe(true)
-        expect(result.data!.customField).toBe('allowed')
+        expect((result.data as any).customField).toBe('allowed')
       })
 
       it('should provide strict validation mode', () => {
@@ -508,8 +508,8 @@ describe('AJV Validation System', () => {
         })
 
         expect(result.success).toBe(true)
-        expect(result.data!.name).toBe('John')
-        expect(result.data!.age).toBe(30)
+        expect((result.data as any).name).toBe('John')
+        expect((result.data as any).age).toBe(30)
         expect((result.data! as any).customField).toBeUndefined()
       })
     })
