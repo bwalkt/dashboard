@@ -1,7 +1,7 @@
-import { z } from 'zod'
+import { createValidator } from '@boardwalk/shared/validator/ajv'
 
 /**
- * Zod schemas for Salesforce Order object
+ * AJV schemas for Salesforce Order object
  * Based on Salesforce describe API metadata
  *
  * Key updates based on actual Salesforce metadata:
@@ -16,208 +16,464 @@ import { z } from 'zod'
  * - Object metadata includes child relationships and action overrides
  */
 
+// =============================================================================
+// TypeScript Interfaces
+// =============================================================================
+
+export type OrderStatus = 'Draft' | 'Activated' | 'Processing' | 'Completed' | 'Shipped'
+export type OrderStatusCode = 'Draft' | 'Activated' | 'Canceled' | 'Expired' | 'Superseded'
+export type PaymentMethod = 'Credit Card' | 'Wire Transfer' | 'Purchase Order'
+export type GeocodeAccuracy =
+  | 'Address'
+  | 'NearAddress'
+  | 'Block'
+  | 'Street'
+  | 'ExtendedZip'
+  | 'Zip'
+  | 'Neighborhood'
+  | 'City'
+  | 'County'
+  | 'State'
+  | 'Unknown'
+
+export interface Address {
+  street?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  geocodeAccuracy?: GeocodeAccuracy | null
+}
+
+export interface OrderAttributes {
+  type: 'Order'
+  url: string
+}
+
+export interface Order {
+  attributes: OrderAttributes
+  // Core fields - Required
+  Id: string
+  OwnerId: string
+  EffectiveDate: string
+  IsReductionOrder: boolean
+  Status: OrderStatus
+  StatusCode: OrderStatusCode
+  OrderNumber: string
+  TotalAmount: number
+  // Core fields - Optional
+  ContractId: string | null
+  AccountId: string | null
+  Pricebook2Id: string | null
+  OriginalOrderId: string | null
+  // Date fields - Optional
+  EndDate: string | null
+  PoDate: string | null
+  ActivatedDate: string | null
+  Order_Date__c: string | null
+  Ship_Date__c: string | null
+  // Description and type - Optional
+  Description: string | null
+  Type: string | null
+  // Authorization fields - Optional
+  CustomerAuthorizedById: string | null
+  CustomerAuthorizedDate: string | null
+  CompanyAuthorizedById: string | null
+  CompanyAuthorizedDate: string | null
+  // Billing address fields - Optional
+  BillingStreet: string | null
+  BillingCity: string | null
+  BillingState: string | null
+  BillingPostalCode: string | null
+  BillingCountry: string | null
+  BillingLatitude: number | null
+  BillingLongitude: number | null
+  BillingGeocodeAccuracy: GeocodeAccuracy | null
+  BillingAddress: Address | null
+  // Shipping address fields - Optional
+  ShippingStreet: string | null
+  ShippingCity: string | null
+  ShippingState: string | null
+  ShippingPostalCode: string | null
+  ShippingCountry: string | null
+  ShippingLatitude: number | null
+  ShippingLongitude: number | null
+  ShippingGeocodeAccuracy: GeocodeAccuracy | null
+  ShippingAddress: Address | null
+  // Order details - Optional
+  Name: string | null
+  PoNumber: string | null
+  OrderReferenceNumber: string | null
+  BillToContactId: string | null
+  ShipToContactId: string | null
+  ActivatedById: string | null
+  // System fields - Required
+  CreatedDate: string
+  CreatedById: string
+  LastModifiedDate: string
+  LastModifiedById: string
+  IsDeleted: boolean
+  SystemModstamp: string
+  // System fields - Optional
+  LastViewedDate: string | null
+  LastReferencedDate: string | null
+  // Custom fields - Optional
+  Customer_Name__c: string | null
+  Customer_Email__c: string | null
+  Sales_Rep__c: string | null
+  Product_Id__c: string | null
+  Quantity__c: number | null
+  Unit_Price__c: number | null
+  Total_Amount__c: number | null
+  Payment__c: PaymentMethod | null
+  External_Id__c: string | null
+}
+
+export interface OrderQueryResponse {
+  success: boolean
+  query: string
+  totalSize: number
+  records: Order[]
+  done: boolean
+}
+
+export interface OrderCreateRequest {
+  // Required fields
+  OwnerId: string
+  EffectiveDate: string
+  Status: OrderStatus
+  AccountId: string
+  // Optional fields
+  ContractId?: string | null
+  Pricebook2Id?: string | null
+  EndDate?: string | null
+  Description?: string | null
+  Type?: string | null
+  CustomerAuthorizedById?: string | null
+  CustomerAuthorizedDate?: string | null
+  CompanyAuthorizedById?: string | null
+  CompanyAuthorizedDate?: string | null
+  BillingStreet?: string | null
+  BillingCity?: string | null
+  BillingState?: string | null
+  BillingPostalCode?: string | null
+  BillingCountry?: string | null
+  BillingLatitude?: number | null
+  BillingLongitude?: number | null
+  BillingGeocodeAccuracy?: GeocodeAccuracy | null
+  ShippingStreet?: string | null
+  ShippingCity?: string | null
+  ShippingState?: string | null
+  ShippingPostalCode?: string | null
+  ShippingCountry?: string | null
+  ShippingLatitude?: number | null
+  ShippingLongitude?: number | null
+  ShippingGeocodeAccuracy?: GeocodeAccuracy | null
+  Name?: string | null
+  PoDate?: string | null
+  PoNumber?: string | null
+  OrderReferenceNumber?: string | null
+  BillToContactId?: string | null
+  ShipToContactId?: string | null
+  // Custom fields
+  Customer_Name__c?: string | null
+  Customer_Email__c?: string | null
+  Sales_Rep__c?: string | null
+  Product_Id__c?: string | null
+  Quantity__c?: number | null
+  Unit_Price__c?: number | null
+  Total_Amount__c?: number | null
+  Order_Date__c?: string | null
+  Ship_Date__c?: string | null
+  Payment__c?: PaymentMethod | null
+  External_Id__c?: string | null
+}
+
+export type OrderUpdateRequest = Partial<OrderCreateRequest>
+
+// =============================================================================
+// AJV Schemas
+// =============================================================================
+
 // Picklist value schemas based on Salesforce metadata
-export const OrderStatusSchema = z.enum(['Draft', 'Activated', 'Processing', 'Completed', 'Shipped'])
-export const OrderStatusCodeSchema = z.enum(['Draft', 'Activated', 'Canceled', 'Expired', 'Superseded'])
-export const PaymentMethodSchema = z.enum(['Credit Card', 'Wire Transfer', 'Purchase Order'])
-export const GeocodeAccuracySchema = z.enum([
-  'Address',
-  'NearAddress',
-  'Block',
-  'Street',
-  'ExtendedZip',
-  'Zip',
-  'Neighborhood',
-  'City',
-  'County',
-  'State',
-  'Unknown',
-])
+export const OrderStatusSchema = { type: 'string', enum: ['Draft', 'Activated', 'Processing', 'Completed', 'Shipped'] }
+export const OrderStatusCodeSchema = {
+  type: 'string',
+  enum: ['Draft', 'Activated', 'Canceled', 'Expired', 'Superseded'],
+}
+export const PaymentMethodSchema = { type: 'string', enum: ['Credit Card', 'Wire Transfer', 'Purchase Order'] }
+export const GeocodeAccuracySchema = {
+  type: 'string',
+  enum: [
+    'Address',
+    'NearAddress',
+    'Block',
+    'Street',
+    'ExtendedZip',
+    'Zip',
+    'Neighborhood',
+    'City',
+    'County',
+    'State',
+    'Unknown',
+  ],
+}
 
-// Address compound field schema
-export const AddressSchema = z.object({
-  street: z.string().nullish(),
-  city: z.string().nullish(),
-  state: z.string().nullish(),
-  postalCode: z.string().nullish(),
-  country: z.string().nullish(),
-  latitude: z.number().nullish(),
-  longitude: z.number().nullish(),
-  geocodeAccuracy: GeocodeAccuracySchema.nullish(),
-})
+export const AddressSchema = {
+  type: 'object',
+  properties: {
+    street: { type: ['string', 'null'] },
+    city: { type: ['string', 'null'] },
+    state: { type: ['string', 'null'] },
+    postalCode: { type: ['string', 'null'] },
+    country: { type: ['string', 'null'] },
+    latitude: { type: ['number', 'null'] },
+    longitude: { type: ['number', 'null'] },
+    geocodeAccuracy: { oneOf: [GeocodeAccuracySchema, { type: 'null' }] },
+  },
+  additionalProperties: false,
+}
 
-// Order attributes schema
-export const OrderAttributesSchema = z.object({
-  type: z.literal('Order'),
-  url: z.string().url(),
-})
+export const OrderAttributesSchema = {
+  type: 'object',
+  properties: {
+    type: { const: 'Order' },
+    url: { type: 'string', format: 'uri' },
+  },
+  required: ['type', 'url'],
+  additionalProperties: false,
+}
 
-// Main Order schema
-export const OrderSchema = z.object({
-  attributes: OrderAttributesSchema,
+export const OrderSchema = {
+  type: 'object',
+  properties: {
+    attributes: OrderAttributesSchema,
+    // Core fields - Required
+    Id: { type: 'string' }, // read-only, required
+    OwnerId: { type: 'string' }, // Reference to User/Group, required, updateable
+    EffectiveDate: { type: 'string' }, // date, required, updateable
+    IsReductionOrder: { type: 'boolean' }, // read-only, required
+    Status: OrderStatusSchema, // required, updateable
+    StatusCode: OrderStatusCodeSchema, // required, updateable
+    OrderNumber: { type: 'string' }, // auto-number, name field, read-only, required
+    TotalAmount: { type: 'number' }, // currency, read-only, required
+    // Core fields - Optional
+    ContractId: { type: ['string', 'null'] }, // Reference to Contract, optional, updateable
+    AccountId: { type: ['string', 'null'] }, // Reference to Account, optional, updateable
+    Pricebook2Id: { type: ['string', 'null'] }, // Reference to Pricebook2, optional, updateable
+    OriginalOrderId: { type: ['string', 'null'] }, // Reference to Order (self-reference), read-only
+    // Date fields - Optional
+    EndDate: { type: ['string', 'null'] }, // date, optional, updateable
+    PoDate: { type: ['string', 'null'] }, // date, optional, updateable
+    ActivatedDate: { type: ['string', 'null'] }, // datetime, read-only
+    Order_Date__c: { type: ['string', 'null'] }, // date (custom), optional, updateable
+    Ship_Date__c: { type: ['string', 'null'] }, // date (custom), optional, updateable
+    // Description and type - Optional
+    Description: { type: ['string', 'null'] }, // textarea, optional, updateable
+    Type: { type: ['string', 'null'] }, // picklist, optional, updateable
+    // Authorization fields - Optional
+    CustomerAuthorizedById: { type: ['string', 'null'] }, // Reference to Contact, optional, updateable
+    CustomerAuthorizedDate: { type: ['string', 'null'] }, // date, optional, updateable
+    CompanyAuthorizedById: { type: ['string', 'null'] }, // Reference to User, optional, updateable
+    CompanyAuthorizedDate: { type: ['string', 'null'] }, // date, optional, updateable
+    // Billing address fields - Optional
+    BillingStreet: { type: ['string', 'null'] }, // textarea, optional, updateable
+    BillingCity: { type: ['string', 'null'] }, // optional, updateable
+    BillingState: { type: ['string', 'null'] }, // optional, updateable
+    BillingPostalCode: { type: ['string', 'null'] }, // optional, updateable
+    BillingCountry: { type: ['string', 'null'] }, // optional, updateable
+    BillingLatitude: { type: ['number', 'null'] }, // double, optional, updateable
+    BillingLongitude: { type: ['number', 'null'] }, // double, optional, updateable
+    BillingGeocodeAccuracy: { oneOf: [GeocodeAccuracySchema, { type: 'null' }] }, // optional, updateable
+    BillingAddress: { oneOf: [AddressSchema, { type: 'null' }] }, // compound field, read-only
+    // Shipping address fields - Optional
+    ShippingStreet: { type: ['string', 'null'] }, // textarea, optional, updateable
+    ShippingCity: { type: ['string', 'null'] }, // optional, updateable
+    ShippingState: { type: ['string', 'null'] }, // optional, updateable
+    ShippingPostalCode: { type: ['string', 'null'] }, // optional, updateable
+    ShippingCountry: { type: ['string', 'null'] }, // optional, updateable
+    ShippingLatitude: { type: ['number', 'null'] }, // double, optional, updateable
+    ShippingLongitude: { type: ['number', 'null'] }, // double, optional, updateable
+    ShippingGeocodeAccuracy: { oneOf: [GeocodeAccuracySchema, { type: 'null' }] }, // optional, updateable
+    ShippingAddress: { oneOf: [AddressSchema, { type: 'null' }] }, // compound field, read-only
+    // Order details - Optional
+    Name: { type: ['string', 'null'] }, // optional, updateable
+    PoNumber: { type: ['string', 'null'] }, // optional, updateable
+    OrderReferenceNumber: { type: ['string', 'null'] }, // unique, optional, updateable
+    BillToContactId: { type: ['string', 'null'] }, // Reference to Contact, optional, updateable
+    ShipToContactId: { type: ['string', 'null'] }, // Reference to Contact, optional, updateable
+    ActivatedById: { type: ['string', 'null'] }, // Reference to User, read-only
+    // System fields - Required
+    CreatedDate: { type: 'string' }, // datetime, read-only, required
+    CreatedById: { type: 'string' }, // Reference to User, read-only, required
+    LastModifiedDate: { type: 'string' }, // datetime, read-only, required
+    LastModifiedById: { type: 'string' }, // Reference to User, read-only, required
+    IsDeleted: { type: 'boolean' }, // read-only, required
+    SystemModstamp: { type: 'string' }, // datetime, read-only, required
+    // System fields - Optional
+    LastViewedDate: { type: ['string', 'null'] }, // datetime, read-only
+    LastReferencedDate: { type: ['string', 'null'] }, // datetime, read-only
+    // Custom fields - Optional
+    Customer_Name__c: { type: ['string', 'null'] }, // string, optional, updateable
+    Customer_Email__c: { type: ['string', 'null'], format: 'email' }, // email, optional, updateable
+    Sales_Rep__c: { type: ['string', 'null'] }, // Reference to SalesRep__c, optional, updateable
+    Product_Id__c: { type: ['string', 'null'] }, // string, optional, updateable
+    Quantity__c: { type: ['number', 'null'] }, // double, optional, updateable
+    Unit_Price__c: { type: ['number', 'null'] }, // currency, optional, updateable
+    Total_Amount__c: { type: ['number', 'null'] }, // currency, optional, updateable
+    Payment__c: { oneOf: [PaymentMethodSchema, { type: 'null' }] }, // picklist, optional, updateable
+    External_Id__c: { type: ['string', 'null'] }, // string, unique, optional, updateable
+  },
+  required: [
+    'attributes',
+    'Id',
+    'OwnerId',
+    'EffectiveDate',
+    'IsReductionOrder',
+    'Status',
+    'StatusCode',
+    'OrderNumber',
+    'TotalAmount',
+    'CreatedDate',
+    'CreatedById',
+    'LastModifiedDate',
+    'LastModifiedById',
+    'IsDeleted',
+    'SystemModstamp',
+  ],
+  additionalProperties: false,
+}
 
-  // Core fields - Required (nillable: false)
-  Id: z.string(), // read-only, required
-  OwnerId: z.string(), // Reference to User/Group, required, updateable
-  EffectiveDate: z.string(), // date, required, updateable
-  IsReductionOrder: z.boolean(), // read-only, required
-  Status: OrderStatusSchema, // required, updateable
-  StatusCode: OrderStatusCodeSchema, // required, updateable
-  OrderNumber: z.string(), // auto-number, name field, read-only, required
-  TotalAmount: z.number(), // currency, read-only, required
+export const OrderQueryResponseSchema = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    query: { type: 'string' },
+    totalSize: { type: 'number' },
+    records: { type: 'array', items: OrderSchema },
+    done: { type: 'boolean' },
+  },
+  required: ['success', 'query', 'totalSize', 'records', 'done'],
+  additionalProperties: false,
+}
 
-  // Core fields - Optional (nillable: true)
-  ContractId: z.string().nullable(), // Reference to Contract, optional, updateable
-  AccountId: z.string().nullable(), // Reference to Account, optional, updateable
-  Pricebook2Id: z.string().nullable(), // Reference to Pricebook2, optional, updateable
-  OriginalOrderId: z.string().nullable(), // Reference to Order (self-reference), read-only
+export const OrderCreateRequestSchema = {
+  type: 'object',
+  properties: {
+    // Required fields
+    OwnerId: { type: 'string' }, // Reference to User/Group, required
+    EffectiveDate: { type: 'string' }, // date, required
+    Status: OrderStatusSchema, // required
+    AccountId: { type: 'string' }, // Reference to Account, required (custom validation rule)
+    // Optional fields
+    ContractId: { type: ['string', 'null'] },
+    Pricebook2Id: { type: ['string', 'null'] },
+    EndDate: { type: ['string', 'null'] },
+    Description: { type: ['string', 'null'] },
+    Type: { type: ['string', 'null'] },
+    CustomerAuthorizedById: { type: ['string', 'null'] },
+    CustomerAuthorizedDate: { type: ['string', 'null'] },
+    CompanyAuthorizedById: { type: ['string', 'null'] },
+    CompanyAuthorizedDate: { type: ['string', 'null'] },
+    BillingStreet: { type: ['string', 'null'] },
+    BillingCity: { type: ['string', 'null'] },
+    BillingState: { type: ['string', 'null'] },
+    BillingPostalCode: { type: ['string', 'null'] },
+    BillingCountry: { type: ['string', 'null'] },
+    BillingLatitude: { type: ['number', 'null'] },
+    BillingLongitude: { type: ['number', 'null'] },
+    BillingGeocodeAccuracy: { oneOf: [GeocodeAccuracySchema, { type: 'null' }] },
+    ShippingStreet: { type: ['string', 'null'] },
+    ShippingCity: { type: ['string', 'null'] },
+    ShippingState: { type: ['string', 'null'] },
+    ShippingPostalCode: { type: ['string', 'null'] },
+    ShippingCountry: { type: ['string', 'null'] },
+    ShippingLatitude: { type: ['number', 'null'] },
+    ShippingLongitude: { type: ['number', 'null'] },
+    ShippingGeocodeAccuracy: { oneOf: [GeocodeAccuracySchema, { type: 'null' }] },
+    Name: { type: ['string', 'null'] },
+    PoDate: { type: ['string', 'null'] },
+    PoNumber: { type: ['string', 'null'] },
+    OrderReferenceNumber: { type: ['string', 'null'] },
+    BillToContactId: { type: ['string', 'null'] },
+    ShipToContactId: { type: ['string', 'null'] },
+    // Custom fields
+    Customer_Name__c: { type: ['string', 'null'] },
+    Customer_Email__c: { type: ['string', 'null'], format: 'email' },
+    Sales_Rep__c: { type: ['string', 'null'] },
+    Product_Id__c: { type: ['string', 'null'] },
+    Quantity__c: { type: ['number', 'null'] },
+    Unit_Price__c: { type: ['number', 'null'] },
+    Total_Amount__c: { type: ['number', 'null'] },
+    Order_Date__c: { type: ['string', 'null'] },
+    Ship_Date__c: { type: ['string', 'null'] },
+    Payment__c: { oneOf: [PaymentMethodSchema, { type: 'null' }] },
+    External_Id__c: { type: ['string', 'null'] },
+  },
+  required: ['OwnerId', 'EffectiveDate', 'Status', 'AccountId'],
+  additionalProperties: false,
+}
 
-  // Date fields - Optional (nillable: true)
-  EndDate: z.string().nullable(), // date, optional, updateable
-  PoDate: z.string().nullable(), // date, optional, updateable
-  ActivatedDate: z.string().nullable(), // datetime, read-only
-  Order_Date__c: z.string().nullable(), // date (custom), optional, updateable
-  Ship_Date__c: z.string().nullable(), // date (custom), optional, updateable
+export const OrderUpdateRequestSchema = {
+  type: 'object',
+  properties: {
+    OwnerId: { type: 'string' },
+    EffectiveDate: { type: 'string' },
+    Status: OrderStatusSchema,
+    AccountId: { type: 'string' },
+    ContractId: { type: ['string', 'null'] },
+    Pricebook2Id: { type: ['string', 'null'] },
+    EndDate: { type: ['string', 'null'] },
+    Description: { type: ['string', 'null'] },
+    Type: { type: ['string', 'null'] },
+    CustomerAuthorizedById: { type: ['string', 'null'] },
+    CustomerAuthorizedDate: { type: ['string', 'null'] },
+    CompanyAuthorizedById: { type: ['string', 'null'] },
+    CompanyAuthorizedDate: { type: ['string', 'null'] },
+    BillingStreet: { type: ['string', 'null'] },
+    BillingCity: { type: ['string', 'null'] },
+    BillingState: { type: ['string', 'null'] },
+    BillingPostalCode: { type: ['string', 'null'] },
+    BillingCountry: { type: ['string', 'null'] },
+    BillingLatitude: { type: ['number', 'null'] },
+    BillingLongitude: { type: ['number', 'null'] },
+    BillingGeocodeAccuracy: { oneOf: [GeocodeAccuracySchema, { type: 'null' }] },
+    ShippingStreet: { type: ['string', 'null'] },
+    ShippingCity: { type: ['string', 'null'] },
+    ShippingState: { type: ['string', 'null'] },
+    ShippingPostalCode: { type: ['string', 'null'] },
+    ShippingCountry: { type: ['string', 'null'] },
+    ShippingLatitude: { type: ['number', 'null'] },
+    ShippingLongitude: { type: ['number', 'null'] },
+    ShippingGeocodeAccuracy: { oneOf: [GeocodeAccuracySchema, { type: 'null' }] },
+    Name: { type: ['string', 'null'] },
+    PoDate: { type: ['string', 'null'] },
+    PoNumber: { type: ['string', 'null'] },
+    OrderReferenceNumber: { type: ['string', 'null'] },
+    BillToContactId: { type: ['string', 'null'] },
+    ShipToContactId: { type: ['string', 'null'] },
+    Customer_Name__c: { type: ['string', 'null'] },
+    Customer_Email__c: { type: ['string', 'null'], format: 'email' },
+    Sales_Rep__c: { type: ['string', 'null'] },
+    Product_Id__c: { type: ['string', 'null'] },
+    Quantity__c: { type: ['number', 'null'] },
+    Unit_Price__c: { type: ['number', 'null'] },
+    Total_Amount__c: { type: ['number', 'null'] },
+    Order_Date__c: { type: ['string', 'null'] },
+    Ship_Date__c: { type: ['string', 'null'] },
+    Payment__c: { oneOf: [PaymentMethodSchema, { type: 'null' }] },
+    External_Id__c: { type: ['string', 'null'] },
+  },
+  additionalProperties: false,
+}
 
-  // Description and type - Optional (nillable: true)
-  Description: z.string().nullable(), // textarea, optional, updateable
-  Type: z.string().nullable(), // picklist, optional, updateable
+// =============================================================================
+// Validators
+// =============================================================================
 
-  // Authorization fields - Optional (nillable: true)
-  CustomerAuthorizedById: z.string().nullable(), // Reference to Contact, optional, updateable
-  CustomerAuthorizedDate: z.string().nullable(), // date, optional, updateable
-  CompanyAuthorizedById: z.string().nullable(), // Reference to User, optional, updateable
-  CompanyAuthorizedDate: z.string().nullable(), // date, optional, updateable
-
-  // Billing address fields - Optional (nillable: true)
-  BillingStreet: z.string().nullable(), // textarea, optional, updateable
-  BillingCity: z.string().nullable(), // optional, updateable
-  BillingState: z.string().nullable(), // optional, updateable
-  BillingPostalCode: z.string().nullable(), // optional, updateable
-  BillingCountry: z.string().nullable(), // optional, updateable
-  BillingLatitude: z.number().nullable(), // double, optional, updateable
-  BillingLongitude: z.number().nullable(), // double, optional, updateable
-  BillingGeocodeAccuracy: GeocodeAccuracySchema.nullable(), // optional, updateable
-  BillingAddress: AddressSchema.nullable(), // compound field, read-only
-
-  // Shipping address fields - Optional (nillable: true)
-  ShippingStreet: z.string().nullable(), // textarea, optional, updateable
-  ShippingCity: z.string().nullable(), // optional, updateable
-  ShippingState: z.string().nullable(), // optional, updateable
-  ShippingPostalCode: z.string().nullable(), // optional, updateable
-  ShippingCountry: z.string().nullable(), // optional, updateable
-  ShippingLatitude: z.number().nullable(), // double, optional, updateable
-  ShippingLongitude: z.number().nullable(), // double, optional, updateable
-  ShippingGeocodeAccuracy: GeocodeAccuracySchema.nullable(), // optional, updateable
-  ShippingAddress: AddressSchema.nullable(), // compound field, read-only
-
-  // Order details - Optional (nillable: true)
-  Name: z.string().nullable(), // optional, updateable
-  PoNumber: z.string().nullable(), // optional, updateable
-  OrderReferenceNumber: z.string().nullable(), // unique, optional, updateable
-  BillToContactId: z.string().nullable(), // Reference to Contact, optional, updateable
-  ShipToContactId: z.string().nullable(), // Reference to Contact, optional, updateable
-  ActivatedById: z.string().nullable(), // Reference to User, read-only
-
-  // System fields - Required (nillable: false) and read-only
-  CreatedDate: z.string(), // datetime, read-only, required
-  CreatedById: z.string(), // Reference to User, read-only, required
-  LastModifiedDate: z.string(), // datetime, read-only, required
-  LastModifiedById: z.string(), // Reference to User, read-only, required
-  IsDeleted: z.boolean(), // read-only, required
-  SystemModstamp: z.string(), // datetime, read-only, required
-
-  // System fields - Optional (nillable: true) and read-only
-  LastViewedDate: z.string().nullable(), // datetime, read-only
-  LastReferencedDate: z.string().nullable(), // datetime, read-only
-
-  // Custom fields - Optional (nillable: true)
-  Customer_Name__c: z.string().nullable(), // string, optional, updateable
-  Customer_Email__c: z.string().email().nullable(), // email, optional, updateable
-  Sales_Rep__c: z.string().nullable(), // Reference to SalesRep__c, optional, updateable
-  Product_Id__c: z.string().nullable(), // string, optional, updateable
-  Quantity__c: z.number().nullable(), // double, optional, updateable
-  Unit_Price__c: z.number().nullable(), // currency, optional, updateable
-  Total_Amount__c: z.number().nullable(), // currency, optional, updateable
-  Payment__c: PaymentMethodSchema.nullable(), // picklist, optional, updateable
-  External_Id__c: z.string().nullable(), // string, unique, optional, updateable
-})
-
-// Order query response schema
-export const OrderQueryResponseSchema = z.object({
-  success: z.boolean(),
-  query: z.string(),
-  totalSize: z.number(),
-  records: z.array(OrderSchema),
-  done: z.boolean(),
-})
-
-// Order creation request schema (excludes read-only fields)
-export const OrderCreateRequestSchema = z.object({
-  // Required fields (createable: true, nillable: false)
-  OwnerId: z.string(), // Reference to User/Group, required
-  EffectiveDate: z.string(), // date, required
-  Status: OrderStatusSchema, // required
-  AccountId: z.string(), // Reference to Account, required (custom validation rule)
-
-  // Optional fields (createable: true, nillable: true)
-  ContractId: z.string().nullish(),
-  Pricebook2Id: z.string().nullish(),
-  EndDate: z.string().nullish(),
-  Description: z.string().nullish(),
-  Type: z.string().nullish(),
-  CustomerAuthorizedById: z.string().nullish(),
-  CustomerAuthorizedDate: z.string().nullish(),
-  CompanyAuthorizedById: z.string().nullish(),
-  CompanyAuthorizedDate: z.string().nullish(),
-  BillingStreet: z.string().nullish(),
-  BillingCity: z.string().nullish(),
-  BillingState: z.string().nullish(),
-  BillingPostalCode: z.string().nullish(),
-  BillingCountry: z.string().nullish(),
-  BillingLatitude: z.number().nullish(),
-  BillingLongitude: z.number().nullish(),
-  BillingGeocodeAccuracy: GeocodeAccuracySchema.nullish(),
-  ShippingStreet: z.string().nullish(),
-  ShippingCity: z.string().nullish(),
-  ShippingState: z.string().nullish(),
-  ShippingPostalCode: z.string().nullish(),
-  ShippingCountry: z.string().nullish(),
-  ShippingLatitude: z.number().nullish(),
-  ShippingLongitude: z.number().nullish(),
-  ShippingGeocodeAccuracy: GeocodeAccuracySchema.nullish(),
-  Name: z.string().nullish(),
-  PoDate: z.string().nullish(),
-  PoNumber: z.string().nullish(),
-  OrderReferenceNumber: z.string().nullish(),
-  BillToContactId: z.string().nullish(),
-  ShipToContactId: z.string().nullish(),
-
-  // Custom fields (createable: true, nillable: true)
-  Customer_Name__c: z.string().nullish(),
-  Customer_Email__c: z.string().email().nullish(),
-  Sales_Rep__c: z.string().nullish(),
-  Product_Id__c: z.string().nullish(),
-  Quantity__c: z.number().nullish(),
-  Unit_Price__c: z.number().nullish(),
-  Total_Amount__c: z.number().nullish(),
-  Order_Date__c: z.string().nullish(),
-  Ship_Date__c: z.string().nullish(),
-  Payment__c: PaymentMethodSchema.nullish(),
-  External_Id__c: z.string().nullish(),
-})
-
-// Order update request schema
-export const OrderUpdateRequestSchema = OrderCreateRequestSchema.partial()
-
-// Inferred types from schemas
-export type OrderStatus = z.infer<typeof OrderStatusSchema>
-export type OrderStatusCode = z.infer<typeof OrderStatusCodeSchema>
-export type PaymentMethod = z.infer<typeof PaymentMethodSchema>
-export type GeocodeAccuracy = z.infer<typeof GeocodeAccuracySchema>
-export type Address = z.infer<typeof AddressSchema>
-export type OrderAttributes = z.infer<typeof OrderAttributesSchema>
-export type Order = z.infer<typeof OrderSchema>
-export type OrderQueryResponse = z.infer<typeof OrderQueryResponseSchema>
-export type OrderCreateRequest = z.infer<typeof OrderCreateRequestSchema>
-export type OrderUpdateRequest = z.infer<typeof OrderUpdateRequestSchema>
+export const validateOrder = createValidator<Order>(OrderSchema)
+export const validateOrderCreateRequest = createValidator<OrderCreateRequest>(OrderCreateRequestSchema)
+export const validateOrderUpdateRequest = createValidator<OrderUpdateRequest>(OrderUpdateRequestSchema)
+export const validateOrderQueryResponse = createValidator<OrderQueryResponse>(OrderQueryResponseSchema)

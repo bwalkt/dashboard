@@ -189,6 +189,17 @@ export class AuthService extends JWTService {
           };
         }
 
+        // Validate email is present and valid
+        if (
+          !accessTokenPayload.email ||
+          typeof accessTokenPayload.email !== "string"
+        ) {
+          return {
+            valid: false,
+            error: "Invalid email in token",
+          };
+        }
+
         return {
           valid: true,
           user: {

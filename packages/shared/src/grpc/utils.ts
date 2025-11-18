@@ -10,7 +10,11 @@ export function extractTokenFromCookie(cookieHeader: string): string | null {
   cookieHeader.split(';').forEach(cookie => {
     const [name, value] = cookie.trim().split('=')
     if (name && value) {
-      cookies[name] = decodeURIComponent(value)
+      try {
+        cookies[name] = decodeURIComponent(value)
+      } catch {
+        cookies[name] = value
+      }
     }
   })
 

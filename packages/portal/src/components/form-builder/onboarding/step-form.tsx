@@ -1,5 +1,4 @@
 import { Separator } from '@base'
-import { z } from 'zod'
 import { AuthWrapper } from '../auth-wrapper'
 import AutoForm from '../auto-form'
 import { useStepper } from '../stepper'

@@ -1,25 +1,46 @@
 'use client'
 
-import { zodResolver } from '@hookform/resolvers/zod'
+import { createValidator } from '@boardwalk/shared/validator/ajv'
 import { useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Form, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import SignatureInput from '@/components/ui/signature-input'
+import { createAjvResolver } from '@/lib/ajv-resolver'
 
-const FormSchema = z.object({
-  signature: z.string().min(1, { message: 'Please sign the form' }),
-})
+// =============================================================================
+// TypeScript Interface
+// =============================================================================
 
-type SignatureFormData = z.infer<typeof FormSchema>
+interface SignatureFormData {
+  signature: string
+}
+
+// =============================================================================
+// AJV Schema
+// =============================================================================
+
+const FormSchema = {
+  type: 'object',
+  properties: {
+    signature: { type: 'string', minLength: 1 },
+  },
+  required: ['signature'],
+  additionalProperties: false,
+}
+
+// =============================================================================
+// Validator
+// =============================================================================
+
+const validateSignatureForm = createValidator<SignatureFormData>(FormSchema)
 
 export function SignatureForm() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const form = useForm<SignatureFormData>({
-    resolver: zodResolver(FormSchema),
+    resolver: createAjvResolver(validateSignatureForm),
   })
 
   const onSubmit = (data: SignatureFormData) => {

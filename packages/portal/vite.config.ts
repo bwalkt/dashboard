@@ -42,7 +42,7 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['@pzero/shared', 'zod', 'react', 'react-dom'],
+    include: ['@pzero/shared', 'ajv', 'react', 'react-dom'],
   },
   build: {
     commonjsOptions: {

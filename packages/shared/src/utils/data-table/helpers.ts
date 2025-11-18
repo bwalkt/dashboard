@@ -17,7 +17,8 @@ export function filterData(data: any[], filters: any): any[] {
       } else if (Array.isArray(value)) {
         if (!value.includes(item[key])) return false
       } else if (typeof value === 'string') {
-        if (!item[key]?.toString().toLowerCase().includes(value.toLowerCase())) {
+        const fieldValue = item[key]
+        if (fieldValue == null || !String(fieldValue).toLowerCase().includes(value.toLowerCase())) {
           return false
         }
       } else if (item[key] !== value) {

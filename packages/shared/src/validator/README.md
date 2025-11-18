@@ -113,18 +113,16 @@ const formData = {
 
 ## 🔄 Migration from Zod
 
-### Before (Zod)
+### Before (Traditional validation libraries)
 
 ```typescript
-import { z } from 'zod';
-
-const UserSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  email: z.string().email(),
-});
-
-type User = z.infer<typeof UserSchema>;
+// Example with other validation libraries
+const UserSchema = {
+  id: { type: 'number' },
+  name: { type: 'string' },
+  email: { type: 'string', format: 'email' },
+  // No dynamic fields allowed
+};
 ```
 
 ### After (AJV with Dynamic Fields)
@@ -266,9 +264,10 @@ const result = validateData(schema, data);
 
 ## 📚 Available Exports
 
+### Main AJV Validation System
 ```typescript
 // From @pzero/shared/validator
-export {
+import {
   // Core validation
   ajv,                    // Main AJV instance
   createValidator,        // Create typed validators
@@ -280,18 +279,51 @@ export {
   CommonSchemas,         // Pre-built common schemas
   
   // Migration helpers
-  MigrationHelpers,      // Zod to AJV migration
-  
-  // Validators
-  userValidator,         // Pre-built user validator
-  productValidator,      // Pre-built product validator
-  apiResponseValidator,  // Pre-built API response validator
+  MigrationHelpers,      // Schema conversion helpers
   
   // Types
   ValidationResult,      // Result interface
   ValidationError,       // Error interface
   BaseValidator,         // Base validator class
-};
+  
+  // Utility validators
+  validator,             // String validation utilities
+} from '@pzero/shared/validator'
+```
+
+### Pre-built Migration Validators
+```typescript
+// From the migrations module (for migration examples)
+import {
+  userValidator,         // Pre-built user validator
+  productValidator,      // Pre-built product validator  
+  apiResponseValidator,  // Pre-built API response validator
+  
+  // Migration interfaces
+  User,
+  Product,
+  ApiResponse,
+  
+  // Migration schemas
+  UserSchema,
+  ProductSchema,
+  ApiResponseSchema,
+} from '@pzero/shared/validator/migrations'
+```
+
+### Email & Phone Validation
+```typescript
+// Email validation
+import { emailValidator } from '@pzero/shared/validator/email'
+
+// Phone validation  
+import { phoneValidator } from '@pzero/shared/validator/phone'
+```
+
+### Testing Examples
+```typescript
+// Testing utilities (not part of public API)
+import { AjvExamples } from '@pzero/shared/validator/test-ajv'
 ```
 
 ## 🧪 Testing
@@ -313,11 +345,11 @@ AjvExamples.runAllTests();
 
 ## 🚀 Next Steps
 
-1. **Gradual Migration**: Start using AJV for new schemas while keeping existing Zod schemas
-2. **Dynamic Forms**: Implement form builders using `createDynamicFormValidator`
-3. **Custom Fields**: Add support for user/organization-specific custom fields
-4. **API Integration**: Use for validating third-party API responses with unknown fields
+1. **Dynamic Forms**: Implement form builders using `createDynamicFormValidator`
+2. **Custom Fields**: Add support for user/organization-specific custom fields
+3. **API Integration**: Use for validating third-party API responses with unknown fields
+4. **Schema Evolution**: Build schemas that can evolve with changing requirements
 
 ---
 
-**Key Advantage**: Unlike Zod, AJV allows you to accept additional properties while still validating the core schema structure, making it perfect for dynamic applications!
+**Key Advantage**: AJV allows you to accept additional properties while still validating the core schema structure, making it perfect for dynamic applications!

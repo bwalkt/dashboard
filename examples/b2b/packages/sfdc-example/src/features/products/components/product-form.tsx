@@ -1,4 +1,3 @@
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -10,8 +9,9 @@ import { FormTextarea } from '@/components/forms/form-textarea'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
+import { createAjvResolver } from '@/lib/ajv-resolver'
 import { api } from '@/lib/api'
-import { Product, ProductCreateRequest, ProductCreateRequestSchema } from '@/types'
+import { Product, ProductCreateRequest, validateProductCreateRequest } from '@/types'
 
 export default function ProductForm({ initialData, pageTitle }: { initialData: Product | null; pageTitle: string }) {
   const defaultValues: ProductCreateRequest = initialData
@@ -41,7 +41,7 @@ export default function ProductForm({ initialData, pageTitle }: { initialData: P
       }
 
   const form = useForm<ProductCreateRequest>({
-    resolver: zodResolver(ProductCreateRequestSchema),
+    resolver: createAjvResolver(validateProductCreateRequest),
     defaultValues: defaultValues,
   })
 

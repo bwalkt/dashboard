@@ -15,6 +15,7 @@ export {
 // Export other validators
 export * from './email'
 export * from './phone'
-// Export migration utilities separately
-export { AjvExamples } from './test-ajv'
 export * from './validator'
+
+// Note: AjvExamples is available for testing at '@pzero/shared/validator/test-ajv'
+// but not exported from the main index to keep the public API surface clean

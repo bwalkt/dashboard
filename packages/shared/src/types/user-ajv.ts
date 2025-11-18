@@ -12,10 +12,10 @@ import { createValidator, ValidationResult } from '../validator/ajv'
 
 export interface User {
   id: number
-  github_id: string | null
+  github_id?: string | null
   name: string
   email: string
-  avatar: string | null
+  avatar?: string | null
   email_verified?: boolean
   created_at: string
   updated_at: string
@@ -24,10 +24,10 @@ export interface User {
 }
 
 export interface CreateUserData {
-  github_id: string | null
+  github_id?: string | null
   name: string
   email: string
-  avatar: string | null
+  avatar?: string | null
   email_verified?: boolean
   // Dynamic fields allowed during creation
   [key: string]: any
@@ -43,12 +43,12 @@ export interface GitHubUser {
 
 export interface AccessTokenPayload {
   userId: number
-  githubId: string | null
+  githubId?: string | null
   email: string
   exp: number
   iat: number
-  // Allow additional JWT claims
-  [key: string]: any
+  // Explicit metadata bag for additional JWT claims
+  metadata?: Record<string, unknown>
 }
 
 export interface RefreshTokenPayload {
@@ -62,8 +62,8 @@ export interface AuthResponse {
   accessToken: string
   refreshToken: string
   user: User
-  // Allow additional auth metadata
-  [key: string]: any
+  // Explicit metadata bag for additional auth metadata
+  metadata?: Record<string, unknown>
 }
 
 export interface UserResponse {
@@ -139,9 +139,10 @@ export const AccessTokenPayloadSchema = {
     email: { type: 'string', format: 'email' },
     exp: { type: 'number' },
     iat: { type: 'number' },
+    metadata: { type: 'object', additionalProperties: true },
   },
   required: ['userId', 'email', 'exp', 'iat'],
-  additionalProperties: true, // Allow additional JWT claims
+  additionalProperties: false, // Security: only allow known JWT claims
 }
 
 export const RefreshTokenPayloadSchema = {
@@ -162,9 +163,10 @@ export const AuthResponseSchema = {
     accessToken: { type: 'string' },
     refreshToken: { type: 'string' },
     user: UserSchema,
+    metadata: { type: 'object', additionalProperties: true },
   },
   required: ['accessToken', 'refreshToken', 'user'],
-  additionalProperties: true, // Allow additional auth metadata
+  additionalProperties: false, // Security: only allow known response fields
 }
 
 export const UserResponseSchema = {
@@ -279,8 +281,10 @@ export function validateUserWithOrgFields(
     return userResult as ValidationResult<User>
   }
 
+  // Use validated data from userResult, not raw input
+  const baseUser = userResult.data ?? (data as User)
   const userData = data as any
-  const errors: any[] = []
+  const errors: Array<{ field: string; message: string; code: string }> = []
 
   // Validate organization-specific fields
   for (const fieldConfig of orgFieldConfig) {
@@ -290,6 +294,7 @@ export function validateUserWithOrgFields(
       errors.push({
         field: fieldConfig.fieldName,
         message: `${fieldConfig.fieldName} is required`,
+        code: 'orgFieldRequired',
       })
       continue
     }
@@ -302,16 +307,19 @@ export function validateUserWithOrgFields(
         errors.push({
           field: fieldConfig.fieldName,
           message: `${fieldConfig.fieldName} must be a number`,
+          code: 'orgFieldType',
         })
       } else if (expectedType === 'boolean' && actualType !== 'boolean') {
         errors.push({
           field: fieldConfig.fieldName,
           message: `${fieldConfig.fieldName} must be a boolean`,
+          code: 'orgFieldType',
         })
       } else if (expectedType === 'string' && actualType !== 'string') {
         errors.push({
           field: fieldConfig.fieldName,
           message: `${fieldConfig.fieldName} must be a string`,
+          code: 'orgFieldType',
         })
       }
     }
@@ -326,7 +334,10 @@ export function validateUserWithOrgFields(
 
   return {
     success: true,
-    data: userData,
+    data: {
+      ...baseUser,
+      ...Object.fromEntries(orgFieldConfig.map(config => [config.fieldName, userData[config.fieldName]])),
+    },
   }
 }
 

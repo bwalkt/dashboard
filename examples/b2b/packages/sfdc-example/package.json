@@ -97,7 +97,8 @@
     "typescript": "catalog:",
     "uuid": "catalog:",
     "vaul": "catalog:",
-    "zod": "catalog:",
+    "ajv": "catalog:",
+    "ajv-formats": "catalog:",
     "zustand": "catalog:"
   },
   "devDependencies": {

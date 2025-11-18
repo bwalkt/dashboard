@@ -1,14 +1,42 @@
+import { createValidator } from '@boardwalk/shared/validator/ajv'
 import { createParser } from 'nuqs/server'
-import { z } from 'zod'
 
 import { dataTableConfig } from '@/config/data-table'
 
 import type { ExtendedColumnFilter, ExtendedColumnSort } from '@/types/data-table'
 
-const sortingItemSchema = z.object({
-  id: z.string(),
-  desc: z.boolean(),
-})
+// =============================================================================
+// TypeScript Interfaces
+// =============================================================================
+
+interface SortingItem {
+  id: string
+  desc: boolean
+}
+
+interface FilterItem {
+  id: string
+  value: string | string[]
+  variant: (typeof dataTableConfig.filterVariants)[number]
+  operator: (typeof dataTableConfig.operators)[number]
+  filterId: string
+}
+
+export type FilterItemSchema = FilterItem
+
+// =============================================================================
+// AJV Schemas
+// =============================================================================
+
+const sortingItemSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    desc: { type: 'boolean' },
+  },
+  required: ['id', 'desc'],
+  additionalProperties: false,
+}
 
 export const getSortingStateParser = <TData>(columnIds?: string[] | Set<string>) => {
   const validKeys = columnIds ? (columnIds instanceof Set ? columnIds : new Set(columnIds)) : null
@@ -17,7 +45,9 @@ export const getSortingStateParser = <TData>(columnIds?: string[] | Set<string>)
     parse: value => {
       try {
         const parsed = JSON.parse(value)
-        const result = z.array(sortingItemSchema).safeParse(parsed)
+        const arraySchema = { type: 'array', items: sortingItemSchema }
+        const validator = createValidator<SortingItem[]>(arraySchema)
+        const result = validator.validate(parsed)
 
         if (!result.success) return null
 
@@ -36,15 +66,27 @@ export const getSortingStateParser = <TData>(columnIds?: string[] | Set<string>)
   })
 }
 
-const filterItemSchema = z.object({
-  id: z.string(),
-  value: z.union([z.string(), z.array(z.string())]),
-  variant: z.enum(dataTableConfig.filterVariants),
-  operator: z.enum(dataTableConfig.operators),
-  filterId: z.string(),
-})
+const filterItemSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    value: {
+      oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+    },
+    variant: { type: 'string', enum: [...dataTableConfig.filterVariants] },
+    operator: { type: 'string', enum: [...dataTableConfig.operators] },
+    filterId: { type: 'string' },
+  },
+  required: ['id', 'value', 'variant', 'operator', 'filterId'],
+  additionalProperties: false,
+}
 
-export type FilterItemSchema = z.infer<typeof filterItemSchema>
+// =============================================================================
+// Validators
+// =============================================================================
+
+const validateSortingItem = createValidator<SortingItem>(sortingItemSchema)
+const validateFilterItem = createValidator<FilterItem>(filterItemSchema)
 
 export const getFiltersStateParser = <TData>(columnIds?: string[] | Set<string>) => {
   const validKeys = columnIds ? (columnIds instanceof Set ? columnIds : new Set(columnIds)) : null
@@ -53,7 +95,9 @@ export const getFiltersStateParser = <TData>(columnIds?: string[] | Set<string>)
     parse: value => {
       try {
         const parsed = JSON.parse(value)
-        const result = z.array(filterItemSchema).safeParse(parsed)
+        const arraySchema = { type: 'array', items: filterItemSchema }
+        const validator = createValidator<FilterItem[]>(arraySchema)
+        const result = validator.validate(parsed)
 
         if (!result.success) return null
 

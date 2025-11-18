@@ -22,6 +22,18 @@ export const ajv = new Ajv({
 // Add standard formats (date, email, uri, etc.)
 addFormats(ajv)
 
+/**
+ * Centralized AJV error formatting helper
+ */
+function formatAjvErrors(errors: ErrorObject[]): ValidationError[] {
+  return errors.map(error => ({
+    field: error.instancePath || error.schemaPath || 'root',
+    message: error.message || 'Validation failed',
+    value: error.data,
+    code: error.keyword,
+  }))
+}
+
 // Validation result interface
 export interface ValidationResult<T> {
   success: boolean
@@ -56,17 +68,8 @@ export abstract class BaseValidator<T> {
 
     return {
       success: false,
-      errors: this.formatErrors(this.validator.errors || []),
+      errors: formatAjvErrors(this.validator.errors || []),
     }
-  }
-
-  public formatErrors(errors: ErrorObject[]): ValidationError[] {
-    return errors.map(error => ({
-      field: error.instancePath || error.schemaPath || 'root',
-      message: error.message || 'Validation failed',
-      value: error.data,
-      code: error.keyword,
-    }))
   }
 }
 
@@ -103,17 +106,8 @@ export class DynamicValidator {
 
     return {
       success: false,
-      errors: this.formatErrors(validator.errors || []),
+      errors: formatAjvErrors(validator.errors || []),
     }
-  }
-
-  private formatErrors(errors: ErrorObject[]): ValidationError[] {
-    return errors.map(error => ({
-      field: error.instancePath || error.schemaPath || 'root',
-      message: error.message || 'Validation failed',
-      value: error.data,
-      code: error.keyword,
-    }))
   }
 
   /**
@@ -267,9 +261,9 @@ export const CommonSchemas = {
  */
 export const MigrationHelpers = {
   /**
-   * Convert common Zod patterns to AJV schemas
+   * Common AJV schema patterns for validation
    */
-  zodToAjv: {
+  commonPatterns: {
     string: () => ({ type: 'string' as const }),
     number: () => ({ type: 'number' as const }),
     boolean: () => ({ type: 'boolean' as const }),

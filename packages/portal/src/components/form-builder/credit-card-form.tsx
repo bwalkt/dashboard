@@ -1,75 +1,184 @@
 'use client'
 
-import { zodResolver } from '@hookform/resolvers/zod'
+import { createValidator, type ValidationResult } from '@boardwalk/shared/validator/ajv'
 import React, { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { FieldErrors, FieldValues, ResolverOptions, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { CreditCard, type CreditCardValue } from '@/components/ui/credit-card'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 
-// Enhanced validation schema
-const FormSchema = z
-  .object({
-    cardholderName: z
-      .string()
-      .min(2, 'Cardholder name must be at least 2 characters')
-      .max(50, 'Cardholder name must be less than 50 characters'),
+// =============================================================================
+// TypeScript Interface
+// =============================================================================
 
-    cardNumber: z
-      .string()
-      .min(1, 'Card number is required')
-      .refine(value => {
-        const cleanNumber = value.replace(/\s/g, '')
-        return /^\d{13,19}$/.test(cleanNumber)
-      }, 'Invalid card number format'),
+interface CreditCardFormData {
+  cardholderName: string
+  cardNumber: string
+  expiryMonth: string
+  expiryYear: string
+  cvv: string
+}
 
-    expiryMonth: z
-      .string()
-      .min(1, 'Expiry month is required')
-      .refine(value => {
-        const month = parseInt(value)
-        return month >= 1 && month <= 12
-      }, 'Invalid month'),
+// =============================================================================
+// AJV Schema
+// =============================================================================
 
-    expiryYear: z
-      .string()
-      .min(1, 'Expiry year is required')
-      .refine(value => {
-        const year = parseInt(value)
-        const currentYear = new Date().getFullYear()
-        return year >= currentYear && year <= currentYear + 20
-      }, 'Invalid year'),
-
-    cvv: z
-      .string()
-      .min(3, 'CVV must be at least 3 digits')
-      .max(4, 'CVV must be at most 4 digits')
-      .refine(value => /^\d+$/.test(value), 'CVV must contain only digits'),
-  })
-
-  // Add expiry date validation
-  .refine(
-    data => {
-      if (!data.expiryMonth || !data.expiryYear) return true // Let individual field validation handle this
-
-      const currentDate = new Date()
-      const currentYear = currentDate.getFullYear()
-      const currentMonth = currentDate.getMonth() + 1
-      const expiryYear = parseInt(data.expiryYear)
-      const expiryMonth = parseInt(data.expiryMonth)
-
-      return expiryYear > currentYear || (expiryYear === currentYear && expiryMonth >= currentMonth)
+const FormSchema = {
+  type: 'object',
+  properties: {
+    cardholderName: {
+      type: 'string',
+      minLength: 2,
+      maxLength: 50,
     },
-    {
-      message: 'Card has expired',
-      path: ['expiryYear'], // Show error on year field
+    cardNumber: {
+      type: 'string',
+      minLength: 1,
+      pattern: '^[0-9\\s]{13,23}$', // Allow spaces, validate length
     },
-  )
+    expiryMonth: {
+      type: 'string',
+      minLength: 1,
+      pattern: '^(0?[1-9]|1[0-2])$', // 1-12
+    },
+    expiryYear: {
+      type: 'string',
+      minLength: 1,
+      pattern: '^[0-9]{4}$', // 4 digits
+    },
+    cvv: {
+      type: 'string',
+      minLength: 3,
+      maxLength: 4,
+      pattern: '^[0-9]{3,4}$',
+    },
+  },
+  required: ['cardholderName', 'cardNumber', 'expiryMonth', 'expiryYear', 'cvv'],
+  additionalProperties: false,
+}
 
-type CreditCardFormData = z.infer<typeof FormSchema>
+// =============================================================================
+// Custom Validator with Cross-field Validation
+// =============================================================================
+
+const validateCreditCardForm = createValidator<CreditCardFormData>(FormSchema)
+
+const creditCardResolver = async (values: FieldValues, context: any, options: ResolverOptions<FieldValues>) => {
+  // First run basic AJV validation
+  const result = validateCreditCardForm.validate(values)
+
+  if (!result.success) {
+    // Convert AJV errors to react-hook-form format
+    const errors: FieldErrors = {}
+
+    if (result.errors) {
+      for (const error of result.errors) {
+        const fieldPath = error.field.replace(/^\//g, '').replace(/\//g, '.')
+
+        let message = error.message || 'Invalid value'
+
+        // Custom error messages
+        if (fieldPath === 'cardholderName') {
+          if (error.code === 'minLength') {
+            message = 'Cardholder name must be at least 2 characters'
+          } else if (error.code === 'maxLength') {
+            message = 'Cardholder name must be less than 50 characters'
+          }
+        } else if (fieldPath === 'cardNumber') {
+          if (error.code === 'pattern') {
+            message = 'Invalid card number format'
+          } else if (error.code === 'minLength') {
+            message = 'Card number is required'
+          }
+        } else if (fieldPath === 'expiryMonth') {
+          if (error.code === 'pattern') {
+            message = 'Invalid month'
+          } else if (error.code === 'minLength') {
+            message = 'Expiry month is required'
+          }
+        } else if (fieldPath === 'expiryYear') {
+          if (error.code === 'pattern') {
+            message = 'Invalid year'
+          } else if (error.code === 'minLength') {
+            message = 'Expiry year is required'
+          }
+        } else if (fieldPath === 'cvv') {
+          if (error.code === 'pattern') {
+            message = 'CVV must contain only digits'
+          } else if (error.code === 'minLength') {
+            message = 'CVV must be at least 3 digits'
+          } else if (error.code === 'maxLength') {
+            message = 'CVV must be at most 4 digits'
+          }
+        }
+
+        errors[fieldPath] = {
+          type: error.code || 'validation',
+          message,
+        }
+      }
+    }
+
+    return {
+      values: {},
+      errors,
+    }
+  }
+
+  // Custom cross-field validations
+  const errors: FieldErrors = {}
+  const data = values as CreditCardFormData
+
+  // Validate card number format (remove spaces and check digits)
+  if (data.cardNumber) {
+    const cleanNumber = data.cardNumber.replace(/\s/g, '')
+    if (!/^\d{13,19}$/.test(cleanNumber)) {
+      errors.cardNumber = {
+        type: 'custom',
+        message: 'Invalid card number format',
+      }
+    }
+  }
+
+  // Validate expiry date
+  if (data.expiryMonth && data.expiryYear) {
+    const currentDate = new Date()
+    const currentYear = currentDate.getFullYear()
+    const currentMonth = currentDate.getMonth() + 1
+    const expiryYear = parseInt(data.expiryYear)
+    const expiryMonth = parseInt(data.expiryMonth)
+
+    // Check if year is valid range
+    if (expiryYear < currentYear || expiryYear > currentYear + 20) {
+      errors.expiryYear = {
+        type: 'custom',
+        message: 'Invalid year',
+      }
+    }
+
+    // Check if card has expired
+    if (expiryYear < currentYear || (expiryYear === currentYear && expiryMonth < currentMonth)) {
+      errors.expiryYear = {
+        type: 'custom',
+        message: 'Card has expired',
+      }
+    }
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return {
+      values: {},
+      errors,
+    }
+  }
+
+  return {
+    values,
+    errors: {},
+  }
+}
 
 export function CreditCardForm() {
   const [creditCard, setCreditCard] = useState<CreditCardValue>({
@@ -83,7 +192,7 @@ export function CreditCardForm() {
   const [isCardValid, setIsCardValid] = useState(false)
 
   const form = useForm<CreditCardFormData>({
-    resolver: zodResolver(FormSchema),
+    resolver: creditCardResolver,
     defaultValues: {
       cardholderName: '',
       cardNumber: '',

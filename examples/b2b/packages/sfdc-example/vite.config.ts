@@ -27,7 +27,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['zod'],
+    include: ['ajv'],
   },
   build: {
     commonjsOptions: {

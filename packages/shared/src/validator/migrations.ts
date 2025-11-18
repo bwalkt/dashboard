@@ -1,8 +1,8 @@
 /**
- * Migration Examples: Zod to AJV
+ * Migration Examples: AJV Schema Patterns
  *
- * This file demonstrates how to migrate existing Zod schemas to AJV
- * while maintaining type safety and adding dynamic field support.
+ * This file demonstrates common AJV schema patterns for validation
+ * with type safety and dynamic field support.
  */
 
 // Using plain JSON Schema objects for better TypeScript compatibility
@@ -12,19 +12,7 @@ import { createValidator, MigrationHelpers, SchemaBuilder, ValidationResult } fr
 // EXAMPLE 1: Basic User Schema Migration
 // =============================================================================
 
-// Original Zod schema (from shared/src/types/user.ts)
-/*
-const UserSchema = z.object({
-  id: z.number(),
-  github_id: z.string().nullable(),
-  name: z.string(),
-  email: z.string().email(),
-  avatar: z.string().url().nullable(),
-  email_verified: z.boolean().optional().default(false),
-  created_at: z.string(),
-  updated_at: z.string(),
-})
-*/
+// User schema with AJV (migrated from shared/src/types/user.ts)
 
 // AJV equivalent with dynamic field support
 export interface User {
@@ -55,23 +43,13 @@ export const UserSchema: any = {
   additionalProperties: true, // This is the key for dynamic fields!
 }
 
-export const userValidator = createValidator(UserSchema)
+export const userValidator = createValidator<User>(UserSchema)
 
 // =============================================================================
 // EXAMPLE 2: Product Schema with Custom Fields
 // =============================================================================
 
-// Original Zod schema (from shared/src/types/product.ts)
-/*
-const ProductSchema = z.object({
-  Id: z.string(),
-  Name: z.string(),
-  ProductCode: z.string().nullable(),
-  Description: z.string().nullable(),
-  IsActive: z.boolean(),
-  // ... other fields
-})
-*/
+// Product schema with AJV (migrated from shared/src/types/product.ts)
 
 // AJV equivalent that allows Salesforce custom fields
 export interface Product {
@@ -97,7 +75,7 @@ export const ProductSchema: any = {
   additionalProperties: true, // Allows Salesforce custom fields like Product_Category__c
 }
 
-export const productValidator = createValidator(ProductSchema)
+export const productValidator = createValidator<Product>(ProductSchema)
 
 // =============================================================================
 // EXAMPLE 3: Dynamic Form Validation
@@ -130,10 +108,18 @@ export class DynamicFormValidator {
         type: field.type === 'email' || field.type === 'url' ? 'string' : field.type,
         required: field.required,
         format: field.type === 'email' ? 'email' : field.type === 'url' ? 'uri' : undefined,
-        ...(field.validation?.minLength && { minLength: field.validation.minLength }),
-        ...(field.validation?.maxLength && { maxLength: field.validation.maxLength }),
-        ...(field.validation?.min && { minimum: field.validation.min }),
-        ...(field.validation?.max && { maximum: field.validation.max }),
+        ...(field.validation?.minLength !== undefined && {
+          minLength: field.validation.minLength,
+        }),
+        ...(field.validation?.maxLength !== undefined && {
+          maxLength: field.validation.maxLength,
+        }),
+        ...(field.validation?.min !== undefined && {
+          minimum: field.validation.min,
+        }),
+        ...(field.validation?.max !== undefined && {
+          maximum: field.validation.max,
+        }),
         ...(field.validation?.pattern && { pattern: field.validation.pattern }),
       })),
     )
@@ -177,28 +163,28 @@ export const ApiResponseSchema: any = {
   additionalProperties: true,
 }
 
-export const apiResponseValidator = createValidator(ApiResponseSchema)
+export const apiResponseValidator = createValidator<ApiResponse>(ApiResponseSchema)
 
 // =============================================================================
 // EXAMPLE 5: Migration Utility Functions
 // =============================================================================
 
 /**
- * Utility to help migrate Zod schemas to AJV
+ * Utility to help create AJV schemas from object definitions
  */
-export class ZodToAjvMigrator {
+export class SchemaConverter {
   /**
-   * Convert a basic Zod-style object definition to AJV schema
+   * Convert a basic object definition to AJV schema
    */
   static convertObjectSchema<T>(
-    zodLikeDefinition: Record<string, any>,
+    schemaDefinition: Record<string, any>,
     requiredFields: (keyof T)[],
     allowDynamicFields = true,
   ): any {
     const properties: any = {}
 
-    for (const [key, zodType] of Object.entries(zodLikeDefinition)) {
-      properties[key] = this.convertFieldType(zodType)
+    for (const [key, fieldType] of Object.entries(schemaDefinition)) {
+      properties[key] = this.convertFieldType(fieldType)
     }
 
     return {
@@ -209,10 +195,10 @@ export class ZodToAjvMigrator {
     }
   }
 
-  private static convertFieldType(zodType: any): any {
+  private static convertFieldType(fieldType: any): any {
     // This is a simplified converter - extend as needed
-    if (typeof zodType === 'string') {
-      switch (zodType) {
+    if (typeof fieldType === 'string') {
+      switch (fieldType) {
         case 'string':
           return { type: 'string' }
         case 'number':
@@ -229,7 +215,7 @@ export class ZodToAjvMigrator {
           return { type: 'string' }
       }
     }
-    return zodType
+    return fieldType
   }
 }
 

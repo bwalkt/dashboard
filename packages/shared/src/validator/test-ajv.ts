@@ -3,12 +3,7 @@
  * This shows how AJV can handle both static and dynamic fields
  */
 
-import Ajv from 'ajv'
-import addFormats from 'ajv-formats'
-
-// Simple AJV setup
-const ajv = new Ajv({ allErrors: true, removeAdditional: false })
-addFormats(ajv)
+import { ajv } from './ajv'
 
 // Example: User schema with dynamic fields
 const userSchemaWithDynamicFields = {
@@ -40,10 +35,12 @@ const productSchemaWithCustomFields = {
 const validateProduct = ajv.compile(productSchemaWithCustomFields)
 
 // Example: Dynamic form validation based on configuration
-export function createDynamicFormValidator(
+export type JsonSchemaType = 'string' | 'number' | 'boolean' | 'integer' | 'array' | 'object'
+
+function createDynamicFormValidator(
   fields: Array<{
     name: string
-    type: string
+    type: JsonSchemaType
     required?: boolean
     format?: string
   }>,
@@ -62,11 +59,15 @@ export function createDynamicFormValidator(
     }
   }
 
-  const schema = {
+  const schema: any = {
     type: 'object',
     properties,
-    required,
     additionalProperties: true, // Always allow additional fields
+  }
+
+  // Only include required array if there are required fields
+  if (required.length > 0) {
+    schema.required = required
   }
 
   return ajv.compile(schema)
@@ -161,9 +162,9 @@ export const AjvExamples = {
   runAllTests() {
     console.log('=== AJV Dynamic Field Validation Tests ===')
 
-    const userResult = this.testUserValidation()
-    const productResult = this.testProductValidation()
-    const formResult = this.testDynamicForm()
+    const userResult = AjvExamples.testUserValidation()
+    const productResult = AjvExamples.testProductValidation()
+    const formResult = AjvExamples.testDynamicForm()
 
     const allPassed = userResult.isValid && productResult.isValid && formResult.isValid
 
