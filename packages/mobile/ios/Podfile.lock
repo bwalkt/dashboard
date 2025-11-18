@@ -1850,7 +1850,7 @@ PODS:
     - Yoga
   - react-native-netinfo (11.4.1):
     - React-Core
-  - react-native-network-info (5.2.1):
+  - react-native-network-info (5.2.2):
     - React
   - react-native-quick-crypto (0.7.17):
     - boost
@@ -1959,6 +1959,34 @@ PODS:
     - React-ImageManager
     - React-jsi
     - react-native-safe-area-context/common
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
+  - react-native-simcard-info (1.1.2):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -2902,6 +2930,7 @@ DEPENDENCIES:
   - react-native-network-info (from `../node_modules/react-native-network-info`)
   - react-native-quick-crypto (from `../node_modules/react-native-quick-crypto`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-simcard-info (from `../node_modules/react-native-simcard-info`)
   - react-native-splash-screen (from `../node_modules/react-native-splash-screen`)
   - react-native-tcp-socket (from `../node_modules/react-native-tcp-socket`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
@@ -3054,6 +3083,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-quick-crypto"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-simcard-info:
+    :path: "../node_modules/react-native-simcard-info"
   react-native-splash-screen:
     :path: "../node_modules/react-native-splash-screen"
   react-native-tcp-socket:
@@ -3191,9 +3222,10 @@ SPEC CHECKSUMS:
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
   react-native-mmkv: ac7507625cd74bac0eb5333604a7cd7b08fe9e3e
   react-native-netinfo: cec9c4e86083cb5b6aba0e0711f563e2fbbff187
-  react-native-network-info: 23b4f34419d7998727c9e50bf8dee3c1bd3f975a
+  react-native-network-info: 703d4b16ff0ff6f03127728348251bf5f12b823a
   react-native-quick-crypto: dac9db2adb0a61b4881909b6db7c51eaaada66a8
   react-native-safe-area-context: c6e2edd1c1da07bdce287fa9d9e60c5f7b514616
+  react-native-simcard-info: 180b0a69cd428db2d837841fac1a891ea0cac7c4
   react-native-splash-screen: 95994222cc95c236bd3cdc59fe45ed5f27969594
   react-native-tcp-socket: 120072c8020262032773f80f0daaf3964aaa08a1
   React-NativeModulesApple: 628df250681ccb569bd203494ed5187269580d6f
@@ -3226,19 +3258,19 @@ SPEC CHECKSUMS:
   React-utils: 96191b0f5e02b57c70a4bbf7b6f6721958e1d369
   React-webperformancenativemodule: 9c76ddf8d1a243e2eecd7ce1aeadb46ceccbdbd2
   ReactAppDependencyProvider: c5c4f5280e4ae0f9f4a739c64c4260fe0b3edaf1
-  ReactCodegen: b969b75041d4758a217da065f86f403f3e5da4be
+  ReactCodegen: 6d609a13d2fbf0cfc00914b69d717c597a1c00f8
   ReactCommon: 25c7f94aee74ddd93a8287756a8ac0830a309544
   ReactNativeUiLib: 237cd5430e9569575778f228547d03c485b010de
   RNDeviceInfo: bcce8752b5043a623fe3c26789679b473f705d3c
   RNGestureHandler: f1dd7f92a0faa2868a919ab53bb9d66eb4ebfcf5
-  RNReanimated: dfdd1216597f7f7590b7beb8d53cc7ffbce0f6d5
+  RNReanimated: fbfd4b0aedfbf45693363a320df89a35873e2e35
   RNScreens: 0bbf16c074ae6bb1058a7bf2d1ae017f4306797c
   RNSVG: 8c0bbfa480a24b24468f1c76bd852a4aac3178e6
-  RNWorklets: c10f7c49cd29d0ac691e9fd8e358f99372a57518
+  RNWorklets: 04b8c5d2c3322745a89f9a7dd52ffee10bffb535
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   VisionCamera: 30b358b807324c692064f78385e9a732ce1bebfe
   Yoga: edeb9900b9e5bb5b27b9a6a2d5914e4fe4033c1b
 
 PODFILE CHECKSUM: 2478372b3fee9e6fc89272829d7f5d4a29f7f344
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.15.2
