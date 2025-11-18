@@ -277,12 +277,12 @@ export function validateUserWithOrgFields(
   // First validate basic user structure
   const userResult = userValidator.validate(data)
 
-  if (!userResult.success) {
+  if (!userResult.success || !userResult.data) {
     return userResult as ValidationResult<User>
   }
 
-  // Use validated data from userResult, not raw input
-  const baseUser = userResult.data ?? (data as User)
+  // Use validated data from userResult
+  const baseUser = userResult.data
   const userData = data as any
   const errors: Array<{ field: string; message: string; code: string }> = []
 
@@ -332,12 +332,14 @@ export function validateUserWithOrgFields(
     }
   }
 
+  const orgFields = Object.fromEntries(orgFieldConfig.map(config => [config.fieldName, userData[config.fieldName]]))
+
   return {
     success: true,
     data: {
       ...baseUser,
-      ...Object.fromEntries(orgFieldConfig.map(config => [config.fieldName, userData[config.fieldName]])),
-    },
+      ...orgFields,
+    } as User,
   }
 }
 

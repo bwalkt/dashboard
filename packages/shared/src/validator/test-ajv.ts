@@ -126,7 +126,12 @@ export const AjvExamples = {
 
   // Test dynamic form based on runtime configuration
   testDynamicForm() {
-    const formConfig = [
+    const formConfig: Array<{
+      name: string
+      type: JsonSchemaType
+      required?: boolean
+      format?: string
+    }> = [
       { name: 'firstName', type: 'string', required: true },
       { name: 'lastName', type: 'string', required: true },
       { name: 'email', type: 'string', required: true, format: 'email' },
