@@ -31,6 +31,7 @@ export interface EnvironmentConfig {
   POSTGRES_DB: string;
   REDIS_HOST: string;
   REDIS_PORT: number;
+  REDIS_PASSWORD: string;
   BREVO_API_KEY: string;
   BREVO_SENDER_EMAIL: string;
   BREVO_SENDER_NAME: string;
@@ -98,6 +99,7 @@ export const config: EnvironmentConfig = {
   POSTGRES_DB: process.env.POSTGRES_DB || "pzero",
   REDIS_HOST: process.env.REDIS_HOST || "localhost",
   REDIS_PORT: parseInt(process.env.REDIS_PORT || "6379", 10),
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD || "",
   BREVO_API_KEY: process.env.BREVO_API_KEY || "",
   BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL || "",
   BREVO_SENDER_NAME: process.env.BREVO_SENDER_NAME || "P-Zero",

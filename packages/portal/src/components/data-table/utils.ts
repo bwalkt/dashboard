@@ -1,11 +1,14 @@
 // TODO: check if we can move to /data-table-filter-command/utils.ts
+
+import { createValidator } from '@boardwalk/shared/validator/ajv'
 import type { ColumnFiltersState } from '@tanstack/react-table'
-import { z } from 'zod'
 import { ARRAY_DELIMITER, RANGE_DELIMITER, SLIDER_DELIMITER } from '@/lib/delimiters'
 import type { DataTableFilterField } from './types'
 
-export function deserialize<T extends z.AnyZodObject>(schema: T) {
-  const castToSchema = z.preprocess(val => {
+export function deserialize<T>(schema: any) {
+  const validator = createValidator<T>(schema)
+
+  const preprocess = (val: unknown) => {
     if (typeof val !== 'string') return val
     return val
       .trim()
@@ -19,23 +22,22 @@ export function deserialize<T extends z.AnyZodObject>(schema: T) {
         },
         {} as Record<string, unknown>,
       )
-  }, schema)
-  return (value: string) => castToSchema.safeParse(value)
+  }
+
+  return (value: string) => {
+    const preprocessed = preprocess(value)
+    const result = validator.validate(preprocessed)
+
+    return {
+      success: result.success,
+      data: result.data,
+      error: result.errors ? { issues: result.errors } : undefined,
+    }
+  }
 }
 
-// export function serialize<T extends z.AnyZodObject>(schema: T) {
-//   return (value: z.infer<T>) =>
-//     schema
-//       .transform((val) => {
-//         Object.keys(val).reduce((prev, curr) => {
-//           if (Array.isArray(val[curr])) {
-//             return `${prev}${curr}:${val[curr].join(",")} `;
-//           }
-//           return `${prev}${curr}:${val[curr]} `;
-//         }, "");
-//       })
-//       .safeParse(value);
-// }
+// Note: Serialize function was removed as part of Zod to AJV migration
+// If needed, implement using AJV schema and manual serialization
 
 export function serializeColumFilters<TData>(
   columnFilters: ColumnFiltersState,

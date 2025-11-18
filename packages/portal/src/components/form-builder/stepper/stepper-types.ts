@@ -1,5 +1,4 @@
 import type { TextField } from '@radix-ui/themes'
-import type { z } from 'zod'
 import type { LucideIconCompType } from '../icons/lucide-icon'
 
 export interface FullStepProps extends StepProps, StepInternalConfig {}
@@ -11,7 +10,7 @@ export type Field = {
   label: string
   type?: TextField.RootProps['type'] | 'textarea'
   initialValue?: string
-  validation?: z.ZodSchema<string>
+  validation?: any // AJV schema object
 }
 
 export type StepItem = {

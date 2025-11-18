@@ -105,9 +105,9 @@ catalog:
   prettier: 3.4.2
   prettier-plugin-tailwindcss: 0.6.11
   radashi: 1.2.0
-  react: ^19.1.1
+  react: 19.2.0
   react-day-picker: 9.11.1
-  react-dom: 19.1.1
+  react-dom: 19.2.0
   react-dropzone: 14.3.5
   react-hook-form: 7.54.1
   react-native: 0.82.0
@@ -149,5 +149,4 @@ catalog:
   vaul: 1.1.2
   vite: 7.1.11
   vitest: 3.2.4
-  zod: 4.1.12
   zustand: 5.0.8

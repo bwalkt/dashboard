@@ -1,78 +1,189 @@
-import { z } from 'zod'
+import Ajv from 'ajv'
+import addFormats from 'ajv-formats'
 
-// Zod schemas
-export const UserSchema = z.object({
-  id: z.number(),
-  github_id: z.string().nullable(),
-  name: z.string(),
-  email: z.string().email(),
-  avatar: z.string().url().nullable(),
-  email_verified: z.boolean().optional().default(false),
-  created_at: z.string(),
-  updated_at: z.string(),
-})
+const ajv = new Ajv()
+addFormats(ajv)
 
-export const CreateUserDataSchema = z.object({
-  github_id: z.string().nullable(),
-  name: z.string(),
-  email: z.string().email(),
-  avatar: z.string().url().nullable(),
-  email_verified: z.boolean().optional().default(false),
-})
+// AJV schemas
+export const UserSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'number' },
+    github_id: { type: ['string', 'null'] },
+    name: { type: 'string' },
+    email: { type: 'string', format: 'email' },
+    avatar: { type: ['string', 'null'], format: 'url' },
+    email_verified: { type: 'boolean', default: false },
+    created_at: { type: 'string' },
+    updated_at: { type: 'string' },
+  },
+  required: ['id', 'name', 'email', 'created_at', 'updated_at'],
+  additionalProperties: false,
+}
+
+export const CreateUserDataSchema = {
+  type: 'object',
+  properties: {
+    github_id: { type: ['string', 'null'] },
+    name: { type: 'string' },
+    email: { type: 'string', format: 'email' },
+    avatar: { type: ['string', 'null'], format: 'url' },
+    email_verified: { type: 'boolean', default: false },
+  },
+  required: ['name', 'email'],
+  additionalProperties: false,
+}
 
 // GitHub OAuth response schemas
-export const GitHubUserSchema = z.object({
-  id: z.string(),
-  login: z.string(),
-  name: z.string(),
-  email: z.string().email(),
-  avatar_url: z.string().url(),
-})
+export const GitHubUserSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    login: { type: 'string' },
+    name: { type: 'string' },
+    email: { type: 'string', format: 'email' },
+    avatar_url: { type: 'string', format: 'url' },
+  },
+  required: ['id', 'login', 'name', 'email', 'avatar_url'],
+  additionalProperties: false,
+}
 
 // JWT Token payload schemas
-export const AccessTokenPayloadSchema = z.object({
-  userId: z.number(),
-  githubId: z.string().nullable(),
-  email: z.string().email(),
-  exp: z.number(),
-  iat: z.number(),
-})
+export const AccessTokenPayloadSchema = {
+  type: 'object',
+  properties: {
+    userId: { type: 'number' },
+    githubId: { type: ['string', 'null'] },
+    email: { type: 'string', format: 'email' },
+    exp: { type: 'number' },
+    iat: { type: 'number' },
+  },
+  required: ['userId', 'email', 'exp', 'iat'],
+  additionalProperties: false,
+}
 
-export const RefreshTokenPayloadSchema = z.object({
-  userId: z.number(),
-  type: z.literal('refresh'),
-  exp: z.number(),
-  iat: z.number(),
-})
+export const RefreshTokenPayloadSchema = {
+  type: 'object',
+  properties: {
+    userId: { type: 'number' },
+    type: { const: 'refresh' },
+    exp: { type: 'number' },
+    iat: { type: 'number' },
+  },
+  required: ['userId', 'type', 'exp', 'iat'],
+  additionalProperties: false,
+}
 
 // API Response schemas
-export const AuthResponseSchema = z.object({
-  accessToken: z.string(),
-  refreshToken: z.string(),
-  user: UserSchema,
-})
+export const AuthResponseSchema = {
+  type: 'object',
+  properties: {
+    accessToken: { type: 'string' },
+    refreshToken: { type: 'string' },
+    user: UserSchema,
+  },
+  required: ['accessToken', 'refreshToken', 'user'],
+  additionalProperties: false,
+}
 
-export const UserResponseSchema = z.object({
-  user: UserSchema,
-})
+export const UserResponseSchema = {
+  type: 'object',
+  properties: {
+    user: UserSchema,
+  },
+  required: ['user'],
+  additionalProperties: false,
+}
 
-export const ErrorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string(),
-})
+export const ErrorResponseSchema = {
+  type: 'object',
+  properties: {
+    error: { type: 'string' },
+    message: { type: 'string' },
+  },
+  required: ['error', 'message'],
+  additionalProperties: false,
+}
 
 // Request types with authentication
-export const AuthenticatedRequestSchema = z.object({
-  user: UserSchema,
-})
+export const AuthenticatedRequestSchema = {
+  type: 'object',
+  properties: {
+    user: UserSchema,
+  },
+  required: ['user'],
+  additionalProperties: false,
+}
 
-// Inferred types from schemas
-export type User = z.infer<typeof UserSchema>
-export type CreateUserData = z.infer<typeof CreateUserDataSchema>
-export type GitHubUser = z.infer<typeof GitHubUserSchema>
-export type AccessTokenPayload = z.infer<typeof AccessTokenPayloadSchema>
-export type RefreshTokenPayload = z.infer<typeof RefreshTokenPayloadSchema>
-export type AuthResponse = z.infer<typeof AuthResponseSchema>
-export type UserResponse = z.infer<typeof UserResponseSchema>
-export type ErrorResponse = z.infer<typeof ErrorResponseSchema>
-export type AuthenticatedRequest = z.infer<typeof AuthenticatedRequestSchema>
+// Compiled validators
+export const validateUser = ajv.compile(UserSchema)
+export const validateCreateUserData = ajv.compile(CreateUserDataSchema)
+export const validateGitHubUser = ajv.compile(GitHubUserSchema)
+export const validateAccessTokenPayload = ajv.compile(AccessTokenPayloadSchema)
+export const validateRefreshTokenPayload = ajv.compile(RefreshTokenPayloadSchema)
+export const validateAuthResponse = ajv.compile(AuthResponseSchema)
+export const validateUserResponse = ajv.compile(UserResponseSchema)
+export const validateErrorResponse = ajv.compile(ErrorResponseSchema)
+export const validateAuthenticatedRequest = ajv.compile(AuthenticatedRequestSchema)
+
+// Type definitions
+export interface User {
+  id: number
+  github_id: string | null
+  name: string
+  email: string
+  avatar: string | null
+  email_verified?: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateUserData {
+  github_id: string | null
+  name: string
+  email: string
+  avatar: string | null
+  email_verified?: boolean
+}
+
+export interface GitHubUser {
+  id: string
+  login: string
+  name: string
+  email: string
+  avatar_url: string
+}
+
+export interface AccessTokenPayload {
+  userId: number
+  githubId: string | null
+  email: string
+  exp: number
+  iat: number
+}
+
+export interface RefreshTokenPayload {
+  userId: number
+  type: 'refresh'
+  exp: number
+  iat: number
+}
+
+export interface AuthResponse {
+  accessToken: string
+  refreshToken: string
+  user: User
+}
+
+export interface UserResponse {
+  user: User
+}
+
+export interface ErrorResponse {
+  error: string
+  message: string
+}
+
+export interface AuthenticatedRequest {
+  user: User
+}

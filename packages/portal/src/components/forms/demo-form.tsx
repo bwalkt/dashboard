@@ -1,10 +1,10 @@
 'use client'
 
-import { zodResolver } from '@hookform/resolvers/zod'
+import { createValidator } from '@boardwalk/shared/validator/ajv'
 import { useForm } from 'react-hook-form'
-import * as z from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { createAjvResolver } from '@/lib/ajv-resolver'
 import { FormCheckbox } from './form-checkbox'
 import { type CheckboxGroupOption, FormCheckboxGroup } from './form-checkbox-group'
 import { FormDatePicker } from './form-date-picker'
@@ -16,43 +16,88 @@ import { FormSlider } from './form-slider'
 import { FormSwitch } from './form-switch'
 import { FormTextarea } from './form-textarea'
 
-// Demo form schema
-const demoFormSchema = z.object({
+// =============================================================================
+// TypeScript Interface
+// =============================================================================
+
+interface DemoFormData {
   // Basic inputs
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.email('Invalid email address'),
-  age: z.number().min(18, 'Must be at least 18 years old'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-
+  name: string
+  email: string
+  age: number
+  password: string
   // Textarea
-  bio: z.string().min(10, 'Bio must be at least 10 characters'),
-
+  bio: string
   // Select
-  country: z.string().min(1, 'Please select a country'),
-
+  country: string
   // Checkbox group
-  interests: z.array(z.string()).min(1, 'Select at least one interest'),
-
+  interests: string[]
   // Radio group
-  gender: z.string().min(1, 'Please select gender'),
-
+  gender: string
   // Switch
-  newsletter: z.boolean(),
-
+  newsletter: boolean
   // Slider
-  rating: z.number().min(0).max(10),
-
+  rating: number
   // Date picker
-  birthDate: z.date().optional(),
-
+  birthDate?: Date
   // Single checkbox
-  terms: z.boolean().refine(val => val === true, 'You must accept the terms'),
-
+  terms: boolean
   // File upload
-  avatar: z.array(z.any()).optional(),
-})
+  avatar?: any[]
+}
 
-type DemoFormData = z.infer<typeof demoFormSchema>
+// =============================================================================
+// AJV Schema
+// =============================================================================
+
+const demoFormSchema = {
+  type: 'object',
+  properties: {
+    // Basic inputs
+    name: { type: 'string', minLength: 2 },
+    email: { type: 'string', format: 'email' },
+    age: { type: 'number', minimum: 18 },
+    password: { type: 'string', minLength: 8 },
+    // Textarea
+    bio: { type: 'string', minLength: 10 },
+    // Select
+    country: { type: 'string', minLength: 1 },
+    // Checkbox group
+    interests: { type: 'array', items: { type: 'string' }, minItems: 1 },
+    // Radio group
+    gender: { type: 'string', minLength: 1 },
+    // Switch
+    newsletter: { type: 'boolean' },
+    // Slider
+    rating: { type: 'number', minimum: 0, maximum: 10 },
+    // Date picker (optional)
+    birthDate: { type: 'string', format: 'date' },
+    // Single checkbox (must be true)
+    terms: { type: 'boolean', const: true },
+    // File upload (optional)
+    avatar: { type: 'array', items: {} },
+  },
+  required: [
+    'name',
+    'email',
+    'age',
+    'password',
+    'bio',
+    'country',
+    'interests',
+    'gender',
+    'newsletter',
+    'rating',
+    'terms',
+  ],
+  additionalProperties: false,
+}
+
+// =============================================================================
+// Validator
+// =============================================================================
+
+const validateDemoForm = createValidator<DemoFormData>(demoFormSchema)
 
 // Demo options
 const countryOptions: FormOption[] = [
@@ -97,7 +142,7 @@ const fileUploadConfig: FileUploadConfig = {
  */
 export default function DemoForm() {
   const form = useForm<DemoFormData>({
-    resolver: zodResolver(demoFormSchema),
+    resolver: createAjvResolver(validateDemoForm),
     defaultValues: {
       name: '',
       email: '',

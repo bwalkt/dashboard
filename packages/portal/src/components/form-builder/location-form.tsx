@@ -1,33 +1,59 @@
 'use client'
 
-import { zodResolver } from '@hookform/resolvers/zod'
+import { createValidator } from '@boardwalk/shared/validator/ajv'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Form, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import LocationSelector from '@/components/ui/location-input'
+import { createAjvResolver } from '@/lib/ajv-resolver'
 
-const FormSchema = z.object({
-  location: z.tuple([
-    z.string().min(1, { message: 'Country is required' }),
-    z
-      .string()
-      .optional(), // State name, optional
-  ]),
-})
+// =============================================================================
+// TypeScript Interface
+// =============================================================================
+
+interface LocationFormData {
+  location: [string, string?] // [country, state?]
+}
+
+// =============================================================================
+// AJV Schema
+// =============================================================================
+
+const FormSchema = {
+  type: 'object',
+  properties: {
+    location: {
+      type: 'array',
+      items: [
+        { type: 'string', minLength: 1 }, // Country (required)
+        { type: 'string' }, // State (optional)
+      ],
+      minItems: 1,
+      maxItems: 2,
+    },
+  },
+  required: ['location'],
+  additionalProperties: false,
+}
+
+// =============================================================================
+// Validator
+// =============================================================================
+
+const validateLocationForm = createValidator<LocationFormData>(FormSchema)
 
 export function LocationForm() {
   const [countryName, setCountryName] = useState<string>('')
   const [stateName, setStateName] = useState<string>('')
 
-  const form = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema),
+  const form = useForm<LocationFormData>({
+    resolver: createAjvResolver(validateLocationForm),
   })
 
-  function onSubmit(data: z.infer<typeof FormSchema>) {
+  function onSubmit(data: LocationFormData) {
     toast(
       <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
         <code className="text-white">{JSON.stringify(data, null, 2)}</code>

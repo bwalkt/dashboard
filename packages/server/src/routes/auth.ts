@@ -498,6 +498,13 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           email_verified: true,
         });
 
+        if (!user) {
+          return reply.status(500).send({
+            error: "Internal Server Error",
+            message: "Failed to create user account",
+          } as ErrorResponse);
+        }
+
         // Delete registration data from Redis
         await redis.delete(redisKey);
 

@@ -20,7 +20,7 @@ describe("SMS Routes", () => {
   describe("POST /sms/verify", () => {
     it("should send SMS verification code for valid phone number", async () => {
       const phoneData = {
-        phone: "+1234567890",
+        phone: "+12125551234",
       };
 
       const response = await request(app.server)
@@ -58,7 +58,7 @@ describe("SMS Routes", () => {
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("error");
-      expect(response.body.message).toBe("Invalid phone number format");
+      expect(response.body.message).toBe("Phone number format is not possible");
     });
 
     it("should reject SMS verification with non-US phone number", async () => {
@@ -73,7 +73,7 @@ describe("SMS Routes", () => {
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("error");
-      expect(response.body.message).toBe("Only US phone numbers are supported");
+      expect(response.body.message).toBe("Phone number is not valid");
     });
   });
 
@@ -97,7 +97,7 @@ describe("SMS Routes", () => {
 
     it("should reject verification with missing code", async () => {
       const confirmData = {
-        phone: "+1234567890",
+        phone: "+12125551234",
       };
 
       const response = await request(app.server)
@@ -114,7 +114,7 @@ describe("SMS Routes", () => {
 
     it("should reject verification with invalid/expired code", async () => {
       const confirmData = {
-        phone: "+1234567890",
+        phone: "+12125551234",
         code: "123456",
       };
 
@@ -134,7 +134,7 @@ describe("SMS Routes", () => {
   describe("POST /sms/verify/resend", () => {
     it("should resend SMS verification code for valid phone number", async () => {
       const phoneData = {
-        phone: "+1234567890",
+        phone: "+12125551234",
       };
 
       const response = await request(app.server)
@@ -172,12 +172,12 @@ describe("SMS Routes", () => {
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("error");
-      expect(response.body.message).toBe("Invalid phone number format");
+      expect(response.body.message).toBe("Phone number format is not possible");
     });
 
     it("should handle rate limiting", async () => {
       const phoneData = {
-        phone: "+1234567890",
+        phone: "+12125551234",
       };
 
       // First request should succeed

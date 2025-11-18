@@ -1,22 +1,43 @@
 'use client'
 
-import { zodResolver } from '@hookform/resolvers/zod'
+import { createValidator } from '@boardwalk/shared/validator/ajv'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { z } from 'zod'
 import Autocomplete from '@/components/ui/autocomplete'
 import { Button } from '@/components/ui/button'
 import { Form, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { createAjvResolver } from '@/lib/ajv-resolver'
 
-const FormSchema = z.object({
-  framework: z.string().min(1, { message: 'Please select a framework' }),
-})
+// =============================================================================
+// TypeScript Interface
+// =============================================================================
 
-type AutocompleteFormData = z.infer<typeof FormSchema>
+interface AutocompleteFormData {
+  framework: string
+}
+
+// =============================================================================
+// AJV Schema
+// =============================================================================
+
+const FormSchema = {
+  type: 'object',
+  properties: {
+    framework: { type: 'string', minLength: 1 },
+  },
+  required: ['framework'],
+  additionalProperties: false,
+}
+
+// =============================================================================
+// Validator
+// =============================================================================
+
+const validateAutocompleteForm = createValidator<AutocompleteFormData>(FormSchema)
 
 export function AutocompleteForm() {
   const form = useForm<AutocompleteFormData>({
-    resolver: zodResolver(FormSchema),
+    resolver: createAjvResolver(validateAutocompleteForm),
   })
 
   const onSubmit = (data: AutocompleteFormData) => {

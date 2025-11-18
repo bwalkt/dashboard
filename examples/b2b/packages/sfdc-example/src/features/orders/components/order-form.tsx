@@ -1,4 +1,3 @@
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -10,8 +9,9 @@ import { FormTextarea } from '@/components/forms/form-textarea'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
+import { createAjvResolver } from '@/lib/ajv-resolver'
 import { api } from '@/lib/api'
-import { Order, OrderCreateRequest, OrderCreateRequestSchema, OrderUpdateRequest } from '@/types'
+import { Order, OrderCreateRequest, OrderUpdateRequest, validateOrderCreateRequest } from '@/types'
 
 interface OrderFormProps {
   initialData?: Order | null
@@ -43,7 +43,7 @@ export default function OrderForm({ initialData, pageTitle }: OrderFormProps) {
       }
 
   const form = useForm<OrderCreateRequest>({
-    resolver: zodResolver(OrderCreateRequestSchema),
+    resolver: createAjvResolver(validateOrderCreateRequest),
     defaultValues: defaultValues,
   })
 
