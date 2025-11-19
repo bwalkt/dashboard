@@ -39,7 +39,6 @@ export interface EnvironmentConfig {
   SIGNALWIRE_TOKEN: string;
   SIGNALWIRE_PHONE_NUMBER: string;
   PORT: number;
-  OAUTH_REDIRECT_URL: string;
   SERVER_BASE_URL: string;
   FRONTEND_URL: string | undefined;
   DOMAIN: string;
@@ -107,7 +106,6 @@ export const config: EnvironmentConfig = {
   SIGNALWIRE_TOKEN: process.env.SIGNALWIRE_TOKEN || "",
   SIGNALWIRE_PHONE_NUMBER: process.env.SIGNALWIRE_PHONE_NUMBER || "",
   PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : 8090,
-  OAUTH_REDIRECT_URL: process.env.OAUTH_REDIRECT_URL || "http://localhost:1430",
   SERVER_BASE_URL: process.env.SERVER_BASE_URL || "http://localhost:8090",
   FRONTEND_URL: process.env.FRONTEND_URL,
   DOMAIN: domain,
@@ -147,6 +145,7 @@ export function validateEnvironment(): void {
   const requiredVars = [
     "GITHUB_CLIENT_ID",
     "GITHUB_CLIENT_SECRET",
+    "FRONTEND_URL",
     "JWT_SECRET",
     "BREVO_API_KEY",
     "BREVO_SENDER_EMAIL",

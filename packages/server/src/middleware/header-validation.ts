@@ -298,8 +298,21 @@ const headerValidationPlugin: FastifyPluginAsync<
       }
 
       // Check for public paths (no auth required)
-      if (isPublicPath(request.url)) {
-        return; // Continue to handler
+      // Extract pathname from URL (remove query string and hash)
+      if (request.url) {
+        try {
+          // Fastify request.url is typically just the pathname with query string
+          // Use a dummy base URL to parse it properly
+          const url = new URL(request.url, config.SERVER_BASE_URL);
+          if (isPublicPath(url.pathname)) {
+            return; // Continue to handler
+          }
+        } catch {
+          // Fallback to original string if URL parsing fails
+          if (isPublicPath(request.url)) {
+            return; // Continue to handler
+          }
+        }
       }
 
       // JWT cookie fallback

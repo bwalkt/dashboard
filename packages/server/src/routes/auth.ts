@@ -44,7 +44,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       },
     },
     callbackUri: (() => {
-      // Extract base URL from OAUTH_REDIRECT_URL (e.g., http://localhost:1430/auth/sign-in -> http://localhost:1430)
+      // Extract base URL from FRONTEND_URL (e.g., http://localhost:1420/auth/sign-in -> http://localhost:1430)
       if (config.FRONTEND_URL) {
         const url = new URL(config.FRONTEND_URL);
         return `${url.protocol}//${url.host}/auth/callback`;
@@ -62,24 +62,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     "/auth/login",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        // Generate state parameter for CSRF protection
-        const state =
-          Math.random().toString(36).substring(2, 15) +
-          Math.random().toString(36).substring(2, 15);
-
-        // Store state in session or cookie for validation
-        // For simplicity, we'll use a cookie
-        // Debug: Log the state being set
-        reply.setCookie("oauth_state", state, {
-          httpOnly: true,
-          secure: config.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: 600, // 10 minutes
-          path: "/",
-        });
-        const githuboAuth2 = fastify.githubOAuth2;
+        const githubOAuth2 = fastify.githubOAuth2;
         // Redirect to GitHub OAuth
-        const authUrl = await githuboAuth2.generateAuthorizationUri(
+        const authUrl = await githubOAuth2.generateAuthorizationUri(
           request,
           reply,
         );
@@ -107,10 +92,16 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           code: string;
           state: string;
         };
-        // Validate state parameter
 
+        // Validate state parameter
+        if (!state) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Invalid state parameter",
+          } as ErrorResponse);
+        }
         const storedState = request.cookies.oauth_state;
-        if (!state || !storedState || state !== storedState) {
+        if (!storedState || state !== storedState) {
           return reply.status(400).send({
             error: "Bad Request",
             message: "Invalid state parameter",
@@ -175,9 +166,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           user.github_id,
           user.email,
         );
-        // Redirect to frontend sign-in page after setting cookies
-        const oAuthRedirectUrl =
-          config.OAUTH_REDIRECT_URL || "http://localhost:1430/auth/sign-in";
 
         if (config.NODE_ENV !== "production") {
           console.log(
@@ -203,8 +191,10 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           maxAge: 3600 * 24 * 30, // 30 days
         });
 
-        console.log("Redirecting to:", oAuthRedirectUrl);
-        return reply.redirect(oAuthRedirectUrl);
+        return reply.send({
+          message: "Login successful",
+          user,
+        });
       } catch (error) {
         console.error("OAuth callback error:", error);
         return reply.status(500).send({
