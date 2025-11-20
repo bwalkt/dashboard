@@ -180,6 +180,7 @@ $$ language plpython3u immutable strict;
 CREATE OR REPLACE FUNCTION pzero.audit_trigger_plpython () returns trigger AS $$
 import plpy
 import json
+import os
 
 # Constants
 AUTH_TABLES = frozenset(['auth', 'users'])
@@ -187,64 +188,100 @@ SKIP_USER_VALIDATION_TABLES = frozenset(['txns', 'all_audits'])  # Skip validati
 EXCLUDED_AUDIT_COLUMNS = frozenset(['id', 'c_by', 'c_at', 'u_by', 'u_at', 'is_del', 'last_seen'])
 MAX_RETRY_ATTEMPTS = 5
 
+# Check environment for DELETE permission
+# Get environment from PostgreSQL GUC (Grand Unified Configuration)
+try:
+    env_result = plpy.execute("SHOW app.environment")
+    environment = env_result[0]['app.environment'] if env_result and len(env_result) > 0 else 'production'
+except:
+    # If app.environment is not set, default to production (safest option)
+    environment = 'production'
+
 # Validate event type
-if TD['event'] not in ['INSERT', 'UPDATE']:
+if TD['event'] == 'DELETE':
+    # Only allow DELETE in development environment
+    if environment != 'development':
+        plpy.error(f"DELETE operations are not allowed in {environment} environment. Use soft delete (SET is_del = TRUE) instead.")
+        raise ValueError(f"DELETE not allowed in {environment}")
+elif TD['event'] not in ['INSERT', 'UPDATE']:
     plpy.error(f"Unsupported event type: {TD['event']}")
     raise
 
 # Get row data
 old_row = TD.get('old')  # Available for UPDATE and DELETE
 new_row = TD.get('new')  # Available for INSERT and UPDATE
+
+# Handle DELETE event (only reaches here in development)
+if TD['event'] == 'DELETE':
+    plpy.notice(f"DELETE event on table {TD.get('table_name')} for row {old_row.get('id')} [DEVELOPMENT MODE]")
+    # For DELETE BEFORE triggers, return "OK" to allow the deletion
+    # We could add audit logging here in the future if needed
+    return "OK"
 # Get the parent partitioned table name (not the partition)
 relid = TD['relid']
-# First check if this is a partition and get the parent table
+
+# Recursively find the root parent table (the one starting with "all_")
 parent_stmt = plpy.prepare("""
-    SELECT 
-        pn.nspname as parent_schema, 
+    SELECT
+        pn.nspname as parent_schema,
         pc.relname as parent_table,
+        pc.oid as parent_oid,
         cn.nspname as child_schema,
         cc.relname as child_table
     FROM pg_inherits pi
     JOIN pg_class pc ON pi.inhparent = pc.oid
     JOIN pg_namespace pn ON pc.relnamespace = pn.oid
-    JOIN pg_class cc ON pi.inhrelid = cc.oid  
+    JOIN pg_class cc ON pi.inhrelid = cc.oid
     JOIN pg_namespace cn ON cc.relnamespace = cn.oid
     WHERE pi.inhrelid = $1
 """, ["bigint"])
-parent_query = plpy.execute(parent_stmt, [relid])
 
-if parent_query:
-    # This is a partition, use the parent table
+current_oid = relid
+schema_name = None
+table_only_name = None
+full_table_name = None
+actual_partition = None
+
+while True:
+    parent_query = plpy.execute(parent_stmt, [current_oid])
+    if not parent_query or len(parent_query) == 0:
+        # No more parents, use current table
+        if schema_name is None:
+            # First iteration and not a partition, use the table itself
+            try:
+                table_stmt = plpy.prepare("SELECT nspname as schema_name, relname as table_name FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.oid = $1", ["bigint"])
+                table_info = plpy.execute(table_stmt, [relid])
+                if table_info and len(table_info) > 0:
+                    schema_name = table_info[0]['schema_name']
+                    table_only_name = table_info[0]['table_name']
+                    full_table_name = f"{schema_name}.{table_only_name}"
+            except Exception as e:
+                plpy.warning(f"Error resolving table: {e}")
+        break
+
     schema_name = parent_query[0]['parent_schema']
     table_only_name = parent_query[0]['parent_table']
     full_table_name = f"{schema_name}.{table_only_name}"
-    actual_partition = f"{parent_query[0]['child_schema']}.{parent_query[0]['child_table']}"
-    plpy.notice(f"Using parent table: {full_table_name} (triggered from partition: {actual_partition})")
-else:
-    # Not a partition, use the table itself
-    try:
-        table_stmt = plpy.prepare("SELECT nspname as schema_name, relname as table_name FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE c.oid = $1", ["bigint"])
-        table_info = plpy.execute(table_stmt, [relid])
-        if table_info and len(table_info) > 0:
-            schema_name = table_info[0]['schema_name']
-            table_only_name = table_info[0]['table_name']
-            full_table_name = f"{schema_name}.{table_only_name}"
-            plpy.notice(f"Resolved table from relid {relid}: {full_table_name}")
-        else:
-            # Fallback to TD values when table lookup fails
-            plpy.warning(f"Failed to resolve table for relid {relid}, falling back to TD values")
-            full_table_name = TD['table_name']
-            schema_name = TD.get('table_schema', 'pzero')
-            table_only_name = full_table_name.split('.')[1] if '.' in full_table_name else full_table_name
-            plpy.notice(f"Using fallback table name: {full_table_name}")
-    except Exception as e:
-        # Fallback to TD values on any error
-        plpy.warning(f"Error resolving table for relid {relid}: {e}, falling back to TD values")
-        full_table_name = TD['table_name']
-        schema_name = TD.get('table_schema', 'pzero')
-        table_only_name = full_table_name.split('.')[1] if '.' in full_table_name else full_table_name
-        plpy.notice(f"Using fallback table name: {full_table_name}")
-    plpy.notice(f"Processing table: {full_table_name} (relid: {relid})")
+    if actual_partition is None:
+        actual_partition = f"{parent_query[0]['child_schema']}.{parent_query[0]['child_table']}"
+
+    # If we found a table starting with "all_", this is our root parent
+    if table_only_name.startswith('all_'):
+        plpy.notice(f"Using root parent table: {full_table_name} (triggered from partition: {actual_partition})")
+        break
+
+    # Continue traversing up the hierarchy
+    current_oid = parent_query[0]['parent_oid']
+
+# Fallback if we still don't have a table name
+if not full_table_name:
+    plpy.warning(f"Failed to resolve table for relid {relid}, falling back to TD values")
+    full_table_name = TD['table_name']
+    schema_name = TD.get('table_schema', 'pzero')
+    table_only_name = full_table_name.split('.')[1] if '.' in full_table_name else full_table_name
+    plpy.notice(f"Using fallback table name: {full_table_name}")
+
+plpy.notice(f"Processing table: {full_table_name} (relid: {relid})")
 auth_insert = False
 
 # Get transaction ID with error handling
@@ -368,10 +405,9 @@ except plpy.SPIError as e:
     raise
 
 plpy.notice("Reached transaction logging section")
-# Get part value from the row if it exists, otherwise use NULL
-part_value = new_row.get('part') if new_row else None
-if not part_value:
-    part_value = 'pzero'  # Default partition for tables without part column
+# Get part value from the row if it exists, otherwise use sentinel value 'pzero'
+# Note: Cannot use NULL because part is in PRIMARY KEY for all_txns and all_audits
+part_value = new_row.get('part') or 'pzero'
 
 # Log transaction with prepared statement (must happen before append-only check)
 try:
@@ -681,7 +717,8 @@ elif event == 'UPDATE':
             plpy.notice(f'Schema "{old_schema}" retained for backup (migration of data to be done separately)')
             # Note: Actual data migration will be handled separately as mentioned
 
-return new_row
+# AFTER triggers should return None
+return None
 $$ language plpython3u;
 
 CREATE FUNCTION pzero.check_relations_trigger () returns trigger AS $$

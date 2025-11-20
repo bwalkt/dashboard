@@ -45,12 +45,10 @@ CREATE DOMAIN pzero.email AS text CHECK (
   value ~* '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
 );
 
-CREATE DOMAIN pzero.valid_handle AS varchar(8) NOT NULL CHECK (value ~* '^[A-Za-z0-9._\-]+$');
-CREATE DOMAIN pzero.valid_part AS varchar(5) CHECK (value IS NULL OR value ~* '^[A-Za-z0-9 ._\-]+$');
-CREATE DOMAIN pzero.valid_org_handle AS varchar(5) NOT NULL CHECK (value ~* '^[A-Za-z0-9._\-]+$');
-
-CREATE DOMAIN pzero.valid_col_name AS varchar(20) NOT NULL CHECK (value ~* '^[A-Za-z0-9_]+$');
-
+CREATE DOMAIN pzero.valid_name AS varchar(100) NOT NULL CHECK (value ~* '^[A-Za-z0-9._ \-]+$');
+CREATE DOMAIN pzero.valid_handle AS varchar(10) NOT NULL CHECK (value ~* '^[A-Za-z0-9._\-]+$');
+CREATE DOMAIN pzero.valid_part AS varchar(10) NOT NULL DEFAULT 'pzero' CHECK (value ~* '^[A-Za-z0-9 ._\-]+$');
+CREATE DOMAIN pzero.valid_col_name AS varchar(25) NOT NULL CHECK (value ~* '^[A-Za-z0-9_]+$');
 CREATE DOMAIN pzero.domain AS text CHECK (
   value ~ '^(https?://)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
 );
@@ -159,7 +157,7 @@ CREATE TYPE pzero.file_unit AS enum(
 
 CREATE TABLE pzero.mmn (
   mmn pzero.mmn_type UNIQUE PRIMARY KEY,
-  table_name varchar(20) UNIQUE
+  table_name varchar(50) UNIQUE
 );
 
 INSERT INTO
@@ -223,7 +221,7 @@ INSERT INTO
 VALUES
   ('all_txns', 'TX');
 CREATE TABLE pzero.base_table (
-  name pzero.valid_handle NOT NULL,
+  name pzero.valid_name NOT NULL,
   is_del boolean DEFAULT FALSE,
   is_act boolean DEFAULT TRUE,
   dscr text,
@@ -242,9 +240,10 @@ CREATE TABLE pzero.domain_base (
   whitelisted_emails pzero.email[],
   blacklisted_emails pzero.email[],
   status pzero.org_status NOT NULL DEFAULT 'PENDING',
-  handle pzero.valid_org_handle NOT NULL,
+  handle pzero.valid_handle NOT NULL,
   headers pzero.key_values,
   variables pzero.key_values,
+  methods pzero.method[],
   add_policy smallint NOT NULL DEFAULT 0 -- 0 explicit, 1 -- discoverable, 2 -- shareable 3 -- discoverable and shareable
 );
 
@@ -254,7 +253,6 @@ CREATE TABLE pzero.parts  (
   c_at timestamptz not null default now(),
   tags text[]
 ) inherits (pzero.base_table);
-
 -- Create immutable wrapper function for extracting epoch from UUIDv7
 CREATE OR REPLACE FUNCTION pzero.extract_epoch(p_timestamptz TIMESTAMPTZ)
 RETURNS BIGINT AS $$
@@ -375,9 +373,9 @@ BEGIN
             IF part_col_exists IS NOT NULL THEN
               partition_sql1 :=  partition_sql1 || ' PARTITION BY LIST (part)';
               partition_sql2 :=  partition_sql2 || ' PARTITION BY LIST (part)';
-              partition_sql3 :=  format('CREATE TABLE %s.%s_%s_ PARTITION OF %s.%s_%s FOR VALUES IN (NULL, ''pzero'')', 
+              partition_sql3 :=  format('CREATE TABLE %s.%s_%s_ PARTITION OF %s.%s_%s FOR VALUES IN (''pzero'')',
                                       v_schema_name, partition_table_name, sql_suffix, v_schema_name, partition_table_name, sql_suffix);
-              partition_sql4 :=  format('CREATE TABLE %s.%s_ PARTITION OF %s.%s FOR VALUES IN (NULL, ''pzero'')', 
+              partition_sql4 :=  format('CREATE TABLE %s.%s_ PARTITION OF %s.%s FOR VALUES IN (''pzero'')',
                                       v_schema_name, partition_table_name, v_schema_name, partition_table_name);
 
             END IF;
@@ -395,7 +393,7 @@ BEGIN
       
           -- If no suffix, create single partition table on part column if exists
           ELSIF part_col_exists IS NOT NULL THEN
-            partition_sql1 := format('CREATE TABLE %s.%s_ PARTITION OF %s FOR VALUES IN (NULL, ''pzero'')', 
+            partition_sql1 := format('CREATE TABLE %s.%s_ PARTITION OF %s FOR VALUES IN (''pzero'')',
                                     v_schema_name, partition_table_name, obj_name);
             EXECUTE partition_sql1;
             RAISE NOTICE 'Created partition table %.% %s  with part column', v_schema_name, partition_table_name, obj_name;
@@ -456,7 +454,7 @@ CREATE TABLE pzero.all_orgs (
   subscriber_tier_level pzero.subscriber_tier_level DEFAULT 'FREE',
   subscriber_tier_expiry timestamptz,
   multi_tenant boolean DEFAULT TRUE,
-  part_by pzero.valid_part REFERENCES pzero.parts(part),
+  part_by pzero.valid_part,
   PRIMARY KEY (id, is_act),
   UNIQUE (name, is_act),
   UNIQUE (website, is_act),
@@ -465,9 +463,13 @@ CREATE TABLE pzero.all_orgs (
   trial_period pzero.from_to
 ) PARTITION BY list (is_act);
 CREATE INDEX org_part_by_idx on pzero.all_orgs(part_by);
-
+INSERT INTO pzero.all_orgs(name, handle, data)
+  SELECT 'pzero', 'pzero', jsonb_build_object('meta',
+  jsonb_build_object('c_by', id::text))
+  FROM pzero.all_auth
+  WHERE email = 'admin@example.com';
 CREATE TABLE pzero.base_part (
-  part pzero.valid_part,
+  part pzero.valid_part not null default 'pzero' REFERENCES pzero.parts(part),
   org_id pzero.id
 );
 -- Children of org are
