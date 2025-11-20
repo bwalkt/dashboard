@@ -279,7 +279,8 @@ try:
     dev_notice(f"Auth record created: {auth_id}")
 
 except plpy.SPIError as e:
-    if 'duplicate key' in str(e).lower() and 'email' in str(e).lower():
+    # Check SQLSTATE for unique_violation (23505)
+    if hasattr(e, 'sqlstate') and e.sqlstate == '23505':
         plpy.error(f'Email {email} already exists')
     else:
         plpy.error(f'Database error creating auth record: {e}')
@@ -468,7 +469,8 @@ try:
         plpy.error('Failed to create organization')
 
 except plpy.SPIError as e:
-    if 'duplicate key' in str(e).lower() and 'handle' in str(e).lower():
+    # Check SQLSTATE for unique_violation (23505)
+    if hasattr(e, 'sqlstate') and e.sqlstate == '23505':
         plpy.error(f'Organization handle {handle} already exists')
     else:
         plpy.error(f'Database error creating organization: {e}')
