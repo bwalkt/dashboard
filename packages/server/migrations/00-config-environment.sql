@@ -15,17 +15,19 @@
 -- For PRODUCTION (blocks DELETE operations)
 -- ALTER DATABASE pzero SET app.environment = 'production';
 -- ============================================
--- Default: Set to development for now
+-- Default: Set to production (safest option)
 -- ============================================
+-- This provides safe-by-default behavior for production deployments.
+-- For development/staging, explicitly set the environment during deployment.
 ALTER DATABASE pzero
 SET
-  app.environment = 'development';
+  app.environment = 'production';
 
 -- ============================================
 -- Reload configuration in current session
 -- ============================================
 -- After setting the environment, you need to reconnect or run:
--- SET app.environment = 'development';  -- Or your chosen environment
+-- SET app.environment = 'production';  -- Or your chosen environment
 -- To check current environment:
 -- SHOW app.environment;
 -- ============================================

@@ -20,14 +20,54 @@ VALUES
   ('user@example.com');
 
 -- ============================================================================
--- Test 2: Users with Data Processing (meta removal, tags preservation)
+-- Test 2: Organizations (must be created before users that reference them)
+-- ============================================================================
+INSERT INTO
+  pzero.all_orgs (name, handle, part_by, website, dscr, data)
+SELECT
+  'Test Organization',
+  'test',
+  'pzero',
+  'https://test.example.com',
+  'Test Organization for Users',
+  (
+    '{"meta": {"c_by": "' || id || '"}, "purpose": "testing"}'
+  )::jsonb
+FROM
+  pzero.all_auth
+WHERE
+  email = 'admin@example.com'
+LIMIT
+  1;
+
+INSERT INTO
+  pzero.all_orgs (name, handle, part_by, website, dscr, data)
+SELECT
+  'Boardwalk Technologies',
+  'bwalk',
+  'pzero',
+  'https://www.boardwalktech.com',
+  'Boardwalk Technologies',
+  (
+    '{"meta": {"c_by": "' || id || '"}, "industry": "technology",
+  "founded": 2020}'
+  )::jsonb
+FROM
+  pzero.all_auth
+WHERE
+  email = 'admin@example.com'
+LIMIT
+  1;
+
+-- ============================================================================
+-- Test 3: Users with Data Processing (meta removal, tags preservation)
 -- ============================================================================
 -- Test user with data.meta that should be removed
 INSERT INTO
   pzero.all_users (id, name, org_id, data)
 SELECT
   a.id,
-  'admin' AS name,
+  'Admin User' AS name,
   o.id AS org_id,
   jsonb_build_object(
     'meta',
@@ -62,28 +102,6 @@ FROM
 WHERE
   a.email = 'user@example.com'
   AND o.handle = 'bwalk'
-LIMIT
-  1;
-
--- ============================================================================
--- Test 3: Organizations
--- ============================================================================
-INSERT INTO
-  pzero.all_orgs (name, handle, part_by, website, dscr, data)
-SELECT
-  'Boardwalk Technologies2',
-  'bwalk',
-  'pzero',
-  'https://www.boardwalktech.com',
-  'Boardwalk Technologies',
-  (
-    '{"meta": {"c_by": "' || id || '"}, "industry": "technology",
-  "founded": 2020}'
-  )::jsonb
-FROM
-  pzero.all_auth
-WHERE
-  email = 'admin@example.com'
 LIMIT
   1;
 

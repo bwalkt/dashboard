@@ -1,25 +1,5 @@
 -- Up Migration
-CREATE EXTENSION if NOT EXISTS plpython3u;
-
-CREATE EXTENSION if NOT EXISTS pgx_ulid;
-
-CREATE EXTENSION if NOT EXISTS hstore;
-
-CREATE EXTENSION if NOT EXISTS citext;
-
-CREATE EXTENSION if NOT EXISTS pgcrypto;
-
-CREATE EXTENSION if NOT EXISTS pg_trgm;
-
-CREATE EXTENSION if NOT EXISTS postgis;
-
 CREATE SCHEMA if NOT EXISTS pzero;
-
-CREATE DOMAIN pzero.uuid AS uuid;
-
-CREATE DOMAIN pzero.id AS pzero.uuid;
-
-CREATE DOMAIN pzero.iid AS pzero.id;
 
 CREATE DOMAIN pzero.data AS jsonb;
 
@@ -34,13 +14,13 @@ SET
   value = excluded.value;
 
 -- Create ULID generation functions using pgx_ulid extension
-CREATE OR REPLACE FUNCTION pzero.gen_id () returns pzero.id AS $$
+CREATE OR REPLACE FUNCTION pzero.gen_id () returns uuid AS $$
     SELECT uuidv7()::pzero.uuid;
 $$ language sql volatile;
 
 CREATE OR REPLACE FUNCTION pzero.is_valid_email (text) returns boolean AS $$
     BEGIN
-        RETURN $1 ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$';
+      RETURN $1 ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$';
     END;
     $$ language plpgsql;
 
@@ -164,8 +144,13 @@ CREATE TYPE pzero.file_unit AS enum(
 
 CREATE TABLE pzero.mmn (
   mmn pzero.mmn_type UNIQUE PRIMARY KEY,
-  table_name varchar(50) UNIQUE
+  table_name pzero.valid_col_name NOT NULL UNIQUE
 );
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_auth', 'P');
 
 INSERT INTO
   pzero.mmn (table_name, mmn)
@@ -247,25 +232,25 @@ CREATE TABLE pzero.base_table (
   is_del boolean DEFAULT FALSE,
   is_act boolean DEFAULT TRUE,
   dscr text,
-  data pzero.data
+  data pzero.data,
+  tags TEXT[],
+  handle pzero.valid_handle NOT NULL
 );
 
-CREATE TABLE pzero.id_base_table (id pzero.id NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.base_table);
+CREATE TABLE uuid_base_table (id uuid NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.base_table);
 
 CREATE TABLE pzero.base_loc_table (loc pzero.location) inherits (pzero.base_table);
 
-CREATE TABLE pzero.id_base_loc_table (id pzero.id NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.base_loc_table);
+CREATE TABLE uuid_base_loc_table (id uuid NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.base_loc_table);
 
 CREATE TABLE pzero.base_effective_table (eff_from timestamptz, eff_to timestamptz);
 
 CREATE TABLE pzero.domain_base (
-  tags TEXT[],
   whitelisted_domains pzero.domain[],
   blacklisted_domains pzero.domain[],
   whitelisted_emails pzero.email[],
   blacklisted_emails pzero.email[],
   status pzero.org_status NOT NULL DEFAULT 'PENDING',
-  handle pzero.valid_handle NOT NULL,
   headers pzero.key_values,
   variables pzero.key_values,
   methods pzero.method[],
@@ -273,16 +258,31 @@ CREATE TABLE pzero.domain_base (
 );
 
 -- TODO - when partition is dropped or renamed
-CREATE TABLE pzero.parts (
-  part pzero.valid_part NOT NULL PRIMARY KEY,
-  c_at timestamptz NOT NULL DEFAULT now(),
-  tags TEXT[]
-) inherits (pzero.base_table);
+CREATE TABLE pzero.schemas (
+  schema pzero.valid_part NOT NULL DEFAULT 'pzero' PRIMARY KEY
+);
+
+INSERT INTO
+  pzero.schemas (schema)
+VALUES
+  ('pzero');
 
 -- Create immutable wrapper function for extracting epoch from UUIDv7
 CREATE OR REPLACE FUNCTION pzero.extract_epoch (p_timestamptz timestamptz) returns bigint AS $$
     SELECT (EXTRACT(EPOCH FROM p_timestamptz) * 1000)::BIGINT;
 $$ language sql immutable;
+
+CREATE TABLE pzero.all_parts (
+  part pzero.valid_part NOT NULL PRIMARY KEY,
+  c_at timestamptz NOT NULL DEFAULT now(),
+  tags TEXT[],
+  data pzero.data
+) inherits (pzero.base_table);
+
+INSERT INTO
+  pzero.all_parts (part, name, hamdle)
+VALUES
+  ('pzero', 'pzero', 'pzero');
 
 CREATE OR REPLACE FUNCTION pzero.create_tables_post () returns event_trigger AS $$
 DECLARE
@@ -293,6 +293,8 @@ DECLARE
     audit_col_exists integer;
     alter_sql text;
     mmn text;
+    no_c_at TEXT[] := ARRAY['all_audits'];
+    v_schemas TEXT[];
 BEGIN
   FOR obj_name IN SELECT object_identity FROM pg_event_trigger_ddl_commands() WHERE command_tag = 'CREATE TABLE'
   LOOP
@@ -305,9 +307,12 @@ BEGIN
     ELSE
         CONTINUE;
     END IF;
-
+    SELECT schemas into v_schemas from pzero.schemas;
     -- Only process tables with 'all_' prefix in pzero schema
-    IF v_schema_name != 'pzero' OR NOT v_table_name LIKE 'all_%' THEN
+    IF NOT (v_schema_name = ANY(schemas)) THEN
+      RETURN;
+    END IF;
+    IF NOT v_table_name LIKE 'all_%' THEN
       RETURN;
     END IF;
     
@@ -350,8 +355,9 @@ BEGIN
       WHERE table_schema = v_schema_name AND table_name = v_table_name AND column_name = 'part';
       RAISE NOTICE 'part_col_exists for %.%: %', v_schema_name, v_table_name, part_col_exists;
       -- Check for id column
-      SELECT 1 INTO c_id_col_exists FROM information_schema.columns 
-      WHERE table_schema = v_schema_name AND table_name = v_table_name AND column_name = 'id';
+      SELECT 1 INTO c_id_col_exists FROM information_schema.columns c
+            WHERE c.table_schema = v_schema_name AND c.table_name = v_table_name AND column_name = 'id'
+            AND c.data_type IN ('uuid');
       if c_id_col_exists IS NOT NULL THEN
         -- Create index on id column
       -- Check for c_at column
@@ -457,7 +463,7 @@ CREATE EVENT TRIGGER on_table_creation_trigger ON ddl_command_end WHEN tag IN ('
 EXECUTE function pzero.create_tables_post ();
 
 CREATE TABLE pzero.all_auth (
-  id pzero.id NOT NULL DEFAULT pzero.gen_id (),
+  id uuid NOT NULL DEFAULT pzero.gen_id (),
   email pzero.email NOT NULL,
   phone text,
   email_verified boolean NOT NULL DEFAULT FALSE,
@@ -474,7 +480,7 @@ PARTITION BY
 CREATE INDEX idx_pzero_auth_email ON pzero.auth USING gin (email gin_trgm_ops);
 
 CREATE TABLE pzero.all_orgs (
-  LIKE pzero.id_base_loc_table including ALL,
+  LIKE uuid_base_loc_table including ALL,
   LIKE pzero.domain_base including ALL,
   website pzero.domain,
   favicon text,
@@ -507,7 +513,7 @@ WHERE
 
 CREATE TABLE pzero.base_part (
   part pzero.valid_part NOT NULL DEFAULT 'pzero' REFERENCES pzero.parts (part),
-  org_id pzero.id
+  org_id uuid
 );
 
 -- Children of org are
@@ -532,7 +538,7 @@ CREATE INDEX idx_pzero_relations_uuid1 ON pzero.relations (part, uuid1);
 CREATE TABLE pzero.all_txns (
   id bigint NOT NULL,
   -- we don't have foreign key check on c_by on all_auths because we don't have is_act
-  c_by pzero.id NOT NULL,
+  c_by uuid NOT NULL,
   part pzero.valid_part,
   c_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (part, id)
@@ -545,7 +551,7 @@ CREATE INDEX idx_pzero_txns_c_by_at ON pzero.all_txns (part, c_by);
 CREATE INDEX idx_pzero_txns_c_at_by ON pzero.all_txns (part, c_at);
 
 CREATE TABLE pzero.all_audits (
-  id pzero.id NOT NULL DEFAULT pzero.gen_id (),
+  id bigserial,
   txn_id bigint,
   mmn pzero.mmn_type NOT NULL,
   row_id text, -- if null then it should be table alter
@@ -554,7 +560,7 @@ CREATE TABLE pzero.all_audits (
   part pzero.valid_part,
   is_del boolean DEFAULT FALSE,
   data pzero.data,
-  PRIMARY KEY (is_del, part, id)
+  c_at timstamptz NOT NULL DEFAULT now() PRIMARY KEY (is_del, part, id)
 )
 PARTITION BY
   list (is_del);
@@ -567,7 +573,7 @@ CREATE INDEX idx_pzero_audits_cno ON pzero.audits (part, mmn, cno);
 -- will search for org specific user profile
 -- if not found, then get pzero user
 CREATE TABLE pzero.all_users (
-  LIKE pzero.id_base_loc_table including ALL,
+  LIKE uuid_base_loc_table including ALL,
   LIKE pzero.base_part including ALL,
   avatar text,
   status pzero.user_status,
@@ -582,7 +588,7 @@ PARTITION BY
 -- Indexes will be created automatically by event trigger
 -- orgs, device and auth are global and not entities part of org
 CREATE TABLE pzero.all_groups (
-  LIKE pzero.id_base_loc_table including ALL,
+  LIKE uuid_base_loc_table including ALL,
   LIKE pzero.base_part including ALL,
   PRIMARY KEY (part, is_act, org_id, id),
   FOREIGN key (part, org_id, is_act) REFERENCES pzero.all_orgs (part_by, id, is_act),
@@ -592,7 +598,7 @@ PARTITION BY
   list (is_act);
 
 CREATE TABLE pzero.all_nhs (
-  LIKE pzero.id_base_loc_table including ALL,
+  LIKE uuid_base_loc_table including ALL,
   LIKE pzero.base_part including ALL,
   LIKE pzero.domain_base including ALL,
   level smallint NOT NULL DEFAULT 0,
@@ -604,22 +610,21 @@ PARTITION BY
   list (is_act);
 
 CREATE TABLE pzero.all_devices (
-  LIKE pzero.id_base_loc_table including ALL,
+  LIKE uuid_base_loc_table including ALL,
   is_primary boolean DEFAULT FALSE,
   device_type pzero.device_type DEFAULT 'OTHER',
   is_verifier boolean DEFAULT FALSE,
   device_status pzero.device_status DEFAULT 'UNKNOWN',
   duration_used bigint DEFAULT 0, -- total duration used in microseconds
-  uid pzero.id NOT NULL NOT NULL,
+  uid uuid NOT NULL NOT NULL,
   UNIQUE (is_primary, uid, is_act),
-  PRIMARY KEY (id, is_act),
-  FOREIGN key (uid, is_act) REFERENCES pzero.all_auth (id, is_act)
+  PRIMARY KEY (id, is_act)
 )
 PARTITION BY
   list (is_act);
 
 CREATE TABLE pzero.all_endpoints (
-  LIKE pzero.id_base_loc_table including ALL,
+  LIKE uuid_base_loc_table including ALL,
   LIKE pzero.domain_base including ALL,
   part pzero.valid_part,
   url pzero.domain NOT NULL,
@@ -629,21 +634,10 @@ CREATE TABLE pzero.all_endpoints (
 PARTITION BY
   list (is_act);
 
--- Indexes will be created automatically by event trigger
-CREATE TABLE pzero.all_sessions (
-  LIKE pzero.id_base_table including ALL,
-  part pzero.valid_part NOT NULL,
-  ip text,
-  user_agent text,
-  status pzero.session_status,
-  PRIMARY KEY (part, is_act, id)
-)
-PARTITION BY
-  list (is_act);
-
 CREATE TABLE pzero.all_dirs (
-  LIKE pzero.id_base_table including ALL,
+  LIKE uuid_base_table including ALL,
   LIKE pzero.base_part including ALL,
+  public boolean NOT NULL DEFAULT FALSE,
   status pzero.dir_status,
   PRIMARY KEY (part, org_id, id, is_act),
   FOREIGN key (part, org_id, is_act) REFERENCES pzero.all_orgs (part_by, id, is_act)
@@ -659,12 +653,26 @@ CREATE TABLE pzero.all_files (
   LIKE pzero.all_dirs including ALL,
   file_type pzero.file_type NOT NULL,
   file_size bigint NOT NULL, -- rounded off by 100
-  file_unit pzero.file_unit NOT NULL
+  file_unit pzero.file_unit NOT NULL,
+  root_id uuid,
+  FOREIGN key (part, org_id, is_act, root_id) REFERENCES pzero.all_dirs (part, org_id, is_act, id)
 )
 PARTITION BY
   list (is_act);
 
 CREATE INDEX idx_pzero_files_status ON pzero.files (part, is_act, status);
+
+-- Indexes will be created automatically by event trigger
+CREATE TABLE pzero.all_sessions (
+  LIKE uuid_base_table including ALL,
+  part pzero.valid_part NOT NULL,
+  ip text,
+  user_agent text,
+  status pzero.session_status,
+  PRIMARY KEY (part, is_act, id)
+)
+PARTITION BY
+  list (is_act);
 
 CREATE TABLE pzero.all_thread_heads (
   id bigserial NOT NULL,

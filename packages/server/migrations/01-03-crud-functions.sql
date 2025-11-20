@@ -15,6 +15,16 @@ CREATE OR REPLACE FUNCTION pzero.insert_into_table (
 import plpy
 import json
 
+# Helper function to print notices only in development mode
+def dev_notice(msg):
+    try:
+        env_result = plpy.execute("SHOW app.environment")
+        environment = env_result[0]['app.environment'] if env_result else 'production'
+        if environment == 'development':
+            plpy.notice(msg)
+    except:
+        pass  # Silently ignore if environment check fails
+
 # Validate inputs
 if not p_table_name:
     plpy.error('table_name is required')
@@ -40,7 +50,8 @@ if 'meta' not in data:
     data['meta'] = {}
 if not isinstance(data['meta'], dict):
     data['meta'] = {}
-data['meta']['c_by'] = c_by
+if c_by is not None:    
+    data['meta']['c_by'] = c_by
 
 # Build column and value lists
 columns = []
@@ -117,9 +128,9 @@ for i, (col, ptype) in enumerate(zip(columns, param_types), 1):
 
 sql = f"INSERT INTO pzero.{table_name} ({col_str}) VALUES ({', '.join(placeholders)}) RETURNING id"
 
-plpy.notice(f"Executing INSERT on pzero.{table_name}")
-plpy.notice(f"Columns: {columns}")
-plpy.notice(f"SQL: {sql}")
+dev_notice(f"Executing INSERT on pzero.{table_name}")
+dev_notice(f"Columns: {columns}")
+dev_notice(f"SQL: {sql}")
 
 # Prepare and execute statement
 try:
@@ -128,7 +139,7 @@ try:
 
     if result and len(result) > 0:
         inserted_id = result[0]['id']
-        plpy.notice(f"Successfully inserted record with id: {inserted_id}")
+        dev_notice(f"Successfully inserted record with id: {inserted_id}")
         return str(inserted_id)
     else:
         plpy.error('Insert did not return an id')
@@ -203,6 +214,16 @@ CREATE OR REPLACE FUNCTION pzero.create_user (p_user jsonb) returns jsonb AS $$
 import plpy
 import json
 
+# Helper function to print notices only in development mode
+def dev_notice(msg):
+    try:
+        env_result = plpy.execute("SHOW app.environment")
+        environment = env_result[0]['app.environment'] if env_result else 'production'
+        if environment == 'development':
+            plpy.notice(msg)
+    except:
+        pass  # Silently ignore if environment check fails
+
 # Parse input
 try:
     user_input = json.loads(p_user) if isinstance(p_user, str) else p_user
@@ -226,11 +247,12 @@ org_id = user_input.get('org_id', '').strip() if user_input.get('org_id') else N
 part = user_input.get('part', 'pzero').strip()
 avatar = user_input.get('avatar', '').strip() if user_input.get('avatar') else None
 email_verified = user_input.get('email_verified', False)
+c_by = user_input.get('c_by').strip() else None
 user_data = user_input.get('data', {}) if isinstance(user_input.get('data'), dict) else {}
 
 # Extract c_by from data.meta.c_by if provided
-c_by = None
-if isinstance(user_data.get('meta'), dict):
+
+if not c_by and isinstance(user_data.get('meta'), dict):
     c_by = user_data['meta'].get('c_by', '').strip() if user_data['meta'].get('c_by') else None
 
 # Get default org_id if not provided
@@ -242,7 +264,7 @@ if not org_id:
     else:
         plpy.error('org_id is required (no default org found)')
 
-plpy.notice(f"Creating user: {name} ({email})")
+dev_notice(f"Creating user: {name} ({email})")
 
 # Step 1: Create auth record with email
 try:
@@ -254,7 +276,7 @@ try:
         plpy.error('Failed to create auth record')
 
     auth_id = str(auth_result[0]['id'])
-    plpy.notice(f"Auth record created: {auth_id}")
+    dev_notice(f"Auth record created: {auth_id}")
 
 except plpy.SPIError as e:
     if 'duplicate key' in str(e).lower() and 'email' in str(e).lower():
@@ -295,7 +317,7 @@ try:
         plpy.error('Failed to create user record')
 
     user_id = str(user_result[0]['id'])
-    plpy.notice(f"User record created: {user_id}")
+    dev_notice(f"User record created: {user_id}")
 
 except plpy.SPIError as e:
     plpy.error(f'Database error creating user record: {e}')
@@ -346,3 +368,113 @@ $$ language plpython3u;
 --     )
 --   )
 -- ));
+-- ============================================
+-- Create Organization Function
+-- ============================================
+-- Creates an organization with a clean JSON API
+--
+-- Parameter: p_org (JSONB) - Organization data
+--
+-- Required fields:
+--   handle: Organization handle (must be unique)
+--   name: Organization name
+--   c_by: Creator user ID
+--
+-- Optional fields:
+--   website: Organization website URL
+--   data: Additional organization data (JSONB)
+--
+-- Returns: Organization ID
+--
+-- Example usage:
+--   SELECT pzero.create_org(jsonb_build_object(
+--     'handle', 'pzero',
+--     'name', 'P-Zero Default Org',
+--     'website', 'https://pzero.com',
+--     'c_by', '019a9f56-2d65-7bd0-b764-9f79183c7672',
+--     'data', jsonb_build_object('is_default', true)
+--   ));
+CREATE OR REPLACE FUNCTION pzero.create_org (p_org jsonb) returns text AS $$
+import plpy
+import json
+
+# Helper function to print notices only in development mode
+def dev_notice(msg):
+    try:
+        env_result = plpy.execute("SHOW app.environment")
+        environment = env_result[0]['app.environment'] if env_result else 'production'
+        if environment == 'development':
+            plpy.notice(msg)
+    except:
+        pass  # Silently ignore if environment check fails
+
+# Parse input
+try:
+    org_input = json.loads(p_org) if isinstance(p_org, str) else p_org
+except Exception as e:
+    plpy.error(f'Invalid JSON input: {e}')
+
+if not isinstance(org_input, dict):
+    plpy.error('Input must be a JSON object')
+
+# Extract required fields
+handle = org_input.get('handle', '').strip() if org_input.get('handle') else None
+name = org_input.get('name', '').strip() if org_input.get('name') else None
+c_by = org_input.get('c_by', '').strip() if org_input.get('c_by') else None
+
+if not handle:
+    plpy.error('handle is required')
+if not name:
+    plpy.error('name is required')
+if not c_by:
+    plpy.error('c_by is required')
+
+# Extract optional fields
+website = org_input.get('website', '').strip() if org_input.get('website') else None
+org_data = org_input.get('data', {}) if isinstance(org_input.get('data'), dict) else {}
+
+dev_notice(f"Creating organization: {name} ({handle})")
+
+# Build fields object
+fields = {
+    'handle': handle,
+    'name': name
+}
+if website:
+    fields['website'] = website
+
+# Call insert_into_table
+try:
+    insert_query = plpy.prepare("""
+        SELECT pzero.insert_into_table(
+            'all_orgs',
+            $1,
+            $2::jsonb,
+            $3::jsonb
+        )
+    """, ["text", "text", "text"])
+
+    result = plpy.execute(insert_query, [
+        c_by,
+        json.dumps(fields),
+        json.dumps(org_data)
+    ])
+
+    if result and len(result) > 0:
+        org_id = result[0]['insert_into_table']
+        dev_notice(f"Organization created: {org_id}")
+        return org_id
+    else:
+        plpy.error('Failed to create organization')
+
+except plpy.SPIError as e:
+    if 'duplicate key' in str(e).lower() and 'handle' in str(e).lower():
+        plpy.error(f'Organization handle {handle} already exists')
+    else:
+        plpy.error(f'Database error creating organization: {e}')
+    raise
+except Exception as e:
+    plpy.error(f'Unexpected error creating organization: {e}')
+    raise
+
+$$ language plpython3u;

@@ -182,9 +182,19 @@ import plpy
 import json
 import os
 
+# Helper function to print notices only in development mode
+def dev_notice(msg):
+    try:
+        env_result = plpy.execute("SHOW app.environment")
+        environment = env_result[0]['app.environment'] if env_result else 'production'
+        if environment == 'development':
+            plpy.notice(msg)
+    except:
+        pass  # Silently ignore if environment check fails
+
 # Constants
 AUTH_TABLES = frozenset(['auth', 'users'])
-SKIP_USER_VALIDATION_TABLES = frozenset(['txns', 'all_audits'])  # Skip validation for internal audit tables
+SKIP_USER_VALIDATION_TABLES = frozenset(['all_txns', 'all_audits'])  # Skip validation for internal audit tables
 EXCLUDED_AUDIT_COLUMNS = frozenset(['id', 'c_by', 'c_at', 'u_by', 'u_at', 'is_del', 'last_seen'])
 MAX_RETRY_ATTEMPTS = 5
 
@@ -213,7 +223,7 @@ new_row = TD.get('new')  # Available for INSERT and UPDATE
 
 # Handle DELETE event (only reaches here in development)
 if TD['event'] == 'DELETE':
-    plpy.notice(f"DELETE event on table {TD.get('table_name')} for row {old_row.get('id')} [DEVELOPMENT MODE]")
+    dev_notice(f"DELETE event on table {TD.get('table_name')} for row {old_row.get('id')} [DEVELOPMENT MODE]")
     # For DELETE BEFORE triggers, return "OK" to allow the deletion
     # We could add audit logging here in the future if needed
     return "OK"
@@ -267,28 +277,28 @@ while True:
 
     # If we found a table starting with "all_", this is our root parent
     if table_only_name.startswith('all_'):
-        plpy.notice(f"Using root parent table: {full_table_name} (triggered from partition: {actual_partition})")
+        dev_notice(f"Using root parent table: {full_table_name} (triggered from partition: {actual_partition})")
         break
 
     # Continue traversing up the hierarchy
     current_oid = parent_query[0]['parent_oid']
 
-# Fallback if we still don't have a table name
+# Fallback if we still dont have a table name
 if not full_table_name:
     plpy.warning(f"Failed to resolve table for relid {relid}, falling back to TD values")
     full_table_name = TD['table_name']
     schema_name = TD.get('table_schema', 'pzero')
     table_only_name = full_table_name.split('.')[1] if '.' in full_table_name else full_table_name
-    plpy.notice(f"Using fallback table name: {full_table_name}")
+    dev_notice(f"Using fallback table name: {full_table_name}")
 
-plpy.notice(f"Processing table: {full_table_name} (relid: {relid})")
+dev_notice(f"Processing table: {full_table_name} (relid: {relid})")
 auth_insert = False
 
 # Get transaction ID with error handling
-plpy.notice(f"=== MAIN EXECUTION START === Table: {full_table_name}")
+dev_notice(f"=== MAIN EXECUTION START === Table: {full_table_name}")
 try:
     txid = plpy.execute("SELECT txid_current()")[0]['txid_current']
-    plpy.notice(f"Got transaction ID: {txid}")
+    dev_notice(f"Got transaction ID: {txid}")
 except Exception as e:
     plpy.error(f'Failed to get transaction ID: {e}')
     raise
@@ -313,7 +323,7 @@ else:  # INSERT
         retry_count = 0
         insert_ok = False
 
-        plpy.notice(f'Debug: "auth" in table_only_name = {("auth" in table_only_name)} for table={table_only_name}, id_val={id_val}')
+        dev_notice(f'Debug: "auth" in table_only_name = {("auth" in table_only_name)} for table={table_only_name}, id_val={id_val}')
         check_sql = f"SELECT 1 FROM {full_table_name} WHERE id = $1 LIMIT 1"
         check_stmt = plpy.prepare(check_sql, ["uuid"])
         while not insert_ok and retry_count < MAX_RETRY_ATTEMPTS:
@@ -325,13 +335,13 @@ else:  # INSERT
                 if  'auth' in table_only_name:
                     c_by = id_val
                     auth_insert = True
-                    plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
+                    dev_notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
                 # Check for existing ID
                 row_exists = plpy.execute(check_stmt, [id_val])
                 
                 if row_exists and len(row_exists) > 0:
                     # ID collision, will retry
-                    plpy.notice(f'ID collision detected for {new_row["id"]}, retrying...')
+                    dev_notice(f'ID collision detected for {new_row["id"]}, retrying...')
                     retry_count += 1
                 else:
                     insert_ok = True
@@ -383,7 +393,7 @@ if not c_by:
     if  'auth' in table_only_name and id_val and TD['event'] == 'INSERT':
         c_by = id_val
         auth_insert = True
-        plpy.notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
+        dev_notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
     else:
         raise Exception('Missing Audit field - c_by ' + str(full_table_name) + '  ' + str(table_only_name))
 # Validate user with prepared statement
@@ -391,7 +401,7 @@ try:
     # Skip user validation for auth table inserts; c_by is the newly generated entity ID (bootstrapping case)
     # Also skip for internal audit tables to avoid circular dependency during transaction logging
     if not auth_insert and table_only_name not in SKIP_USER_VALIDATION_TABLES:
-        user_check = plpy.prepare("SELECT is_act FROM pzero.all_auth WHERE id = $1::pzero.id LIMIT 1", ["text"])
+        user_check = plpy.prepare("SELECT is_act FROM pzero.all_auth WHERE id = $1::uuid LIMIT 1", ["text"])
         user_exists = plpy.execute(user_check, [str(c_by)])
         if not user_exists or len(user_exists) == 0:
             plpy.error(f'c_by user {c_by} does not exist')
@@ -404,31 +414,31 @@ except plpy.SPIError as e:
     plpy.error(f'Database error checking user: {e}')
     raise
 
-plpy.notice("Reached transaction logging section")
+dev_notice("Reached transaction logging section")
 # Get part value from the row if it exists, otherwise use sentinel value 'pzero'
 # Note: Cannot use NULL because part is in PRIMARY KEY for all_txns and all_audits
 part_value = new_row.get('part') or 'pzero'
 
 # Log transaction with prepared statement (must happen before append-only check)
 try:
-    plpy.notice(f"About to log transaction: txid={txid}, c_by={c_by}, part={part_value}")
-    txn_sql = f"INSERT INTO {schema_name}.all_txns (id, c_by, part, c_at) VALUES ($1, $2::pzero.id, $3, NOW()) ON CONFLICT (part, id) DO NOTHING"
+    dev_notice(f"About to log transaction: txid={txid}, c_by={c_by}, part={part_value}")
+    txn_sql = f"INSERT INTO {schema_name}.all_txns (id, c_by, part, c_at) VALUES ($1, $2::uuid, $3, NOW()) ON CONFLICT (part, id) DO NOTHING"
     txn_stmt = plpy.prepare(txn_sql, ["bigint", "text", "text"])
     plpy.execute(txn_stmt, [txid, str(c_by), part_value])
-    plpy.notice(f"Successfully logged transaction {txid}")
+    dev_notice(f"Successfully logged transaction {txid}")
 except Exception as e:
     plpy.error(f'Failed to log transaction: {e} {txid}')
     raise
 
 # Get MMN for the table with error handling
 try:
-    plpy.notice(f"Getting MMN for table: {table_only_name}")
-    plpy.notice(f"About to prepare MMN statement")
+    dev_notice(f"Getting MMN for table: {table_only_name}")
+    dev_notice(f"About to prepare MMN statement")
     mmn_stmt = plpy.prepare("SELECT pzero.get_mmn($1) as mmn", ["text"])
-    plpy.notice(f"MMN statement prepared successfully")
-    plpy.notice(f"About to execute MMN statement with parameter: {table_only_name}")
+    dev_notice(f"MMN statement prepared successfully")
+    dev_notice(f"About to execute MMN statement with parameter: {table_only_name}")
     mmn_result = plpy.execute(mmn_stmt, [table_only_name])
-    plpy.notice(f"MMN statement executed successfully")
+    dev_notice(f"MMN statement executed successfully")
     if not mmn_result or len(mmn_result) == 0:
         plpy.error(f'Unable to resolve MMN for table {table_only_name}')
         raise ValueError(f'No MMN found for table {table_only_name}')
@@ -483,17 +493,17 @@ if audit_inserts:
         audit_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, row_id, part, cno, cval) VALUES ({txid}, '{mmn}', '{id_str}', $1, $2, $3)"
         audit_stmt = plpy.prepare(audit_sql, ["text", "integer", "text"])
         for audit_row in audit_inserts:
-            plpy.notice(f"About to insert audit row: {audit_row}, part={part_value}")
+            dev_notice(f"About to insert audit row: {audit_row}, part={part_value}")
             plpy.execute(audit_stmt, [part_value, audit_row[0], audit_row[1]])
-        plpy.notice(f"Successfully inserted {len(audit_inserts)} audit records for row {id_str}")
+        dev_notice(f"Successfully inserted {len(audit_inserts)} audit records for row {id_str}")
     except Exception as e:
         plpy.warning(f'Failed to insert audit records: {e}')
 
 
-plpy.notice(f"About to return new_row: {type(new_row)}")
-plpy.notice(f"New row keys: {list(new_row.keys()) if new_row else 'None'}")
-plpy.notice(f"new_row['id'] = {new_row.get('id', 'NOT_SET')}")
-plpy.notice(f"Returning MODIFY for BEFORE trigger with modifications")
+dev_notice(f"About to return new_row: {type(new_row)}")
+dev_notice(f"New row keys: {list(new_row.keys()) if new_row else 'None'}")
+dev_notice(f"new_row['id'] = {new_row.get('id', 'NOT_SET')}")
+dev_notice(f"Returning MODIFY for BEFORE trigger with modifications")
 return "MODIFY"
 $$ language plpython3u;
 
@@ -590,6 +600,16 @@ $$ language plpython3u;
 CREATE OR REPLACE FUNCTION pzero.migrate_org () returns trigger AS $$
 import plpy
 
+# Helper function to print notices only in development mode
+def dev_notice(msg):
+    try:
+        env_result = plpy.execute("SHOW app.environment")
+        environment = env_result[0]['app.environment'] if env_result else 'production'
+        if environment == 'development':
+            plpy.notice(msg)
+    except:
+        pass  # Silently ignore if environment check fails
+
 # Get row data
 new_row = TD.get('new')
 old_row = TD.get('old')
@@ -620,7 +640,7 @@ def create_schema_and_tables(schema_name):
     try:
         # Create schema if it does not exist
         plpy.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"')
-        plpy.notice(f'Created/verified schema "{schema_name}"')
+        dev_notice(f'Created/verified schema "{schema_name}"')
         
         # Create tables in the new schema
         for table in DEDICATED_TABLES:
@@ -630,7 +650,7 @@ def create_schema_and_tables(schema_name):
                     CREATE TABLE IF NOT EXISTS "{schema_name}".{table} 
                     (LIKE pzero.{table} INCLUDING ALL)
                 ''')
-                plpy.notice(f'Created/verified table "{schema_name}".{table}')
+                dev_notice(f'Created/verified table "{schema_name}".{table}')
                 
                 # Create partitions if the source table is partitioned
                 if table in ['all_endpoints', 'all_sessions', 'all_threads', 'all_thread_heads']:
@@ -663,7 +683,7 @@ if event == 'INSERT':
     if not multi_tenant and handle:
         schema_name = sanitize_handle(handle)
         if schema_name:
-            plpy.notice(f'Creating dedicated schema for new org with handle: {handle}')
+            dev_notice(f'Creating dedicated schema for new org with handle: {handle}')
             create_schema_and_tables(schema_name)
         else:
             plpy.error(f'Invalid handle for schema creation: {handle}')
@@ -690,11 +710,11 @@ elif event == 'UPDATE':
             if schema_exists:
                 try:
                     plpy.execute(f'ALTER SCHEMA "{old_schema}" RENAME TO "{new_schema}"')
-                    plpy.notice(f'Renamed schema from "{old_schema}" to "{new_schema}"')
+                    dev_notice(f'Renamed schema from "{old_schema}" to "{new_schema}"')
                 except plpy.SPIError as e:
                     # If rename fails, create new schema and warn about old one
                     plpy.warning(f'Could not rename schema: {e}')
-                    plpy.notice(f'Creating new schema "{new_schema}" (old schema "{old_schema}" remains)')
+                    dev_notice(f'Creating new schema "{new_schema}" (old schema "{old_schema}" remains)')
                     create_schema_and_tables(new_schema)
             else:
                 # Old schema does not exist, just create new one
@@ -704,7 +724,7 @@ elif event == 'UPDATE':
     elif old_multi_tenant and not new_multi_tenant:
         schema_name = sanitize_handle(new_handle)
         if schema_name:
-            plpy.notice(f'Org changed to single-tenant mode, creating dedicated schema: {schema_name}')
+            dev_notice(f'Org changed to single-tenant mode, creating dedicated schema: {schema_name}')
             create_schema_and_tables(schema_name)
         else:
             plpy.error(f'Invalid handle for schema creation: {new_handle}')
@@ -713,8 +733,8 @@ elif event == 'UPDATE':
     elif not old_multi_tenant and new_multi_tenant:
         old_schema = sanitize_handle(old_handle)
         if old_schema:
-            plpy.notice(f'Org changed to multi-tenant mode')
-            plpy.notice(f'Schema "{old_schema}" retained for backup (migration of data to be done separately)')
+            dev_notice(f'Org changed to multi-tenant mode')
+            dev_notice(f'Schema "{old_schema}" retained for backup (migration of data to be done separately)')
             # Note: Actual data migration will be handled separately as mentioned
 
 # AFTER triggers should return None
@@ -733,6 +753,16 @@ $$ language plpgsql;
 CREATE OR REPLACE FUNCTION pzero.create_triggers_plpython () returns void AS $$
 import plpy
 
+# Helper function to print notices only in development mode
+def dev_notice(msg):
+    try:
+        env_result = plpy.execute("SHOW app.environment")
+        environment = env_result[0]['app.environment'] if env_result else 'production'
+        if environment == 'development':
+            plpy.notice(msg)
+    except:
+        pass  # Silently ignore if environment check fails
+
 triggers_created = []
 
 try:
@@ -743,13 +773,13 @@ try:
         FOR EACH ROW EXECUTE FUNCTION pzero.check_relations_trigger()
     """)
     triggers_created.append('trigger_check_relations')
-    plpy.notice('Created trigger trigger_check_relations on table pzero.relations')
+    dev_notice('Created trigger trigger_check_relations on table pzero.relations')
     
 except plpy.SPIError as e:
     if 'already exists' not in str(e).lower():
         plpy.error(f'Failed to create relations trigger: {e}')
         raise
-    plpy.notice('Trigger trigger_check_relations already exists')
+    dev_notice('Trigger trigger_check_relations already exists')
 
 # Tables to add audit triggers to
 # Note: txns and all_audits tables excluded to prevent infinite recursion during audit logging
@@ -767,7 +797,7 @@ tables_query = """
 tables_result = plpy.execute(tables_query)
 tables = [row['full_table_name'] for row in tables_result]
 
-plpy.notice(f'Found {len(tables)} tables to add audit triggers: {", ".join(tables)}')
+dev_notice(f'Found {len(tables)} tables to add audit triggers: {", ".join(tables)}')
 
 # Create audit triggers
 for target_table in tables:
@@ -781,14 +811,14 @@ for target_table in tables:
         """
         plpy.execute(sql)
         triggers_created.append(trigger_name)
-        plpy.notice(f'Created trigger {trigger_name} on table {target_table}')
+        dev_notice(f'Created trigger {trigger_name} on table {target_table}')
         
     except plpy.SPIError as e:
         if 'already exists' not in str(e).lower():
             plpy.warning(f'Failed to create trigger {trigger_name}: {e}')
             # Continue with other triggers
         else:
-            plpy.notice(f'Trigger {trigger_name} already exists')
+            dev_notice(f'Trigger {trigger_name} already exists')
 
 # Create migrate_org trigger for all_orgs table
 try:
@@ -798,15 +828,15 @@ try:
         FOR EACH ROW EXECUTE FUNCTION pzero.migrate_org()
     """)
     triggers_created.append('trigger_migrate_org')
-    plpy.notice('Created trigger trigger_migrate_org on table pzero.all_orgs')
+    dev_notice('Created trigger trigger_migrate_org on table pzero.all_orgs')
     
 except plpy.SPIError as e:
     if 'already exists' not in str(e).lower():
         plpy.error(f'Failed to create migrate_org trigger: {e}')
         raise
-    plpy.notice('Trigger trigger_migrate_org already exists')
+    dev_notice('Trigger trigger_migrate_org already exists')
 
-plpy.notice(f'Successfully created/verified {len(triggers_created)} triggers')
+dev_notice(f'Successfully created/verified {len(triggers_created)} triggers')
 $$ language plpython3u;
 
 -- Commented out to prevent automatic execution during migration
