@@ -368,12 +368,17 @@ except plpy.SPIError as e:
     raise
 
 plpy.notice("Reached transaction logging section")
+# Get part value from the row if it exists, otherwise use NULL
+part_value = new_row.get('part') if new_row else None
+if not part_value:
+    part_value = 'pzero'  # Default partition for tables without part column
+
 # Log transaction with prepared statement (must happen before append-only check)
 try:
-    plpy.notice(f"About to log transaction: txid={txid}, c_by={c_by}")
-    txn_sql = f"INSERT INTO {schema_name}.txns (id, c_by, c_at) VALUES ($1, $2::pzero.id, EXTRACT(EPOCH FROM NOW())) ON CONFLICT (id) DO NOTHING"
-    txn_stmt = plpy.prepare(txn_sql, ["bigint", "text"])
-    plpy.execute(txn_stmt, [txid, str(c_by)])
+    plpy.notice(f"About to log transaction: txid={txid}, c_by={c_by}, part={part_value}")
+    txn_sql = f"INSERT INTO {schema_name}.all_txns (id, c_by, part, c_at) VALUES ($1, $2::pzero.id, $3, NOW()) ON CONFLICT (part, id) DO NOTHING"
+    txn_stmt = plpy.prepare(txn_sql, ["bigint", "text", "text"])
+    plpy.execute(txn_stmt, [txid, str(c_by), part_value])
     plpy.notice(f"Successfully logged transaction {txid}")
 except Exception as e:
     plpy.error(f'Failed to log transaction: {e} {txid}')
@@ -439,11 +444,11 @@ for col_name in new_row:
 if audit_inserts:
     try:
         id_str = str(id_val)
-        audit_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, row_id, cno, cval) VALUES ({txid}, '{mmn}', '{id_str}', $1, $2)"
-        audit_stmt = plpy.prepare(audit_sql, ["integer", "text"])
+        audit_sql = f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, row_id, part, cno, cval) VALUES ({txid}, '{mmn}', '{id_str}', $1, $2, $3)"
+        audit_stmt = plpy.prepare(audit_sql, ["text", "integer", "text"])
         for audit_row in audit_inserts:
-            plpy.notice(f"About to insert audit row: {audit_row}")
-            plpy.execute(audit_stmt, [audit_row[0], audit_row[1]])
+            plpy.notice(f"About to insert audit row: {audit_row}, part={part_value}")
+            plpy.execute(audit_stmt, [part_value, audit_row[0], audit_row[1]])
         plpy.notice(f"Successfully inserted {len(audit_inserts)} audit records for row {id_str}")
     except Exception as e:
         plpy.warning(f'Failed to insert audit records: {e}')
@@ -711,11 +716,21 @@ except plpy.SPIError as e:
 
 # Tables to add audit triggers to
 # Note: txns and all_audits tables excluded to prevent infinite recursion during audit logging
-tables = [
-    'pzero.all_devices', 'pzero.all_endpoints', 'pzero.all_sessions', 
-    'pzero.all_orgs', 'pzero.all_auth', 'pzero.all_users',  
-    'pzero.all_thread_heads', 'pzero.all_threads'
-]
+EXCLUDED_TABLES = {'all_txns', 'all_audits'}
+
+# Dynamically get all 'all_*' tables from pzero schema
+tables_query = """
+    SELECT table_schema || '.' || table_name as full_table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'pzero'
+      AND table_name LIKE 'all_%'
+      AND table_name NOT IN ('all_txns', 'all_audits')
+    ORDER BY table_name
+"""
+tables_result = plpy.execute(tables_query)
+tables = [row['full_table_name'] for row in tables_result]
+
+plpy.notice(f'Found {len(tables)} tables to add audit triggers: {", ".join(tables)}')
 
 # Create audit triggers
 for target_table in tables:

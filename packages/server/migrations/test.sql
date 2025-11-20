@@ -276,7 +276,7 @@ SELECT
   'Transaction Records Count' AS test_name,
   count(*) AS count
 FROM
-  pzero.txns;
+  pzero.all_txns;
 
 -- Verify data processing worked (meta should be removed)
 SELECT
@@ -391,4 +391,4 @@ SELECT
   'Transactions' AS table_name,
   count(*) AS record_count
 FROM
-  pzero.txns;
+  pzero.all_txns;
