@@ -1425,6 +1425,15 @@ importers:
         specifier: '>=7.1.11'
         version: 7.2.2(@types/node@22.10.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
 
+  perf:
+    devDependencies:
+      '@types/k6':
+        specifier: ^0.48.0
+        version: 0.48.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.8.3
+
 packages:
 
   '@alloc/quick-lru@5.2.0':
@@ -4497,6 +4506,9 @@ packages:
 
   '@types/jsonwebtoken@9.0.10':
     resolution: {integrity: sha512-asx5hIG9Qmf/1oStypjanR7iKTv0gXQ1Ov/jfrX6kS/EO0OFni8orbmGCn0672NHR3kXHwpAwR+B368ZGN/2rA==}
+
+  '@types/k6@0.48.0':
+    resolution: {integrity: sha512-TobNNdz8XAr2xjg7sT0janwMpi54wKvBMklgVrrEl4X/Caw3WdFhzbF9yjTEr8TZmFad4ZDxechYeIuRowfhlA==}
 
   '@types/methods@1.1.4':
     resolution: {integrity: sha512-ymXWVrDiCxTBE3+RIrrP533E70eA+9qu7zdWoHuOmGujkYtzf4HQF96b8nwHLqhuf4ykX61IGRIB38CC6/sImQ==}
@@ -12438,6 +12450,8 @@ snapshots:
     dependencies:
       '@types/ms': 2.1.0
       '@types/node': 22.19.1
+
+  '@types/k6@0.48.0': {}
 
   '@types/methods@1.1.4': {}
 

@@ -1,0 +1,22 @@
+name: k6 Performance Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  k6:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Build k6 test image
+        run: |
+          docker build -t perf-tests ./perf
+
+      - name: Run k6 tests
+        run: |
+          docker run --rm perf-tests

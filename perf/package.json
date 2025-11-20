@@ -1,0 +1,13 @@
+{
+  "name": "@pzero/perf",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/k6": "^0.48.0",
+    "typescript": "catalog:"
+  }
+}
