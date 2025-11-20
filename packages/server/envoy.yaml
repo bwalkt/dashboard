@@ -21,39 +21,6 @@ static_resources:
                   - name: envoy.filters.http.cors
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
-                  - name: envoy.filters.http.lua
-                    typed_config:
-                      "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-                      inline_code: |
-                        function envoy_on_request(request_handle)
-                          local path = request_handle:headers():get(":path")
-                          local method = request_handle:headers():get(":method")
-                          
-                          -- Allow auth routes without cookie check
-                          if path:match("^/auth/login") or path:match("^/auth/callback") or path:match("^/proxy") then
-                            return
-                          end
-                          
-                          -- Allow OPTIONS requests for CORS preflight
-                          if method == "OPTIONS" then
-                            return
-                          end
-                          
-                          -- Check for JWT cookie existence (without verification)
-                          local cookies = request_handle:headers():get("cookie")
-                          if cookies then
-                            -- Check if accessToken or refreshToken cookie exists
-                            if cookies:match("accessToken=[^;]+") or cookies:match("refreshToken=[^;]+") then
-                              return
-                            end
-                          end
-                          
-                          -- No JWT cookie found, return 401
-                          request_handle:respond(
-                            {[":status"] = "401", ["content-type"] = "application/json"},
-                            '{"error":"JWT cookie required"}'
-                          )
-                        end
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
