@@ -307,9 +307,9 @@ BEGIN
     ELSE
         CONTINUE;
     END IF;
-    SELECT schemas into v_schemas from pzero.schemas;
+    SELECT ARRAY_AGG(schema) into v_schemas from pzero.schemas;
     -- Only process tables with 'all_' prefix in pzero schema
-    IF NOT (v_schema_name = ANY(schemas)) THEN
+    IF NOT (v_schema_name = ANY(v_schemas)) THEN
       RETURN;
     END IF;
     IF NOT v_table_name LIKE 'all_%' THEN
@@ -368,7 +368,7 @@ BEGIN
       begin
         -- Create index on c_at if it exists
         IF c_id_col_exists IS NOT NULL AND c_at_col_exists IS NULL THEN
-          alter_sql := format('ALTER TABLE %s.%s ADD COLUMN c_at timestamptz GENERATED ALWAYS AS (uuid_extract_timestamp(id::uuid)) STORED',
+          alter_sql := format('ALTER TABLE %s.%s ADD COLUMN c_at timestamptz GENERATED ALWAYS AS (uuid_extract_timestamp(id::uuid))',
                         v_schema_name, v_table_name);
           EXECUTE alter_sql;
           RAISE NOTICE 'Alter table %.%: %', v_schema_name, v_table_name, alter_sql;
@@ -664,11 +664,14 @@ CREATE INDEX idx_pzero_files_status ON pzero.files (part, is_act, status);
 
 -- Indexes will be created automatically by event trigger
 CREATE TABLE pzero.all_sessions (
-  LIKE uuid_base_table including ALL,
+  id bigserial NOT NULL,
   part pzero.valid_part NOT NULL,
   ip text,
-  user_agent text,
+  fp text,
   status pzero.session_status,
+  c_at timestampz NOT NULL DEFAULT now(),
+  u_at timestampz,
+  is_act boolean NOT NULL DEFAULT TRUE,
   PRIMARY KEY (part, is_act, id)
 )
 PARTITION BY
