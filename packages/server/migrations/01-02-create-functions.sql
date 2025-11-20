@@ -195,7 +195,7 @@ def dev_notice(msg):
 # Constants
 AUTH_TABLES = frozenset(['auth', 'users'])
 SKIP_USER_VALIDATION_TABLES = frozenset(['all_txns', 'all_audits'])  # Skip validation for internal audit tables
-EXCLUDED_AUDIT_COLUMNS = frozenset(['id', 'c_by', 'c_at', 'u_by', 'u_at', 'is_del', 'last_seen'])
+EXCLUDED_AUDIT_COLUMNS = frozenset(['id', 'c_by', 'c_at', 'u_by', 'u_at', 'is_del', 'last_seen', 'tim', 'timestamp'])
 MAX_RETRY_ATTEMPTS = 5
 
 # Check environment for DELETE permission

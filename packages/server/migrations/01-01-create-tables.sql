@@ -882,7 +882,6 @@ CREATE TABLE pzero.all_fingerprint_changes (
 
   -- Timestamp
   timestamp timestamptz NOT NULL DEFAULT now(),
-
   PRIMARY KEY (part, is_del, id)
 ) PARTITION BY LIST (is_del);
 
