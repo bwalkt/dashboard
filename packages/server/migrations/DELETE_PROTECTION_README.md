@@ -12,10 +12,14 @@ The system uses PostgreSQL's GUC (Grand Unified Configuration) system to store t
 
 ```sql
 -- Set database-level environment (persists across sessions)
-ALTER DATABASE pzero SET app.environment = 'development';  -- or 'staging', 'production'
+ALTER DATABASE pzero
+SET
+  app.environment = 'development';
 
+-- or 'staging', 'production'
 -- Set session-level environment (temporary, current session only)
-SET app.environment = 'development';
+SET
+  app.environment = 'development';
 
 -- Check current environment
 SHOW app.environment;
@@ -23,11 +27,11 @@ SHOW app.environment;
 
 ### DELETE Behavior by Environment
 
-| Environment | DELETE Allowed | Behavior |
-|------------|---------------|----------|
-| development | ✅ Yes | Hard deletes work normally |
-| staging | ❌ No | Error: "DELETE operations are not allowed in staging environment" |
-| production | ❌ No | Error: "DELETE operations are not allowed in production environment" |
+| Environment | DELETE Allowed | Behavior                                                             |
+| ----------- | -------------- | -------------------------------------------------------------------- |
+| development | ✅ Yes         | Hard deletes work normally                                           |
+| staging     | ❌ No          | Error: "DELETE operations are not allowed in staging environment"    |
+| production  | ❌ No          | Error: "DELETE operations are not allowed in production environment" |
 
 ### Default Environment
 
@@ -39,10 +43,14 @@ If no environment is set, the system defaults to **production** (safest option) 
 
 ```sql
 -- Set environment
-SET app.environment = 'development';
+SET
+  app.environment = 'development';
 
 -- Hard DELETE works
-DELETE FROM pzero.all_orgs WHERE handle = 'test';
+DELETE FROM pzero.all_orgs
+WHERE
+  handle = 'test';
+
 -- ✅ Succeeds with NOTICE: DELETE event... [DEVELOPMENT MODE]
 ```
 
@@ -50,10 +58,14 @@ DELETE FROM pzero.all_orgs WHERE handle = 'test';
 
 ```sql
 -- Set environment
-SET app.environment = 'production';
+SET
+  app.environment = 'production';
 
 -- Hard DELETE blocked
-DELETE FROM pzero.all_orgs WHERE handle = 'test';
+DELETE FROM pzero.all_orgs
+WHERE
+  handle = 'test';
+
 -- ❌ ERROR: DELETE operations are not allowed in production environment.
 --    Use soft delete (SET is_del = TRUE) instead.
 ```
@@ -105,18 +117,27 @@ psql -d pzero -f test-crud-functions.sql
 ### Setting Environment for Different Deployments
 
 **Development:**
+
 ```sql
-ALTER DATABASE pzero_dev SET app.environment = 'development';
+ALTER DATABASE pzero_dev
+SET
+  app.environment = 'development';
 ```
 
 **Staging:**
+
 ```sql
-ALTER DATABASE pzero_staging SET app.environment = 'staging';
+ALTER DATABASE pzero_staging
+SET
+  app.environment = 'staging';
 ```
 
 **Production:**
+
 ```sql
-ALTER DATABASE pzero_prod SET app.environment = 'production';
+ALTER DATABASE pzero_prod
+SET
+  app.environment = 'production';
 ```
 
 ### Temporary Environment Override
@@ -125,14 +146,18 @@ For testing production behavior in development:
 
 ```sql
 -- Test production DELETE blocking without changing database setting
-SET app.environment = 'production';
+SET
+  app.environment = 'production';
 
 -- Try DELETE - will fail
-DELETE FROM pzero.all_orgs WHERE handle = 'test';
--- ERROR: DELETE operations are not allowed in production environment
+DELETE FROM pzero.all_orgs
+WHERE
+  handle = 'test';
 
+-- ERROR: DELETE operations are not allowed in production environment
 -- Reset to development
-SET app.environment = 'development';
+SET
+  app.environment = 'development';
 ```
 
 ## Implementation Details
@@ -196,11 +221,13 @@ The test suite (`test-crud-functions.sql`) includes **Test 9** which verifies:
 - ✅ Development mode allows DELETE
 
 Run tests:
+
 ```bash
 PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d pzero -f test-crud-functions.sql
 ```
 
 Expected output:
+
 ```
 === Test 9: Production DELETE protection ===
 Testing DELETE blocked in production:
@@ -215,29 +242,43 @@ Testing soft delete as production alternative:
 ### Problem: DELETE still works in production
 
 **Solution**: Check environment setting
+
 ```sql
-SHOW app.environment;  -- Should show 'production'
+SHOW app.environment;
+
+-- Should show 'production'
 ```
 
 ### Problem: Getting "environment not set" errors
 
 **Solution**: Set the environment
+
 ```sql
-ALTER DATABASE pzero SET app.environment = 'production';
+ALTER DATABASE pzero
+SET
+  app.environment = 'production';
+
 -- Then reconnect or run:
-SET app.environment = 'production';
+SET
+  app.environment = 'production';
 ```
 
 ### Problem: Need to hard DELETE in production (emergency)
 
 **Solution**: Temporarily switch to development (use with caution!)
+
 ```sql
 -- Emergency bypass (logs will show [DEVELOPMENT MODE])
-SET app.environment = 'development';
-DELETE FROM pzero.all_orgs WHERE id = '...';
+SET
+  app.environment = 'development';
+
+DELETE FROM pzero.all_orgs
+WHERE
+  id = '...';
 
 -- Switch back immediately
-SET app.environment = 'production';
+SET
+  app.environment = 'production';
 ```
 
 **Note**: All DELETEs are logged with environment marker for audit purposes.
@@ -247,12 +288,14 @@ SET app.environment = 'production';
 ### Updating Existing Code
 
 **Before:**
+
 ```javascript
 // Old code - hard DELETE
-await db.query('DELETE FROM pzero.all_orgs WHERE id = $1', [orgId]);
+await db.query("DELETE FROM pzero.all_orgs WHERE id = $1", [orgId]);
 ```
 
 **After:**
+
 ```javascript
 // New code - soft DELETE
 await db.query(
@@ -264,23 +307,35 @@ await db.query(
          to_jsonb($2::text)
        )
    WHERE id = $1`,
-  [orgId, userId]
+  [orgId, userId],
 );
 ```
 
 ### Query Updates
 
 **Before:**
+
 ```sql
 -- Old query - includes deleted records
-SELECT * FROM pzero.all_orgs WHERE handle = 'acme';
+SELECT
+  *
+FROM
+  pzero.all_orgs
+WHERE
+  handle = 'acme';
 ```
 
 **After:**
+
 ```sql
 -- New query - exclude deleted records
-SELECT * FROM pzero.all_orgs
-WHERE handle = 'acme' AND is_del = FALSE;
+SELECT
+  *
+FROM
+  pzero.all_orgs
+WHERE
+  handle = 'acme'
+  AND is_del = FALSE;
 ```
 
 ## Files

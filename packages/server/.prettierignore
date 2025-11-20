@@ -1,4 +1,4 @@
 dist/
 
 # SQL test files with psql meta-commands
-**/migrations/test-*.sql
+migrations/test-*.sql

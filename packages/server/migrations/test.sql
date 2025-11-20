@@ -4,8 +4,11 @@
 -- ============================================================================
 -- Test 1: Basic Auth User Creation with Auto-Generated ID
 -- ============================================================================
+INSERT INTO
+  pzero.parts (part, name)
+VALUES
+  ('pzero', 'pzero');
 
-insert into pzero.parts(part, name) values ('pzero', 'pzero');
 INSERT INTO
   pzero.all_auth (email)
 VALUES
@@ -20,53 +23,70 @@ VALUES
 -- Test 2: Users with Data Processing (meta removal, tags preservation)
 -- ============================================================================
 -- Test user with data.meta that should be removed
-
-  INSERT INTO pzero.all_users (id, name, org_id, data)
-  SELECT
-    a.id,
-    'admin' AS name,
-    o.id AS org_id,
-    jsonb_build_object(
-      'meta', jsonb_build_object('c_by', a.id::text, 'foo', 1,
-  'bar', 'test'),
-      'tags', jsonb_build_array('admin', 'superuser'),
-      'profile', jsonb_build_object('role', 'administrator')
-    ) AS data
-  FROM pzero.all_auth a, pzero.all_orgs o
-  WHERE a.email = 'admin@example.com' AND o.handle = 'test';
+INSERT INTO
+  pzero.all_users (id, name, org_id, data)
+SELECT
+  a.id,
+  'admin' AS name,
+  o.id AS org_id,
+  jsonb_build_object(
+    'meta',
+    jsonb_build_object('c_by', a.id::text, 'foo', 1, 'bar', 'test'),
+    'tags',
+    jsonb_build_array('admin', 'superuser'),
+    'profile',
+    jsonb_build_object('role', 'administrator')
+  ) AS data
+FROM
+  pzero.all_auth a,
+  pzero.all_orgs o
+WHERE
+  a.email = 'admin@example.com'
+  AND o.handle = 'test';
 
 -- Test user with data.diff for update tracking
-
-INSERT INTO pzero.all_users (id, name, org_id, data)
-  SELECT
-    a.id,
-    'Regular User' AS name,
-    o.id AS org_id,
-    ('{"meta": {"c_by": "' || a.id || '"}, "tags": ["user"],
+INSERT INTO
+  pzero.all_users (id, name, org_id, data)
+SELECT
+  a.id,
+  'Regular User' AS name,
+  o.id AS org_id,
+  (
+    '{"meta": {"c_by": "' || a.id || '"}, "tags": ["user"],
   "diff": {"name": {"old": "John", "new": "Jane"}}, "settings":
-  {"theme": "dark"}}')::jsonb AS data
-  FROM pzero.all_auth a
+  {"theme": "dark"}}'
+  )::jsonb AS data
+FROM
+  pzero.all_auth a
   CROSS JOIN pzero.all_orgs o
-  WHERE a.email = 'user@example.com'
-    AND o.handle = 'bwalk'
-  LIMIT 1;
+WHERE
+  a.email = 'user@example.com'
+  AND o.handle = 'bwalk'
+LIMIT
+  1;
+
 -- ============================================================================
 -- Test 3: Organizations
 -- ============================================================================
+INSERT INTO
+  pzero.all_orgs (name, handle, part_by, website, dscr, data)
+SELECT
+  'Boardwalk Technologies2',
+  'bwalk',
+  'pzero',
+  'https://www.boardwalktech.com',
+  'Boardwalk Technologies',
+  (
+    '{"meta": {"c_by": "' || id || '"}, "industry": "technology",
+  "founded": 2020}'
+  )::jsonb
+FROM
+  pzero.all_auth
+WHERE
+  email = 'admin@example.com'
+LIMIT
+  1;
 
-INSERT INTO pzero.all_orgs (name, handle, part_by, website, dscr,
-   data)
-  SELECT
-    'Boardwalk Technologies2',
-    'bwalk',
-    'pzero',
-    'https://www.boardwalktech.com',
-    'Boardwalk Technologies',
-    ('{"meta": {"c_by": "' || id || '"}, "industry": "technology",
-  "founded": 2020}')::jsonb
-  FROM pzero.all_auth
-  WHERE email = 'admin@example.com'
-  LIMIT 1;
 -- ============================================================================
 -- Test 4: Endpoints with Various Methods
 -- ============================================================================

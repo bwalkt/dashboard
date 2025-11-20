@@ -1,5 +1,4 @@
 -- CRUD Functions for pzero schema
-
 -- Insert function that automatically handles meta.c_by injection
 -- Parameters:
 --   p_table_name: Name of the table (without 'pzero.' prefix)
@@ -7,12 +6,12 @@
 --   p_fields: JSONB object with field names and values {"field_name": "value", ...}
 --   p_data: Additional data to include (meta.c_by will be automatically added/merged)
 -- Returns: ID of the inserted record
-CREATE OR REPLACE FUNCTION pzero.insert_into_table(
+CREATE OR REPLACE FUNCTION pzero.insert_into_table (
   p_table_name text,
   p_c_by text,
   p_fields jsonb,
   p_data jsonb DEFAULT '{}'::jsonb
-) RETURNS text AS $$
+) returns text AS $$
 import plpy
 import json
 
@@ -140,7 +139,7 @@ except Exception as e:
     plpy.error(f'Unexpected error during insert: {e}')
     raise
 
-$$ LANGUAGE plpython3u;
+$$ language plpython3u;
 
 -- Example usage:
 -- SELECT pzero.insert_into_table(
@@ -149,7 +148,6 @@ $$ LANGUAGE plpython3u;
 --   '{"name": "Test Org", "handle": "testorg", "website": "test.com"}'::jsonb,
 --   '{"industry": "technology", "founded": 2020}'::jsonb
 -- );
-
 -- Or with jsonb_build_object:
 -- SELECT pzero.insert_into_table(
 --   'all_orgs',
@@ -166,7 +164,6 @@ $$ LANGUAGE plpython3u;
 --     'employees', 50
 --   )
 -- );
-
 -- ============================================
 -- Create User Function
 -- ============================================
@@ -202,7 +199,7 @@ $$ LANGUAGE plpython3u;
 --       'meta', jsonb_build_object('c_by', '019a9f56-2d65-7bd0-b764-9f79183c7672')
 --     )
 --   ));
-CREATE OR REPLACE FUNCTION pzero.create_user(p_user jsonb) RETURNS jsonb AS $$
+CREATE OR REPLACE FUNCTION pzero.create_user (p_user jsonb) returns jsonb AS $$
 import plpy
 import json
 
@@ -319,30 +316,26 @@ result = {
 
 return json.dumps(result)
 
-$$ LANGUAGE plpython3u;
+$$ language plpython3u;
 
 -- More examples:
-
 -- Minimal (only required fields):
 -- SELECT pzero.create_user(jsonb_build_object(
 --   'name', 'John Doe',
 --   'email', 'john.doe@example.com'
 -- ));
-
 -- With org_id:
 -- SELECT pzero.create_user(jsonb_build_object(
 --   'name', 'Jane Smith',
 --   'email', 'jane.smith@example.com',
 --   'org_id', (SELECT id::text FROM pzero.all_orgs WHERE handle = 'acme')
 -- ));
-
 -- With additional data:
 -- SELECT pzero.create_user(jsonb_build_object(
 --   'name', 'Bob Johnson',
 --   'email', 'bob@example.com',
 --   'data', jsonb_build_object('department', 'Engineering', 'title', 'Developer')
 -- ));
-
 -- With c_by (when created by another user):
 -- SELECT pzero.create_user(jsonb_build_object(
 --   'name', 'Alice Wong',

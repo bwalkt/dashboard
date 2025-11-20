@@ -16,8 +16,11 @@ CREATE EXTENSION if NOT EXISTS postgis;
 CREATE SCHEMA if NOT EXISTS pzero;
 
 CREATE DOMAIN pzero.uuid AS uuid;
+
 CREATE DOMAIN pzero.id AS pzero.uuid;
+
 CREATE DOMAIN pzero.iid AS pzero.id;
+
 CREATE DOMAIN pzero.data AS jsonb;
 
 CREATE TABLE IF NOT EXISTS pzero.global_vars (name text PRIMARY KEY, value text);
@@ -46,9 +49,13 @@ CREATE DOMAIN pzero.email AS text CHECK (
 );
 
 CREATE DOMAIN pzero.valid_name AS varchar(100) NOT NULL CHECK (value ~* '^[A-Za-z0-9._ \-]+$');
+
 CREATE DOMAIN pzero.valid_handle AS varchar(10) NOT NULL CHECK (value ~* '^[A-Za-z0-9._\-]+$');
+
 CREATE DOMAIN pzero.valid_part AS varchar(10) NOT NULL DEFAULT 'pzero' CHECK (value ~* '^[A-Za-z0-9 ._\-]+$');
+
 CREATE DOMAIN pzero.valid_col_name AS varchar(25) NOT NULL CHECK (value ~* '^[A-Za-z0-9_]+$');
+
 CREATE DOMAIN pzero.domain AS text CHECK (
   value ~ '^(https?://)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
 );
@@ -164,62 +171,77 @@ INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_auth', 'A');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_users', 'U');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_groups', 'G');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_orgs', 'O');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_nhs', 'N');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_sessions', 'S');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_devices', 'D');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_endpoints', 'E');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_files', 'F');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_dirs', 'DR');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_relations', 'R');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_audits', 'AD');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_thread_heads', 'TH');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_threads', 'T');
+
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
   ('all_txns', 'TX');
+
 CREATE TABLE pzero.base_table (
   name pzero.valid_name NOT NULL,
   is_del boolean DEFAULT FALSE,
@@ -229,8 +251,11 @@ CREATE TABLE pzero.base_table (
 );
 
 CREATE TABLE pzero.id_base_table (id pzero.id NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.base_table);
+
 CREATE TABLE pzero.base_loc_table (loc pzero.location) inherits (pzero.base_table);
+
 CREATE TABLE pzero.id_base_loc_table (id pzero.id NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.base_loc_table);
+
 CREATE TABLE pzero.base_effective_table (eff_from timestamptz, eff_to timestamptz);
 
 CREATE TABLE pzero.domain_base (
@@ -248,16 +273,16 @@ CREATE TABLE pzero.domain_base (
 );
 
 -- TODO - when partition is dropped or renamed
-CREATE TABLE pzero.parts  (
-  part pzero.valid_part not null primary key,
-  c_at timestamptz not null default now(),
-  tags text[]
+CREATE TABLE pzero.parts (
+  part pzero.valid_part NOT NULL PRIMARY KEY,
+  c_at timestamptz NOT NULL DEFAULT now(),
+  tags TEXT[]
 ) inherits (pzero.base_table);
+
 -- Create immutable wrapper function for extracting epoch from UUIDv7
-CREATE OR REPLACE FUNCTION pzero.extract_epoch(p_timestamptz TIMESTAMPTZ)
-RETURNS BIGINT AS $$
+CREATE OR REPLACE FUNCTION pzero.extract_epoch (p_timestamptz timestamptz) returns bigint AS $$
     SELECT (EXTRACT(EPOCH FROM p_timestamptz) * 1000)::BIGINT;
-$$ LANGUAGE sql IMMUTABLE;
+$$ language sql immutable;
 
 CREATE OR REPLACE FUNCTION pzero.create_tables_post () returns event_trigger AS $$
 DECLARE
@@ -439,15 +464,17 @@ CREATE TABLE pzero.all_auth (
   phone_verified boolean NOT NULL DEFAULT FALSE,
   is_del boolean NOT NULL DEFAULT FALSE,
   is_act boolean NOT NULL DEFAULT TRUE,
-  UNIQUE ( id, is_act),
+  UNIQUE (id, is_act),
   UNIQUE (email, is_act),
   UNIQUE (phone, is_act)
-)PARTITION BY list (is_act);
+)
+PARTITION BY
+  list (is_act);
 
 CREATE INDEX idx_pzero_auth_email ON pzero.auth USING gin (email gin_trgm_ops);
 
 CREATE TABLE pzero.all_orgs (
-  LIKE pzero.id_base_loc_table including all,
+  LIKE pzero.id_base_loc_table including ALL,
   LIKE pzero.domain_base including ALL,
   website pzero.domain,
   favicon text,
@@ -461,43 +488,60 @@ CREATE TABLE pzero.all_orgs (
   UNIQUE (handle, is_act),
   UNIQUE (part_by, id, is_act),
   trial_period pzero.from_to
-) PARTITION BY list (is_act);
-CREATE INDEX org_part_by_idx on pzero.all_orgs(part_by);
-INSERT INTO pzero.all_orgs(name, handle, data)
-  SELECT 'pzero', 'pzero', jsonb_build_object('meta',
-  jsonb_build_object('c_by', id::text))
-  FROM pzero.all_auth
-  WHERE email = 'admin@example.com';
+)
+PARTITION BY
+  list (is_act);
+
+CREATE INDEX org_part_by_idx ON pzero.all_orgs (part_by);
+
+INSERT INTO
+  pzero.all_orgs (name, handle, data)
+SELECT
+  'pzero',
+  'pzero',
+  jsonb_build_object('meta', jsonb_build_object('c_by', id::text))
+FROM
+  pzero.all_auth
+WHERE
+  email = 'admin@example.com';
+
 CREATE TABLE pzero.base_part (
-  part pzero.valid_part not null default 'pzero' REFERENCES pzero.parts(part),
+  part pzero.valid_part NOT NULL DEFAULT 'pzero' REFERENCES pzero.parts (part),
   org_id pzero.id
 );
+
 -- Children of org are
 -- nhs,
 -- groups
-
 CREATE TABLE pzero.all_relations (
   part pzero.valid_part,
-  is_act boolean default true,
+  is_act boolean DEFAULT TRUE,
   uuid1 text NOT NULL,
   uuid2 text NOT NULL,
   data pzero.data,
   PRIMARY KEY (part, is_act, uuid1, uuid2)
-) PARTITION BY list (is_act);
+)
+PARTITION BY
+  list (is_act);
+
 CREATE INDEX idx_pzero_relations_uuid2 ON pzero.relations (part, uuid2);
+
 CREATE INDEX idx_pzero_relations_uuid1 ON pzero.relations (part, uuid1);
 
 -- Bitwise indexes will be created automatically by event trigger
 CREATE TABLE pzero.all_txns (
-  id bigint  NOT NULL,
+  id bigint NOT NULL,
   -- we don't have foreign key check on c_by on all_auths because we don't have is_act
-  c_by pzero.id not null,
+  c_by pzero.id NOT NULL,
   part pzero.valid_part,
-  c_at timestamptz not null default now(),
-  primary key (part, id)
-) PARTITION BY list(part);
+  c_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (part, id)
+)
+PARTITION BY
+  list (part);
 
 CREATE INDEX idx_pzero_txns_c_by_at ON pzero.all_txns (part, c_by);
+
 CREATE INDEX idx_pzero_txns_c_at_by ON pzero.all_txns (part, c_at);
 
 CREATE TABLE pzero.all_audits (
@@ -511,24 +555,29 @@ CREATE TABLE pzero.all_audits (
   is_del boolean DEFAULT FALSE,
   data pzero.data,
   PRIMARY KEY (is_del, part, id)
-) PARTITION BY list (is_del);
-CREATE INDEX idx_pzero_audits_row_id ON pzero.audits (part,  mmn, row_id);
-CREATE INDEX idx_pzero_audits_cno ON pzero.audits (part,  mmn, cno);
+)
+PARTITION BY
+  list (is_del);
+
+CREATE INDEX idx_pzero_audits_row_id ON pzero.audits (part, mmn, row_id);
+
+CREATE INDEX idx_pzero_audits_cno ON pzero.audits (part, mmn, cno);
 
 -- having users in different orgs - alls for org specific profile
 -- will search for org specific user profile
 -- if not found, then get pzero user
 CREATE TABLE pzero.all_users (
-  LIKE pzero.id_base_loc_table including all,
-  LIKE pzero.base_part including all,
+  LIKE pzero.id_base_loc_table including ALL,
+  LIKE pzero.base_part including ALL,
   avatar text,
   status pzero.user_status,
   online_status pzero.user_online_status,
   last_seen timestamptz,
   PRIMARY KEY (part, is_act, org_id, id),
   FOREIGN key (id, is_act) REFERENCES pzero.all_auth (id, is_act) ON DELETE CASCADE
-) PARTITION BY list (is_act);
-
+)
+PARTITION BY
+  list (is_act);
 
 -- Indexes will be created automatically by event trigger
 -- orgs, device and auth are global and not entities part of org
@@ -536,9 +585,11 @@ CREATE TABLE pzero.all_groups (
   LIKE pzero.id_base_loc_table including ALL,
   LIKE pzero.base_part including ALL,
   PRIMARY KEY (part, is_act, org_id, id),
-  FOREIGN KEY (part, org_id, is_act) REFERENCES pzero.all_orgs(part_by, id, is_act),
+  FOREIGN key (part, org_id, is_act) REFERENCES pzero.all_orgs (part_by, id, is_act),
   UNIQUE (part, is_act, org_id, name)
-) PARTITION BY list (is_act);
+)
+PARTITION BY
+  list (is_act);
 
 CREATE TABLE pzero.all_nhs (
   LIKE pzero.id_base_loc_table including ALL,
@@ -547,57 +598,72 @@ CREATE TABLE pzero.all_nhs (
   level smallint NOT NULL DEFAULT 0,
   PRIMARY KEY (part, org_id, id, is_act),
   UNIQUE (part, org_id, name, level, is_act),
-  FOREIGN KEY (part, org_id, is_act) REFERENCES pzero.all_orgs(part_by, id, is_act)
-) PARTITION BY list (is_act);
+  FOREIGN key (part, org_id, is_act) REFERENCES pzero.all_orgs (part_by, id, is_act)
+)
+PARTITION BY
+  list (is_act);
 
 CREATE TABLE pzero.all_devices (
-  LIKe pzero.id_base_loc_table including all,
+  LIKE pzero.id_base_loc_table including ALL,
   is_primary boolean DEFAULT FALSE,
   device_type pzero.device_type DEFAULT 'OTHER',
   is_verifier boolean DEFAULT FALSE,
   device_status pzero.device_status DEFAULT 'UNKNOWN',
   duration_used bigint DEFAULT 0, -- total duration used in microseconds
-  uid pzero.id not null NOT NULL,
+  uid pzero.id NOT NULL NOT NULL,
   UNIQUE (is_primary, uid, is_act),
   PRIMARY KEY (id, is_act),
-  FOREIGN KEY (uid, is_act) REFERENCES pzero.all_auth (id, is_act) 
-) PARTITION BY list (is_act);
+  FOREIGN key (uid, is_act) REFERENCES pzero.all_auth (id, is_act)
+)
+PARTITION BY
+  list (is_act);
 
 CREATE TABLE pzero.all_endpoints (
-  LIKE pzero.id_base_loc_table including all,
-  LIKE pzero.domain_base including all,
+  LIKE pzero.id_base_loc_table including ALL,
+  LIKE pzero.domain_base including ALL,
   part pzero.valid_part,
   url pzero.domain NOT NULL,
   access_policy smallint DEFAULT 0, -- 0 private, 1 - internal, 3 - public collab 4 - public,
   PRIMARY KEY (part, is_act, id)
-) PARTITION BY list (is_act);
+)
+PARTITION BY
+  list (is_act);
 
 -- Indexes will be created automatically by event trigger
 CREATE TABLE pzero.all_sessions (
-  LIKE pzero.id_base_table including all,
-  part pzero.valid_part not null,
+  LIKE pzero.id_base_table including ALL,
+  part pzero.valid_part NOT NULL,
   ip text,
   user_agent text,
   status pzero.session_status,
   PRIMARY KEY (part, is_act, id)
-) PARTITION BY list (is_act);
+)
+PARTITION BY
+  list (is_act);
 
 CREATE TABLE pzero.all_dirs (
-  LIKE pzero.id_base_table including all,
-  LIke pzero.base_part including all,
+  LIKE pzero.id_base_table including ALL,
+  LIKE pzero.base_part including ALL,
   status pzero.dir_status,
   PRIMARY KEY (part, org_id, id, is_act),
-  FOREIGN KEY (part, org_id, is_act) REFERENCES pzero.all_orgs(part_by, id, is_act)
-) PARTITION BY list (is_act);
-CREATE UNIQUE INDEX idx_pzero_dirs_parent ON pzero.dirs (part,name, is_act);
+  FOREIGN key (part, org_id, is_act) REFERENCES pzero.all_orgs (part_by, id, is_act)
+)
+PARTITION BY
+  list (is_act);
+
+CREATE UNIQUE INDEX idx_pzero_dirs_parent ON pzero.dirs (part, name, is_act);
+
 CREATE INDEX idx_pzero_dirs_status ON pzero.all_dirs (status);
 
 CREATE TABLE pzero.all_files (
-  LIKE pzero.all_dirs including all,
+  LIKE pzero.all_dirs including ALL,
   file_type pzero.file_type NOT NULL,
   file_size bigint NOT NULL, -- rounded off by 100
   file_unit pzero.file_unit NOT NULL
-) PARTITION BY list (is_act);
+)
+PARTITION BY
+  list (is_act);
+
 CREATE INDEX idx_pzero_files_status ON pzero.files (part, is_act, status);
 
 CREATE TABLE pzero.all_thread_heads (
@@ -607,47 +673,81 @@ CREATE TABLE pzero.all_thread_heads (
   part pzero.valid_part,
   -- that started the thread
   data pzero.data,
-  c_at timestamptz not null default now(),
+  c_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (part, id, is_act)
-) PARTITION BY list (is_act);
+)
+PARTITION BY
+  list (is_act);
 
 CREATE TABLE pzero.all_threads (
-  LIKE pzero.all_thread_heads including all,
+  LIKE pzero.all_thread_heads including ALL,
   root_id bigint NOT NULL,
   FOREIGN key (part, root_id, is_act) REFERENCES pzero.all_thread_heads (part, id, is_act) ON DELETE CASCADE
-) PARTITION BY list (is_act);
+)
+PARTITION BY
+  list (is_act);
+
 -- Down Migration
 DROP TABLE IF EXISTS pzero.all_threads;
+
 DROP TABLE IF EXISTS pzero.all_thread_heads;
+
 DROP TABLE IF EXISTS pzero.all_files;
+
 DROP TABLE IF EXISTS pzero.all_dirs;
+
 DROP TABLE IF EXISTS pzero.all_endpoints;
+
 DROP TABLE IF EXISTS pzero.all_devices;
+
 DROP TABLE IF EXISTS pzero.all_nhs;
+
 DROP TABLE IF EXISTS pzero.all_sessions;
+
 DROP TABLE IF EXISTS pzero.all_users;
+
 DROP TABLE IF EXISTS pzero.all_orgs;
+
 DROP TABLE IF EXISTS pzero.all_relations;
+
 DROP TABLE IF EXISTS pzero.all_audits;
+
 DROP TABLE IF EXISTS pzero.all_txns;
+
 DROP TABLE IF EXISTS pzero.all_auth;
+
 DROP TABLE IF EXISTS pzero.mmn;
 
 DROP TYPE if EXISTS pzero.file_unit;
 
 DROP TYPE if EXISTS pzero.file_type;
+
 DROP TYPE if EXISTS pzero.relation_type;
+
 DROP TYPE if EXISTS pzero.device_type;
+
 DROP TYPE if EXISTS pzero.session_type;
+
 DROP TYPE if EXISTS pzero.session_status;
+
 DROP TYPE if EXISTS pzero.device_status;
+
 DROP TYPE if EXISTS pzero.user_status;
+
 DROP TYPE if EXISTS pzero.method;
+
 DROP TYPE if EXISTS pzero.location;
+
 DROP TYPE if EXISTS pzero.address;
+
 DROP TYPE if EXISTS pzero.org_status;
+
 DROP TYPE if EXISTS pzero.endpoint_status;
+
 DROP DOMAIN if EXISTS pzero.key_values;
+
 DROP DOMAIN if EXISTS pzero.iid;
+
 DROP DOMAIN if EXISTS pzero.mmn_type;
+
 DROP SCHEMA if EXISTS pzero cascade;

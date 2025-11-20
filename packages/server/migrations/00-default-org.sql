@@ -1,5 +1,6 @@
 -- Create default organization
-SET app.environment = 'development';
+SET
+  app.environment = 'development';
 
 DO $$
 DECLARE
@@ -20,4 +21,11 @@ BEGIN
   END IF;
 END $$;
 
-SELECT id, handle, name FROM pzero.all_orgs WHERE handle = 'pzero';
+SELECT
+  id,
+  handle,
+  name
+FROM
+  pzero.all_orgs
+WHERE
+  handle = 'pzero';
