@@ -161,7 +161,7 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'pow(x, y)', name: 'pow' },
       { expr: 'log(x, y)', name: 'log' },
       { expr: 'asinh(x / y)', name: 'asinh,divide' },
-      { expr: 'acosh(abs(x))', name: 'acosh,abs' },
+      { expr: 'acosh(abs(x) + 1)', name: 'acosh,abs,add' },
       { expr: 'atanh(x / y)', name: 'atanh,divide' },
       { expr: 'fix(x / y)', name: 'fix,divide' },
       { expr: '(x^2 + y) inch to cm', name: 'pow,add,unit_conversion' },
@@ -190,7 +190,7 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'sin(x)^2 + cos(x)^2', name: 'sin,cos,pow,add' },
       { expr: 'tan(x/y) + atan(y/x)', name: 'tan,atan,divide,add' },
       { expr: 'sinh(x) * cosh(y)', name: 'sinh,cosh,multiply' },
-      { expr: 'asinh(x) + acosh(abs(y))', name: 'asinh,acosh,abs,add' },
+      { expr: 'asinh(x) + acosh(abs(y) + 1)', name: 'asinh,acosh,abs,add' },
       { expr: 'max(x^2, y^2) - min(x, y)', name: 'max,min,pow,subtract' },
       { expr: 'ceil(x/y) + floor(y/x)', name: 'ceil,floor,divide,add' },
       { expr: 'abs(x - y) / max(x, y)', name: 'abs,max,subtract,divide' },
@@ -206,12 +206,12 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'round(sqrt(x^2 + y^2))', name: 'round,sqrt,pow,add' },
       { expr: '(x^2 + y^2) inch to cm', name: 'pow,add,unit_conversion' },
       { expr: 'sqrt(x^2 + y^2) m to ft', name: 'sqrt,pow,add,unit_conversion' },
-      { expr: '(sin(x) + cos(y)) * 100 deg to rad', name: 'sin,cos,add,multiply,unit_conversion' },
+      { expr: '(x + y) deg to rad', name: 'add,unit_conversion' },
       { expr: '(x * y + x) kg to lb', name: 'multiply,add,unit_conversion' },
       { expr: 'abs(x^2 - y^2) mm to cm', name: 'abs,pow,subtract,unit_conversion' },
       { expr: 'max(x, y)^2 liter to gallon', name: 'max,pow,unit_conversion' },
       { expr: 'cbrt(x^3 + y^3) km to mile', name: 'cbrt,pow,add,unit_conversion' },
-      { expr: 'log10(abs(x * y)) degC to degF', name: 'log10,abs,multiply,unit_conversion' },
+      { expr: '(x + y) degC to degF', name: 'add,unit_conversion' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     expression = selected.expr
