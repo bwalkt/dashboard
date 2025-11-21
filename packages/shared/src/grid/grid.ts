@@ -192,8 +192,14 @@ export function genFunction(complexity?: number, size?: number) {
   let expression: string
   let operations: string[] = []
 
+  // Helper to get random coefficients for parameterization
+  const randCoeff = () => Math.floor(Math.random() * 5) + 1 // 1-5
+  const randSmallCoeff = () => Math.floor(Math.random() * 3) + 1 // 1-3
+  const randPower = () => Math.floor(Math.random() * 4) + 2 // 2-5
+
   if (finalComplexity === 1) {
     // Simple: basic operations, single functions, simple unit conversions
+    // Mix of fixed templates and generator functions for parameterization
     const ops = [
       { expr: 'x + y', name: 'add' },
       { expr: 'x - y', name: 'subtract' },
@@ -203,6 +209,22 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'x^3', name: 'cube' },
       { expr: 'sqrt(x)', name: 'sqrt' },
       { expr: 'cbrt(x)', name: 'cbrt' },
+      // Parameterized templates - generate fresh expressions each time
+      { expr: () => `${randCoeff()}*x + y`, name: 'multiply,add' },
+      { expr: () => `x + ${randCoeff()}*y`, name: 'add,multiply' },
+      { expr: () => `${randCoeff()}*x - y`, name: 'multiply,subtract' },
+      { expr: () => `x - ${randCoeff()}*y`, name: 'subtract,multiply' },
+      { expr: () => `${randCoeff()}*x + ${randCoeff()}*y`, name: 'multiply,add' },
+      { expr: () => `${randCoeff()}*x - ${randCoeff()}*y`, name: 'multiply,subtract' },
+      { expr: () => `x^${randPower()}`, name: 'pow' },
+      { expr: () => `y^${randPower()}`, name: 'pow' },
+      { expr: () => `${randCoeff()}*x`, name: 'multiply' },
+      { expr: () => `${randCoeff()}*y`, name: 'multiply' },
+      { expr: () => `x / ${randCoeff()}`, name: 'divide' },
+      { expr: () => `y / ${randCoeff()}`, name: 'divide' },
+      { expr: () => `(x + y) / ${randCoeff()}`, name: 'add,divide' },
+      { expr: () => `(x - y) * ${randCoeff()}`, name: 'subtract,multiply' },
+      { expr: () => `(x * y) / ${randCoeff()}`, name: 'multiply,divide' },
       { expr: 'abs(x - y)', name: 'abs,subtract' },
       { expr: 'ceil(x / y)', name: 'ceil,divide' },
       { expr: 'floor(x / y)', name: 'floor,divide' },
@@ -243,7 +265,8 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'median(mr(1-3))', name: 'median,matrix_rows' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
-    expression = selected.expr
+    // Handle both string expressions and generator functions
+    expression = typeof selected.expr === 'function' ? selected.expr() : selected.expr
     operations = selected.name.split(',')
   } else if (finalComplexity === 2) {
     // Moderate: combinations of two operations or functions
@@ -252,6 +275,17 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'x^3 - y', name: 'pow,subtract' },
       { expr: '2*x + 3*y', name: 'multiply,add' },
       { expr: 'x*y + x', name: 'multiply,add' },
+      // Parameterized templates for more diversity
+      { expr: () => `x^${randPower()} + y`, name: 'pow,add' },
+      { expr: () => `x^${randPower()} - y`, name: 'pow,subtract' },
+      { expr: () => `${randCoeff()}*x + ${randCoeff()}*y`, name: 'multiply,add' },
+      { expr: () => `${randCoeff()}*x - ${randCoeff()}*y`, name: 'multiply,subtract' },
+      { expr: () => `x*y + ${randCoeff()}*x`, name: 'multiply,add' },
+      { expr: () => `x*y - ${randCoeff()}*y`, name: 'multiply,subtract' },
+      { expr: () => `x^${randPower()} + y^${randPower()}`, name: 'pow,add' },
+      { expr: () => `x^${randPower()} - y^${randPower()}`, name: 'pow,subtract' },
+      { expr: () => `sqrt(x) + ${randCoeff()}*y`, name: 'sqrt,multiply,add' },
+      { expr: () => `${randCoeff()}*sqrt(x) + cbrt(y)`, name: 'sqrt,cbrt,multiply,add' },
       { expr: 'sin(x) + cos(y)', name: 'sin,cos,add' },
       { expr: 'tan(x) + sin(y)', name: 'tan,sin,add' },
       { expr: 'sinh(x) - cosh(y)', name: 'sinh,cosh,subtract' },
@@ -296,7 +330,8 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'min(mr(all)) + max(mc(all))', name: 'min,max,matrix,add' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
-    expression = selected.expr
+    // Handle both string expressions and generator functions
+    expression = typeof selected.expr === 'function' ? selected.expr() : selected.expr
     operations = selected.name.split(',')
   } else {
     // Complex: nested operations, multiple functions, complex expressions
@@ -306,6 +341,17 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: '(x + y) * (x - y)', name: 'add,subtract,multiply' },
       { expr: 'sin(x*y) + cos(x/y)', name: 'sin,cos,multiply,divide,add' },
       { expr: 'x^3 - 3*x*y + y^3', name: 'pow,multiply,subtract,add' },
+      // Parameterized templates for significantly more diversity
+      { expr: () => `x^${randPower()} + ${randCoeff()}*x*y + y^${randPower()}`, name: 'pow,multiply,add' },
+      { expr: () => `${randCoeff()}*x^${randPower()} - ${randCoeff()}*y^${randPower()}`, name: 'pow,multiply,subtract' },
+      { expr: () => `(${randCoeff()}*x + y) * (x - ${randCoeff()}*y)`, name: 'add,subtract,multiply' },
+      { expr: () => `x^${randPower()} / ${randCoeff()} + y^${randPower()} / ${randCoeff()}`, name: 'pow,divide,add' },
+      { expr: () => `sqrt(x^${randPower()}) + cbrt(y^${randPower()})`, name: 'sqrt,cbrt,pow,add' },
+      { expr: () => `(x + ${randCoeff()}*y) / (x - ${randCoeff()}*y)`, name: 'add,subtract,multiply,divide' },
+      { expr: () => `abs(x^${randPower()} - y^${randPower()})`, name: 'abs,pow,subtract' },
+      { expr: () => `max(x, y)^${randPower()} - min(x, y)^${randPower()}`, name: 'max,min,pow,subtract' },
+      { expr: () => `${randCoeff()}*log(x) + ${randCoeff()}*exp(y)`, name: 'log,exp,multiply,add' },
+      { expr: () => `sqrt(${randCoeff()}*x^2 + ${randCoeff()}*y^2)`, name: 'sqrt,pow,multiply,add' },
       { expr: 'log(x) + exp(y)', name: 'log,exp,add' },
       { expr: 'log10(x^2) + log2(y^2)', name: 'log10,log2,pow,add' },
       { expr: 'sqrt(abs(x)) + cbrt(abs(y))', name: 'sqrt,cbrt,abs,add' },
@@ -356,7 +402,8 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'log(std(m) + variance(m))', name: 'log,std,variance,matrix,add' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
-    expression = selected.expr
+    // Handle both string expressions and generator functions
+    expression = typeof selected.expr === 'function' ? selected.expr() : selected.expr
     operations = selected.name.split(',')
   }
 
