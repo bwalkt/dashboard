@@ -309,7 +309,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    * POST /auth/logout
    * Logout user (invalidate tokens)
    */
-  fastify.get(
+  fastify.post(
     "/auth/logout",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -368,12 +368,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Check rate limiting for registration attempts - 1 attempt per email every 60 seconds
         const rateLimitKey = `email_registration_rate:${email}`;
-        const isRateLimited = await redis.exists(rateLimitKey);
+        const ttl = await redis.ttl(rateLimitKey);
 
-        if (isRateLimited) {
+        if (ttl > 0) {
           return reply.status(429).send({
             error: "Too Many Requests",
-            message: "Please wait before requesting another verification email",
+            message: `Please wait ${ttl} seconds before requesting another verification email`,
           } as ErrorResponse);
         }
 
@@ -448,12 +448,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Check rate limiting for verification attempts - allow attempts only once every 60 seconds per email
         const rateLimitKey = `email_register_verify_rate:${email}`;
-        const isRateLimited = await redis.exists(rateLimitKey);
+        const ttl = await redis.ttl(rateLimitKey);
 
-        if (isRateLimited) {
+        if (ttl > 0) {
           return reply.status(429).send({
             error: "Too Many Requests",
-            message: "Please wait before attempting verification again",
+            message: `Please wait ${ttl} seconds before attempting verification again`,
           } as ErrorResponse);
         }
 
@@ -557,12 +557,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Check rate limiting for login attempts - 1 attempt per email every 60 seconds
         const rateLimitKey = `email_login_rate:${email}`;
-        const isRateLimited = await redis.exists(rateLimitKey);
+        const ttl = await redis.ttl(rateLimitKey);
 
-        if (isRateLimited) {
+        if (ttl > 0) {
           return reply.status(429).send({
             error: "Too Many Requests",
-            message: "Please wait before requesting another verification code",
+            message: `Please wait ${ttl} seconds before requesting another verification code`,
           } as ErrorResponse);
         }
 
@@ -630,12 +630,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Check rate limiting - allow verification attempts only once every 60 seconds per email
         const rateLimitKey = `email_login_verify_rate:${email}`;
-        const isRateLimited = await redis.exists(rateLimitKey);
+        const ttl = await redis.ttl(rateLimitKey);
 
-        if (isRateLimited) {
+        if (ttl > 0) {
           return reply.status(429).send({
             error: "Too Many Requests",
-            message: "Please wait before attempting verification again",
+            message: `Please wait ${ttl} seconds before attempting verification again`,
           } as ErrorResponse);
         }
 

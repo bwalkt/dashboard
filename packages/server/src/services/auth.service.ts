@@ -29,7 +29,7 @@ export class AuthService extends JWTService {
   /**
    * Generate refresh token with SHA-512 algorithm for GitHub OAuth2
    */
-  public generateRefreshToken(userId: number): string {
+  public generateRefreshToken(userId: string): string {
     const tokenPayload: Omit<RefreshTokenPayload, "exp" | "iat"> = {
       userId,
       type: "refresh",
@@ -56,7 +56,7 @@ export class AuthService extends JWTService {
 
       // Additional validation
       if (
-        typeof decoded.userId !== "number" ||
+        typeof decoded.userId !== "string" ||
         (decoded.githubId !== null && typeof decoded.githubId !== "string")
       ) {
         console.log(
@@ -102,7 +102,7 @@ export class AuthService extends JWTService {
       ) as RefreshTokenPayload;
 
       // Additional validation
-      if (decoded.type !== "refresh" || typeof decoded.userId !== "number") {
+      if (decoded.type !== "refresh" || typeof decoded.userId !== "string") {
         return null;
       }
 
@@ -139,7 +139,7 @@ export class AuthService extends JWTService {
    * Generate both access and refresh tokens
    */
   public generateTokenPair(
-    userId: number,
+    userId: string,
     githubId: string | null,
     email: string,
   ): {
@@ -167,7 +167,7 @@ export class AuthService extends JWTService {
   public async validateAccessToken(token: string): Promise<{
     valid: boolean;
     user?: {
-      id: number;
+      id: string;
       email: string;
       name: string;
       role?: string[];
@@ -178,10 +178,10 @@ export class AuthService extends JWTService {
     try {
       const accessTokenPayload = this.verifyAccessToken(token);
       if (accessTokenPayload) {
-        // Validate userId is a valid number
+        // Validate userId is a valid string
         if (
-          typeof accessTokenPayload.userId !== "number" ||
-          isNaN(accessTokenPayload.userId)
+          typeof accessTokenPayload.userId !== "string" ||
+          !accessTokenPayload.userId
         ) {
           return {
             valid: false,
@@ -233,16 +233,16 @@ export class AuthService extends JWTService {
    */
   public async validateRefreshTokenForRefresh(token: string): Promise<{
     valid: boolean;
-    userId?: number;
+    userId?: string;
     error?: string;
   }> {
     try {
       const refreshTokenPayload = this.verifyRefreshToken(token);
       if (refreshTokenPayload) {
-        // Validate userId is a valid number
+        // Validate userId is a valid string
         if (
-          typeof refreshTokenPayload.userId !== "number" ||
-          isNaN(refreshTokenPayload.userId)
+          typeof refreshTokenPayload.userId !== "string" ||
+          !refreshTokenPayload.userId
         ) {
           return {
             valid: false,

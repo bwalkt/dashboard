@@ -135,7 +135,11 @@ const headerValidationPlugin: FastifyPluginAsync<
       const jwtService = new JWTService();
 
       // Verify JWT token using the JWT_SECRET from environment
-      const decoded = jwtService.verifyHMACToken(token, config.JWT_SECRET);
+      const decoded = jwtService.verifyHMACToken(
+        token,
+        config.JWT_SECRET,
+        "HS512",
+      );
 
       // Check if token is not expired
       const now = Math.floor(Date.now() / 1000);
@@ -188,6 +192,7 @@ const headerValidationPlugin: FastifyPluginAsync<
           const decoded = jwtService.verifyHMACToken(
             cookies.accessToken,
             config.JWT_SECRET,
+            "HS512",
           );
           const now = Math.floor(Date.now() / 1000);
           if (!decoded.exp || decoded.exp > now) {
@@ -204,6 +209,7 @@ const headerValidationPlugin: FastifyPluginAsync<
           const decoded = jwtService.verifyHMACToken(
             cookies.refreshToken,
             config.JWT_SECRET,
+            "HS512",
           );
           const now = Math.floor(Date.now() / 1000);
           if (!decoded.exp || decoded.exp > now) {
