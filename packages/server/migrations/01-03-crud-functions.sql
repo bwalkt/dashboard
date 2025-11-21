@@ -118,7 +118,7 @@ for i, (col, ptype) in enumerate(zip(columns, param_types), 1):
         # Get the full type name from column_types
         col_info = column_types.get(col, ('text', 'text'))
         if col_info[1] == 'id':
-            placeholders.append(f'${i}::pzero.id')
+            placeholders.append(f'${i}::uuid')
         elif col_info[1] == 'uuid':
             placeholders.append(f'${i}::uuid')
         else:
@@ -301,7 +301,7 @@ user_data['meta']['c_by'] = c_by if c_by else auth_id
 try:
     user_sql = """
         INSERT INTO pzero.all_users (id, name, org_id, part, avatar, data)
-        VALUES ($1::pzero.id, $2, $3::pzero.id, $4, $5, $6::jsonb)
+        VALUES ($1::uuid, $2, $3::uuid, $4, $5, $6::jsonb)
         RETURNING id
     """
     user_stmt = plpy.prepare(user_sql, ["text", "text", "text", "text", "text", "text"])
