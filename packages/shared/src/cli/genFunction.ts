@@ -173,16 +173,11 @@ function main() {
 
     console.log(`\n🎯 Function ${i + 1}/${options.count} (Complexity: ${randomComplexity}):`)
     console.log(`  ID: ${func.id}`)
-    console.log(`  Expression: ${func.compactExpression}`)
-    console.log(`  Long Expression: ${toFullVerbose(func.compactExpression)}`)
-    if (func.metadata?.spaceSavings) {
-      console.log(
-        `  Space saved: ${func.metadata.spaceSavings.savedBytes} bytes (${func.metadata.spaceSavings.savedPercentage.toFixed(1)}%)`,
-      )
-    }
+    console.log(`  Expression: ${func.expression}`)
+    console.log(`  Simplified: ${func.simplifiedExpression}`)
+    console.log(`  x = grid[${func.xCell.row}][${func.xCell.col}], y = grid[${func.yCell.row}][${func.yCell.col}]`)
 
     if (options.verbose) {
-      console.log(`  Verbose Expression: ${func.expression}`)
       console.log(`  Description: ${func.readable}`)
       console.log(`  Complexity: ${JSON.stringify(formatComplexity(func.complexity), null, 4)}`)
       console.log(`  Functions Used: [${func.functions.unique.join(', ')}]`)
@@ -194,7 +189,11 @@ function main() {
     if (options.evaluate && grid) {
       const evalStart = Date.now()
       try {
-        let result = evaluate(grid, { expression: func.expression })
+        let result = evaluate(grid, {
+          expression: func.expression,
+          xCell: func.xCell,
+          yCell: func.yCell,
+        })
         let evalTime = Date.now() - evalStart
 
         // Check if result should trigger regeneration
@@ -210,18 +209,27 @@ function main() {
         while (shouldRegenerate(result)) {
           console.log(`  ⚠️  Result was ${result}, regenerating function...`)
           func = genFunction(randomComplexity, options.size)
-          result = evaluate(grid, { expression: func.expression })
+          result = evaluate(grid, {
+            expression: func.expression,
+            xCell: func.xCell,
+            yCell: func.yCell,
+          })
           evalTime = Date.now() - evalStart
 
           // Update function details after regeneration
           console.log(`  🔄 New Function:`)
           console.log(`  ID: ${func.id}`)
-          console.log(`  Expression: ${func.compactExpression}`)
-          console.log(`  Long Expression: ${toFullVerbose(func.compactExpression)}`)
+          console.log(`  Expression: ${func.expression}`)
+          console.log(`  Simplified: ${func.simplifiedExpression}`)
+          console.log(
+            `  x = grid[${func.xCell.row}][${func.xCell.col}], y = grid[${func.yCell.row}][${func.yCell.col}]`,
+          )
         }
 
         allStats.evaluationTime += evalTime
-        console.log(`  ✅ Evaluation Result: ${result}`)
+        const xVal = grid[func.xCell.row][func.xCell.col]
+        const yVal = grid[func.yCell.row][func.yCell.col]
+        console.log(`  ✅ Evaluation Result: ${result} (x=${xVal}, y=${yVal})`)
         if (options.verbose) {
           console.log(`  Evaluation Time: ${evalTime}ms`)
         }
