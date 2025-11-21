@@ -541,6 +541,7 @@ CREATE TABLE pzero.base_part (
   part pzero.valid_part NOT NULL DEFAULT 'pzero' REFERENCES pzero.all_parts (part),
   org_id uuid
 );
+
 INSERT INTO
   pzero.all_auth (email, email_verified)
 VALUES
@@ -592,7 +593,9 @@ CREATE TABLE pzero.all_audits (
   data pzero.data,
   c_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (is_del, part, id)
-) PARTITION BY list (is_del);
+)
+PARTITION BY
+  list (is_del);
 
 CREATE INDEX idx_pzero_audits_row_id ON pzero.audits (part, mmn, row_id);
 
@@ -701,7 +704,9 @@ CREATE TABLE pzero.all_sessions (
   u_at timestamptz NOT NULL DEFAULT now(),
   is_act boolean NOT NULL DEFAULT TRUE,
   PRIMARY KEY (part, is_act, id)
-) PARTITION BY list (is_act);
+)
+PARTITION BY
+  list (is_act);
 
 CREATE TABLE pzero.all_thread_heads (
   id bigserial NOT NULL,
@@ -712,33 +717,50 @@ CREATE TABLE pzero.all_thread_heads (
   data pzero.data,
   c_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (part, id, is_act)
-) PARTITION BY list (is_act);
+)
+PARTITION BY
+  list (is_act);
 
 CREATE TABLE pzero.all_threads (
   LIKE pzero.all_thread_heads including ALL,
   root_id bigint NOT NULL,
   FOREIGN key (part, root_id, is_act) REFERENCES pzero.all_thread_heads (part, id, is_act) ON DELETE CASCADE
-) PARTITION BY list (is_act);
+)
+PARTITION BY
+  list (is_act);
 
 -- Drop main tables
 DROP TABLE IF EXISTS pzero.all_threads;
+
 DROP TABLE IF EXISTS pzero.all_thread_heads;
+
 DROP TABLE IF EXISTS pzero.all_files;
+
 DROP TABLE IF EXISTS pzero.all_dirs;
+
 DROP TABLE IF EXISTS pzero.all_endpoints;
+
 DROP TABLE IF EXISTS pzero.all_devices;
+
 DROP TABLE IF EXISTS pzero.all_nhs;
+
 DROP TABLE IF EXISTS pzero.all_sessions;
+
 DROP TABLE IF EXISTS pzero.all_users;
+
 DROP TABLE IF EXISTS pzero.all_orgs;
+
 DROP TABLE IF EXISTS pzero.all_relations;
+
 DROP TABLE IF EXISTS pzero.all_audits;
+
 DROP TABLE IF EXISTS pzero.all_txns;
+
 DROP TABLE IF EXISTS pzero.all_auth;
+
 DROP TABLE IF EXISTS pzero.mmn;
 
 -- Drop fingerprinting types
-
 -- Drop main types
 DROP TYPE if EXISTS pzero.file_unit;
 

@@ -53,13 +53,15 @@ if not isinstance(data['meta'], dict):
 if c_by is not None:    
     data['meta']['c_by'] = c_by
 
-# Build column and value lists
-columns = []
+# Build column and value lists (with escaped column names)
+columns = []  # Will store escaped column names
+column_keys = []  # Will store original keys for type lookup
 values = []
 param_types = []
 
 # Add data column first
-columns.append('data')
+columns.append('data')  # 'data' is safe, hardcoded
+column_keys.append('data')
 values.append(json.dumps(data))
 param_types.append('jsonb')
 
@@ -76,15 +78,20 @@ except Exception as e:
     plpy.warning(f'Could not fetch column types: {e}')
     column_types = {}
 
-# Add fields from p_fields
+# Add fields from p_fields with immediate escaping
 if fields and isinstance(fields, dict):
     for key, value in fields.items():
-        # Sanitize column name (basic validation)
+        # Validate column name
         if not key or not isinstance(key, str):
             plpy.warning(f'Skipping invalid field key: {key}')
             continue
 
-        columns.append(key)
+        # Escape column name immediately to prevent SQL injection
+        safe_col_query = plpy.prepare("SELECT quote_ident($1)", ["text"])
+        safe_col = plpy.execute(safe_col_query, [key])[0]['quote_ident']
+
+        columns.append(safe_col)
+        column_keys.append(key)  # Store original for type lookup
 
         # Get column type info
         col_info = column_types.get(key, ('text', 'text'))
@@ -108,15 +115,19 @@ if fields and isinstance(fields, dict):
                 values.append(str(value))
                 param_types.append('text')
 
-# Build SQL with parameter placeholders
+# Safely quote table name to prevent SQL injection
+safe_table_query = plpy.prepare("SELECT quote_ident($1)", ["text"])
+safe_table = plpy.execute(safe_table_query, [table_name])[0]['quote_ident']
+
+# Build SQL with parameter placeholders (columns are already escaped)
 col_str = ', '.join(columns)
 placeholders = []
-for i, (col, ptype) in enumerate(zip(columns, param_types), 1):
+for i, (col_key, ptype) in enumerate(zip(column_keys, param_types), 1):
     if ptype == 'jsonb':
         placeholders.append(f'${i}::jsonb')
     elif ptype in ('id', 'uuid'):
-        # Get the full type name from column_types
-        col_info = column_types.get(col, ('text', 'text'))
+        # Get the full type name from column_types using original key
+        col_info = column_types.get(col_key, ('text', 'text'))
         if col_info[1] == 'id':
             placeholders.append(f'${i}::uuid')
         elif col_info[1] == 'uuid':
@@ -126,7 +137,7 @@ for i, (col, ptype) in enumerate(zip(columns, param_types), 1):
     else:
         placeholders.append(f'${i}')
 
-sql = f"INSERT INTO pzero.{table_name} ({col_str}) VALUES ({', '.join(placeholders)}) RETURNING id"
+sql = f"INSERT INTO pzero.{safe_table} ({col_str}) VALUES ({', '.join(placeholders)}) RETURNING id"
 
 dev_notice(f"Executing INSERT on pzero.{table_name}")
 dev_notice(f"Columns: {columns}")
