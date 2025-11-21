@@ -475,10 +475,8 @@ CREATE TABLE pzero.all_audits (
   part pzero.valid_part,
   is_del boolean DEFAULT FALSE,
   data pzero.data,
-  c_at timstamptz NOT NULL DEFAULT now() PRIMARY KEY (is_del, part, id)
-)
-PARTITION BY
-  list (is_del);
+  c_at timestamptz NOT NULL DEFAULT now() PRIMARY KEY (is_del, part, id)
+) PARTITION BY list (is_del);
 
 CREATE INDEX idx_pzero_audits_row_id ON pzero.audits (part, mmn, row_id);
 
@@ -582,29 +580,12 @@ CREATE TABLE pzero.all_sessions (
   id bigserial NOT NULL,
   part pzero.valid_part NOT NULL,
   ip text,
-  fp text,
-  -- Fingerprinting columns
-  fp_components jsonb,
-  visitor_id text,
-  bot_score numeric(5, 4) DEFAULT 0,
-  risk_score smallint DEFAULT 0,
-  is_bot boolean DEFAULT FALSE,
   status pzero.session_status,
-  c_at timestampz NOT NULL DEFAULT now(),
-  u_at timestampz,
+  c_at timestamptz NOT NULL DEFAULT now(),
+  u_at timestamptz NOT NULL DEFAULT now(),
   is_act boolean NOT NULL DEFAULT TRUE,
   PRIMARY KEY (part, is_act, id)
-)
-PARTITION BY
-  list (is_act);
-
-CREATE INDEX idx_sessions_visitor_id ON pzero.sessions (part, visitor_id)
-WHERE
-  visitor_id IS NOT NULL;
-
-CREATE INDEX idx_sessions_bot ON pzero.sessions (part, is_bot)
-WHERE
-  is_bot = TRUE;
+) PARTITION BY list (is_act);
 
 CREATE TABLE pzero.all_thread_heads (
   id bigserial NOT NULL,
@@ -615,397 +596,32 @@ CREATE TABLE pzero.all_thread_heads (
   data pzero.data,
   c_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (part, id, is_act)
-)
-PARTITION BY
-  list (is_act);
+) PARTITION BY list (is_act);
 
 CREATE TABLE pzero.all_threads (
   LIKE pzero.all_thread_heads including ALL,
   root_id bigint NOT NULL,
   FOREIGN key (part, root_id, is_act) REFERENCES pzero.all_thread_heads (part, id, is_act) ON DELETE CASCADE
-)
-PARTITION BY
-  list (is_act);
-
--- ============================================
--- Fingerprinting Tables
--- ============================================
-CREATE TABLE pzero.all_fingerprints (
-  id uuid NOT NULL DEFAULT pzero.gen_id (),
-  visitor_id text NOT NULL,
-  session_id text NOT NULL,
-  ip text NOT NULL,
-  -- Fingerprint hashes
-  fp text NOT NULL,
-  fp_server text NOT NULL,
-  fp_client text,
-  fp_combined text NOT NULL,
-  -- Components (JSONB for flexibility)
-  fp_components jsonb NOT NULL,
-  -- Specific fingerprints
-  ja3_hash text,
-  tls_fingerprint jsonb,
-  http2_fingerprint jsonb,
-  tcp_fingerprint jsonb,
-  -- Intelligence
-  intelligence jsonb NOT NULL,
-  -- Quick access fields (denormalized for performance)
-  bot_score numeric(5, 4) DEFAULT 0,
-  risk_score smallint DEFAULT 0,
-  is_bot boolean DEFAULT FALSE,
-  is_vpn boolean DEFAULT FALSE,
-  is_proxy boolean DEFAULT FALSE,
-  is_tor boolean DEFAULT FALSE,
-  -- Network info
-  asn text,
-  -- Visit tracking
-  visit_count integer DEFAULT 1,
-  first_seen timestamptz NOT NULL DEFAULT now(),
-  last_seen timestamptz NOT NULL DEFAULT now(),
-  -- Part and activation
-  part pzero.valid_part NOT NULL DEFAULT 'pzero',
-  is_act boolean NOT NULL DEFAULT TRUE,
-  -- Timestamps
-  c_at timestamptz NOT NULL DEFAULT now(),
-  u_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (part, visitor_id, is_act),
-  UNIQUE (part, id, is_act)
-)
-PARTITION BY
-  list (is_act);
-
-CREATE INDEX idx_fingerprints_visitor_id ON pzero.fingerprints (part, visitor_id);
-
-CREATE INDEX idx_fingerprints_session_id ON pzero.fingerprints (part, session_id);
-
-CREATE INDEX idx_fingerprints_ip ON pzero.fingerprints (part, ip);
-
-CREATE INDEX idx_fingerprints_ja3 ON pzero.fingerprints (part, ja3_hash)
-WHERE
-  ja3_hash IS NOT NULL;
-
-CREATE INDEX idx_fingerprints_bot ON pzero.fingerprints (part, is_bot, bot_score);
-
-CREATE INDEX idx_fingerprints_risk ON pzero.fingerprints (part, risk_score)
-WHERE
-  risk_score > 50;
-
-CREATE INDEX idx_fingerprints_proxy ON pzero.fingerprints (part)
-WHERE
-  is_vpn
-  OR is_proxy
-  OR is_tor;
-
-CREATE INDEX idx_fingerprints_last_seen ON pzero.fingerprints (part, last_seen DESC);
-
-CREATE INDEX idx_fingerprints_asn ON pzero.fingerprints (part, asn)
-WHERE
-  asn IS NOT NULL;
-
-CREATE INDEX idx_fingerprints_components ON pzero.fingerprints USING gin (fp_components);
-
-CREATE INDEX idx_fingerprints_intelligence ON pzero.fingerprints USING gin (intelligence);
-
-CREATE TABLE pzero.all_fingerprint_visits (
-  id uuid NOT NULL DEFAULT pzero.gen_id (),
-  visitor_id text NOT NULL,
-  session_id text NOT NULL,
-  ip text NOT NULL,
-  -- Snapshot of components at visit time
-  fp_components jsonb NOT NULL,
-  -- Quick access metrics
-  bot_score numeric(5, 4) DEFAULT 0,
-  risk_score smallint DEFAULT 0,
-  -- Request info
-  path text,
-  method text,
-  user_agent text,
-  -- Part
-  part pzero.valid_part NOT NULL DEFAULT 'pzero',
-  is_del boolean NOT NULL DEFAULT FALSE,
-  -- Timestamp
-  c_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (part, is_del, id)
-)
-PARTITION BY
-  list (is_del);
-
-CREATE INDEX idx_fingerprint_visits_visitor ON pzero.fingerprint_visits (part, visitor_id, c_at DESC);
-
-CREATE INDEX idx_fingerprint_visits_session ON pzero.fingerprint_visits (part, session_id, c_at DESC);
-
-CREATE INDEX idx_fingerprint_visits_ip ON pzero.fingerprint_visits (part, ip, c_at DESC);
-
-CREATE INDEX idx_fingerprint_visits_time ON pzero.fingerprint_visits (part, c_at DESC);
-
-CREATE INDEX idx_fingerprint_visits_bot ON pzero.fingerprint_visits (part, c_at DESC)
-WHERE
-  bot_score > 0.5;
-
-CREATE TABLE pzero.all_fingerprint_changes (
-  id uuid NOT NULL DEFAULT pzero.gen_id (),
-  visitor_id text NOT NULL,
-  component text NOT NULL,
-  old_value jsonb,
-  new_value jsonb,
-  significance pzero.fingerprint_change_significance NOT NULL,
-  -- Part
-  part pzero.valid_part NOT NULL DEFAULT 'pzero',
-  is_del boolean NOT NULL DEFAULT FALSE,
-  -- Timestamp
-  timestamp timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (part, is_del, id)
-)
-PARTITION BY
-  list (is_del);
-
-CREATE INDEX idx_fingerprint_changes_visitor ON pzero.fingerprint_changes (part, visitor_id, timestamp DESC);
-
-CREATE INDEX idx_fingerprint_changes_component ON pzero.fingerprint_changes (part, component);
-
-CREATE INDEX idx_fingerprint_changes_significance ON pzero.fingerprint_changes (part, significance);
-
-CREATE TABLE pzero.all_bot_signals (
-  id uuid NOT NULL DEFAULT pzero.gen_id (),
-  visitor_id text NOT NULL,
-  signal_type text NOT NULL,
-  weight numeric(3, 2) NOT NULL,
-  description text,
-  -- Part
-  part pzero.valid_part NOT NULL DEFAULT 'pzero',
-  is_del boolean NOT NULL DEFAULT FALSE,
-  -- Timestamp
-  c_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (part, is_del, id)
-)
-PARTITION BY
-  list (is_del);
-
-CREATE INDEX idx_bot_signals_visitor ON pzero.bot_signals (part, visitor_id);
-
-CREATE INDEX idx_bot_signals_type ON pzero.bot_signals (part, signal_type);
-
--- Known Bot JA3 Fingerprints (non-partitioned reference table)
-CREATE TABLE pzero.known_bot_ja3 (
-  ja3_hash text PRIMARY KEY,
-  bot_name text NOT NULL,
-  bot_type pzero.bot_type NOT NULL,
-  description text,
-  is_legitimate boolean DEFAULT FALSE,
-  c_at timestamptz NOT NULL DEFAULT now(),
-  u_at timestamptz NOT NULL DEFAULT now()
-);
-
--- IP Intelligence (non-partitioned reference table)
-CREATE TABLE pzero.ip_intelligence (
-  ip_range cidr PRIMARY KEY,
-  type text NOT NULL,
-  provider text,
-  asn text,
-  is_trusted boolean DEFAULT FALSE,
-  c_at timestamptz NOT NULL DEFAULT now(),
-  u_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_ip_intelligence_type ON pzero.ip_intelligence (type);
-
--- IP Reputation (non-partitioned cache table)
-CREATE TABLE pzero.ip_reputation (
-  ip text PRIMARY KEY,
-  reputation_score smallint DEFAULT 50,
-  is_blacklisted boolean DEFAULT FALSE,
-  blacklist_sources TEXT[],
-  abuse_score smallint DEFAULT 0,
-  last_checked timestamptz NOT NULL DEFAULT now(),
-  c_at timestamptz NOT NULL DEFAULT now(),
-  u_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_ip_reputation_blacklisted ON pzero.ip_reputation (ip)
-WHERE
-  is_blacklisted = TRUE;
-
-CREATE INDEX idx_ip_reputation_score ON pzero.ip_reputation (reputation_score)
-WHERE
-  reputation_score < 30;
-
--- ============================================
--- Fingerprinting Helper Functions
--- ============================================
--- Function to get visitor history
-CREATE OR REPLACE FUNCTION pzero.get_visitor_history (p_visitor_id text, p_part text DEFAULT 'pzero') returns jsonb language plpgsql AS $$
-DECLARE
-  v_fingerprint record;
-  v_visits jsonb;
-  v_changes jsonb;
-  v_result jsonb;
-BEGIN
-  SELECT * INTO v_fingerprint
-  FROM pzero.fingerprints
-  WHERE part = p_part AND visitor_id = p_visitor_id;
-
-  IF NOT FOUND THEN
-    RETURN NULL;
-  END IF;
-
-  SELECT jsonb_agg(
-    jsonb_build_object(
-      'sessionId', session_id,
-      'timestamp', c_at,
-      'ip', ip,
-      'path', path,
-      'botScore', bot_score,
-      'riskScore', risk_score
-    ) ORDER BY c_at DESC
-  ) INTO v_visits
-  FROM pzero.fingerprint_visits
-  WHERE part = p_part AND visitor_id = p_visitor_id
-  LIMIT 100;
-
-  SELECT jsonb_agg(
-    jsonb_build_object(
-      'timestamp', timestamp,
-      'component', component,
-      'oldValue', old_value,
-      'newValue', new_value,
-      'significance', significance
-    ) ORDER BY timestamp DESC
-  ) INTO v_changes
-  FROM pzero.fingerprint_changes
-  WHERE part = p_part AND visitor_id = p_visitor_id
-  LIMIT 50;
-
-  v_result := jsonb_build_object(
-    'visitorId', v_fingerprint.visitor_id,
-    'firstSeen', v_fingerprint.first_seen,
-    'lastSeen', v_fingerprint.last_seen,
-    'visitCount', v_fingerprint.visit_count,
-    'isBot', v_fingerprint.is_bot,
-    'botScore', v_fingerprint.bot_score,
-    'riskScore', v_fingerprint.risk_score,
-    'visits', COALESCE(v_visits, '[]'::jsonb),
-    'changes', COALESCE(v_changes, '[]'::jsonb)
-  );
-
-  RETURN v_result;
-END;
-$$;
-
--- Function to get bot statistics
-CREATE OR REPLACE FUNCTION pzero.get_bot_stats (
-  p_interval text DEFAULT '24 hours',
-  p_part text DEFAULT 'pzero'
-) returns jsonb language plpgsql AS $$
-DECLARE
-  v_stats jsonb;
-BEGIN
-  SELECT jsonb_build_object(
-    'totalRequests', COUNT(*),
-    'uniqueVisitors', COUNT(DISTINCT visitor_id),
-    'botCount', SUM(CASE WHEN bot_score > 0.5 THEN 1 ELSE 0 END),
-    'avgBotScore', AVG(bot_score),
-    'avgRiskScore', AVG(risk_score),
-    'highRiskCount', SUM(CASE WHEN risk_score > 70 THEN 1 ELSE 0 END)
-  ) INTO v_stats
-  FROM pzero.fingerprint_visits
-  WHERE part = p_part
-    AND c_at > NOW() - p_interval::interval;
-
-  RETURN v_stats;
-END;
-$$;
-
--- Function to check if IP is in known ranges
-CREATE OR REPLACE FUNCTION pzero.check_ip_intelligence (p_ip inet) returns jsonb language plpgsql AS $$
-DECLARE
-  v_result record;
-  v_json jsonb;
-BEGIN
-  SELECT * INTO v_result
-  FROM pzero.ip_intelligence
-  WHERE ip_range >>= p_ip
-  ORDER BY masklen(ip_range) DESC
-  LIMIT 1;
-
-  IF FOUND THEN
-    v_json := jsonb_build_object(
-      'type', v_result.type,
-      'provider', v_result.provider,
-      'asn', v_result.asn,
-      'isTrusted', v_result.is_trusted
-    );
-  ELSE
-    v_json := NULL;
-  END IF;
-
-  RETURN v_json;
-END;
-$$;
-
--- Down Migration
--- Drop fingerprinting functions
-DROP FUNCTION if EXISTS pzero.check_ip_intelligence (inet);
-
-DROP FUNCTION if EXISTS pzero.get_bot_stats (text, text);
-
-DROP FUNCTION if EXISTS pzero.get_visitor_history (text, text);
-
--- Drop fingerprinting tables
-DROP TABLE IF EXISTS pzero.ip_reputation;
-
-DROP TABLE IF EXISTS pzero.ip_intelligence;
-
-DROP TABLE IF EXISTS pzero.known_bot_ja3;
-
-DROP TABLE IF EXISTS pzero.all_bot_signals;
-
-DROP TABLE IF EXISTS pzero.all_fingerprint_changes;
-
-DROP TABLE IF EXISTS pzero.all_fingerprint_visits;
-
-DROP TABLE IF EXISTS pzero.all_fingerprints;
+) PARTITION BY list (is_act);
 
 -- Drop main tables
 DROP TABLE IF EXISTS pzero.all_threads;
-
 DROP TABLE IF EXISTS pzero.all_thread_heads;
-
 DROP TABLE IF EXISTS pzero.all_files;
-
 DROP TABLE IF EXISTS pzero.all_dirs;
-
 DROP TABLE IF EXISTS pzero.all_endpoints;
-
 DROP TABLE IF EXISTS pzero.all_devices;
-
 DROP TABLE IF EXISTS pzero.all_nhs;
-
 DROP TABLE IF EXISTS pzero.all_sessions;
-
 DROP TABLE IF EXISTS pzero.all_users;
-
 DROP TABLE IF EXISTS pzero.all_orgs;
-
 DROP TABLE IF EXISTS pzero.all_relations;
-
 DROP TABLE IF EXISTS pzero.all_audits;
-
 DROP TABLE IF EXISTS pzero.all_txns;
-
 DROP TABLE IF EXISTS pzero.all_auth;
-
 DROP TABLE IF EXISTS pzero.mmn;
 
 -- Drop fingerprinting types
-DROP TYPE if EXISTS pzero.fingerprint_change_significance;
-
-DROP TYPE if EXISTS pzero.network_intelligence_type;
-
-DROP TYPE if EXISTS pzero.device_intelligence_type;
-
-DROP TYPE if EXISTS pzero.risk_level;
-
-DROP TYPE if EXISTS pzero.bot_type;
 
 -- Drop main types
 DROP TYPE if EXISTS pzero.file_unit;
