@@ -12,15 +12,18 @@ export function genGrid(size: number = 5) {
 export function expandGrid(grid: number[][], newSize: number) {
   const size = grid.length
   if (newSize <= size) return grid
-  const expandSize = newSize - size
-  const addGrid = genGrid(expandSize)
 
-  // Expand rows
-  for (let i = size; i < newSize; i++) {
-    grid[i] = addGrid[i - size]
+  // Generate a full newSize x newSize grid
+  const expandedGrid = genGrid(newSize)
+
+  // Copy existing values into the top-left region
+  for (let i = 0; i < size; i++) {
+    for (let j = 0; j < size; j++) {
+      expandedGrid[i][j] = grid[i][j]
+    }
   }
 
-  return grid
+  return expandedGrid
 }
 
 export function getSubgrid(matrix: number[][], size: number): number[][] {
@@ -54,15 +57,15 @@ export function getSubgrid(matrix: number[][], size: number): number[][] {
 }
 
 /**
- * Generates simple mathematical expressions using x and y variables from grid.
+ * Generates mathematical expressions using x and y variables from grid.
  * Uses math.js simplify() and evaluate() for expression handling.
  *
  * @param complexity - Complexity level (default=random 1-3). Values below 1 are clamped to 1.
- *   - 1: Simple expression (e.g., x + y)
- *   - 2: Moderate expression (e.g., x^2 + y)
- *   - 3+: Complex expression (e.g., x^2 + x*y + y^2)
- * @param size - Grid size for cell references (default=random 5-10). Must be >= 1.
- * @returns Function object with expression and metadata
+ *   - 1: Simple expression (35 templates: basic operations, single functions, simple unit conversions)
+ *   - 2: Moderate expression (32 templates: combinations of two operations or functions)
+ *   - 3+: Complex expression (33 templates: nested operations, multiple functions, complex expressions)
+ * @param size - Grid size for cell references (default=random 5-10). Must be a positive integer >= 1.
+ * @returns Function object with expression and metadata including unique ID, expressions, complexity info, and generation statistics
  */
 export function genFunction(complexity?: number, size?: number) {
   const startTime = Date.now()
@@ -327,17 +330,18 @@ export function evaluate(
       y = grid[0]?.[1] ?? 0
     }
 
-    // Handle unit conversion expressions
-    if (func.expression.includes('to')) {
-      // Use scope to evaluate expression with x and y variables
-      const scope = {
-        x,
-        y,
-        pi: Math.PI,
-        e: Math.E,
-      }
-      const result = mathjsEvaluate(func.expression, scope)
+    // Common scope for all evaluations
+    const scope = {
+      x,
+      y,
+      pi: Math.PI,
+      e: Math.E,
+    }
 
+    const result = mathjsEvaluate(func.expression, scope)
+
+    // Handle unit conversion expressions (return formatted string)
+    if (func.expression.includes('to')) {
       // Extract numeric value and unit for consistent rounding
       if (
         typeof result === 'object' &&
@@ -361,6 +365,16 @@ export function evaluate(
           numericValue = numMatch ? parseFloat(numMatch[1]) : result.toNumber()
         }
 
+        // Apply same validation as numeric results
+        if (!isFinite(numericValue)) {
+          return '0'
+        }
+
+        const maxSafeValue = Number.MAX_SAFE_INTEGER
+        if (Math.abs(numericValue) > maxSafeValue) {
+          return '0'
+        }
+
         const roundedValue = Math.round(numericValue * 1000) / 1000
 
         // Get the unit string from toString()
@@ -368,23 +382,20 @@ export function evaluate(
         return `${roundedValue} ${unitStr}`.trim()
       }
 
-      // Fallback for other types
+      // Fallback for other unit types
       if (typeof result === 'number') {
+        if (!isFinite(result)) {
+          return 0
+        }
+        const maxSafeValue = Number.MAX_SAFE_INTEGER
+        if (Math.abs(result) > maxSafeValue) {
+          return 0
+        }
         return Math.round(result * 1000) / 1000
       }
 
       return result
     }
-
-    // Evaluate expression with x and y values using math.js
-    const scope = {
-      x,
-      y,
-      pi: Math.PI,
-      e: Math.E,
-    }
-
-    const result = mathjsEvaluate(func.expression, scope)
 
     // Handle complex numbers in result
     if (typeof result === 'object' && result !== null && 'im' in result) {
@@ -395,25 +406,16 @@ export function evaluate(
       }
     }
 
-    // Handle edge cases for numeric results
+    // Handle and validate numeric results
     if (typeof result === 'number') {
-      if (!isFinite(result)) {
-        return 0
-      }
-
-      // Clamp very large results to prevent overflow
-      const maxSafeValue = Number.MAX_SAFE_INTEGER
-      if (Math.abs(result) > maxSafeValue) {
-        return 0
-      }
+      if (!isFinite(result)) return 0
+      if (Math.abs(result) > Number.MAX_SAFE_INTEGER) return 0
+      return Math.round(result * 1000) / 1000 // Round to 3 decimal places
     }
 
-    // Guard against non-numeric results before final rounding
-    if (typeof result !== 'number' || !isFinite(result)) {
-      return 0
-    }
-
-    return Math.round(result * 1000) / 1000 // Round to 3 decimal places
+    // Non-numeric results should have been handled earlier (complex, units);
+    // if anything slips through, fall back safely:
+    return 0
   } catch (error) {
     // Re-throw validation errors from strictBounds
     if (error instanceof Error && error.message.includes('out of bounds')) {

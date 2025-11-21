@@ -2,14 +2,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { evaluate, expandGrid, genFunction, genGrid } from './grid.js'
 
 describe('genGrid', () => {
-  it('should generate a grid with default size of 10x10', () => {
-    const grid = genGrid(10)
-    expect(grid).toHaveLength(10)
-    expect(grid[0]).toHaveLength(10)
+  it('should generate a grid with default size of 5x5', () => {
+    const grid = genGrid()
+    expect(grid).toHaveLength(5)
+    expect(grid[0]).toHaveLength(5)
   })
 
   it('should generate a grid with specified size', () => {
-    const size = 5
+    const size = 10
     const grid = genGrid(size)
     expect(grid).toHaveLength(size)
     expect(grid[0]).toHaveLength(size)
@@ -63,10 +63,18 @@ describe('expandGrid', () => {
     ]
     const result = expandGrid(originalGrid, 4)
     expect(result).toHaveLength(4)
-    expect(result[0]).toEqual([1, 2])
-    expect(result[1]).toEqual([3, 4])
-    expect(result[2]).toBeDefined()
-    expect(result[3]).toBeDefined()
+    expect(result[0]).toHaveLength(4) // Now a proper 4x4 grid, not jagged
+    expect(result[1]).toHaveLength(4)
+    expect(result[2]).toHaveLength(4)
+    expect(result[3]).toHaveLength(4)
+    // Original values preserved in top-left
+    expect(result[0][0]).toBe(1)
+    expect(result[0][1]).toBe(2)
+    expect(result[1][0]).toBe(3)
+    expect(result[1][1]).toBe(4)
+    // New values are numbers
+    expect(typeof result[0][2]).toBe('number')
+    expect(typeof result[2][0]).toBe('number')
   })
 
   it('should handle empty grid expansion', () => {

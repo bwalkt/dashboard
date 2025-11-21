@@ -70,7 +70,7 @@ USAGE:
 
 OPTIONS:
   -n, --count <num>       Number of functions to generate (default: 1)
-  -s, --size <num>        Grid size for cell references (default: 10)
+  -s, --size <num>        Grid size for cell references (default: 5)
   -e, --evaluate          Evaluate functions with sample grid
   -v, --verbose           Show detailed function analysis
   --stats                 Show generation statistics
@@ -78,10 +78,10 @@ OPTIONS:
 
 COMPLEXITY:
   Complexity is randomly generated between ${MIN_COMPLEXITY} and ${MAX_COMPLEXITY}:
-    1: Single function
-    2: Nested functions  
-    3: Triple nested
-    4: Multi-level composition
+    1: Simple (35 templates) - basic operations, single functions
+    2: Moderate (32 templates) - combinations of two operations/functions
+    3: Complex (33 templates) - nested operations, multiple functions
+    4: Complex+ (33 templates) - same as level 3
 
 EXAMPLES:
   pnpm genFunction                      # Generate 1 function with random complexity
@@ -90,20 +90,22 @@ EXAMPLES:
   pnpm genFunction -n 10 -v --stats      # Verbose output with statistics
 
 MATHEMATICAL FUNCTIONS SUPPORTED:
-  • Basic Arithmetic: add, subtract, multiply, divide, pow, sqrt, etc.
-  • Trigonometric: sin, cos, tan, asin, acos, atan, sinh, cosh, tanh
-  • Logarithmic: log, ln, log10, log2, exp, exp2, exp10
-  • Statistical: mean, variance, std, median, quantile
-  • Special: gamma, beta, erf, fibonacci, factorial
-  • Geometric: hypot, distance, degrees, radians
-  • And 100+ more mathematical functions!
+  • Basic Arithmetic: add, subtract, multiply, divide, pow, sqrt, cbrt, abs, mod, gcd, lcm, etc.
+  • Trigonometric: sin, cos, tan, asin, acos, atan, atan2
+  • Hyperbolic: sinh, cosh, tanh, asinh, acosh, atanh
+  • Logarithmic: log, log10, log2, exp
+  • Rounding: ceil, floor, round, fix, sign
+  • Comparison: max, min, hypot
+  • Unit Conversions: temperature, length, mass, angle, volume
+  • 39+ unique mathematical functions across 100 expression templates!
 
-MILLIONS OF COMBINATIONS:
-  With 100+ base functions and nesting levels, this generator can create:
-  • Level 1: ~100 functions
-  • Level 2: ~10,000 combinations  
-  • Level 3: ~1,000,000 combinations
-  • Level 4+: Virtually unlimited!
+TEMPLATE DISTRIBUTION:
+  100 total expression templates across complexity levels:
+  • Level 1 (Simple): 35 templates - basic operations, single functions
+  • Level 2 (Moderate): 32 templates - two-operation combinations
+  • Level 3+ (Complex): 33 templates - nested, multi-function expressions
+
+  With random x,y cell positions, unique expressions scale exponentially!
 `)
 }
 
@@ -191,7 +193,7 @@ function main() {
 
     // Evaluate if requested
     if (options.evaluate && grid) {
-      const evalStart = Date.now()
+      let evalStart = Date.now()
       try {
         let result = evaluate(grid, {
           expression: func.expression,
@@ -212,7 +214,15 @@ function main() {
 
         while (shouldRegenerate(result)) {
           console.log(`  ⚠️  Result was ${result}, regenerating function...`)
+
+          // Track regeneration time
+          const regenStart = Date.now()
           func = genFunction(randomComplexity, options.size)
+          const regenTime = Date.now() - regenStart
+          allStats.generationTime += regenTime
+
+          // Re-evaluate with fresh timing
+          evalStart = Date.now()
           result = evaluate(grid, {
             expression: func.expression,
             xCell: func.xCell,
