@@ -74,3 +74,15 @@ The following functions were removed from `MATH_FUNCTIONS` because they are not 
 3. Implement custom versions for missing but useful functions
 4. Consider creating wrapper functions for complex mathematical operations
 5. Add unit tests for any newly implemented functions
+
+
+
+
+  There are still many mathjs functions we haven't tapped into yet, like:
+  - Statistical functions (mean, median, mode, variance, std)
+  - Matrix operations (det, trace, transpose - though we'd need matrix
+  inputs)
+  - Special functions (gamma, factorial, combinations, permutations)
+  - Bitwise operations (bitAnd, bitOr, bitXor, leftShift, rightShift)
+  - Comparison chains and logical operations
+  - More complex nested combinations

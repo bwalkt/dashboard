@@ -70,7 +70,7 @@ USAGE:
 
 OPTIONS:
   -n, --count <num>       Number of functions to generate (default: 1)
-  -s, --size <num>        Grid size for cell references (default: 10)
+  -s, --size <num>        Grid size for cell references (default: 5)
   -e, --evaluate          Evaluate functions with sample grid
   -v, --verbose           Show detailed function analysis
   --stats                 Show generation statistics
@@ -78,10 +78,10 @@ OPTIONS:
 
 COMPLEXITY:
   Complexity is randomly generated between ${MIN_COMPLEXITY} and ${MAX_COMPLEXITY}:
-    1: Single function
-    2: Nested functions  
-    3: Triple nested
-    4: Multi-level composition
+    1: Simple (35 templates) - basic operations, single functions
+    2: Moderate (32 templates) - combinations of two operations/functions
+    3: Complex (33 templates) - nested operations, multiple functions
+    4: Complex+ (33 templates) - same as level 3
 
 EXAMPLES:
   pnpm genFunction                      # Generate 1 function with random complexity
@@ -90,20 +90,22 @@ EXAMPLES:
   pnpm genFunction -n 10 -v --stats      # Verbose output with statistics
 
 MATHEMATICAL FUNCTIONS SUPPORTED:
-  • Basic Arithmetic: add, subtract, multiply, divide, pow, sqrt, etc.
-  • Trigonometric: sin, cos, tan, asin, acos, atan, sinh, cosh, tanh
-  • Logarithmic: log, ln, log10, log2, exp, exp2, exp10
-  • Statistical: mean, variance, std, median, quantile
-  • Special: gamma, beta, erf, fibonacci, factorial
-  • Geometric: hypot, distance, degrees, radians
-  • And 100+ more mathematical functions!
+  • Basic Arithmetic: add, subtract, multiply, divide, pow, sqrt, cbrt, abs, mod, gcd, lcm, etc.
+  • Trigonometric: sin, cos, tan, asin, acos, atan, atan2
+  • Hyperbolic: sinh, cosh, tanh, asinh, acosh, atanh
+  • Logarithmic: log, log10, log2, exp
+  • Rounding: ceil, floor, round, fix, sign
+  • Comparison: max, min, hypot
+  • Unit Conversions: temperature, length, mass, angle, volume
+  • 39+ unique mathematical functions across 100 expression templates!
 
-MILLIONS OF COMBINATIONS:
-  With 100+ base functions and nesting levels, this generator can create:
-  • Level 1: ~100 functions
-  • Level 2: ~10,000 combinations  
-  • Level 3: ~1,000,000 combinations
-  • Level 4+: Virtually unlimited!
+TEMPLATE DISTRIBUTION:
+  100 total expression templates across complexity levels:
+  • Level 1 (Simple): 35 templates - basic operations, single functions
+  • Level 2 (Moderate): 32 templates - two-operation combinations
+  • Level 3+ (Complex): 33 templates - nested, multi-function expressions
+
+  With random x,y cell positions, unique expressions scale exponentially!
 `)
 }
 
@@ -153,6 +155,8 @@ function main() {
     totalFunctions: 0,
     totalComplexity: 0,
     uniqueFunctionsUsed: new Set<string>(),
+    uniqueExpressions: new Set<string>(),
+    expressionCounts: new Map<string, number>(),
     generationTime: 0,
     evaluationTime: 0,
   }
@@ -170,19 +174,16 @@ function main() {
     allStats.totalComplexity += func.complexity.level
     allStats.generationTime += genTime
     func.functions.unique.forEach(f => allStats.uniqueFunctionsUsed.add(f))
+    allStats.uniqueExpressions.add(func.expression)
+    allStats.expressionCounts.set(func.expression, (allStats.expressionCounts.get(func.expression) || 0) + 1)
 
     console.log(`\n🎯 Function ${i + 1}/${options.count} (Complexity: ${randomComplexity}):`)
     console.log(`  ID: ${func.id}`)
-    console.log(`  Expression: ${func.compactExpression}`)
-    console.log(`  Long Expression: ${toFullVerbose(func.compactExpression)}`)
-    if (func.metadata?.spaceSavings) {
-      console.log(
-        `  Space saved: ${func.metadata.spaceSavings.savedBytes} bytes (${func.metadata.spaceSavings.savedPercentage.toFixed(1)}%)`,
-      )
-    }
+    console.log(`  Expression: ${func.expression}`)
+    console.log(`  Simplified: ${func.simplifiedExpression}`)
+    console.log(`  x = grid[${func.xCell.row}][${func.xCell.col}], y = grid[${func.yCell.row}][${func.yCell.col}]`)
 
     if (options.verbose) {
-      console.log(`  Verbose Expression: ${func.expression}`)
       console.log(`  Description: ${func.readable}`)
       console.log(`  Complexity: ${JSON.stringify(formatComplexity(func.complexity), null, 4)}`)
       console.log(`  Functions Used: [${func.functions.unique.join(', ')}]`)
@@ -192,9 +193,13 @@ function main() {
 
     // Evaluate if requested
     if (options.evaluate && grid) {
-      const evalStart = Date.now()
+      let evalStart = Date.now()
       try {
-        let result = evaluate(grid, { expression: func.expression })
+        let result = evaluate(grid, {
+          expression: func.expression,
+          xCell: func.xCell,
+          yCell: func.yCell,
+        })
         let evalTime = Date.now() - evalStart
 
         // Check if result should trigger regeneration
@@ -209,19 +214,36 @@ function main() {
 
         while (shouldRegenerate(result)) {
           console.log(`  ⚠️  Result was ${result}, regenerating function...`)
+
+          // Track regeneration time
+          const regenStart = Date.now()
           func = genFunction(randomComplexity, options.size)
-          result = evaluate(grid, { expression: func.expression })
+          const regenTime = Date.now() - regenStart
+          allStats.generationTime += regenTime
+
+          // Re-evaluate with fresh timing
+          evalStart = Date.now()
+          result = evaluate(grid, {
+            expression: func.expression,
+            xCell: func.xCell,
+            yCell: func.yCell,
+          })
           evalTime = Date.now() - evalStart
 
           // Update function details after regeneration
           console.log(`  🔄 New Function:`)
           console.log(`  ID: ${func.id}`)
-          console.log(`  Expression: ${func.compactExpression}`)
-          console.log(`  Long Expression: ${toFullVerbose(func.compactExpression)}`)
+          console.log(`  Expression: ${func.expression}`)
+          console.log(`  Simplified: ${func.simplifiedExpression}`)
+          console.log(
+            `  x = grid[${func.xCell.row}][${func.xCell.col}], y = grid[${func.yCell.row}][${func.yCell.col}]`,
+          )
         }
 
         allStats.evaluationTime += evalTime
-        console.log(`  ✅ Evaluation Result: ${result}`)
+        const xVal = grid[func.xCell.row][func.xCell.col]
+        const yVal = grid[func.yCell.row][func.yCell.col]
+        console.log(`  ✅ Evaluation Result: ${result} (x=${xVal}, y=${yVal})`)
         if (options.verbose) {
           console.log(`  Evaluation Time: ${evalTime}ms`)
         }
@@ -233,8 +255,18 @@ function main() {
 
   // Show final statistics
   if (options.stats || options.count > 1) {
+    const duplicates = allStats.totalFunctions - allStats.uniqueExpressions.size
+
+    // Calculate duplicate distribution: how many functions appeared X times
+    const frequencyDistribution = new Map<number, number>()
+    for (const count of allStats.expressionCounts.values()) {
+      frequencyDistribution.set(count, (frequencyDistribution.get(count) || 0) + 1)
+    }
+
     console.log(`\n📈 Generation Statistics:
   Total Functions Generated: ${allStats.totalFunctions}
+  Unique Expressions: ${allStats.uniqueExpressions.size}
+  Total Duplicated Functions (w/o x,y): ${duplicates}
   Average Complexity: ${(allStats.totalComplexity / allStats.totalFunctions).toFixed(2)}
   Unique Mathematical Functions Used: ${allStats.uniqueFunctionsUsed.size}
   Total Generation Time: ${allStats.generationTime}ms
@@ -242,8 +274,21 @@ function main() {
   Functions Per Second: ${allStats.generationTime > 0 ? (allStats.totalFunctions / (allStats.generationTime / 1000)).toFixed(2) : 'N/A (instant)'}
  `)
 
+    // Show duplicate distribution
+    if (duplicates > 0 && (options.stats || options.verbose)) {
+      console.log(`\n📊 Duplicate Distribution:`)
+      // Sort by frequency (descending)
+      const sortedFrequencies = Array.from(frequencyDistribution.entries())
+        .filter(([count]) => count > 1) // Only show duplicates
+        .sort((a, b) => b[0] - a[0]) // Sort by count descending
+
+      for (const [count, numExpressions] of sortedFrequencies) {
+        console.log(`  ${numExpressions} expression${numExpressions > 1 ? 's' : ''} appeared ${count} times`)
+      }
+    }
+
     if (options.verbose) {
-      console.log(`  Mathematical Functions Used: [${Array.from(allStats.uniqueFunctionsUsed).join(', ')}]`)
+      console.log(`\n  Mathematical Functions Used: [${Array.from(allStats.uniqueFunctionsUsed).join(', ')}]`)
     }
   }
 
