@@ -77,10 +77,6 @@ export function generateRandomOrder(productIds: string[]): OrderCreateRequest {
   order.Total_Amount__c = parseFloat(faker.commerce.price({ min: 50, max: 5000, dec: 2 }));
   order.Total_Amount__c = order.Total_Amount__c;
 
-  if (faker.datatype.boolean({ probability: 0.3 })) {
-    order.Product_Id__c = faker.string.alphanumeric(10);
-  }
-
   if (faker.datatype.boolean({ probability: 0.2 })) {
     // Sales_Rep__c expects a Salesforce ID, not a name
     // Using a valid Salesforce user ID format
@@ -190,9 +186,13 @@ export function generateRandomOrder(productIds: string[]): OrderCreateRequest {
       .split("T")[0];
   }
 
-  const productId = faker.helpers.arrayElement<string>(productIds);
-
-  order.Product_Id__c = productId;
+  // Set Product_Id__c with guard against empty productIds array
+  if (productIds.length > 0) {
+    order.Product_Id__c = faker.helpers.arrayElement<string>(productIds);
+  } else {
+    // Fallback to synthetic product id if no products available
+    order.Product_Id__c = faker.string.alphanumeric(10);
+  }
 
   return order;
 }

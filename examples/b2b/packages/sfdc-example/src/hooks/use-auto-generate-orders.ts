@@ -60,12 +60,35 @@ class AutoGenerateManager {
     this.queryClient = queryClient;
   }
 
-  setConfig(config: AutoGenerateConfig) {
-    this.config = {
+  /**
+   * Normalizes and clamps config values to ensure valid ranges:
+   * - Ensures minOrdersPerBatch is at least 1
+   * - Enforces min <= max by swapping or setting max = min when needed
+   */
+  private normalizeConfig(config: AutoGenerateConfig): Required<AutoGenerateConfig> {
+    const currentMin = config.minOrdersPerBatch ?? this.config.minOrdersPerBatch;
+    const currentMax = config.maxOrdersPerBatch ?? this.config.maxOrdersPerBatch;
+
+    // Ensure min is at least 1
+    let normalizedMin = Math.max(1, currentMin);
+
+    // Ensure max is at least 1
+    let normalizedMax = Math.max(1, currentMax);
+
+    // Enforce min <= max: if min > max, swap them or set max = min
+    if (normalizedMin > normalizedMax) {
+      normalizedMax = normalizedMin;
+    }
+
+    return {
       intervalMs: config.intervalMs ?? this.config.intervalMs,
-      minOrdersPerBatch: config.minOrdersPerBatch ?? this.config.minOrdersPerBatch,
-      maxOrdersPerBatch: config.maxOrdersPerBatch ?? this.config.maxOrdersPerBatch,
+      minOrdersPerBatch: normalizedMin,
+      maxOrdersPerBatch: normalizedMax,
     };
+  }
+
+  setConfig(config: AutoGenerateConfig) {
+    this.config = this.normalizeConfig(config);
   }
 
   subscribe(listener: StateChangeListener): () => void {
@@ -83,7 +106,17 @@ class AutoGenerateManager {
   }
 
   private generateRandomCount(): number {
-    return Math.floor(Math.random() * (this.config.maxOrdersPerBatch - this.config.minOrdersPerBatch + 1)) + this.config.minOrdersPerBatch;
+    // Use normalized values from config (already normalized in setConfig)
+    const min = this.config.minOrdersPerBatch;
+    const max = this.config.maxOrdersPerBatch;
+
+    // Ensure we have valid normalized values (defensive check)
+    const normalizedMin = Math.max(1, min);
+    const normalizedMax = Math.max(normalizedMin, max);
+
+    // Calculate random count using normalized values, ensuring result >= 1
+    const count = Math.floor(Math.random() * (normalizedMax - normalizedMin + 1)) + normalizedMin;
+    return Math.max(1, count);
   }
 
   private async triggerGeneration() {

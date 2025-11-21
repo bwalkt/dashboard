@@ -12,7 +12,7 @@ export function RecentSales() {
   const recentOrders =
     orders
       ?.filter((order) => {
-        const amount = order.Total_Amount__c || 0;
+        const amount = order.TotalAmount || order.Total_Amount__c || 0;
         return amount > 0;
       })
       ?.sort((a, b) => new Date(b.EffectiveDate).getTime() - new Date(a.EffectiveDate).getTime())
@@ -103,7 +103,6 @@ export function RecentSales() {
           {recentOrders.length > 0 ? (
             recentOrders.map((order, index) => {
               const customerName = order.Customer_Name__c || "Unknown Customer";
-              const customerEmail = order.Customer_Email__c || "No email provided";
               const amount = order.TotalAmount || order.Total_Amount__c || 0;
 
               return (
@@ -114,7 +113,7 @@ export function RecentSales() {
                   </Avatar>
                   <div className="ml-4 space-y-1">
                     <p className="text-sm leading-none font-medium">{customerName}</p>
-                    <p className="text-muted-foreground text-sm">{truncateEmail(customerEmail)}</p>
+                    <p className="text-muted-foreground text-sm">{truncateEmail(order.Customer_Email__c)}</p>
                   </div>
                   <div className="ml-auto font-medium">+{formatCurrency(amount)}</div>
                 </div>
