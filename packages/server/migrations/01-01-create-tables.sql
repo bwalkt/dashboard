@@ -645,7 +645,7 @@ CREATE TABLE pzero.all_devices (
   is_verifier boolean DEFAULT FALSE,
   device_status pzero.device_status DEFAULT 'UNKNOWN',
   duration_used bigint DEFAULT 0, -- total duration used in microseconds
-  uid uuid NOT NULL NOT NULL,
+  uid uuid NOT NULL,
   UNIQUE (is_primary, uid, is_act),
   PRIMARY KEY (id, is_act)
 )
