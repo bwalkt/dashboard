@@ -32,6 +32,21 @@ export default function SignUpViewPage() {
     }
   }, [user, loading, navigate])
 
+  const handleResendCode = async () => {
+    setIsLoading(true)
+    try {
+      await signUp({ email, name })
+      setOtpCode('') // Clear the OTP input
+      toast.success('New verification code sent to your email')
+    } catch (error: any) {
+      console.error('Resend error:', error)
+      const errorMessage = error?.message || 'Failed to resend code. Please try again.'
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -51,9 +66,11 @@ export default function SignUpViewPage() {
 
         toast.success('Registration successful!')
         navigate({ to: '/dashboard/overview', replace: true })
-      } catch (error) {
+      } catch (error: any) {
         console.error('Verification error:', error)
-        toast.error('Invalid or expired verification code. Please try again.')
+        // Extract the error message from the API error
+        const errorMessage = error?.message || 'Invalid or expired verification code. Please try again.'
+        toast.error(errorMessage)
       } finally {
         setIsLoading(false)
       }
@@ -73,9 +90,11 @@ export default function SignUpViewPage() {
         setName(formName)
         setEmailSent(true)
         toast.success('Check your email for verification code')
-      } catch (error) {
+      } catch (error: any) {
         console.error('Sign up error:', error)
-        toast.error('Failed to sign up. Please try again.')
+        // Extract the error message from the API error
+        const errorMessage = error?.message || 'Failed to sign up. Please try again.'
+        toast.error(errorMessage)
       } finally {
         setIsLoading(false)
       }
@@ -146,6 +165,32 @@ export default function SignUpViewPage() {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'Processing...' : emailSent ? 'Verify Code' : 'Register'}
                 </Button>
+
+                {emailSent && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleResendCode}
+                      disabled={isLoading}
+                    >
+                      Resend Code
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => {
+                        setEmailSent(false)
+                        setOtpCode('')
+                      }}
+                      disabled={isLoading}
+                    >
+                      Use Different Email
+                    </Button>
+                  </>
+                )}
               </form>
 
               <div className="relative my-4">
