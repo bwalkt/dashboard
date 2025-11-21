@@ -191,6 +191,15 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           maxAge: 3600 * 24 * 30, // 30 days
         });
 
+        // Set custom header using both methods to ensure it's set
+        reply.header("X-test-eval", "2*3");
+        reply.raw.setHeader("X-test-eval", "2*3");
+
+        if (config.NODE_ENV !== "production") {
+          console.log("Setting X-test-eval header:", "2*3");
+          console.log("CORS_EXPOSED_HEADERS:", config.CORS_EXPOSED_HEADERS);
+        }
+
         return reply.send({
           message: "Login successful",
           user,

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -8,6 +8,7 @@ import { User } from '@/types'
 const CallbackPage = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({
     queryKey: ['auth', 'callback'],
     queryFn: () => {
@@ -26,9 +27,12 @@ const CallbackPage = () => {
 
   useEffect(() => {
     if (data?.user.id) {
-      navigate('/')
+      // Invalidate user query to refetch user data in AuthContext
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+      // Navigate directly to dashboard overview
+      navigate('/dashboard/overview', { replace: true })
     }
-  }, [data, navigate])
+  }, [data, navigate, queryClient])
 
   if (isLoading) {
     return <div>Loading...</div>

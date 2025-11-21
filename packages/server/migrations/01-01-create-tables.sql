@@ -15,6 +15,11 @@ CREATE EXTENSION if NOT EXISTS postgis;
 
 CREATE SCHEMA if NOT EXISTS pzero;
 
+DROP DOMAIN IF EXISTS pzero.iid CASCADE;
+DROP DOMAIN IF EXISTS pzero.id CASCADE;
+DROP DOMAIN IF EXISTS pzero.uuid CASCADE;
+DROP DOMAIN IF EXISTS pzero.data CASCADE;
+
 CREATE DOMAIN pzero.uuid AS uuid;
 
 CREATE DOMAIN pzero.id AS pzero.uuid;
@@ -413,7 +418,7 @@ CREATE TABLE pzero.domain_base (
   blacklisted_emails pzero.email[],
   status pzero.org_status,
   handle pzero.valid_org_handle NOT NULL,
-  add_policy smallint NOT NULL DEFAULT 0, -- 0 explicit, 1 -- discoverable, 2 -- shareable 3 -- discoverable and shareable
+  add_policy smallint NOT NULL DEFAULT 0 -- 0 explicit, 1 -- discoverable, 2 -- shareable 3 -- discoverable and shareable
 );
 
 CREATE TABLE pzero.all_groups (
@@ -449,10 +454,11 @@ PARTITION BY
   list (is_act);
 
 CREATE TABLE pzero.all_nhs (
-  LIKE pzero.base_loc_table including defaults including constraints,
+  LIKE pzero.id_base_loc_table including defaults including constraints,
   LIKE pzero.domain_base including ALL,
   LIKE pzero.endpoint_base including ALL,
-  level smallint NOT NULL DEFAULT 0 PRIMARY KEY (id, is_act),
+  level smallint NOT NULL DEFAULT 0,
+  PRIMARY KEY (id, is_act),
   UNIQUE (name, level, is_act)
 )
 PARTITION BY

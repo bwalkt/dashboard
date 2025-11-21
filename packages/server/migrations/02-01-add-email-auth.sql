@@ -10,8 +10,11 @@ BEGIN
             ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
         END IF;
 
-        -- Make github_id nullable to support email-only users
-        ALTER TABLE users ALTER COLUMN github_id DROP NOT NULL;
+        -- Make github_id nullable to support email-only users (if column exists)
+        IF EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'users' AND table_schema = 'public' AND column_name = 'github_id') THEN
+            ALTER TABLE users ALTER COLUMN github_id DROP NOT NULL;
+        END IF;
 
         -- Add unique constraint on email if it doesn't exist
         IF NOT EXISTS (SELECT 1 FROM pg_constraint 
@@ -48,11 +51,17 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables 
                WHERE table_name = 'all_auth' AND table_schema = 'pzero') THEN
-        -- oauth_id should be nullable for email-only users
-        ALTER TABLE pzero.all_auth ALTER COLUMN oauth_id DROP NOT NULL;
+        -- oauth_id should be nullable for email-only users (if column exists)
+        IF EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'all_auth' AND table_schema = 'pzero' AND column_name = 'oauth_id') THEN
+            ALTER TABLE pzero.all_auth ALTER COLUMN oauth_id DROP NOT NULL;
+        END IF;
         
-        -- Ensure password field can store null for OAuth-only users
-        ALTER TABLE pzero.all_auth ALTER COLUMN password DROP NOT NULL;
+        -- Ensure password field can store null for OAuth-only users (if column exists)
+        IF EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'all_auth' AND table_schema = 'pzero' AND column_name = 'password') THEN
+            ALTER TABLE pzero.all_auth ALTER COLUMN password DROP NOT NULL;
+        END IF;
     END IF;
 END $$;
 

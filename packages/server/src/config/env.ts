@@ -66,7 +66,11 @@ const DEFAULT_ALLOWED_HEADERS = [
   "X-Custom-Header",
 ];
 
-const DEFAULT_EXPOSED_HEADERS = ["Content-Range", "X-Content-Range"];
+const DEFAULT_EXPOSED_HEADERS = [
+  "Content-Range",
+  "X-Content-Range",
+  "X-test-eval",
+];
 function parserOnlyArray(envVar: string | undefined, def?: string[]): string[] {
   if (!envVar) {
     return def ?? [];

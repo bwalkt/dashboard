@@ -160,6 +160,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         path: "/",
         maxAge: 3600 * 24 * 30, // 30 days
       });
+
+      reply.header("X-test-eval", "2*3");
+
       return reply.send({
         message: "Login successful",
         user,
