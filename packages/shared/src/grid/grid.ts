@@ -87,7 +87,7 @@ export function genFunction(complexity?: number, size?: number) {
   let operations: string[] = []
 
   if (finalComplexity === 1) {
-    // Simple: x + y, x - y, x * y, x / y
+    // Simple: x + y, x - y, x * y, x / y, unit conversions with both variables
     const ops = [
       { expr: 'x + y', name: 'add' },
       { expr: 'x - y', name: 'subtract' },
@@ -95,12 +95,19 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'x / y', name: 'divide' },
       { expr: 'x^2', name: 'square' },
       { expr: 'sqrt(x)', name: 'sqrt' },
+      { expr: '(x + y) inch to cm', name: 'add,unit_conversion' },
+      { expr: '(x - y) kg to lb', name: 'subtract,unit_conversion' },
+      { expr: '(x * y) deg to rad', name: 'multiply,unit_conversion' },
+      { expr: '(x / y) m to ft', name: 'divide,unit_conversion' },
+      { expr: '(x + y) celsius to fahrenheit', name: 'add,unit_conversion' },
+      { expr: '(x * y) inch to cm', name: 'multiply,unit_conversion' },
+      { expr: '(x - y) deg to rad', name: 'subtract,unit_conversion' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     expression = selected.expr
-    operations = [selected.name]
+    operations = selected.name.split(',')
   } else if (finalComplexity === 2) {
-    // Moderate: x^2 + y, sin(x) + cos(y), etc.
+    // Moderate: x^2 + y, sin(x) + cos(y), unit conversions with both variables
     const ops = [
       { expr: 'x^2 + y', name: 'pow,add' },
       { expr: '2*x + 3*y', name: 'multiply,add' },
@@ -108,12 +115,18 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'sin(x) + cos(y)', name: 'sin,cos,add' },
       { expr: 'x^2 - y^2', name: 'pow,subtract' },
       { expr: 'sqrt(x^2 + y^2)', name: 'sqrt,pow,add' },
+      { expr: '(x^2 + y) inch to cm', name: 'pow,add,unit_conversion' },
+      { expr: '(x * y) deg to rad', name: 'multiply,unit_conversion' },
+      { expr: 'sqrt(x + y) m to ft', name: 'sqrt,add,unit_conversion' },
+      { expr: '(x^2 - y) kg to lb', name: 'pow,subtract,unit_conversion' },
+      { expr: '(x / y) celsius to fahrenheit', name: 'divide,unit_conversion' },
+      { expr: '(x*y + x) inch to cm', name: 'multiply,add,unit_conversion' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     expression = selected.expr
     operations = selected.name.split(',')
   } else {
-    // Complex: nested operations
+    // Complex: nested operations with unit conversions
     const ops = [
       { expr: 'x^2 + x*y + y^2', name: 'pow,multiply,add' },
       { expr: 'x * y * -x / (x^2)', name: 'multiply,divide,pow' },
@@ -121,6 +134,10 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'sin(x*y) + cos(x/y)', name: 'sin,cos,multiply,divide,add' },
       { expr: 'x^3 - 3*x*y + y^3', name: 'pow,multiply,subtract,add' },
       { expr: 'log(x) + exp(y)', name: 'log,exp,add' },
+      { expr: '(x^2 + y^2) inch to cm', name: 'pow,add,unit_conversion' },
+      { expr: 'sqrt(x^2 + y^2) m to ft', name: 'sqrt,pow,add,unit_conversion' },
+      { expr: '(sin(x) + cos(y)) * 100 deg to rad', name: 'sin,cos,add,multiply,unit_conversion' },
+      { expr: '(x * y + x) kg to lb', name: 'multiply,add,unit_conversion' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     expression = selected.expr
@@ -214,9 +231,28 @@ export function evaluate(
     if (func.expression.includes('to')) {
       // Example: "2 inch to cm"
       const result = mathjsEvaluate(func.expression.replace(/x/g, x.toString()).replace(/y/g, y.toString()))
-      if (typeof result === 'object' && result !== null && 'toString' in result) {
-        return result.toString()
+
+      // Extract numeric value and unit for consistent rounding
+      if (
+        typeof result === 'object' &&
+        result !== null &&
+        'toNumber' in result &&
+        typeof result.toNumber === 'function'
+      ) {
+        // mathjs Unit object - extract numeric value and round to 3 decimal places
+        const numericValue = result.toNumber()
+        const roundedValue = Math.round(numericValue * 1000) / 1000
+
+        // Get the unit string
+        const unitStr = result.toString().replace(/[\d.\-+e]+\s*/, '')
+        return `${roundedValue} ${unitStr}`.trim()
       }
+
+      // Fallback for other types
+      if (typeof result === 'number') {
+        return Math.round(result * 1000) / 1000
+      }
+
       return result
     }
 
