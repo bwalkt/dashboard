@@ -78,10 +78,10 @@ OPTIONS:
 
 COMPLEXITY:
   Complexity is randomly generated between ${MIN_COMPLEXITY} and ${MAX_COMPLEXITY}:
-    1: Simple (35 templates) - basic operations, single functions
-    2: Moderate (32 templates) - combinations of two operations/functions
-    3: Complex (33 templates) - nested operations, multiple functions
-    4: Complex+ (33 templates) - same as level 3
+    1: Simple (44 templates) - basic operations, single functions, special functions, matrix stats
+    2: Moderate (43 templates) - combinations of operations, special/bitwise functions, matrix operations
+    3: Complex (47 templates) - nested operations, multiple functions, complex matrix combinations
+    4: Complex+ (47 templates) - same as level 3
 
 EXAMPLES:
   pnpm genFunction                      # Generate 1 function with random complexity
@@ -96,16 +96,20 @@ MATHEMATICAL FUNCTIONS SUPPORTED:
   • Logarithmic: log, log10, log2, exp
   • Rounding: ceil, floor, round, fix, sign
   • Comparison: max, min, hypot
+  • Special Functions: gamma, factorial, combinations, permutations
+  • Bitwise Operations: bitAnd, bitOr, bitXor, leftShift, rightLogShift
+  • Statistical Functions: mean, median, mode, variance, std (on matrix subsets)
+  • Matrix Operations: m (entire matrix), mr(rows), mc(columns) with ranges/patterns
   • Unit Conversions: temperature, length, mass, angle, volume
-  • 39+ unique mathematical functions across 100 expression templates!
+  • 60+ unique mathematical functions across 134 expression templates!
 
 TEMPLATE DISTRIBUTION:
-  100 total expression templates across complexity levels:
-  • Level 1 (Simple): 35 templates - basic operations, single functions
-  • Level 2 (Moderate): 32 templates - two-operation combinations
-  • Level 3+ (Complex): 33 templates - nested, multi-function expressions
+  134 total expression templates across complexity levels:
+  • Level 1 (Simple): 44 templates - basic operations, single functions, special functions, matrix stats
+  • Level 2 (Moderate): 43 templates - two-operation combinations, special/bitwise operations, matrix operations
+  • Level 3+ (Complex): 47 templates - nested operations, multiple functions, complex matrix combinations
 
-  With random x,y cell positions, unique expressions scale exponentially!
+  With random x,y cell positions AND matrix subsetting, unique expressions scale exponentially!
 `)
 }
 
@@ -208,12 +212,19 @@ function main() {
           if (typeof r === 'string' && r.includes('+ 0i')) {
             return false
           }
-          // Regenerate for 0 or infinity
-          return r === 0 || (typeof r === 'number' && !isFinite(r))
+          // Only regenerate for infinity/NaN (0 is a valid result)
+          return typeof r === 'number' && !isFinite(r)
         }
 
-        while (shouldRegenerate(result)) {
-          console.log(`  ⚠️  Result was ${result}, regenerating function...`)
+        // Limit regeneration attempts to prevent infinite loops
+        const MAX_REGENERATION_ATTEMPTS = 10
+        let regenerationCount = 0
+
+        while (shouldRegenerate(result) && regenerationCount < MAX_REGENERATION_ATTEMPTS) {
+          regenerationCount++
+          console.log(
+            `  ⚠️  Result was ${result}, regenerating function... (attempt ${regenerationCount}/${MAX_REGENERATION_ATTEMPTS})`,
+          )
 
           // Track regeneration time
           const regenStart = Date.now()
@@ -238,6 +249,11 @@ function main() {
           console.log(
             `  x = grid[${func.xCell.row}][${func.xCell.col}], y = grid[${func.yCell.row}][${func.yCell.col}]`,
           )
+        }
+
+        // Warn if max attempts reached
+        if (regenerationCount >= MAX_REGENERATION_ATTEMPTS && shouldRegenerate(result)) {
+          console.log(`  ⚠️  Max regeneration attempts reached, keeping result: ${result}`)
         }
 
         allStats.evaluationTime += evalTime

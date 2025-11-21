@@ -1,4 +1,25 @@
-import { evaluate as mathjsEvaluate, parse, randomInt, simplify } from 'mathjs'
+import {
+  bitAnd,
+  bitOr,
+  bitXor,
+  combinations,
+  det,
+  factorial,
+  gamma,
+  leftShift,
+  evaluate as mathjsEvaluate,
+  mean,
+  median,
+  mode,
+  parse,
+  permutations,
+  randomInt,
+  rightLogShift,
+  simplify,
+  std,
+  transpose,
+  variance,
+} from 'mathjs'
 import { toFullCompact } from '../utils/functionShorthand.js'
 
 export function genGrid(size: number = 5) {
@@ -57,13 +78,88 @@ export function getSubgrid(matrix: number[][], size: number): number[][] {
 }
 
 /**
+ * Parse matrix reference specification
+ * Examples: "1-4", "odd", "even", "1,3,5", "all"
+ */
+function parseMatrixSpec(spec: string, maxIndex: number): number[] {
+  // Handle "all"
+  if (spec === 'all') {
+    return Array.from({ length: maxIndex }, (_, i) => i)
+  }
+
+  // Handle "odd" (1-indexed: 1, 3, 5, ... -> 0-indexed: 0, 2, 4, ...)
+  if (spec === 'odd') {
+    return Array.from({ length: maxIndex }, (_, i) => i).filter(i => i % 2 === 0)
+  }
+
+  // Handle "even" (1-indexed: 2, 4, 6, ... -> 0-indexed: 1, 3, 5, ...)
+  if (spec === 'even') {
+    return Array.from({ length: maxIndex }, (_, i) => i).filter(i => i % 2 === 1)
+  }
+
+  // Handle range "1-4" (convert from 1-indexed to 0-indexed)
+  const rangeMatch = spec.match(/^(\d+)-(\d+)$/)
+  if (rangeMatch) {
+    const start = Math.max(0, parseInt(rangeMatch[1]) - 1)
+    const end = Math.min(maxIndex - 1, parseInt(rangeMatch[2]) - 1)
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+  }
+
+  // Handle list "1,3,5" (convert from 1-indexed to 0-indexed)
+  if (spec.includes(',')) {
+    return spec
+      .split(',')
+      .map(s => parseInt(s.trim()) - 1)
+      .filter(i => i >= 0 && i < maxIndex)
+  }
+
+  // Handle single index "3" (convert from 1-indexed to 0-indexed)
+  const singleIndex = parseInt(spec) - 1
+  if (!isNaN(singleIndex) && singleIndex >= 0 && singleIndex < maxIndex) {
+    return [singleIndex]
+  }
+
+  return []
+}
+
+/**
+ * Extract specified rows from a matrix
+ * @param matrix - Input matrix
+ * @param spec - Row specification (e.g., "1-4", "odd", "even", "1,3,5", "all")
+ * @returns Array of selected rows
+ */
+export function getMatrixRows(matrix: number[][], spec: string): number[][] {
+  const rowIndices = parseMatrixSpec(spec, matrix.length)
+  return rowIndices.map(i => matrix[i])
+}
+
+/**
+ * Extract specified columns from a matrix
+ * @param matrix - Input matrix
+ * @param spec - Column specification (e.g., "1-4", "odd", "even", "1,3,5", "all")
+ * @returns Array of selected columns (as rows for easier processing)
+ */
+export function getMatrixCols(matrix: number[][], spec: string): number[][] {
+  const cols = matrix[0]?.length || 0
+  const colIndices = parseMatrixSpec(spec, cols)
+  return colIndices.map(colIdx => matrix.map(row => row[colIdx]))
+}
+
+/**
+ * Flatten a matrix to a 1D array for statistical operations
+ */
+export function flattenMatrix(matrix: number[][]): number[] {
+  return matrix.flat()
+}
+
+/**
  * Generates mathematical expressions using x and y variables from grid.
  * Uses math.js simplify() and evaluate() for expression handling.
  *
  * @param complexity - Complexity level (default=random 1-3). Values below 1 are clamped to 1.
- *   - 1: Simple expression (35 templates: basic operations, single functions, simple unit conversions)
- *   - 2: Moderate expression (32 templates: combinations of two operations or functions)
- *   - 3+: Complex expression (33 templates: nested operations, multiple functions, complex expressions)
+ *   - 1: Simple expression (44 templates: basic operations, single functions, special functions, bitwise ops, matrix stats)
+ *   - 2: Moderate expression (43 templates: combinations of two operations, special functions, bitwise ops, matrix operations)
+ *   - 3+: Complex expression (47 templates: nested operations, multiple functions, complex matrix combinations)
  * @param size - Grid size for cell references (default=random 5-10). Must be a positive integer >= 1.
  * @returns Function object with expression and metadata including unique ID, expressions, complexity info, and generation statistics
  */
@@ -133,6 +229,18 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: '(x - y) deg to rad', name: 'subtract,unit_conversion' },
       { expr: 'abs(x) mm to inch', name: 'abs,unit_conversion' },
       { expr: 'sqrt(x) km to mile', name: 'sqrt,unit_conversion' },
+      // Special functions
+      { expr: 'factorial(floor(abs(x)))', name: 'factorial,floor,abs' },
+      { expr: 'gamma(abs(x))', name: 'gamma,abs' },
+      // Bitwise operations (need integers)
+      { expr: 'bitAnd(floor(x), floor(y))', name: 'bitAnd,floor' },
+      { expr: 'bitOr(floor(x), floor(y))', name: 'bitOr,floor' },
+      { expr: 'bitXor(floor(x), floor(y))', name: 'bitXor,floor' },
+      // Statistical functions on matrix
+      { expr: 'mean(m)', name: 'mean,matrix' },
+      { expr: 'std(mr(odd))', name: 'std,matrix_rows' },
+      { expr: 'variance(mc(even))', name: 'variance,matrix_cols' },
+      { expr: 'median(mr(1-3))', name: 'median,matrix_rows' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     expression = selected.expr
@@ -172,6 +280,20 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: '(x*y + x) inch to cm', name: 'multiply,add,unit_conversion' },
       { expr: 'abs(x - y) mm to cm', name: 'abs,subtract,unit_conversion' },
       { expr: 'max(x, y) liter to gallon', name: 'max,unit_conversion' },
+      // Special functions
+      { expr: 'combinations(floor(abs(x)), floor(abs(y)))', name: 'combinations,floor,abs' },
+      { expr: 'permutations(floor(abs(x)), floor(abs(y)))', name: 'permutations,floor,abs' },
+      { expr: 'gamma(x) + gamma(y)', name: 'gamma,add' },
+      // Bitwise operations
+      { expr: 'leftShift(floor(x), floor(y))', name: 'leftShift,floor' },
+      { expr: 'rightLogShift(floor(x), floor(y))', name: 'rightLogShift,floor' },
+      { expr: 'bitAnd(floor(x^2), floor(y))', name: 'bitAnd,floor,pow' },
+      { expr: 'bitOr(floor(x), floor(y^2))', name: 'bitOr,floor,pow' },
+      // Statistical functions on matrix
+      { expr: 'mean(mc(1-3)) + std(mc(2-4))', name: 'mean,std,matrix_cols,add' },
+      { expr: 'variance(mr(odd)) + variance(mr(even))', name: 'variance,matrix_rows,add' },
+      { expr: 'median(m) / max(m)', name: 'median,max,matrix,divide' },
+      { expr: 'min(mr(all)) + max(mc(all))', name: 'min,max,matrix,add' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     expression = selected.expr
@@ -212,6 +334,26 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'max(x, y)^2 liter to gallon', name: 'max,pow,unit_conversion' },
       { expr: 'cbrt(x^3 + y^3) km to mile', name: 'cbrt,pow,add,unit_conversion' },
       { expr: '(x + y) degC to degF', name: 'add,unit_conversion' },
+      // Special functions
+      { expr: 'factorial(floor(abs(x))) + factorial(floor(abs(y)))', name: 'factorial,floor,abs,add' },
+      { expr: 'combinations(floor(abs(x)+abs(y)), floor(abs(y)))', name: 'combinations,floor,abs,add' },
+      { expr: 'permutations(floor(abs(x*y)), floor(abs(y)))', name: 'permutations,floor,abs,multiply' },
+      { expr: 'gamma(abs(x)) * gamma(abs(y))', name: 'gamma,abs,multiply' },
+      { expr: 'log(gamma(abs(x)))', name: 'log,gamma,abs' },
+      // Bitwise operations
+      { expr: 'bitXor(bitAnd(floor(x), floor(y)), floor(x+y))', name: 'bitXor,bitAnd,floor,add' },
+      {
+        expr: 'bitOr(leftShift(floor(x), 2), rightLogShift(floor(y), 2))',
+        name: 'bitOr,leftShift,rightLogShift,floor',
+      },
+      { expr: 'bitAnd(floor(x^2 + y^2), floor(x*y))', name: 'bitAnd,floor,pow,multiply,add' },
+      // Statistical & matrix operations
+      { expr: 'sqrt(variance(m)) + mean(mr(1-3))', name: 'sqrt,variance,mean,matrix,add' },
+      { expr: 'std(mc(odd)) / std(mc(even))', name: 'std,matrix_cols,divide' },
+      { expr: 'median(mr(all)) * variance(mc(all))', name: 'median,variance,matrix,multiply' },
+      { expr: 'abs(mean(m) - median(m))', name: 'abs,mean,median,matrix,subtract' },
+      { expr: 'max(mr(1-2)) - min(mr(3-4))', name: 'max,min,matrix_rows,subtract' },
+      { expr: 'log(std(m) + variance(m))', name: 'log,std,variance,matrix,add' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     expression = selected.expr
@@ -274,7 +416,7 @@ export function genFunction(complexity?: number, size?: number) {
     readable,
     metadata: {
       generationTime: endTime - startTime,
-      estimatedCombinations: finalComplexity === 1 ? 35 : finalComplexity === 2 ? 32 : 33,
+      estimatedCombinations: finalComplexity === 1 ? 44 : finalComplexity === 2 ? 43 : 47,
       timestamp: new Date().toISOString(),
       gridSize: actualSize,
       simplification: {
@@ -330,15 +472,62 @@ export function evaluate(
       y = grid[0]?.[1] ?? 0
     }
 
-    // Common scope for all evaluations
+    // Parse and replace matrix references in expression
+    let processedExpression = func.expression
+
+    // Replace mr(spec) - matrix rows
+    processedExpression = processedExpression.replace(/mr\(([^)]+)\)/g, (match, spec) => {
+      const rows = getMatrixRows(grid, spec)
+      const flattened = flattenMatrix(rows)
+      return `[${flattened.join(',')}]`
+    })
+
+    // Replace mc(spec) - matrix columns
+    processedExpression = processedExpression.replace(/mc\(([^)]+)\)/g, (match, spec) => {
+      const cols = getMatrixCols(grid, spec)
+      const flattened = flattenMatrix(cols)
+      return `[${flattened.join(',')}]`
+    })
+
+    // Replace m - entire matrix (but not in unit conversions like "m to ft" or "cm", "mm", etc.)
+    // Only match standalone 'm' that's used as a matrix reference
+    processedExpression = processedExpression.replace(/\bm\b(?!\s*to)(?![a-zA-Z])/g, () => {
+      const flattened = flattenMatrix(grid)
+      return `[${flattened.join(',')}]`
+    })
+
+    // Common scope for all evaluations with safe wrappers for expensive operations
+    // Save references to original functions to avoid recursion
+    const factorialOriginal = factorial
+    const combinationsOriginal = combinations
+    const permutationsOriginal = permutations
+
     const scope = {
       x,
       y,
       pi: Math.PI,
       e: Math.E,
+      // Wrap expensive operations with safety limits
+      factorial: (n: number) => {
+        const limited = Math.min(Math.max(0, Math.floor(n)), 170) // factorial(170) is near max safe number
+        return factorialOriginal(limited)
+      },
+      combinations: (n: number, k: number) => {
+        const nLimited = Math.min(Math.max(0, Math.floor(n)), 1000)
+        const kLimited = Math.min(Math.max(0, Math.floor(k)), nLimited)
+        if (kLimited > nLimited) return 0
+        return combinationsOriginal(nLimited, kLimited)
+      },
+      permutations: (n: number, k?: number) => {
+        const nLimited = Math.min(Math.max(0, Math.floor(n)), 1000)
+        if (k === undefined) return factorialOriginal(nLimited)
+        const kLimited = Math.min(Math.max(0, Math.floor(k)), nLimited)
+        if (kLimited > nLimited) return 0
+        return permutationsOriginal(nLimited, kLimited)
+      },
     }
 
-    const result = mathjsEvaluate(func.expression, scope)
+    const result = mathjsEvaluate(processedExpression, scope)
 
     // Handle unit conversion expressions (return formatted string)
     if (func.expression.includes('to')) {
