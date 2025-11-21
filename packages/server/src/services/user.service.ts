@@ -67,20 +67,31 @@ export class UserService {
     userData: CreateUserData,
     schema: string = "pzero",
   ): Promise<User> {
-    const result = await db.pool.query(
-      `INSERT INTO ${schema}.auth (github_id, name, email, avatar, email_verified)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
+    // Use the create_user postgres function
+    const createResult = await db.pool.query(
+      `SELECT ${schema}.create_user($1) as result`,
       [
-        userData.github_id,
-        userData.name,
-        userData.email,
-        userData.avatar,
-        userData.email_verified ?? false,
+        JSON.stringify({
+          name: userData.name,
+          email: userData.email,
+          avatar: userData.avatar || null,
+          email_verified: userData.email_verified ?? false,
+        }),
       ],
     );
 
-    return result.rows[0];
+    const { user_id } = createResult.rows[0].result;
+
+    // Fetch the complete user record
+    const userResult = await db.pool.query(
+      `SELECT u.*, a.email, a.email_verified
+       FROM ${schema}.all_users u
+       JOIN ${schema}.all_auth a ON u.id = a.id
+       WHERE u.id = $1`,
+      [user_id],
+    );
+
+    return userResult.rows[0];
   }
 
   /**
