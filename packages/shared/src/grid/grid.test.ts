@@ -122,6 +122,52 @@ describe('genFunction', () => {
     expect(level2.complexity.level).toBe(2)
     expect(level3.complexity.level).toBe(3)
   })
+
+  it('should validate size parameter and throw for invalid sizes', () => {
+    // Valid sizes should not throw
+    expect(() => genFunction(1, 1)).not.toThrow()
+    expect(() => genFunction(1, 5)).not.toThrow()
+    expect(() => genFunction(1, 10)).not.toThrow()
+
+    // Invalid sizes should throw
+    expect(() => genFunction(1, 0)).toThrow('Grid size must be a positive integer')
+    expect(() => genFunction(1, -1)).toThrow('Grid size must be a positive integer')
+    expect(() => genFunction(1, 0.5)).toThrow('Grid size must be a positive integer')
+  })
+
+  it('should include simplification metadata', () => {
+    const result = genFunction(1, 5)
+
+    expect(result.metadata).toHaveProperty('simplification')
+    expect(result.metadata.simplification).toHaveProperty('succeeded')
+    expect(typeof result.metadata.simplification.succeeded).toBe('boolean')
+
+    // Error field may or may not be present depending on simplification success
+    if (!result.metadata.simplification.succeeded) {
+      expect(result.metadata.simplification).toHaveProperty('error')
+      expect(typeof result.metadata.simplification.error).toBe('string')
+    }
+  })
+
+  it('should include gridSize in metadata', () => {
+    const result = genFunction(2, 7)
+
+    expect(result.metadata).toHaveProperty('gridSize')
+    expect(result.metadata.gridSize).toBe(7)
+  })
+
+  it('should have compactExpression match simplifiedExpression', () => {
+    const result = genFunction(1, 5)
+
+    expect(result.compactExpression).toBe(result.simplifiedExpression)
+  })
+
+  it('should have non-negative space savings', () => {
+    const result = genFunction(2, 5)
+
+    expect(result.metadata.spaceSavings.savedBytes).toBeGreaterThanOrEqual(0)
+    expect(result.metadata.spaceSavings.savedPercentage).toBeGreaterThanOrEqual(0)
+  })
 })
 
 describe('evaluate', () => {
@@ -293,5 +339,79 @@ describe('evaluate', () => {
     const meterFunc = { expression: '(x + 0) m to ft', xCell: { row: 1, col: 0 }, yCell: { row: 1, col: 1 } }
     const meterResult = evaluate(grid, meterFunc)
     expect(meterResult).toBe('3.281 ft')
+  })
+
+  it('should fallback to 0 for out-of-bounds cell references', () => {
+    const grid = [
+      [5, 10],
+      [15, 20],
+    ]
+
+    // Test x cell out of bounds (row)
+    const outOfBoundsX = { expression: 'x + y', xCell: { row: 10, col: 0 }, yCell: { row: 0, col: 1 } }
+    expect(evaluate(grid, outOfBoundsX)).toBe(10) // 0 + 10
+
+    // Test y cell out of bounds (col)
+    const outOfBoundsY = { expression: 'x + y', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 10 } }
+    expect(evaluate(grid, outOfBoundsY)).toBe(5) // 5 + 0
+
+    // Test both cells out of bounds
+    const bothOutOfBounds = { expression: 'x * y', xCell: { row: 10, col: 10 }, yCell: { row: -1, col: -1 } }
+    expect(evaluate(grid, bothOutOfBounds)).toBe(0) // 0 * 0
+
+    // Test negative indices (should also fallback to 0)
+    const negativeIndices = { expression: 'x - y', xCell: { row: -1, col: 0 }, yCell: { row: 0, col: -1 } }
+    expect(evaluate(grid, negativeIndices)).toBe(0) // 0 - 0
+  })
+
+  it('should handle edge cases with infinity and very large numbers', () => {
+    const grid = [
+      [1, 0],
+      [Number.MAX_SAFE_INTEGER + 1, 2],
+    ]
+
+    // Test division by zero (results in Infinity)
+    const divByZero = { expression: 'x / y', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
+    expect(evaluate(grid, divByZero)).toBe(0) // Infinity -> 0
+
+    // Test very large number multiplication (exceeds MAX_SAFE_INTEGER)
+    const largeNum = { expression: 'x * x', xCell: { row: 1, col: 0 }, yCell: { row: 1, col: 1 } }
+    expect(evaluate(grid, largeNum)).toBe(0) // Too large -> 0
+  })
+
+  it('should throw error with strictBounds when cell references are out of bounds', () => {
+    const grid = [
+      [5, 10],
+      [15, 20],
+    ]
+
+    // Test x cell out of bounds with strict mode
+    const outOfBoundsX = { expression: 'x + y', xCell: { row: 10, col: 0 }, yCell: { row: 0, col: 1 } }
+    expect(() => evaluate(grid, outOfBoundsX, { strictBounds: true })).toThrow('xCell out of bounds')
+
+    // Test y cell out of bounds with strict mode
+    const outOfBoundsY = { expression: 'x + y', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 10 } }
+    expect(() => evaluate(grid, outOfBoundsY, { strictBounds: true })).toThrow('yCell out of bounds')
+
+    // Test negative indices with strict mode
+    const negativeX = { expression: 'x + y', xCell: { row: -1, col: 0 }, yCell: { row: 0, col: 0 } }
+    expect(() => evaluate(grid, negativeX, { strictBounds: true })).toThrow('xCell out of bounds')
+
+    // Without strict mode, should fallback to 0 (already tested in previous test)
+    expect(evaluate(grid, outOfBoundsX)).toBe(10) // No error, fallback to 0
+  })
+
+  it('should work normally with strictBounds when cells are within bounds', () => {
+    const grid = [
+      [5, 10],
+      [15, 20],
+    ]
+
+    const validFunc = { expression: 'x + y', xCell: { row: 0, col: 0 }, yCell: { row: 1, col: 1 } }
+
+    // Should work the same with or without strict bounds when cells are valid
+    expect(evaluate(grid, validFunc, { strictBounds: true })).toBe(25) // 5 + 20
+    expect(evaluate(grid, validFunc, { strictBounds: false })).toBe(25) // 5 + 20
+    expect(evaluate(grid, validFunc)).toBe(25) // 5 + 20 (default)
   })
 })

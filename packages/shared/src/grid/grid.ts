@@ -68,8 +68,15 @@ export function genFunction(complexity?: number, size?: number) {
   const startTime = Date.now()
 
   const actualComplexity = complexity !== undefined ? complexity : Math.floor(Math.random() * 3) + 1
-  const actualSize = size !== undefined ? Math.max(1, Math.floor(size)) : Math.floor(Math.random() * 6) + 5
 
+  // Validate size before processing
+  if (size !== undefined) {
+    if (!Number.isInteger(size) || size < 1) {
+      throw new Error(`Grid size must be a positive integer, got: ${size}`)
+    }
+  }
+
+  const actualSize = size !== undefined ? size : Math.floor(Math.random() * 6) + 5
   const finalComplexity = Math.max(1, actualComplexity)
 
   // Generate random grid cells for x and y
@@ -87,14 +94,33 @@ export function genFunction(complexity?: number, size?: number) {
   let operations: string[] = []
 
   if (finalComplexity === 1) {
-    // Simple: x + y, x - y, x * y, x / y, unit conversions with both variables
+    // Simple: basic operations, single functions, simple unit conversions
     const ops = [
       { expr: 'x + y', name: 'add' },
       { expr: 'x - y', name: 'subtract' },
       { expr: 'x * y', name: 'multiply' },
       { expr: 'x / y', name: 'divide' },
       { expr: 'x^2', name: 'square' },
+      { expr: 'x^3', name: 'cube' },
       { expr: 'sqrt(x)', name: 'sqrt' },
+      { expr: 'cbrt(x)', name: 'cbrt' },
+      { expr: 'abs(x - y)', name: 'abs,subtract' },
+      { expr: 'ceil(x / y)', name: 'ceil,divide' },
+      { expr: 'floor(x / y)', name: 'floor,divide' },
+      { expr: 'round(x / y)', name: 'round,divide' },
+      { expr: 'sign(x - y)', name: 'sign,subtract' },
+      { expr: 'max(x, y)', name: 'max' },
+      { expr: 'min(x, y)', name: 'min' },
+      { expr: 'mod(x, y)', name: 'mod' },
+      { expr: 'gcd(x, y)', name: 'gcd' },
+      { expr: 'lcm(x, y)', name: 'lcm' },
+      { expr: 'tan(x)', name: 'tan' },
+      { expr: 'asin(x / y)', name: 'asin,divide' },
+      { expr: 'acos(x / y)', name: 'acos,divide' },
+      { expr: 'atan(x / y)', name: 'atan,divide' },
+      { expr: 'sinh(x)', name: 'sinh' },
+      { expr: 'cosh(x)', name: 'cosh' },
+      { expr: 'tanh(x)', name: 'tanh' },
       { expr: '(x + y) inch to cm', name: 'add,unit_conversion' },
       { expr: '(x - y) kg to lb', name: 'subtract,unit_conversion' },
       { expr: '(x * y) deg to rad', name: 'multiply,unit_conversion' },
@@ -102,31 +128,53 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: '(x + y) degC to degF', name: 'add,unit_conversion' },
       { expr: '(x * y) inch to cm', name: 'multiply,unit_conversion' },
       { expr: '(x - y) deg to rad', name: 'subtract,unit_conversion' },
+      { expr: 'abs(x) mm to inch', name: 'abs,unit_conversion' },
+      { expr: 'sqrt(x) km to mile', name: 'sqrt,unit_conversion' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     expression = selected.expr
     operations = selected.name.split(',')
   } else if (finalComplexity === 2) {
-    // Moderate: x^2 + y, sin(x) + cos(y), unit conversions with both variables
+    // Moderate: combinations of two operations or functions
     const ops = [
       { expr: 'x^2 + y', name: 'pow,add' },
+      { expr: 'x^3 - y', name: 'pow,subtract' },
       { expr: '2*x + 3*y', name: 'multiply,add' },
       { expr: 'x*y + x', name: 'multiply,add' },
       { expr: 'sin(x) + cos(y)', name: 'sin,cos,add' },
+      { expr: 'tan(x) + sin(y)', name: 'tan,sin,add' },
+      { expr: 'sinh(x) - cosh(y)', name: 'sinh,cosh,subtract' },
       { expr: 'x^2 - y^2', name: 'pow,subtract' },
       { expr: 'sqrt(x^2 + y^2)', name: 'sqrt,pow,add' },
+      { expr: 'cbrt(x^3 + y^3)', name: 'cbrt,pow,add' },
+      { expr: 'abs(x) + abs(y)', name: 'abs,add' },
+      { expr: 'ceil(x) + floor(y)', name: 'ceil,floor,add' },
+      { expr: 'max(x, y) + min(x, y)', name: 'max,min,add' },
+      { expr: 'log10(x) + log10(y)', name: 'log10,add' },
+      { expr: 'log2(x) - log2(y)', name: 'log2,subtract' },
+      { expr: 'exp(x / y)', name: 'exp,divide' },
+      { expr: 'atan2(x, y)', name: 'atan2' },
+      { expr: 'hypot(x, y)', name: 'hypot' },
+      { expr: 'pow(x, y)', name: 'pow' },
+      { expr: 'log(x, y)', name: 'log' },
+      { expr: 'asinh(x / y)', name: 'asinh,divide' },
+      { expr: 'acosh(abs(x))', name: 'acosh,abs' },
+      { expr: 'atanh(x / y)', name: 'atanh,divide' },
+      { expr: 'fix(x / y)', name: 'fix,divide' },
       { expr: '(x^2 + y) inch to cm', name: 'pow,add,unit_conversion' },
       { expr: '(x * y) deg to rad', name: 'multiply,unit_conversion' },
       { expr: 'sqrt(x + y) m to ft', name: 'sqrt,add,unit_conversion' },
       { expr: '(x^2 - y) kg to lb', name: 'pow,subtract,unit_conversion' },
       { expr: '(x / y) degC to degF', name: 'divide,unit_conversion' },
       { expr: '(x*y + x) inch to cm', name: 'multiply,add,unit_conversion' },
+      { expr: 'abs(x - y) mm to cm', name: 'abs,subtract,unit_conversion' },
+      { expr: 'max(x, y) liter to gallon', name: 'max,unit_conversion' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     expression = selected.expr
     operations = selected.name.split(',')
   } else {
-    // Complex: nested operations with unit conversions
+    // Complex: nested operations, multiple functions, complex expressions
     const ops = [
       { expr: 'x^2 + x*y + y^2', name: 'pow,multiply,add' },
       { expr: 'x * y * -x / (x^2)', name: 'multiply,divide,pow' },
@@ -134,10 +182,33 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'sin(x*y) + cos(x/y)', name: 'sin,cos,multiply,divide,add' },
       { expr: 'x^3 - 3*x*y + y^3', name: 'pow,multiply,subtract,add' },
       { expr: 'log(x) + exp(y)', name: 'log,exp,add' },
+      { expr: 'log10(x^2) + log2(y^2)', name: 'log10,log2,pow,add' },
+      { expr: 'sqrt(abs(x)) + cbrt(abs(y))', name: 'sqrt,cbrt,abs,add' },
+      { expr: 'sin(x)^2 + cos(x)^2', name: 'sin,cos,pow,add' },
+      { expr: 'tan(x/y) + atan(y/x)', name: 'tan,atan,divide,add' },
+      { expr: 'sinh(x) * cosh(y)', name: 'sinh,cosh,multiply' },
+      { expr: 'asinh(x) + acosh(abs(y))', name: 'asinh,acosh,abs,add' },
+      { expr: 'max(x^2, y^2) - min(x, y)', name: 'max,min,pow,subtract' },
+      { expr: 'ceil(x/y) + floor(y/x)', name: 'ceil,floor,divide,add' },
+      { expr: 'abs(x - y) / max(x, y)', name: 'abs,max,subtract,divide' },
+      { expr: 'gcd(x, y) + lcm(x, y)', name: 'gcd,lcm,add' },
+      { expr: 'mod(x^2, y) + mod(y^2, x)', name: 'mod,pow,add' },
+      { expr: 'sign(x) * abs(y) + sign(y) * abs(x)', name: 'sign,abs,multiply,add' },
+      { expr: 'hypot(x, y) + sqrt(x*y)', name: 'hypot,sqrt,multiply,add' },
+      { expr: 'pow(abs(x), 1/3) + pow(abs(y), 1/2)', name: 'pow,abs,divide,add' },
+      { expr: 'log(x^2 + y^2, 10)', name: 'log,pow,add' },
+      { expr: 'exp(x/100) * exp(y/100)', name: 'exp,divide,multiply' },
+      { expr: 'atan2(sin(x), cos(y))', name: 'atan2,sin,cos' },
+      { expr: 'fix(x * y) / ceil(x + y)', name: 'fix,ceil,multiply,add,divide' },
+      { expr: 'round(sqrt(x^2 + y^2))', name: 'round,sqrt,pow,add' },
       { expr: '(x^2 + y^2) inch to cm', name: 'pow,add,unit_conversion' },
       { expr: 'sqrt(x^2 + y^2) m to ft', name: 'sqrt,pow,add,unit_conversion' },
       { expr: '(sin(x) + cos(y)) * 100 deg to rad', name: 'sin,cos,add,multiply,unit_conversion' },
       { expr: '(x * y + x) kg to lb', name: 'multiply,add,unit_conversion' },
+      { expr: 'abs(x^2 - y^2) mm to cm', name: 'abs,pow,subtract,unit_conversion' },
+      { expr: 'max(x, y)^2 liter to gallon', name: 'max,pow,unit_conversion' },
+      { expr: 'cbrt(x^3 + y^3) km to mile', name: 'cbrt,pow,add,unit_conversion' },
+      { expr: 'log10(abs(x * y)) degC to degF', name: 'log10,abs,multiply,unit_conversion' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     expression = selected.expr
@@ -146,12 +217,16 @@ export function genFunction(complexity?: number, size?: number) {
 
   // Simplify the expression using math.js
   let simplifiedExpression: string
+  let simplificationSucceeded = false
+  let simplificationError: string | undefined
   try {
     const node = parse(expression)
     const simplified = simplify(node)
     simplifiedExpression = simplified.toString()
+    simplificationSucceeded = true
   } catch (error) {
     simplifiedExpression = expression
+    simplificationError = error instanceof Error ? error.message : String(error)
   }
 
   const endTime = Date.now()
@@ -170,7 +245,7 @@ export function genFunction(complexity?: number, size?: number) {
   return {
     id: functionId,
     expression,
-    compactExpression: expression,
+    compactExpression: simplifiedExpression,
     simplifiedExpression,
     xCell,
     yCell,
@@ -196,14 +271,21 @@ export function genFunction(complexity?: number, size?: number) {
     readable,
     metadata: {
       generationTime: endTime - startTime,
-      estimatedCombinations: 18 * finalComplexity,
+      estimatedCombinations: finalComplexity === 1 ? 35 : finalComplexity === 2 ? 32 : 33,
       timestamp: new Date().toISOString(),
+      gridSize: actualSize,
+      simplification: {
+        succeeded: simplificationSucceeded,
+        error: simplificationError,
+      },
       spaceSavings: {
         original: expression.length,
         compact: simplifiedExpression.length,
-        savedBytes: expression.length - simplifiedExpression.length,
+        savedBytes: Math.max(0, expression.length - simplifiedExpression.length),
         savedPercentage:
-          expression.length === 0 ? 0 : ((expression.length - simplifiedExpression.length) / expression.length) * 100,
+          expression.length === 0
+            ? 0
+            : Math.max(0, ((expression.length - simplifiedExpression.length) / expression.length) * 100),
       },
     },
   }
@@ -212,12 +294,30 @@ export function genFunction(complexity?: number, size?: number) {
 export function evaluate(
   grid: number[][],
   func: { expression: string; xCell?: { row: number; col: number }; yCell?: { row: number; col: number } },
+  options?: { strictBounds?: boolean },
 ): number | string {
   try {
+    const gridRows = grid.length
+    const gridCols = grid[0]?.length || 0
+
     // Get x and y values from grid
     let x: number, y: number
 
     if (func.xCell && func.yCell) {
+      // Strict bounds checking if enabled
+      if (options?.strictBounds) {
+        if (func.xCell.row < 0 || func.xCell.row >= gridRows || func.xCell.col < 0 || func.xCell.col >= gridCols) {
+          throw new Error(
+            `xCell out of bounds: [${func.xCell.row}][${func.xCell.col}] for grid of size ${gridRows}x${gridCols}`,
+          )
+        }
+        if (func.yCell.row < 0 || func.yCell.row >= gridRows || func.yCell.col < 0 || func.yCell.col >= gridCols) {
+          throw new Error(
+            `yCell out of bounds: [${func.yCell.row}][${func.yCell.col}] for grid of size ${gridRows}x${gridCols}`,
+          )
+        }
+      }
+
       // Use specified cells
       x = grid[func.xCell.row]?.[func.xCell.col] ?? 0
       y = grid[func.yCell.row]?.[func.yCell.col] ?? 0
@@ -308,8 +408,17 @@ export function evaluate(
       }
     }
 
+    // Guard against non-numeric results before final rounding
+    if (typeof result !== 'number' || !isFinite(result)) {
+      return 0
+    }
+
     return Math.round(result * 1000) / 1000 // Round to 3 decimal places
   } catch (error) {
+    // Re-throw validation errors from strictBounds
+    if (error instanceof Error && error.message.includes('out of bounds')) {
+      throw error
+    }
     return 0
   }
 }

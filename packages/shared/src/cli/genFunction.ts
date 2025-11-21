@@ -153,6 +153,8 @@ function main() {
     totalFunctions: 0,
     totalComplexity: 0,
     uniqueFunctionsUsed: new Set<string>(),
+    uniqueExpressions: new Set<string>(),
+    expressionCounts: new Map<string, number>(),
     generationTime: 0,
     evaluationTime: 0,
   }
@@ -170,6 +172,8 @@ function main() {
     allStats.totalComplexity += func.complexity.level
     allStats.generationTime += genTime
     func.functions.unique.forEach(f => allStats.uniqueFunctionsUsed.add(f))
+    allStats.uniqueExpressions.add(func.expression)
+    allStats.expressionCounts.set(func.expression, (allStats.expressionCounts.get(func.expression) || 0) + 1)
 
     console.log(`\n🎯 Function ${i + 1}/${options.count} (Complexity: ${randomComplexity}):`)
     console.log(`  ID: ${func.id}`)
@@ -241,8 +245,18 @@ function main() {
 
   // Show final statistics
   if (options.stats || options.count > 1) {
+    const duplicates = allStats.totalFunctions - allStats.uniqueExpressions.size
+
+    // Calculate duplicate distribution: how many functions appeared X times
+    const frequencyDistribution = new Map<number, number>()
+    for (const count of allStats.expressionCounts.values()) {
+      frequencyDistribution.set(count, (frequencyDistribution.get(count) || 0) + 1)
+    }
+
     console.log(`\n📈 Generation Statistics:
   Total Functions Generated: ${allStats.totalFunctions}
+  Unique Expressions: ${allStats.uniqueExpressions.size}
+  Total Duplicated Functions (w/o x,y): ${duplicates}
   Average Complexity: ${(allStats.totalComplexity / allStats.totalFunctions).toFixed(2)}
   Unique Mathematical Functions Used: ${allStats.uniqueFunctionsUsed.size}
   Total Generation Time: ${allStats.generationTime}ms
@@ -250,8 +264,21 @@ function main() {
   Functions Per Second: ${allStats.generationTime > 0 ? (allStats.totalFunctions / (allStats.generationTime / 1000)).toFixed(2) : 'N/A (instant)'}
  `)
 
+    // Show duplicate distribution
+    if (duplicates > 0 && (options.stats || options.verbose)) {
+      console.log(`\n📊 Duplicate Distribution:`)
+      // Sort by frequency (descending)
+      const sortedFrequencies = Array.from(frequencyDistribution.entries())
+        .filter(([count]) => count > 1) // Only show duplicates
+        .sort((a, b) => b[0] - a[0]) // Sort by count descending
+
+      for (const [count, numExpressions] of sortedFrequencies) {
+        console.log(`  ${numExpressions} expression${numExpressions > 1 ? 's' : ''} appeared ${count} times`)
+      }
+    }
+
     if (options.verbose) {
-      console.log(`  Mathematical Functions Used: [${Array.from(allStats.uniqueFunctionsUsed).join(', ')}]`)
+      console.log(`\n  Mathematical Functions Used: [${Array.from(allStats.uniqueFunctionsUsed).join(', ')}]`)
     }
   }
 
