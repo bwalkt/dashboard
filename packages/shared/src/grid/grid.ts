@@ -343,7 +343,10 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'x^3 - 3*x*y + y^3', name: 'pow,multiply,subtract,add' },
       // Parameterized templates for significantly more diversity
       { expr: () => `x^${randPower()} + ${randCoeff()}*x*y + y^${randPower()}`, name: 'pow,multiply,add' },
-      { expr: () => `${randCoeff()}*x^${randPower()} - ${randCoeff()}*y^${randPower()}`, name: 'pow,multiply,subtract' },
+      {
+        expr: () => `${randCoeff()}*x^${randPower()} - ${randCoeff()}*y^${randPower()}`,
+        name: 'pow,multiply,subtract',
+      },
       { expr: () => `(${randCoeff()}*x + y) * (x - ${randCoeff()}*y)`, name: 'add,subtract,multiply' },
       { expr: () => `x^${randPower()} / ${randCoeff()} + y^${randPower()} / ${randCoeff()}`, name: 'pow,divide,add' },
       { expr: () => `sqrt(x^${randPower()}) + cbrt(y^${randPower()})`, name: 'sqrt,cbrt,pow,add' },
