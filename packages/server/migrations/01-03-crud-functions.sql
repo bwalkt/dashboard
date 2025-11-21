@@ -247,7 +247,7 @@ org_id = user_input.get('org_id', '').strip() if user_input.get('org_id') else N
 part = user_input.get('part', 'pzero').strip()
 avatar = user_input.get('avatar', '').strip() if user_input.get('avatar') else None
 email_verified = user_input.get('email_verified', False)
-c_by = user_input.get('c_by').strip() else None
+c_by = user_input.get('c_by', '').strip() if user_input.get('c_by') else None
 user_data = user_input.get('data', {}) if isinstance(user_input.get('data'), dict) else {}
 
 # Extract c_by from data.meta.c_by if provided

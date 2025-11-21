@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS pzero.global_vars (name text PRIMARY KEY, value text)
 
 -- Create ULID generation functions using pgx_ulid extension
 CREATE OR REPLACE FUNCTION pzero.gen_id () returns uuid AS $$
-    SELECT uuidv7()::pzero.uuid;
+    SELECT uuidv7()::uuid;
 $$ language sql volatile;
 
 CREATE OR REPLACE FUNCTION pzero.is_valid_email (text) returns boolean AS $$
@@ -388,6 +388,117 @@ $$ language plpgsql;
 CREATE EVENT TRIGGER on_table_creation_trigger ON ddl_command_end WHEN tag IN ('CREATE TABLE')
 EXECUTE function pzero.create_tables_post ();
 
+-- ============================================
+-- Seed Data Migration
+-- ============================================
+-- Update global vars version
+INSERT INTO
+  pzero.global_vars (name, value)
+VALUES
+  ('version', '01-01')
+ON CONFLICT (name) DO UPDATE
+SET
+  value = excluded.value;
+
+-- ============================================
+-- MMN (Mneumonic Namespace) Seeds
+-- ============================================
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_auth', 'P');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_auth', 'A');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_users', 'U');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_groups', 'G');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_orgs', 'O');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_nhs', 'N');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_sessions', 'S');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_devices', 'D');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_endpoints', 'E');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_files', 'F');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_dirs', 'DR');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_relations', 'R');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_audits', 'AD');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_thread_heads', 'TH');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_threads', 'T');
+
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_txns', 'TX');
+
+-- ============================================
+-- Schema Seeds
+-- ============================================
+INSERT INTO
+  pzero.schemas (schema)
+VALUES
+  ('pzero');
+
+-- ============================================
+-- Parts Seeds
+-- ============================================
+INSERT INTO
+  pzero.all_parts (part, name, handle)
+VALUES
+  ('pzero', 'pzero', 'pzero');
+
 CREATE TABLE pzero.all_auth (
   id uuid NOT NULL DEFAULT pzero.gen_id (),
   email pzero.email NOT NULL,
@@ -430,6 +541,10 @@ CREATE TABLE pzero.base_part (
   part pzero.valid_part NOT NULL DEFAULT 'pzero' REFERENCES pzero.all_parts (part),
   org_id uuid
 );
+INSERT INTO
+  pzero.all_auth (email, email_verified)
+VALUES
+  ('uma.krishnan@boardwalktech.com', TRUE);
 
 -- Children of org are
 -- nhs,
@@ -475,7 +590,8 @@ CREATE TABLE pzero.all_audits (
   part pzero.valid_part,
   is_del boolean DEFAULT FALSE,
   data pzero.data,
-  c_at timestamptz NOT NULL DEFAULT now() PRIMARY KEY (is_del, part, id)
+  c_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (is_del, part, id)
 ) PARTITION BY list (is_del);
 
 CREATE INDEX idx_pzero_audits_row_id ON pzero.audits (part, mmn, row_id);
