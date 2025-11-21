@@ -61,26 +61,52 @@ export class UserService {
   }
 
   /**
+   * Generate a unique handle from email (username part, max 10 chars)
+   */
+  private generateHandle(email: string): string {
+    // Extract username part from email and sanitize
+    const username = email.split("@")[0];
+    // Remove invalid characters and truncate to 10 chars
+    const handle = username.replace(/[^A-Za-z0-9._\-]/g, "").substring(0, 10);
+    return handle || "user";
+  }
+
+  /**
    * Create a new user
    */
   public async createUser(
     userData: CreateUserData,
     schema: string = "pzero",
   ): Promise<User> {
-    const result = await db.pool.query(
-      `INSERT INTO ${schema}.auth (github_id, name, email, avatar, email_verified)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
+    // Generate handle from email
+    const handle = this.generateHandle(userData.email);
+
+    // Use the create_user postgres function
+    const createResult = await db.pool.query(
+      `SELECT ${schema}.create_user($1) as result`,
       [
-        userData.github_id,
-        userData.name,
-        userData.email,
-        userData.avatar,
-        userData.email_verified ?? false,
+        JSON.stringify({
+          name: userData.name,
+          email: userData.email,
+          handle: handle,
+          avatar: userData.avatar || null,
+          email_verified: userData.email_verified ?? false,
+        }),
       ],
     );
 
-    return result.rows[0];
+    const { user_id } = createResult.rows[0].result;
+
+    // Fetch the complete user record
+    const userResult = await db.pool.query(
+      `SELECT u.*, a.email, a.email_verified
+       FROM ${schema}.all_users u
+       JOIN ${schema}.all_auth a ON u.id = a.id
+       WHERE u.id = $1`,
+      [user_id],
+    );
+
+    return userResult.rows[0];
   }
 
   /**
