@@ -217,4 +217,81 @@ describe('evaluate', () => {
     const result = evaluate(grid, divideFunc)
     expect(result).toBe(0.333) // 1/3 = 0.333... rounded to 3 decimal places
   })
+
+  it('should handle temperature conversions from degC to degF', () => {
+    const grid = [
+      [0, 100],
+      [20, 37],
+    ]
+
+    // Test 0°C to °F (freezing point)
+    const freezingFunc = { expression: '(x + 0) degC to degF', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
+    const freezingResult = evaluate(grid, freezingFunc)
+    expect(freezingResult).toBe('32 degF') // 0°C = 32°F
+
+    // Test 100°C to °F (boiling point)
+    const boilingFunc = { expression: '(y + 0) degC to degF', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
+    const boilingResult = evaluate(grid, boilingFunc)
+    expect(boilingResult).toBe('212 degF') // 100°C = 212°F
+
+    // Test 20°C to °F (room temperature)
+    const roomTempFunc = { expression: '(x + 0) degC to degF', xCell: { row: 1, col: 0 }, yCell: { row: 1, col: 1 } }
+    const roomTempResult = evaluate(grid, roomTempFunc)
+    expect(roomTempResult).toBe('68 degF') // 20°C = 68°F
+  })
+
+  it('should handle temperature conversion expressions with operations', () => {
+    const grid = [
+      [10, 5],
+      [20, 10],
+    ]
+
+    // Test addition with temperature conversion: (x + y) degC to degF
+    const addTempFunc = { expression: '(x + y) degC to degF', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
+    const addTempResult = evaluate(grid, addTempFunc)
+    // (10 + 5) = 15°C = 59°F
+    expect(addTempResult).toBe('59 degF')
+
+    // Test division with temperature conversion: (x / y) degC to degF
+    const divTempFunc = { expression: '(x / y) degC to degF', xCell: { row: 1, col: 0 }, yCell: { row: 1, col: 1 } }
+    const divTempResult = evaluate(grid, divTempFunc)
+    // (20 / 10) = 2°C = 35.6°F
+    expect(divTempResult).toBe('35.6 degF')
+  })
+
+  it('should handle other unit conversions correctly', () => {
+    const grid = [
+      [10, 5],
+      [100, 2],
+    ]
+
+    // Test inch to cm conversion
+    const inchToCmFunc = { expression: '(x + y) inch to cm', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
+    const inchToCmResult = evaluate(grid, inchToCmFunc)
+    // (10 + 5) = 15 inches = 38.1 cm
+    expect(inchToCmResult).toBe('38.1 cm')
+
+    // Test meter to feet conversion
+    const mToFtFunc = { expression: '(x / y) m to ft', xCell: { row: 1, col: 0 }, yCell: { row: 1, col: 1 } }
+    const mToFtResult = evaluate(grid, mToFtFunc)
+    // (100 / 2) = 50 m ≈ 164.042 ft
+    expect(mToFtResult).toBe('164.042 ft')
+  })
+
+  it('should correctly extract numeric values in target unit, not SI base unit', () => {
+    const grid = [
+      [2, 0],
+      [1, 0],
+    ]
+
+    // Test that 2 inches is converted correctly to 5.08 cm, not 0.0508 (which would be meters)
+    const inchFunc = { expression: '(x + 0) inch to cm', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
+    const inchResult = evaluate(grid, inchFunc)
+    expect(inchResult).toBe('5.08 cm')
+
+    // Test that 1 meter is converted correctly to 3.281 ft, not some SI base value
+    const meterFunc = { expression: '(x + 0) m to ft', xCell: { row: 1, col: 0 }, yCell: { row: 1, col: 1 } }
+    const meterResult = evaluate(grid, meterFunc)
+    expect(meterResult).toBe('3.281 ft')
+  })
 })

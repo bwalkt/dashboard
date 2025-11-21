@@ -57,18 +57,18 @@ export function getSubgrid(matrix: number[][], size: number): number[][] {
  * Generates simple mathematical expressions using x and y variables from grid.
  * Uses math.js simplify() and evaluate() for expression handling.
  *
- * @param complexity - Complexity level (default=1)
+ * @param complexity - Complexity level (default=random 1-3). Values below 1 are clamped to 1.
  *   - 1: Simple expression (e.g., x + y)
  *   - 2: Moderate expression (e.g., x^2 + y)
  *   - 3+: Complex expression (e.g., x^2 + x*y + y^2)
- * @param size - Grid size for cell references (default=10)
+ * @param size - Grid size for cell references (default=random 5-10). Must be >= 1.
  * @returns Function object with expression and metadata
  */
 export function genFunction(complexity?: number, size?: number) {
   const startTime = Date.now()
 
   const actualComplexity = complexity !== undefined ? complexity : Math.floor(Math.random() * 3) + 1
-  const actualSize = size !== undefined ? size : Math.floor(Math.random() * 6) + 5
+  const actualSize = size !== undefined ? Math.max(1, Math.floor(size)) : Math.floor(Math.random() * 6) + 5
 
   const finalComplexity = Math.max(1, actualComplexity)
 
@@ -99,7 +99,7 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: '(x - y) kg to lb', name: 'subtract,unit_conversion' },
       { expr: '(x * y) deg to rad', name: 'multiply,unit_conversion' },
       { expr: '(x / y) m to ft', name: 'divide,unit_conversion' },
-      { expr: '(x + y) celsius to fahrenheit', name: 'add,unit_conversion' },
+      { expr: '(x + y) degC to degF', name: 'add,unit_conversion' },
       { expr: '(x * y) inch to cm', name: 'multiply,unit_conversion' },
       { expr: '(x - y) deg to rad', name: 'subtract,unit_conversion' },
     ]
@@ -119,7 +119,7 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: '(x * y) deg to rad', name: 'multiply,unit_conversion' },
       { expr: 'sqrt(x + y) m to ft', name: 'sqrt,add,unit_conversion' },
       { expr: '(x^2 - y) kg to lb', name: 'pow,subtract,unit_conversion' },
-      { expr: '(x / y) celsius to fahrenheit', name: 'divide,unit_conversion' },
+      { expr: '(x / y) degC to degF', name: 'divide,unit_conversion' },
       { expr: '(x*y + x) inch to cm', name: 'multiply,add,unit_conversion' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
@@ -229,8 +229,14 @@ export function evaluate(
 
     // Handle unit conversion expressions
     if (func.expression.includes('to')) {
-      // Example: "2 inch to cm"
-      const result = mathjsEvaluate(func.expression.replace(/x/g, x.toString()).replace(/y/g, y.toString()))
+      // Use scope to evaluate expression with x and y variables
+      const scope = {
+        x,
+        y,
+        pi: Math.PI,
+        e: Math.E,
+      }
+      const result = mathjsEvaluate(func.expression, scope)
 
       // Extract numeric value and unit for consistent rounding
       if (
@@ -239,11 +245,25 @@ export function evaluate(
         'toNumber' in result &&
         typeof result.toNumber === 'function'
       ) {
-        // mathjs Unit object - extract numeric value and round to 3 decimal places
-        const numericValue = result.toNumber()
+        // mathjs Unit object - extract the target unit from the expression
+        // Expression format: "... to <targetUnit>"
+        const toMatch = func.expression.match(/to\s+(\w+)/)
+        const targetUnit = toMatch ? toMatch[1] : null
+
+        let numericValue: number
+        if (targetUnit) {
+          // Get the numeric value in the target unit
+          numericValue = result.toNumber(targetUnit)
+        } else {
+          // Fallback: parse from toString() which gives the value in the converted unit
+          const resultStr = result.toString()
+          const numMatch = resultStr.match(/^([\d.\-+e]+)/)
+          numericValue = numMatch ? parseFloat(numMatch[1]) : result.toNumber()
+        }
+
         const roundedValue = Math.round(numericValue * 1000) / 1000
 
-        // Get the unit string
+        // Get the unit string from toString()
         const unitStr = result.toString().replace(/[\d.\-+e]+\s*/, '')
         return `${roundedValue} ${unitStr}`.trim()
       }
