@@ -1,86 +1,86 @@
-import { useQuery } from '@tanstack/react-query'
-import { api } from '@/lib/api'
-import { Product } from '@/types'
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { Product } from "@/types";
 
 interface ListApiResponse {
-  success: boolean
-  records: Product[]
-  totalSize: number
-  done: boolean
+  success: boolean;
+  records: Product[];
+  totalSize: number;
+  done: boolean;
   pagination: {
-    currentPage: number
-    totalPages: number
-    limit: number
-    hasNext: boolean
-    hasPrevious: boolean
-  }
-  message?: string
+    currentPage: number;
+    totalPages: number;
+    limit: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+  message?: string;
 }
 
 interface ApiResponse {
-  success: boolean
-  record: Product
-  totalSize: number
-  message?: string
+  success: boolean;
+  record: Product;
+  totalSize: number;
+  message?: string;
 }
 
 interface PaginationParams {
-  page?: number
-  limit?: number
+  page?: number;
+  limit?: number;
 }
 
-const fetchProducts = async (params?: PaginationParams): Promise<ListApiResponse> => {
-  const queryParams = new URLSearchParams()
+export const fetchProducts = async (params?: PaginationParams): Promise<ListApiResponse> => {
+  const queryParams = new URLSearchParams();
 
-  if (params?.page) queryParams.append('page', params.page.toString())
-  if (params?.limit) queryParams.append('limit', params.limit.toString())
+  if (params?.page) queryParams.append("page", params.page.toString());
+  if (params?.limit) queryParams.append("limit", params.limit.toString());
 
-  const queryString = queryParams.toString()
-  const url = queryString ? `/salesforce/Product2/query?${queryString}` : '/salesforce/Product2/query'
+  const queryString = queryParams.toString();
+  const url = queryString ? `/salesforce/Product2/query?${queryString}` : "/salesforce/Product2/query";
 
-  const data: ListApiResponse = await api.get(url)
+  const data: ListApiResponse = await api.get(url);
 
   if (data.success && data.records) {
-    return data
+    return data;
   } else {
-    throw new Error(data.message || 'Failed to fetch products from API')
+    throw new Error(data.message || "Failed to fetch products from API");
   }
-}
+};
 
 const fetchProduct = async (productId: string): Promise<Product> => {
-  const data: ApiResponse = await api.get(`/salesforce/records/Product2/${productId}`)
+  const data: ApiResponse = await api.get(`/salesforce/records/Product2/${productId}`);
 
   if (data.success && data.record) {
-    return data.record
+    return data.record;
   } else {
-    throw new Error(data.message || 'Failed to fetch product from API')
+    throw new Error(data.message || "Failed to fetch product from API");
   }
-}
+};
 
 export const useProducts = () => {
   return useQuery({
-    queryKey: ['products'],
+    queryKey: ["products"],
     queryFn: () => fetchProducts(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
-  })
-}
+  });
+};
 
 export const useProductsPaginated = (params?: PaginationParams) => {
   return useQuery({
-    queryKey: ['products', 'paginated', params],
+    queryKey: ["products", "paginated", params],
     queryFn: () => fetchProducts(params),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
-  })
-}
+  });
+};
 
 export const useProduct = (productId: string | undefined) => {
   return useQuery({
-    queryKey: ['product', productId],
+    queryKey: ["product", productId],
     enabled: !!productId,
     queryFn: () => fetchProduct(productId as string),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
-  })
-}
+  });
+};

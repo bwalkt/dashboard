@@ -9,6 +9,7 @@ export const PUBLIC_ROUTES = [
   "/auth/login",
   "/auth/login/verify",
   "/auth/logout",
+  "/auth/callback",
   "/auth/callback/github",
   "/auth/refresh",
 

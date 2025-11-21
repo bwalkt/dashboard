@@ -1,195 +1,321 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
-import { generateAndCreateOrders } from '@/lib/generate-order'
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { generateAndCreateOrders } from "@/lib/generate-order";
 
 interface AutoGenerateConfig {
-  intervalMs?: number
-  minOrdersPerBatch?: number
-  maxOrdersPerBatch?: number
+  intervalMs?: number;
+  minOrdersPerBatch?: number;
+  maxOrdersPerBatch?: number;
 }
 
 interface AutoGenerateState {
-  isRunning: boolean
-  totalGenerated: number
-  totalSuccessful: number
-  totalFailed: number
+  isRunning: boolean;
+  totalGenerated: number;
+  totalSuccessful: number;
+  totalFailed: number;
   lastBatchResult?: {
-    count: number
-    successful: number
-    failed: number
-    timestamp: Date
+    count: number;
+    successful: number;
+    failed: number;
+    timestamp: Date;
+  };
+}
+
+type StateChangeListener = (state: AutoGenerateState) => void;
+
+/**
+ * Singleton manager for auto-generation to ensure only one instance runs globally
+ * This prevents duplicate orders when multiple components use the hook
+ */
+class AutoGenerateManager {
+  private static instance: AutoGenerateManager;
+  private intervalRef: NodeJS.Timeout | null = null;
+  private isRunning: boolean = false;
+  private isGenerating: boolean = false;
+  private state: AutoGenerateState = {
+    isRunning: false,
+    totalGenerated: 0,
+    totalSuccessful: 0,
+    totalFailed: 0,
+  };
+  private listeners: Set<StateChangeListener> = new Set();
+  private config: Required<AutoGenerateConfig> = {
+    intervalMs: 5000,
+    minOrdersPerBatch: 1,
+    maxOrdersPerBatch: 3,
+  };
+  private queryClient: any = null;
+
+  private constructor() {}
+
+  static getInstance(): AutoGenerateManager {
+    if (!AutoGenerateManager.instance) {
+      AutoGenerateManager.instance = new AutoGenerateManager();
+    }
+    return AutoGenerateManager.instance;
+  }
+
+  setQueryClient(queryClient: any) {
+    this.queryClient = queryClient;
+  }
+
+  /**
+   * Normalizes and clamps config values to ensure valid ranges:
+   * - Ensures minOrdersPerBatch is at least 1
+   * - Enforces min <= max by swapping or setting max = min when needed
+   */
+  private normalizeConfig(config: AutoGenerateConfig): Required<AutoGenerateConfig> {
+    const currentMin = config.minOrdersPerBatch ?? this.config.minOrdersPerBatch;
+    const currentMax = config.maxOrdersPerBatch ?? this.config.maxOrdersPerBatch;
+
+    // Ensure min is at least 1
+    let normalizedMin = Math.max(1, currentMin);
+
+    // Ensure max is at least 1
+    let normalizedMax = Math.max(1, currentMax);
+
+    // Enforce min <= max: if min > max, swap them or set max = min
+    if (normalizedMin > normalizedMax) {
+      normalizedMax = normalizedMin;
+    }
+
+    return {
+      intervalMs: config.intervalMs ?? this.config.intervalMs,
+      minOrdersPerBatch: normalizedMin,
+      maxOrdersPerBatch: normalizedMax,
+    };
+  }
+
+  setConfig(config: AutoGenerateConfig) {
+    this.config = this.normalizeConfig(config);
+  }
+
+  subscribe(listener: StateChangeListener): () => void {
+    this.listeners.add(listener);
+    // Immediately notify the new subscriber of current state
+    listener(this.state);
+    // Return unsubscribe function
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach((listener) => listener(this.state));
+  }
+
+  private generateRandomCount(): number {
+    // Use normalized values from config (already normalized in setConfig)
+    const min = this.config.minOrdersPerBatch;
+    const max = this.config.maxOrdersPerBatch;
+
+    // Ensure we have valid normalized values (defensive check)
+    const normalizedMin = Math.max(1, min);
+    const normalizedMax = Math.max(normalizedMin, max);
+
+    // Calculate random count using normalized values, ensuring result >= 1
+    const count = Math.floor(Math.random() * (normalizedMax - normalizedMin + 1)) + normalizedMin;
+    return Math.max(1, count);
+  }
+
+  private async triggerGeneration() {
+    // Prevent concurrent mutations - if already generating, skip this trigger
+    if (!this.isRunning || this.isGenerating) {
+      return;
+    }
+
+    this.isGenerating = true;
+    const count = this.generateRandomCount();
+
+    try {
+      const result = await generateAndCreateOrders(count);
+      const { summary } = result;
+
+      this.state = {
+        ...this.state,
+        totalGenerated: this.state.totalGenerated + count,
+        totalSuccessful: this.state.totalSuccessful + summary.successful,
+        totalFailed: this.state.totalFailed + summary.failed,
+        lastBatchResult: {
+          count,
+          successful: summary.successful,
+          failed: summary.failed,
+          timestamp: new Date(),
+        },
+      };
+
+      // Only show toast for significant failures (all orders failed)
+      if (summary.failed === count && summary.successful === 0) {
+        toast.error(`Failed to generate ${count} orders`);
+      }
+
+      // Invalidate orders query to refresh the list
+      if (this.queryClient) {
+        this.queryClient.invalidateQueries({ queryKey: ["orders"] });
+      }
+
+      this.notifyListeners();
+    } catch (error) {
+      this.state = {
+        ...this.state,
+        totalGenerated: this.state.totalGenerated + count,
+        totalFailed: this.state.totalFailed + count,
+        lastBatchResult: {
+          count,
+          successful: 0,
+          failed: count,
+          timestamp: new Date(),
+        },
+      };
+
+      // Show error toast for API failures
+      toast.error(`Failed to auto-generate ${count} orders`);
+      console.error("Auto-generation error:", error);
+      this.notifyListeners();
+    } finally {
+      this.isGenerating = false;
+    }
+  }
+
+  start() {
+    if (this.isRunning) {
+      return;
+    }
+
+    // Clear any existing interval first (safety check)
+    if (this.intervalRef) {
+      clearInterval(this.intervalRef);
+      this.intervalRef = null;
+    }
+
+    this.isRunning = true;
+    this.state = { ...this.state, isRunning: true };
+    this.notifyListeners();
+
+    // Start the interval
+    this.intervalRef = setInterval(() => {
+      this.triggerGeneration();
+    }, this.config.intervalMs);
+
+    // Trigger first generation immediately
+    this.triggerGeneration();
+
+    toast.info("Auto-order generation started");
+  }
+
+  stop() {
+    if (!this.isRunning) {
+      return;
+    }
+
+    this.isRunning = false;
+    this.state = { ...this.state, isRunning: false };
+    this.notifyListeners();
+
+    if (this.intervalRef) {
+      clearInterval(this.intervalRef);
+      this.intervalRef = null;
+    }
+
+    toast.info("Auto-order generation stopped");
+  }
+
+  toggle() {
+    if (this.isRunning) {
+      this.stop();
+    } else {
+      this.start();
+    }
+  }
+
+  reset() {
+    this.isRunning = false;
+    this.isGenerating = false;
+    this.state = {
+      isRunning: false,
+      totalGenerated: 0,
+      totalSuccessful: 0,
+      totalFailed: 0,
+    };
+
+    if (this.intervalRef) {
+      clearInterval(this.intervalRef);
+      this.intervalRef = null;
+    }
+
+    this.notifyListeners();
+    toast.info("Auto-generation statistics reset");
+  }
+
+  getState(): AutoGenerateState {
+    return this.state;
+  }
+
+  getIsGenerating(): boolean {
+    return this.isGenerating;
   }
 }
 
 /**
  * Hook for automatically generating random orders at intervals
- * Uses React Query for state management and error handling
+ * Uses a singleton manager to ensure only one instance runs globally
+ * This prevents duplicate orders when multiple components use the hook
  */
 export function useAutoGenerateOrders(config: AutoGenerateConfig = {}) {
   const {
     intervalMs = 5000, // 5 seconds
     minOrdersPerBatch = 1,
     maxOrdersPerBatch = 3,
-  } = config
+  } = config;
 
-  const [state, setState] = useState<AutoGenerateState>({
-    isRunning: false,
-    totalGenerated: 0,
-    totalSuccessful: 0,
-    totalFailed: 0,
-  })
+  const managerRef = useRef(AutoGenerateManager.getInstance());
+  const queryClient = useQueryClient();
+  const [state, setState] = useState<AutoGenerateState>(managerRef.current.getState());
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const isRunningRef = useRef(false)
-  const triggerGenerationRef = useRef<(() => void) | undefined>(undefined)
-  const queryClient = useQueryClient()
+  // Set query client and config on mount/update
+  useEffect(() => {
+    managerRef.current.setQueryClient(queryClient);
+    managerRef.current.setConfig({ intervalMs, minOrdersPerBatch, maxOrdersPerBatch });
+  }, [queryClient, intervalMs, minOrdersPerBatch, maxOrdersPerBatch]);
 
-  // Mutation for creating random orders
-  const createOrdersMutation = useMutation({
-    mutationFn: ({ count }: { count: number }) => generateAndCreateOrders(count),
-    onSuccess: (result, variables) => {
-      const { summary } = result
+  // Subscribe to state changes
+  useEffect(() => {
+    const unsubscribe = managerRef.current.subscribe((newState) => {
+      setState(newState);
+    });
+    return unsubscribe;
+  }, []);
 
-      setState(prev => ({
-        ...prev,
-        totalGenerated: prev.totalGenerated + variables.count,
-        totalSuccessful: prev.totalSuccessful + summary.successful,
-        totalFailed: prev.totalFailed + summary.failed,
-        lastBatchResult: {
-          count: variables.count,
-          successful: summary.successful,
-          failed: summary.failed,
-          timestamp: new Date(),
-        },
-      }))
-
-      // Only show toast for significant failures (all orders failed)
-      if (summary.failed === variables.count && summary.successful === 0) {
-        toast.error(`Failed to generate ${variables.count} orders`)
-      }
-
-      // Invalidate orders query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['orders'] })
-    },
-    onError: (error, variables) => {
-      setState(prev => ({
-        ...prev,
-        totalGenerated: prev.totalGenerated + variables.count,
-        totalFailed: prev.totalFailed + variables.count,
-        lastBatchResult: {
-          count: variables.count,
-          successful: 0,
-          failed: variables.count,
-          timestamp: new Date(),
-        },
-      }))
-
-      // Show error toast for API failures
-      toast.error(`Failed to auto-generate ${variables.count} orders`)
-      console.error('Auto-generation error:', error)
-    },
-    retry: 1, // Retry once on failure
-    retryDelay: 1000, // Wait 1 second before retry
-  })
-
-  // Function to generate a random number of orders
-  const generateRandomCount = useCallback(() => {
-    return Math.floor(Math.random() * (maxOrdersPerBatch - minOrdersPerBatch + 1)) + minOrdersPerBatch
-  }, [minOrdersPerBatch, maxOrdersPerBatch])
-
-  // Function to trigger order generation
-  const triggerGeneration = useCallback(() => {
-    if (!isRunningRef.current) {
-      return
-    }
-
-    const count = generateRandomCount()
-    createOrdersMutation.mutate({ count })
-  }, [generateRandomCount])
-
-  // Update the ref whenever triggerGeneration changes
-  triggerGenerationRef.current = triggerGeneration
-
-  // Start auto-generation
-  const start = useCallback(() => {
-    if (state.isRunning) return
-
-    isRunningRef.current = true
-    setState(prev => ({ ...prev, isRunning: true }))
-
-    // Start the interval
-    intervalRef.current = setInterval(() => {
-      triggerGenerationRef.current?.()
-    }, intervalMs)
-
-    // Trigger first generation immediately
-    triggerGenerationRef.current?.()
-
-    toast.info('Auto-order generation started')
-  }, [state.isRunning, intervalMs])
-
-  // Stop auto-generation
-  const stop = useCallback(() => {
-    if (!state.isRunning) return
-
-    isRunningRef.current = false
-    setState(prev => ({ ...prev, isRunning: false }))
-
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-
-    toast.info('Auto-order generation stopped')
-  }, [state.isRunning])
-
-  // Debug effect to track interval changes (removed - not needed)
-
-  // Toggle auto-generation
-  const toggle = useCallback(() => {
-    if (state.isRunning) {
-      stop()
-    } else {
-      start()
-    }
-  }, [state.isRunning, start, stop])
-
-  // Reset statistics
-  const reset = useCallback(() => {
-    isRunningRef.current = false
-    setState({
-      isRunning: false,
-      totalGenerated: 0,
-      totalSuccessful: 0,
-      totalFailed: 0,
-    })
-
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-
-    toast.info('Auto-generation statistics reset')
-  }, [])
-
-  // Cleanup on unmount
+  // Cleanup on unmount - don't stop the manager, just unsubscribe
+  // This allows other components to continue using it
   useEffect(() => {
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-    }
-  }, [])
+      // Component unmounting - just unsubscribe, don't stop the manager
+      // The manager will continue running if other components are using it
+    };
+  }, []);
 
-  // Note: Removed auto-start effect since we're using manual toggle control
-  // The enabled prop is not being used for automatic start/stop
+  const start = useCallback(() => {
+    managerRef.current.start();
+  }, []);
+
+  const stop = useCallback(() => {
+    managerRef.current.stop();
+  }, []);
+
+  const toggle = useCallback(() => {
+    managerRef.current.toggle();
+  }, []);
+
+  const reset = useCallback(() => {
+    managerRef.current.reset();
+  }, []);
 
   return {
     // State
     ...state,
-    isGenerating: createOrdersMutation.isPending,
+    isGenerating: managerRef.current.getIsGenerating(),
 
     // Actions
     start,
@@ -208,6 +334,6 @@ export function useAutoGenerateOrders(config: AutoGenerateConfig = {}) {
     },
 
     // Error handling
-    error: createOrdersMutation.error,
-  }
+    error: null, // Errors are handled in the manager
+  };
 }
