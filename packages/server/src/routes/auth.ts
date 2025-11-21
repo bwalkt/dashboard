@@ -309,7 +309,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    * POST /auth/logout
    * Logout user (invalidate tokens)
    */
-  fastify.get(
+  fastify.post(
     "/auth/logout",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {

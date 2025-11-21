@@ -142,6 +142,9 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
     } else {
       requestConfig.body = body
     }
+  } else {
+    // Remove Content-Type header when there's no body to avoid Fastify empty body error
+    delete (requestConfig.headers as Record<string, string>)['Content-Type']
   }
 
   try {
