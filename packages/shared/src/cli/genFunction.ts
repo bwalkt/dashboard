@@ -78,10 +78,10 @@ OPTIONS:
 
 COMPLEXITY:
   Complexity is randomly generated between ${MIN_COMPLEXITY} and ${MAX_COMPLEXITY}:
-    1: Simple (44 templates) - basic operations, single functions, special functions, matrix stats
-    2: Moderate (43 templates) - combinations of operations, special/bitwise functions, matrix operations
-    3: Complex (47 templates) - nested operations, multiple functions, complex matrix combinations
-    4: Complex+ (47 templates) - same as level 3
+    1: Simple (63 templates) - basic operations, single functions, special functions, matrix stats
+    2: Moderate (66 templates) - combinations of operations, special/bitwise functions, matrix operations
+    3: Complex (72 templates) - nested operations, multiple functions, complex matrix combinations
+    4: Complex+ (72 templates) - same as level 3
 
 EXAMPLES:
   pnpm genFunction                      # Generate 1 function with random complexity
@@ -101,13 +101,13 @@ MATHEMATICAL FUNCTIONS SUPPORTED:
   • Statistical Functions: mean, median, mode, variance, std (on matrix subsets)
   • Matrix Operations: m (entire matrix), mr(rows), mc(columns) with ranges/patterns
   • Unit Conversions: temperature, length, mass, angle, volume
-  • 60+ unique mathematical functions across 134 expression templates!
+  • 60+ unique mathematical functions across 201 expression templates!
 
 TEMPLATE DISTRIBUTION:
-  134 total expression templates across complexity levels:
-  • Level 1 (Simple): 44 templates - basic operations, single functions, special functions, matrix stats
-  • Level 2 (Moderate): 43 templates - two-operation combinations, special/bitwise operations, matrix operations
-  • Level 3+ (Complex): 47 templates - nested operations, multiple functions, complex matrix combinations
+  201 total expression templates across complexity levels:
+  • Level 1 (Simple): 63 templates - basic operations, single functions, special functions, matrix stats
+  • Level 2 (Moderate): 66 templates - two-operation combinations, special/bitwise operations, matrix operations
+  • Level 3+ (Complex): 72 templates - nested operations, multiple functions, complex matrix combinations
 
   With random x,y cell positions AND matrix subsetting, unique expressions scale exponentially!
 `)

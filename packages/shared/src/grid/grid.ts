@@ -122,39 +122,46 @@ export function getSubgridAt(matrix: number[][], size: number, startRow: number,
  * Examples: "1-4", "odd", "even", "1,3,5", "all"
  */
 function parseMatrixSpec(spec: string, maxIndex: number): number[] {
+  // Normalize spec by trimming whitespace
+  const normalized = spec.trim()
+
   // Handle "all"
-  if (spec === 'all') {
+  if (normalized === 'all') {
     return Array.from({ length: maxIndex }, (_, i) => i)
   }
 
   // Handle "odd" (1-indexed: 1, 3, 5, ... -> 0-indexed: 0, 2, 4, ...)
-  if (spec === 'odd') {
+  if (normalized === 'odd') {
     return Array.from({ length: maxIndex }, (_, i) => i).filter(i => i % 2 === 0)
   }
 
   // Handle "even" (1-indexed: 2, 4, 6, ... -> 0-indexed: 1, 3, 5, ...)
-  if (spec === 'even') {
+  if (normalized === 'even') {
     return Array.from({ length: maxIndex }, (_, i) => i).filter(i => i % 2 === 1)
   }
 
   // Handle range "1-4" (convert from 1-indexed to 0-indexed)
-  const rangeMatch = spec.match(/^(\d+)-(\d+)$/)
+  const rangeMatch = normalized.match(/^(\d+)-(\d+)$/)
   if (rangeMatch) {
-    const start = Math.max(0, parseInt(rangeMatch[1]) - 1)
-    const end = Math.min(maxIndex - 1, parseInt(rangeMatch[2]) - 1)
+    const start = Math.max(0, parseInt(rangeMatch[1], 10) - 1)
+    const end = Math.min(maxIndex - 1, parseInt(rangeMatch[2], 10) - 1)
+    // Guard against invalid ranges (end < start or start >= maxIndex)
+    if (end < start || start >= maxIndex) {
+      return []
+    }
     return Array.from({ length: end - start + 1 }, (_, i) => start + i)
   }
 
   // Handle list "1,3,5" (convert from 1-indexed to 0-indexed)
-  if (spec.includes(',')) {
-    return spec
+  if (normalized.includes(',')) {
+    return normalized
       .split(',')
-      .map(s => parseInt(s.trim()) - 1)
+      .map(s => parseInt(s.trim(), 10) - 1)
       .filter(i => i >= 0 && i < maxIndex)
   }
 
   // Handle single index "3" (convert from 1-indexed to 0-indexed)
-  const singleIndex = parseInt(spec) - 1
+  const singleIndex = parseInt(normalized, 10) - 1
   if (!isNaN(singleIndex) && singleIndex >= 0 && singleIndex < maxIndex) {
     return [singleIndex]
   }
@@ -182,7 +189,8 @@ export function getMatrixRows(matrix: number[][], spec: string): number[][] {
 export function getMatrixCols(matrix: number[][], spec: string): number[][] {
   const cols = matrix[0]?.length || 0
   const colIndices = parseMatrixSpec(spec, cols)
-  return colIndices.map(colIdx => matrix.map(row => row[colIdx]))
+  // Handle ragged matrices by defaulting to 0 for undefined values
+  return colIndices.map(colIdx => matrix.map(row => row[colIdx] ?? 0))
 }
 
 /**
@@ -197,9 +205,9 @@ export function flattenMatrix(matrix: number[][]): number[] {
  * Uses math.js simplify() and evaluate() for expression handling.
  *
  * @param complexity - Complexity level (default=random 1-3). Values below 1 are clamped to 1.
- *   - 1: Simple expression (44 templates: basic operations, single functions, special functions, bitwise ops, matrix stats)
- *   - 2: Moderate expression (43 templates: combinations of two operations, special functions, bitwise ops, matrix operations)
- *   - 3+: Complex expression (47 templates: nested operations, multiple functions, complex matrix combinations)
+ *   - 1: Simple expression (63 templates: basic operations, single functions, special functions, bitwise ops, matrix stats)
+ *   - 2: Moderate expression (66 templates: combinations of two operations, special functions, bitwise ops, matrix operations)
+ *   - 3+: Complex expression (72 templates: nested operations, multiple functions, complex matrix combinations)
  * @param size - Grid size for cell references (default=random 5-10). Must be a positive integer >= 1.
  * @returns Function object with expression and metadata including unique ID, expressions, complexity info, and generation statistics
  */
@@ -618,7 +626,7 @@ export function genFunction(complexity?: number, size?: number) {
     readable,
     metadata: {
       generationTime: endTime - startTime,
-      estimatedCombinations: finalComplexity === 1 ? 44 : finalComplexity === 2 ? 43 : 47,
+      estimatedCombinations: finalComplexity === 1 ? 63 : finalComplexity === 2 ? 66 : 72,
       timestamp: new Date().toISOString(),
       gridSize: actualSize,
       simplification: {
@@ -684,9 +692,9 @@ export function evaluate(
         .split(',')
         .map((s: string) => s.trim())
         .filter((s: string) => s.length > 0)
-      const size = args[0] ? parseInt(args[0]) : 5
-      const row = args[1] ? parseInt(args[1]) : 1
-      const col = args[2] ? parseInt(args[2]) : 1
+      const size = args[0] ? parseInt(args[0], 10) : 5
+      const row = args[1] ? parseInt(args[1], 10) : 1
+      const col = args[2] ? parseInt(args[2], 10) : 1
 
       const subgrid = getSubgridAt(grid, size, row, col)
       const flattened = flattenMatrix(subgrid)
@@ -710,7 +718,8 @@ export function evaluate(
     // Replace m - entire matrix (but not in unit conversions like "m to ft" or "cm", "mm", etc.)
     // Only match standalone 'm' that's used as a matrix reference
     // For det() and trace(), we need 2D matrix structure, not flattened 1D array
-    const needsMatrix2D = func.expression.includes('det(') || func.expression.includes('trace(')
+    // Use regex to handle optional whitespace: det (m) or trace (m)
+    const needsMatrix2D = /det\s*\(/.test(func.expression) || /trace\s*\(/.test(func.expression)
     processedExpression = processedExpression.replace(/\bm\b(?!\s*to)(?![a-zA-Z])/g, () => {
       if (needsMatrix2D) {
         // For det/trace, pass 2D matrix: [[1,2,3],[4,5,6],[7,8,9]]
@@ -753,7 +762,7 @@ export function evaluate(
 
         switch (funcName) {
           case 'ts.ma': {
-            const windowSize = paramsStr ? parseInt(paramsStr.trim()) : 3
+            const windowSize = paramsStr ? parseInt(paramsStr.trim(), 10) : 3
             const maResult = tsInstance.movingAverage(data, windowSize)
             result = maResult.length > 0 ? maResult[maResult.length - 1] : 0 // Return last value
             break

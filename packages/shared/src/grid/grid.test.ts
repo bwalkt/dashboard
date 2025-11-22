@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { evaluate, expandGrid, genFunction, genGrid } from './grid.js'
+import { evaluate, expandGrid, genFunction, genGrid, getMatrixCols, getMatrixRows } from './grid.js'
 
 describe('genGrid', () => {
   it('should generate a grid with default size of 5x5', () => {
@@ -421,5 +421,209 @@ describe('evaluate', () => {
     expect(evaluate(grid, validFunc, { strictBounds: true })).toBe(25) // 5 + 20
     expect(evaluate(grid, validFunc, { strictBounds: false })).toBe(25) // 5 + 20
     expect(evaluate(grid, validFunc)).toBe(25) // 5 + 20 (default)
+  })
+})
+
+describe('matrix spec parsing edge cases', () => {
+  const testGrid = [
+    [1, 2, 3, 4],
+    [5, 6, 7, 8],
+    [9, 10, 11, 12],
+    [13, 14, 15, 16],
+  ]
+
+  it('should handle specs with whitespace', () => {
+    // Spec with leading whitespace
+    const rows1 = getMatrixRows(testGrid, ' 1-2')
+    expect(rows1).toEqual([
+      [1, 2, 3, 4],
+      [5, 6, 7, 8],
+    ])
+
+    // Spec with trailing whitespace
+    const rows2 = getMatrixRows(testGrid, '1-2 ')
+    expect(rows2).toEqual([
+      [1, 2, 3, 4],
+      [5, 6, 7, 8],
+    ])
+
+    // Spec with both leading and trailing whitespace
+    const rows3 = getMatrixRows(testGrid, ' odd ')
+    expect(rows3).toEqual([
+      [1, 2, 3, 4],
+      [9, 10, 11, 12],
+    ])
+
+    // Spec with whitespace around "even"
+    const cols1 = getMatrixCols(testGrid, ' even ')
+    expect(cols1).toEqual([
+      [2, 6, 10, 14],
+      [4, 8, 12, 16],
+    ])
+
+    // Spec with whitespace around "all"
+    const rows4 = getMatrixRows(testGrid, ' all ')
+    expect(rows4).toEqual(testGrid)
+  })
+
+  it('should return empty array for invalid ranges (end < start)', () => {
+    // Range where end < start (4-1 means start=3, end=0)
+    const invalidRange = getMatrixRows(testGrid, '4-1')
+    expect(invalidRange).toEqual([])
+
+    // Another invalid range
+    const invalidRange2 = getMatrixCols(testGrid, '3-1')
+    expect(invalidRange2).toEqual([])
+  })
+
+  it('should return empty array for out-of-bounds ranges', () => {
+    // Range starting beyond the matrix size
+    const outOfBounds = getMatrixRows(testGrid, '10-12')
+    expect(outOfBounds).toEqual([])
+
+    // Range with start >= maxIndex
+    const outOfBounds2 = getMatrixCols(testGrid, '5-7')
+    expect(outOfBounds2).toEqual([])
+  })
+
+  it('should handle edge case ranges correctly', () => {
+    // Range from 1-1 (just first row)
+    const singleRow = getMatrixRows(testGrid, '1-1')
+    expect(singleRow).toEqual([[1, 2, 3, 4]])
+
+    // Range to last element
+    const toEnd = getMatrixRows(testGrid, '3-4')
+    expect(toEnd).toEqual([
+      [9, 10, 11, 12],
+      [13, 14, 15, 16],
+    ])
+
+    // Range that would partially exceed bounds (clamped)
+    const partialOverflow = getMatrixCols(testGrid, '3-10')
+    expect(partialOverflow).toEqual([
+      [3, 7, 11, 15],
+      [4, 8, 12, 16],
+    ])
+  })
+
+  it('should handle comma-separated lists with whitespace', () => {
+    // List with spaces around commas
+    const rows = getMatrixRows(testGrid, '1 , 3 , 4')
+    expect(rows).toEqual([
+      [1, 2, 3, 4],
+      [9, 10, 11, 12],
+      [13, 14, 15, 16],
+    ])
+
+    // List with inconsistent spacing
+    const cols = getMatrixCols(testGrid, '1,  2,    3')
+    expect(cols).toEqual([
+      [1, 5, 9, 13],
+      [2, 6, 10, 14],
+      [3, 7, 11, 15],
+    ])
+  })
+
+  it('should filter out invalid indices in lists', () => {
+    // List with out-of-bounds indices (0 and 5 are invalid)
+    const rows = getMatrixRows(testGrid, '0,1,2,5')
+    expect(rows).toEqual([
+      [1, 2, 3, 4],
+      [5, 6, 7, 8],
+    ]) // Only 1 and 2 are valid
+
+    // List with negative indices
+    const cols = getMatrixCols(testGrid, '-1,1,2')
+    expect(cols).toEqual([
+      [1, 5, 9, 13],
+      [2, 6, 10, 14],
+    ]) // -1 is filtered out
+  })
+
+  it('should handle single index with whitespace', () => {
+    const rows = getMatrixRows(testGrid, ' 2 ')
+    expect(rows).toEqual([[5, 6, 7, 8]])
+
+    const cols = getMatrixCols(testGrid, ' 3 ')
+    expect(cols).toEqual([[3, 7, 11, 15]])
+  })
+
+  it('should return empty array for completely invalid specs', () => {
+    // Empty spec after trim
+    const empty1 = getMatrixRows(testGrid, '   ')
+    expect(empty1).toEqual([])
+
+    // Invalid spec format
+    const invalid = getMatrixCols(testGrid, 'invalid')
+    expect(invalid).toEqual([])
+
+    // Spec that looks like a number but is invalid
+    const invalidNum = getMatrixRows(testGrid, '0')
+    expect(invalidNum).toEqual([]) // 0 is invalid (1-indexed)
+
+    // Negative single index
+    const negative = getMatrixCols(testGrid, '-1')
+    expect(negative).toEqual([])
+  })
+
+  it('should handle ragged matrices by defaulting to 0 for undefined values', () => {
+    // Create a ragged matrix where rows have different lengths
+    const raggedMatrix = [
+      [1, 2, 3, 4], // Full length row
+      [5, 6], // Short row (missing columns 2 and 3)
+      [7, 8, 9], // Medium row (missing column 3)
+      [10], // Very short row (missing columns 1, 2, and 3)
+    ]
+
+    // Test getting all columns - should fill in 0s for missing values
+    const col1 = getMatrixCols(raggedMatrix, '1')
+    expect(col1).toEqual([[1, 5, 7, 10]]) // Column 0 - all present
+
+    const col2 = getMatrixCols(raggedMatrix, '2')
+    expect(col2).toEqual([[2, 6, 8, 0]]) // Column 1 - row 3 missing (defaults to 0)
+
+    const col3 = getMatrixCols(raggedMatrix, '3')
+    expect(col3).toEqual([[3, 0, 9, 0]]) // Column 2 - rows 1 and 3 missing
+
+    const col4 = getMatrixCols(raggedMatrix, '4')
+    expect(col4).toEqual([[4, 0, 0, 0]]) // Column 3 - only row 0 has it
+
+    // Test getting multiple columns at once
+    const cols12 = getMatrixCols(raggedMatrix, '1,2')
+    expect(cols12).toEqual([
+      [1, 5, 7, 10], // Column 0
+      [2, 6, 8, 0], // Column 1
+    ])
+
+    // Test range of columns on ragged matrix
+    const cols234 = getMatrixCols(raggedMatrix, '2-4')
+    expect(cols234).toEqual([
+      [2, 6, 8, 0], // Column 1
+      [3, 0, 9, 0], // Column 2
+      [4, 0, 0, 0], // Column 3
+    ])
+
+    // Test "all" spec on ragged matrix
+    const allCols = getMatrixCols(raggedMatrix, 'all')
+    expect(allCols).toEqual([
+      [1, 5, 7, 10], // Column 0
+      [2, 6, 8, 0], // Column 1
+      [3, 0, 9, 0], // Column 2
+      [4, 0, 0, 0], // Column 3
+    ])
+
+    // Test "even" columns on ragged matrix
+    const evenCols = getMatrixCols(raggedMatrix, 'even')
+    expect(evenCols).toEqual([
+      [2, 6, 8, 0], // Column 1 (2nd column, even in 1-indexed)
+      [4, 0, 0, 0], // Column 3 (4th column, even in 1-indexed)
+    ])
+
+    // Test "odd" columns on ragged matrix
+    const oddCols = getMatrixCols(raggedMatrix, 'odd')
+    expect(oddCols).toEqual([
+      [1, 5, 7, 10], // Column 0 (1st column, odd in 1-indexed)
+      [3, 0, 9, 0], // Column 2 (3rd column, odd in 1-indexed)
+    ])
   })
 })
