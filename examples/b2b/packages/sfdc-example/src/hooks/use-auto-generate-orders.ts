@@ -1,63 +1,63 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
-import { generateAndCreateOrders } from "@/lib/generate-order";
+import { useQueryClient } from '@tanstack/react-query'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { generateAndCreateOrders } from '@/lib/generate-order'
 
 interface AutoGenerateConfig {
-  intervalMs?: number;
-  minOrdersPerBatch?: number;
-  maxOrdersPerBatch?: number;
+  intervalMs?: number
+  minOrdersPerBatch?: number
+  maxOrdersPerBatch?: number
 }
 
 interface AutoGenerateState {
-  isRunning: boolean;
-  totalGenerated: number;
-  totalSuccessful: number;
-  totalFailed: number;
+  isRunning: boolean
+  totalGenerated: number
+  totalSuccessful: number
+  totalFailed: number
   lastBatchResult?: {
-    count: number;
-    successful: number;
-    failed: number;
-    timestamp: Date;
-  };
+    count: number
+    successful: number
+    failed: number
+    timestamp: Date
+  }
 }
 
-type StateChangeListener = (state: AutoGenerateState) => void;
+type StateChangeListener = (state: AutoGenerateState) => void
 
 /**
  * Singleton manager for auto-generation to ensure only one instance runs globally
  * This prevents duplicate orders when multiple components use the hook
  */
 class AutoGenerateManager {
-  private static instance: AutoGenerateManager;
-  private intervalRef: NodeJS.Timeout | null = null;
-  private isRunning: boolean = false;
-  private isGenerating: boolean = false;
+  private static instance: AutoGenerateManager
+  private intervalRef: NodeJS.Timeout | null = null
+  private isRunning: boolean = false
+  private isGenerating: boolean = false
   private state: AutoGenerateState = {
     isRunning: false,
     totalGenerated: 0,
     totalSuccessful: 0,
     totalFailed: 0,
-  };
-  private listeners: Set<StateChangeListener> = new Set();
+  }
+  private listeners: Set<StateChangeListener> = new Set()
   private config: Required<AutoGenerateConfig> = {
     intervalMs: 5000,
     minOrdersPerBatch: 1,
     maxOrdersPerBatch: 3,
-  };
-  private queryClient: any = null;
+  }
+  private queryClient: any = null
 
   private constructor() {}
 
   static getInstance(): AutoGenerateManager {
     if (!AutoGenerateManager.instance) {
-      AutoGenerateManager.instance = new AutoGenerateManager();
+      AutoGenerateManager.instance = new AutoGenerateManager()
     }
-    return AutoGenerateManager.instance;
+    return AutoGenerateManager.instance
   }
 
   setQueryClient(queryClient: any) {
-    this.queryClient = queryClient;
+    this.queryClient = queryClient
   }
 
   /**
@@ -66,71 +66,71 @@ class AutoGenerateManager {
    * - Enforces min <= max by swapping or setting max = min when needed
    */
   private normalizeConfig(config: AutoGenerateConfig): Required<AutoGenerateConfig> {
-    const currentMin = config.minOrdersPerBatch ?? this.config.minOrdersPerBatch;
-    const currentMax = config.maxOrdersPerBatch ?? this.config.maxOrdersPerBatch;
+    const currentMin = config.minOrdersPerBatch ?? this.config.minOrdersPerBatch
+    const currentMax = config.maxOrdersPerBatch ?? this.config.maxOrdersPerBatch
 
     // Ensure min is at least 1
-    let normalizedMin = Math.max(1, currentMin);
+    let normalizedMin = Math.max(1, currentMin)
 
     // Ensure max is at least 1
-    let normalizedMax = Math.max(1, currentMax);
+    let normalizedMax = Math.max(1, currentMax)
 
     // Enforce min <= max: if min > max, swap them or set max = min
     if (normalizedMin > normalizedMax) {
-      normalizedMax = normalizedMin;
+      normalizedMax = normalizedMin
     }
 
     return {
       intervalMs: config.intervalMs ?? this.config.intervalMs,
       minOrdersPerBatch: normalizedMin,
       maxOrdersPerBatch: normalizedMax,
-    };
+    }
   }
 
   setConfig(config: AutoGenerateConfig) {
-    this.config = this.normalizeConfig(config);
+    this.config = this.normalizeConfig(config)
   }
 
   subscribe(listener: StateChangeListener): () => void {
-    this.listeners.add(listener);
+    this.listeners.add(listener)
     // Immediately notify the new subscriber of current state
-    listener(this.state);
+    listener(this.state)
     // Return unsubscribe function
     return () => {
-      this.listeners.delete(listener);
-    };
+      this.listeners.delete(listener)
+    }
   }
 
   private notifyListeners() {
-    this.listeners.forEach((listener) => listener(this.state));
+    this.listeners.forEach(listener => listener(this.state))
   }
 
   private generateRandomCount(): number {
     // Use normalized values from config (already normalized in setConfig)
-    const min = this.config.minOrdersPerBatch;
-    const max = this.config.maxOrdersPerBatch;
+    const min = this.config.minOrdersPerBatch
+    const max = this.config.maxOrdersPerBatch
 
     // Ensure we have valid normalized values (defensive check)
-    const normalizedMin = Math.max(1, min);
-    const normalizedMax = Math.max(normalizedMin, max);
+    const normalizedMin = Math.max(1, min)
+    const normalizedMax = Math.max(normalizedMin, max)
 
     // Calculate random count using normalized values, ensuring result >= 1
-    const count = Math.floor(Math.random() * (normalizedMax - normalizedMin + 1)) + normalizedMin;
-    return Math.max(1, count);
+    const count = Math.floor(Math.random() * (normalizedMax - normalizedMin + 1)) + normalizedMin
+    return Math.max(1, count)
   }
 
   private async triggerGeneration() {
     // Prevent concurrent mutations - if already generating, skip this trigger
     if (!this.isRunning || this.isGenerating) {
-      return;
+      return
     }
 
-    this.isGenerating = true;
-    const count = this.generateRandomCount();
+    this.isGenerating = true
+    const count = this.generateRandomCount()
 
     try {
-      const result = await generateAndCreateOrders(count);
-      const { summary } = result;
+      const result = await generateAndCreateOrders(count)
+      const { summary } = result
 
       this.state = {
         ...this.state,
@@ -143,19 +143,19 @@ class AutoGenerateManager {
           failed: summary.failed,
           timestamp: new Date(),
         },
-      };
+      }
 
       // Only show toast for significant failures (all orders failed)
       if (summary.failed === count && summary.successful === 0) {
-        toast.error(`Failed to generate ${count} orders`);
+        toast.error(`Failed to generate ${count} orders`)
       }
 
       // Invalidate orders query to refresh the list
       if (this.queryClient) {
-        this.queryClient.invalidateQueries({ queryKey: ["orders"] });
+        this.queryClient.invalidateQueries({ queryKey: ['orders'] })
       }
 
-      this.notifyListeners();
+      this.notifyListeners()
     } catch (error) {
       this.state = {
         ...this.state,
@@ -167,93 +167,93 @@ class AutoGenerateManager {
           failed: count,
           timestamp: new Date(),
         },
-      };
+      }
 
       // Show error toast for API failures
-      toast.error(`Failed to auto-generate ${count} orders`);
-      console.error("Auto-generation error:", error);
-      this.notifyListeners();
+      toast.error(`Failed to auto-generate ${count} orders`)
+      console.error('Auto-generation error:', error)
+      this.notifyListeners()
     } finally {
-      this.isGenerating = false;
+      this.isGenerating = false
     }
   }
 
   start() {
     if (this.isRunning) {
-      return;
+      return
     }
 
     // Clear any existing interval first (safety check)
     if (this.intervalRef) {
-      clearInterval(this.intervalRef);
-      this.intervalRef = null;
+      clearInterval(this.intervalRef)
+      this.intervalRef = null
     }
 
-    this.isRunning = true;
-    this.state = { ...this.state, isRunning: true };
-    this.notifyListeners();
+    this.isRunning = true
+    this.state = { ...this.state, isRunning: true }
+    this.notifyListeners()
 
     // Start the interval
     this.intervalRef = setInterval(() => {
-      this.triggerGeneration();
-    }, this.config.intervalMs);
+      this.triggerGeneration()
+    }, this.config.intervalMs)
 
     // Trigger first generation immediately
-    this.triggerGeneration();
+    this.triggerGeneration()
 
-    toast.info("Auto-order generation started");
+    toast.info('Auto-order generation started')
   }
 
   stop() {
     if (!this.isRunning) {
-      return;
+      return
     }
 
-    this.isRunning = false;
-    this.state = { ...this.state, isRunning: false };
-    this.notifyListeners();
+    this.isRunning = false
+    this.state = { ...this.state, isRunning: false }
+    this.notifyListeners()
 
     if (this.intervalRef) {
-      clearInterval(this.intervalRef);
-      this.intervalRef = null;
+      clearInterval(this.intervalRef)
+      this.intervalRef = null
     }
 
-    toast.info("Auto-order generation stopped");
+    toast.info('Auto-order generation stopped')
   }
 
   toggle() {
     if (this.isRunning) {
-      this.stop();
+      this.stop()
     } else {
-      this.start();
+      this.start()
     }
   }
 
   reset() {
-    this.isRunning = false;
-    this.isGenerating = false;
+    this.isRunning = false
+    this.isGenerating = false
     this.state = {
       isRunning: false,
       totalGenerated: 0,
       totalSuccessful: 0,
       totalFailed: 0,
-    };
-
-    if (this.intervalRef) {
-      clearInterval(this.intervalRef);
-      this.intervalRef = null;
     }
 
-    this.notifyListeners();
-    toast.info("Auto-generation statistics reset");
+    if (this.intervalRef) {
+      clearInterval(this.intervalRef)
+      this.intervalRef = null
+    }
+
+    this.notifyListeners()
+    toast.info('Auto-generation statistics reset')
   }
 
   getState(): AutoGenerateState {
-    return this.state;
+    return this.state
   }
 
   getIsGenerating(): boolean {
-    return this.isGenerating;
+    return this.isGenerating
   }
 }
 
@@ -267,25 +267,25 @@ export function useAutoGenerateOrders(config: AutoGenerateConfig = {}) {
     intervalMs = 5000, // 5 seconds
     minOrdersPerBatch = 1,
     maxOrdersPerBatch = 3,
-  } = config;
+  } = config
 
-  const managerRef = useRef(AutoGenerateManager.getInstance());
-  const queryClient = useQueryClient();
-  const [state, setState] = useState<AutoGenerateState>(managerRef.current.getState());
+  const managerRef = useRef(AutoGenerateManager.getInstance())
+  const queryClient = useQueryClient()
+  const [state, setState] = useState<AutoGenerateState>(managerRef.current.getState())
 
   // Set query client and config on mount/update
   useEffect(() => {
-    managerRef.current.setQueryClient(queryClient);
-    managerRef.current.setConfig({ intervalMs, minOrdersPerBatch, maxOrdersPerBatch });
-  }, [queryClient, intervalMs, minOrdersPerBatch, maxOrdersPerBatch]);
+    managerRef.current.setQueryClient(queryClient)
+    managerRef.current.setConfig({ intervalMs, minOrdersPerBatch, maxOrdersPerBatch })
+  }, [queryClient, intervalMs, minOrdersPerBatch, maxOrdersPerBatch])
 
   // Subscribe to state changes
   useEffect(() => {
-    const unsubscribe = managerRef.current.subscribe((newState) => {
-      setState(newState);
-    });
-    return unsubscribe;
-  }, []);
+    const unsubscribe = managerRef.current.subscribe(newState => {
+      setState(newState)
+    })
+    return unsubscribe
+  }, [])
 
   // Cleanup on unmount - don't stop the manager, just unsubscribe
   // This allows other components to continue using it
@@ -293,24 +293,24 @@ export function useAutoGenerateOrders(config: AutoGenerateConfig = {}) {
     return () => {
       // Component unmounting - just unsubscribe, don't stop the manager
       // The manager will continue running if other components are using it
-    };
-  }, []);
+    }
+  }, [])
 
   const start = useCallback(() => {
-    managerRef.current.start();
-  }, []);
+    managerRef.current.start()
+  }, [])
 
   const stop = useCallback(() => {
-    managerRef.current.stop();
-  }, []);
+    managerRef.current.stop()
+  }, [])
 
   const toggle = useCallback(() => {
-    managerRef.current.toggle();
-  }, []);
+    managerRef.current.toggle()
+  }, [])
 
   const reset = useCallback(() => {
-    managerRef.current.reset();
-  }, []);
+    managerRef.current.reset()
+  }, [])
 
   return {
     // State
@@ -335,5 +335,5 @@ export function useAutoGenerateOrders(config: AutoGenerateConfig = {}) {
 
     // Error handling
     error: null, // Errors are handled in the manager
-  };
+  }
 }
