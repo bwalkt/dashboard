@@ -86,3 +86,67 @@ The following functions were removed from `MATH_FUNCTIONS` because they are not 
   - Bitwise operations (bitAnd, bitOr, bitXor, leftShift, rightShift)
   - Comparison chains and logical operations
   - More complex nested combinations
+
+
+  import { genGrid, genFunction, evaluate } from '@pzero/shared'
+
+  const n = 100  // Generate 100 functions
+
+  for (let i = 0; i < n; i++) {
+    // Option 1: Everything random (complexity 1-3, size 5-10)
+    const func = genFunction()
+    const grid = genGrid(func.metadata.gridSize)  // Match the grid size
+
+    const result = evaluate(grid, func)
+    console.log(`${i + 1}. ${func.expression} = ${result}`)
+  }
+
+  Or if you want a fixed grid size but random complexity:
+
+  import { genGrid, genFunction, evaluate } from '@pzero/shared'
+
+  const n = 100
+  const gridSize = 5
+  const grid = genGrid(gridSize)  // One grid for all functions
+
+  for (let i = 0; i < n; i++) {
+    // Random complexity (1-3), fixed size
+    const func = genFunction(undefined, gridSize)
+
+    const result = evaluate(grid, func)
+    console.log(`${i + 1}. ${func.expression} = ${result}`)
+  }
+
+  More complete example with statistics:
+
+  import { genGrid, genFunction, evaluate } from '@pzero/shared'
+
+  const n = 1000
+  const uniqueExpressions = new Set()
+
+  for (let i = 0; i < n; i++) {
+    const func = genFunction()  // Random complexity
+    const grid = genGrid(func.metadata.gridSize)
+
+    const result = evaluate(grid, func)
+    uniqueExpressions.add(func.expression)
+
+    if (i < 10) {  // Show first 10
+      console.log(`${i + 1}. ${func.expression}`)
+      console.log(`   Complexity: ${func.complexity.level}`)
+      console.log(`   Result: ${result}\n`)
+    }
+  }
+
+  console.log(`\nGenerated ${n} functions`)
+  console.log(`Unique expressions: ${uniqueExpressions.size}`)
+  console.log(`Uniqueness: ${(uniqueExpressions.size / n *
+  100).toFixed(2)}%`)
+
+  Key points:
+
+  - genFunction() - random complexity (1-3), random size (5-10)
+  - genFunction(undefined, 5) - random complexity, fixed size 5
+  - genFunction(2, 5) - complexity 2, size 5
+  - Each function has func.metadata.gridSize you can use to create a
+  matching grid

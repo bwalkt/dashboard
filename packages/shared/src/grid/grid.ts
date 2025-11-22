@@ -17,6 +17,7 @@ import {
   rightLogShift,
   simplify,
   std,
+  trace,
   transpose,
   variance,
 } from 'mathjs'
@@ -193,52 +194,56 @@ export function genFunction(complexity?: number, size?: number) {
   let operations: string[] = []
 
   // Helper to get random coefficients for parameterization
-  const randCoeff = () => Math.floor(Math.random() * 5) + 1 // 1-5
-  const randSmallCoeff = () => Math.floor(Math.random() * 3) + 1 // 1-3
-  const randPower = () => Math.floor(Math.random() * 4) + 2 // 2-5
+  const randCoeff = () => Math.floor(Math.random() * 10) + 1 // 1-10
+  const randSmallCoeff = () => Math.floor(Math.random() * 5) + 1 // 1-5
+  const randPower = () => Math.floor(Math.random() * 9) + 2 // 2-10
+  const randDivisor = () => Math.floor(Math.random() * 5) + 2 // 2-6
+  const randOffset = () => Math.floor(Math.random() * 10) + 1 // 1-10
 
   if (finalComplexity === 1) {
     // Simple: basic operations, single functions, simple unit conversions
-    // Mix of fixed templates and generator functions for parameterization
+    // Heavily parameterized for maximum diversity
     const ops = [
+      // Basic operations with many coefficient variations
+      { expr: () => `${randCoeff()}*x + ${randCoeff()}*y`, name: 'multiply,add' },
+      { expr: () => `${randCoeff()}*x - ${randCoeff()}*y`, name: 'multiply,subtract' },
+      { expr: () => `${randCoeff()}*x + ${randOffset()}`, name: 'multiply,add' },
+      { expr: () => `${randCoeff()}*y - ${randOffset()}`, name: 'multiply,subtract' },
+      { expr: () => `(x + ${randOffset()}) * (y - ${randOffset()})`, name: 'add,subtract,multiply' },
+      { expr: () => `x^${randPower()}`, name: 'pow' },
+      { expr: () => `y^${randPower()}`, name: 'pow' },
+      { expr: () => `${randCoeff()}*x^${randPower()}`, name: 'multiply,pow' },
+      { expr: () => `${randCoeff()}*y^${randPower()}`, name: 'multiply,pow' },
+      { expr: () => `x / ${randDivisor()}`, name: 'divide' },
+      { expr: () => `y / ${randDivisor()}`, name: 'divide' },
+      { expr: () => `(x + y) / ${randDivisor()}`, name: 'add,divide' },
+      { expr: () => `(x - y) * ${randSmallCoeff()}`, name: 'subtract,multiply' },
+      { expr: () => `(x * y) / ${randDivisor()}`, name: 'multiply,divide' },
+      { expr: () => `${randSmallCoeff()}*x + y`, name: 'multiply,add' },
+      { expr: () => `x + ${randSmallCoeff()}*y`, name: 'add,multiply' },
+      { expr: () => `${randSmallCoeff()}*x - y`, name: 'multiply,subtract' },
+      { expr: () => `x - ${randSmallCoeff()}*y`, name: 'subtract,multiply' },
+      // Functions with parameterization
+      { expr: () => `abs(x - ${randCoeff()}*y)`, name: 'abs,subtract,multiply' },
+      { expr: () => `abs(${randCoeff()}*x - y)`, name: 'abs,multiply,subtract' },
+      { expr: () => `ceil(x / ${randDivisor()})`, name: 'ceil,divide' },
+      { expr: () => `floor(y / ${randDivisor()})`, name: 'floor,divide' },
+      { expr: () => `round((x + y) / ${randDivisor()})`, name: 'round,add,divide' },
+      { expr: () => `sqrt(x^${randPower()})`, name: 'sqrt,pow' },
+      { expr: () => `cbrt(y^${randPower()})`, name: 'cbrt,pow' },
+      { expr: () => `sqrt(${randCoeff()}*x)`, name: 'sqrt,multiply' },
+      { expr: () => `cbrt(${randCoeff()}*y)`, name: 'cbrt,multiply' },
+      // Keep some fixed for stability
       { expr: 'x + y', name: 'add' },
       { expr: 'x - y', name: 'subtract' },
       { expr: 'x * y', name: 'multiply' },
       { expr: 'x / y', name: 'divide' },
-      { expr: 'x^2', name: 'square' },
-      { expr: 'x^3', name: 'cube' },
-      { expr: 'sqrt(x)', name: 'sqrt' },
-      { expr: 'cbrt(x)', name: 'cbrt' },
-      // Parameterized templates - generate fresh expressions each time
-      { expr: () => `${randCoeff()}*x + y`, name: 'multiply,add' },
-      { expr: () => `x + ${randCoeff()}*y`, name: 'add,multiply' },
-      { expr: () => `${randCoeff()}*x - y`, name: 'multiply,subtract' },
-      { expr: () => `x - ${randCoeff()}*y`, name: 'subtract,multiply' },
-      { expr: () => `${randCoeff()}*x + ${randCoeff()}*y`, name: 'multiply,add' },
-      { expr: () => `${randCoeff()}*x - ${randCoeff()}*y`, name: 'multiply,subtract' },
-      { expr: () => `x^${randPower()}`, name: 'pow' },
-      { expr: () => `y^${randPower()}`, name: 'pow' },
-      { expr: () => `${randCoeff()}*x`, name: 'multiply' },
-      { expr: () => `${randCoeff()}*y`, name: 'multiply' },
-      { expr: () => `x / ${randCoeff()}`, name: 'divide' },
-      { expr: () => `y / ${randCoeff()}`, name: 'divide' },
-      { expr: () => `(x + y) / ${randCoeff()}`, name: 'add,divide' },
-      { expr: () => `(x - y) * ${randCoeff()}`, name: 'subtract,multiply' },
-      { expr: () => `(x * y) / ${randCoeff()}`, name: 'multiply,divide' },
-      { expr: 'abs(x - y)', name: 'abs,subtract' },
-      { expr: 'ceil(x / y)', name: 'ceil,divide' },
-      { expr: 'floor(x / y)', name: 'floor,divide' },
-      { expr: 'round(x / y)', name: 'round,divide' },
-      { expr: 'sign(x - y)', name: 'sign,subtract' },
       { expr: 'max(x, y)', name: 'max' },
       { expr: 'min(x, y)', name: 'min' },
       { expr: 'mod(x, y)', name: 'mod' },
       { expr: 'gcd(x, y)', name: 'gcd' },
       { expr: 'lcm(x, y)', name: 'lcm' },
       { expr: 'tan(x)', name: 'tan' },
-      { expr: 'asin(x / y)', name: 'asin,divide' },
-      { expr: 'acos(x / y)', name: 'acos,divide' },
-      { expr: 'atan(x / y)', name: 'atan,divide' },
       { expr: 'sinh(x)', name: 'sinh' },
       { expr: 'cosh(x)', name: 'cosh' },
       { expr: 'tanh(x)', name: 'tanh' },
@@ -263,6 +268,12 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'std(mr(odd))', name: 'std,matrix_rows' },
       { expr: 'variance(mc(even))', name: 'variance,matrix_cols' },
       { expr: 'median(mr(1-3))', name: 'median,matrix_rows' },
+      // Actual matrix operations
+      { expr: 'det(m)', name: 'det,matrix' },
+      { expr: 'trace(m)', name: 'trace,matrix' },
+      { expr: () => `abs(det(m))`, name: 'abs,det,matrix' },
+      { expr: () => `${randCoeff()}*det(m)`, name: 'multiply,det,matrix' },
+      { expr: () => `trace(m) / ${randDivisor()}`, name: 'trace,divide,matrix' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     // Handle both string expressions and generator functions
@@ -270,22 +281,25 @@ export function genFunction(complexity?: number, size?: number) {
     operations = selected.name.split(',')
   } else if (finalComplexity === 2) {
     // Moderate: combinations of two operations or functions
+    // Heavily parameterized
     const ops = [
-      { expr: 'x^2 + y', name: 'pow,add' },
-      { expr: 'x^3 - y', name: 'pow,subtract' },
-      { expr: '2*x + 3*y', name: 'multiply,add' },
-      { expr: 'x*y + x', name: 'multiply,add' },
-      // Parameterized templates for more diversity
-      { expr: () => `x^${randPower()} + y`, name: 'pow,add' },
-      { expr: () => `x^${randPower()} - y`, name: 'pow,subtract' },
+      // Parameterized power combinations
+      { expr: () => `x^${randPower()} + ${randCoeff()}*y`, name: 'pow,multiply,add' },
+      { expr: () => `${randCoeff()}*x^${randPower()} - y`, name: 'multiply,pow,subtract' },
+      { expr: () => `x^${randPower()} + y^${randPower()}`, name: 'pow,add' },
+      { expr: () => `x^${randPower()} - y^${randPower()}`, name: 'pow,subtract' },
+      { expr: () => `${randCoeff()}*x^${randPower()} + ${randCoeff()}*y^${randPower()}`, name: 'multiply,pow,add' },
+      // Parameterized combinations
       { expr: () => `${randCoeff()}*x + ${randCoeff()}*y`, name: 'multiply,add' },
       { expr: () => `${randCoeff()}*x - ${randCoeff()}*y`, name: 'multiply,subtract' },
       { expr: () => `x*y + ${randCoeff()}*x`, name: 'multiply,add' },
       { expr: () => `x*y - ${randCoeff()}*y`, name: 'multiply,subtract' },
-      { expr: () => `x^${randPower()} + y^${randPower()}`, name: 'pow,add' },
-      { expr: () => `x^${randPower()} - y^${randPower()}`, name: 'pow,subtract' },
-      { expr: () => `sqrt(x) + ${randCoeff()}*y`, name: 'sqrt,multiply,add' },
-      { expr: () => `${randCoeff()}*sqrt(x) + cbrt(y)`, name: 'sqrt,cbrt,multiply,add' },
+      { expr: () => `${randCoeff()}*x*y + ${randOffset()}`, name: 'multiply,add' },
+      { expr: () => `sqrt(x^${randPower()}) + ${randCoeff()}*y`, name: 'sqrt,pow,multiply,add' },
+      { expr: () => `${randCoeff()}*sqrt(x) + cbrt(y^${randPower()})`, name: 'sqrt,cbrt,multiply,pow,add' },
+      { expr: () => `abs(x^${randPower()}) + abs(y^${randPower()})`, name: 'abs,pow,add' },
+      { expr: () => `ceil(x/${randDivisor()}) + floor(y/${randDivisor()})`, name: 'ceil,floor,divide,add' },
+      { expr: () => `sqrt(${randCoeff()}*x^2 + ${randCoeff()}*y^2)`, name: 'sqrt,multiply,pow,add' },
       { expr: 'sin(x) + cos(y)', name: 'sin,cos,add' },
       { expr: 'tan(x) + sin(y)', name: 'tan,sin,add' },
       { expr: 'sinh(x) - cosh(y)', name: 'sinh,cosh,subtract' },
@@ -328,6 +342,12 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'variance(mr(odd)) + variance(mr(even))', name: 'variance,matrix_rows,add' },
       { expr: 'median(m) / max(m)', name: 'median,max,matrix,divide' },
       { expr: 'min(mr(all)) + max(mc(all))', name: 'min,max,matrix,add' },
+      // Matrix operations
+      { expr: 'det(m) + trace(m)', name: 'det,trace,matrix,add' },
+      { expr: 'abs(det(m)) + trace(m)', name: 'abs,det,trace,matrix,add' },
+      { expr: () => `${randCoeff()}*det(m) + ${randCoeff()}*trace(m)`, name: 'det,trace,multiply,add,matrix' },
+      { expr: () => `sqrt(abs(det(m)))`, name: 'sqrt,abs,det,matrix' },
+      { expr: () => `log(abs(det(m)) + 1)`, name: 'log,abs,det,add,matrix' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     // Handle both string expressions and generator functions
@@ -335,26 +355,59 @@ export function genFunction(complexity?: number, size?: number) {
     operations = selected.name.split(',')
   } else {
     // Complex: nested operations, multiple functions, complex expressions
+    // Maximum parameterization for highest diversity
     const ops = [
-      { expr: 'x^2 + x*y + y^2', name: 'pow,multiply,add' },
-      { expr: 'x * y * -x / (x^2)', name: 'multiply,divide,pow' },
-      { expr: '(x + y) * (x - y)', name: 'add,subtract,multiply' },
-      { expr: 'sin(x*y) + cos(x/y)', name: 'sin,cos,multiply,divide,add' },
-      { expr: 'x^3 - 3*x*y + y^3', name: 'pow,multiply,subtract,add' },
-      // Parameterized templates for significantly more diversity
+      // Heavily parameterized complex expressions
       { expr: () => `x^${randPower()} + ${randCoeff()}*x*y + y^${randPower()}`, name: 'pow,multiply,add' },
       {
         expr: () => `${randCoeff()}*x^${randPower()} - ${randCoeff()}*y^${randPower()}`,
         name: 'pow,multiply,subtract',
       },
-      { expr: () => `(${randCoeff()}*x + y) * (x - ${randCoeff()}*y)`, name: 'add,subtract,multiply' },
-      { expr: () => `x^${randPower()} / ${randCoeff()} + y^${randPower()} / ${randCoeff()}`, name: 'pow,divide,add' },
+      {
+        expr: () => `${randCoeff()}*x^${randPower()} + ${randCoeff()}*x*y + ${randCoeff()}*y^${randPower()}`,
+        name: 'pow,multiply,add',
+      },
+      {
+        expr: () => `(${randCoeff()}*x + ${randOffset()}) * (${randCoeff()}*y - ${randOffset()})`,
+        name: 'add,subtract,multiply',
+      },
+      {
+        expr: () => `x^${randPower()} / ${randDivisor()} + y^${randPower()} / ${randDivisor()}`,
+        name: 'pow,divide,add',
+      },
+      {
+        expr: () => `x^${randPower()} / ${randDivisor()} - y^${randPower()} / ${randDivisor()}`,
+        name: 'pow,divide,subtract',
+      },
       { expr: () => `sqrt(x^${randPower()}) + cbrt(y^${randPower()})`, name: 'sqrt,cbrt,pow,add' },
+      {
+        expr: () => `${randCoeff()}*sqrt(x^${randPower()}) + ${randCoeff()}*cbrt(y^${randPower()})`,
+        name: 'sqrt,cbrt,pow,multiply,add',
+      },
       { expr: () => `(x + ${randCoeff()}*y) / (x - ${randCoeff()}*y)`, name: 'add,subtract,multiply,divide' },
+      { expr: () => `(${randCoeff()}*x + y) / (x - ${randCoeff()}*y)`, name: 'add,subtract,multiply,divide' },
       { expr: () => `abs(x^${randPower()} - y^${randPower()})`, name: 'abs,pow,subtract' },
+      {
+        expr: () => `abs(${randCoeff()}*x^${randPower()} - ${randCoeff()}*y^${randPower()})`,
+        name: 'abs,pow,multiply,subtract',
+      },
       { expr: () => `max(x, y)^${randPower()} - min(x, y)^${randPower()}`, name: 'max,min,pow,subtract' },
+      {
+        expr: () => `${randCoeff()}*max(x, y)^${randPower()} + ${randCoeff()}*min(x, y)^${randPower()}`,
+        name: 'max,min,pow,multiply,add',
+      },
       { expr: () => `${randCoeff()}*log(x) + ${randCoeff()}*exp(y)`, name: 'log,exp,multiply,add' },
+      {
+        expr: () => `${randCoeff()}*log(x^${randPower()}) + ${randCoeff()}*exp(y/${randDivisor()})`,
+        name: 'log,exp,pow,divide,multiply,add',
+      },
       { expr: () => `sqrt(${randCoeff()}*x^2 + ${randCoeff()}*y^2)`, name: 'sqrt,pow,multiply,add' },
+      { expr: () => `cbrt(${randCoeff()}*x^3 + ${randCoeff()}*y^3)`, name: 'cbrt,pow,multiply,add' },
+      {
+        expr: () => `pow(abs(x), 1/${randSmallCoeff()}) + pow(abs(y), 1/${randSmallCoeff()})`,
+        name: 'pow,abs,divide,add',
+      },
+      { expr: () => `sin(x/${randDivisor()}) * cos(y/${randDivisor()})`, name: 'sin,cos,divide,multiply' },
       { expr: 'log(x) + exp(y)', name: 'log,exp,add' },
       { expr: 'log10(x^2) + log2(y^2)', name: 'log10,log2,pow,add' },
       { expr: 'sqrt(abs(x)) + cbrt(abs(y))', name: 'sqrt,cbrt,abs,add' },
@@ -403,6 +456,17 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'abs(mean(m) - median(m))', name: 'abs,mean,median,matrix,subtract' },
       { expr: 'max(mr(1-2)) - min(mr(3-4))', name: 'max,min,matrix_rows,subtract' },
       { expr: 'log(std(m) + variance(m))', name: 'log,std,variance,matrix,add' },
+      // Actual matrix operations (Level 3 - Complex)
+      { expr: 'det(m) * trace(m)', name: 'det,trace,multiply,matrix' },
+      { expr: 'abs(det(m)) * trace(m)', name: 'abs,det,trace,multiply,matrix' },
+      { expr: () => `det(m) * ${randCoeff()} + trace(m)`, name: 'det,trace,multiply,add,matrix' },
+      { expr: () => `${randCoeff()}*det(m) + mean(m)`, name: 'det,mean,multiply,add,matrix' },
+      { expr: () => `sqrt(abs(det(m))) + ${randCoeff()}*trace(m)`, name: 'sqrt,abs,det,trace,multiply,add,matrix' },
+      { expr: () => `log(abs(det(m)) + trace(m))`, name: 'log,abs,det,trace,add,matrix' },
+      { expr: () => `abs(det(m) - trace(m))`, name: 'abs,det,trace,subtract,matrix' },
+      { expr: () => `${randCoeff()}*det(m) / (trace(m) + 1)`, name: 'det,trace,multiply,divide,add,matrix' },
+      { expr: () => `pow(abs(det(m)), 1/${randSmallCoeff()}) + trace(m)`, name: 'pow,abs,det,trace,divide,add,matrix' },
+      { expr: () => `det(m) + ${randCoeff()}*mean(m) + trace(m)`, name: 'det,mean,trace,multiply,add,matrix' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     // Handle both string expressions and generator functions
@@ -541,9 +605,17 @@ export function evaluate(
 
     // Replace m - entire matrix (but not in unit conversions like "m to ft" or "cm", "mm", etc.)
     // Only match standalone 'm' that's used as a matrix reference
+    // For det() and trace(), we need 2D matrix structure, not flattened 1D array
+    const needsMatrix2D = func.expression.includes('det(') || func.expression.includes('trace(')
     processedExpression = processedExpression.replace(/\bm\b(?!\s*to)(?![a-zA-Z])/g, () => {
-      const flattened = flattenMatrix(grid)
-      return `[${flattened.join(',')}]`
+      if (needsMatrix2D) {
+        // For det/trace, pass 2D matrix: [[1,2,3],[4,5,6],[7,8,9]]
+        return `[${grid.map(row => `[${row.join(',')}]`).join(',')}]`
+      } else {
+        // For statistical functions, pass flattened 1D array: [1,2,3,4,5,6,7,8,9]
+        const flattened = flattenMatrix(grid)
+        return `[${flattened.join(',')}]`
+      }
     })
 
     // Common scope for all evaluations with safe wrappers for expensive operations
