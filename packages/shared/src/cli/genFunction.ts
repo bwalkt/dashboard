@@ -184,6 +184,10 @@ function main() {
     console.log(`\n🎯 Function ${i + 1}/${options.count} (Complexity: ${randomComplexity}):`)
     console.log(`  ID: ${func.id}`)
     console.log(`  Expression: ${func.expression}`)
+    // Show verbose form if different from expression (i.e., contains shorthand)
+    if (func.verboseExpression && func.verboseExpression !== func.expression) {
+      console.log(`  Verbose: ${func.verboseExpression}`)
+    }
     console.log(`  Simplified: ${func.simplifiedExpression}`)
     console.log(`  x = grid[${func.xCell.row}][${func.xCell.col}], y = grid[${func.yCell.row}][${func.yCell.col}]`)
 
@@ -245,6 +249,9 @@ function main() {
           console.log(`  🔄 New Function:`)
           console.log(`  ID: ${func.id}`)
           console.log(`  Expression: ${func.expression}`)
+          if (func.verboseExpression && func.verboseExpression !== func.expression) {
+            console.log(`  Verbose: ${func.verboseExpression}`)
+          }
           console.log(`  Simplified: ${func.simplifiedExpression}`)
           console.log(
             `  x = grid[${func.xCell.row}][${func.xCell.col}], y = grid[${func.yCell.row}][${func.yCell.col}]`,

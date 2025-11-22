@@ -21,7 +21,10 @@ import {
   transpose,
   variance,
 } from 'mathjs'
-import { toFullCompact } from '../utils/functionShorthand.js'
+import { SignalProcessing } from '../math/signalProcessing.js'
+import { StatisticalFunctions } from '../math/statisticalFunctions.js'
+import { TimeSeries } from '../math/timeSeries.js'
+import { toFullCompact, toFullVerbose } from '../utils/functionShorthand.js'
 
 export function genGrid(size: number = 5) {
   const min = Math.ceil(Math.random() * 100) || 1
@@ -70,6 +73,42 @@ export function getSubgrid(matrix: number[][], size: number): number[][] {
       // Use modulo to wrap around if we exceed boundaries
       const sourceRow = (startRow + i) % rows
       const sourceCol = (startCol + j) % cols
+      row.push(matrix[sourceRow][sourceCol])
+    }
+    subgrid.push(row)
+  }
+
+  return subgrid
+}
+
+/**
+ * Extract a submatrix at a specific position with wrap-around
+ * @param matrix - Input matrix
+ * @param size - Size of the square submatrix
+ * @param startRow - Starting row (1-indexed, wraps around)
+ * @param startCol - Starting column (1-indexed, wraps around)
+ * @returns Square submatrix of specified size
+ */
+export function getSubgridAt(matrix: number[][], size: number, startRow: number, startCol: number): number[][] {
+  const rows = matrix.length
+  const cols = matrix[0]?.length || 0
+
+  if (rows === 0 || cols === 0) {
+    return []
+  }
+
+  // Convert from 1-indexed to 0-indexed and wrap around
+  const row0 = (((startRow - 1) % rows) + rows) % rows
+  const col0 = (((startCol - 1) % cols) + cols) % cols
+
+  // Create subgrid with wrap-around
+  const subgrid: number[][] = []
+
+  for (let i = 0; i < size; i++) {
+    const row: number[] = []
+    for (let j = 0; j < size; j++) {
+      const sourceRow = (row0 + i) % rows
+      const sourceCol = (col0 + j) % cols
       row.push(matrix[sourceRow][sourceCol])
     }
     subgrid.push(row)
@@ -199,6 +238,38 @@ export function genFunction(complexity?: number, size?: number) {
   const randPower = () => Math.floor(Math.random() * 9) + 2 // 2-10
   const randDivisor = () => Math.floor(Math.random() * 5) + 2 // 2-6
   const randOffset = () => Math.floor(Math.random() * 10) + 1 // 1-10
+  const randFraction = () => `1/${Math.floor(Math.random() * 5) + 2}` // 1/2 to 1/6
+
+  // Helper to get random unit conversions for diversity
+  const randTempConversion = () => {
+    const conversions = ['degC to degF', 'degF to degC', 'degC to K', 'K to degC']
+    return conversions[Math.floor(Math.random() * conversions.length)]
+  }
+  const randLengthConversion = () => {
+    const conversions = [
+      'm to ft',
+      'ft to m',
+      'km to mile',
+      'mile to km',
+      'inch to cm',
+      'cm to inch',
+      'mm to cm',
+      'mm to inch',
+    ]
+    return conversions[Math.floor(Math.random() * conversions.length)]
+  }
+  const randMassConversion = () => {
+    const conversions = ['kg to lb', 'lb to kg', 'g to oz', 'oz to g']
+    return conversions[Math.floor(Math.random() * conversions.length)]
+  }
+  const randAngleConversion = () => {
+    const conversions = ['deg to rad', 'rad to deg']
+    return conversions[Math.floor(Math.random() * conversions.length)]
+  }
+  const randVolumeConversion = () => {
+    const conversions = ['liter to gallon', 'gallon to liter', 'ml to cup', 'cup to ml']
+    return conversions[Math.floor(Math.random() * conversions.length)]
+  }
 
   if (finalComplexity === 1) {
     // Simple: basic operations, single functions, simple unit conversions
@@ -247,15 +318,16 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'sinh(x)', name: 'sinh' },
       { expr: 'cosh(x)', name: 'cosh' },
       { expr: 'tanh(x)', name: 'tanh' },
-      { expr: '(x + y) inch to cm', name: 'add,unit_conversion' },
-      { expr: '(x - y) kg to lb', name: 'subtract,unit_conversion' },
-      { expr: '(x * y) deg to rad', name: 'multiply,unit_conversion' },
-      { expr: '(x / y) m to ft', name: 'divide,unit_conversion' },
-      { expr: '(x + y) degC to degF', name: 'add,unit_conversion' },
-      { expr: '(x * y) inch to cm', name: 'multiply,unit_conversion' },
-      { expr: '(x - y) deg to rad', name: 'subtract,unit_conversion' },
-      { expr: 'abs(x) mm to inch', name: 'abs,unit_conversion' },
-      { expr: 'sqrt(x) km to mile', name: 'sqrt,unit_conversion' },
+      // Randomized unit conversions
+      { expr: () => `(x + y) ${randLengthConversion()}`, name: 'add,unit_conversion' },
+      { expr: () => `(x - y) ${randMassConversion()}`, name: 'subtract,unit_conversion' },
+      { expr: () => `(x * y) ${randAngleConversion()}`, name: 'multiply,unit_conversion' },
+      { expr: () => `(x / y) ${randLengthConversion()}`, name: 'divide,unit_conversion' },
+      { expr: () => `(x + y) ${randTempConversion()}`, name: 'add,unit_conversion' },
+      { expr: () => `(x * y) ${randLengthConversion()}`, name: 'multiply,unit_conversion' },
+      { expr: () => `(x - y) ${randAngleConversion()}`, name: 'subtract,unit_conversion' },
+      { expr: () => `abs(x) ${randLengthConversion()}`, name: 'abs,unit_conversion' },
+      { expr: () => `sqrt(x) ${randLengthConversion()}`, name: 'sqrt,unit_conversion' },
       // Special functions
       { expr: 'factorial(floor(abs(x)))', name: 'factorial,floor,abs' },
       { expr: 'gamma(abs(x))', name: 'gamma,abs' },
@@ -300,34 +372,36 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: () => `abs(x^${randPower()}) + abs(y^${randPower()})`, name: 'abs,pow,add' },
       { expr: () => `ceil(x/${randDivisor()}) + floor(y/${randDivisor()})`, name: 'ceil,floor,divide,add' },
       { expr: () => `sqrt(${randCoeff()}*x^2 + ${randCoeff()}*y^2)`, name: 'sqrt,multiply,pow,add' },
-      { expr: 'sin(x) + cos(y)', name: 'sin,cos,add' },
-      { expr: 'tan(x) + sin(y)', name: 'tan,sin,add' },
-      { expr: 'sinh(x) - cosh(y)', name: 'sinh,cosh,subtract' },
-      { expr: 'x^2 - y^2', name: 'pow,subtract' },
-      { expr: 'sqrt(x^2 + y^2)', name: 'sqrt,pow,add' },
-      { expr: 'cbrt(x^3 + y^3)', name: 'cbrt,pow,add' },
-      { expr: 'abs(x) + abs(y)', name: 'abs,add' },
-      { expr: 'ceil(x) + floor(y)', name: 'ceil,floor,add' },
-      { expr: 'max(x, y) + min(x, y)', name: 'max,min,add' },
-      { expr: 'log10(x) + log10(y)', name: 'log10,add' },
-      { expr: 'log2(x) - log2(y)', name: 'log2,subtract' },
-      { expr: 'exp(x / y)', name: 'exp,divide' },
-      { expr: 'atan2(x, y)', name: 'atan2' },
-      { expr: 'hypot(x, y)', name: 'hypot' },
-      { expr: 'pow(x, y)', name: 'pow' },
-      { expr: 'log(x, y)', name: 'log' },
-      { expr: 'asinh(x / y)', name: 'asinh,divide' },
-      { expr: 'acosh(abs(x) + 1)', name: 'acosh,abs,add' },
-      { expr: 'atanh(x / y)', name: 'atanh,divide' },
-      { expr: 'fix(x / y)', name: 'fix,divide' },
-      { expr: '(x^2 + y) inch to cm', name: 'pow,add,unit_conversion' },
-      { expr: '(x * y) deg to rad', name: 'multiply,unit_conversion' },
-      { expr: 'sqrt(x + y) m to ft', name: 'sqrt,add,unit_conversion' },
-      { expr: '(x^2 - y) kg to lb', name: 'pow,subtract,unit_conversion' },
-      { expr: '(x / y) degC to degF', name: 'divide,unit_conversion' },
-      { expr: '(x*y + x) inch to cm', name: 'multiply,add,unit_conversion' },
-      { expr: 'abs(x - y) mm to cm', name: 'abs,subtract,unit_conversion' },
-      { expr: 'max(x, y) liter to gallon', name: 'max,unit_conversion' },
+      // Randomize trig functions
+      { expr: () => `${randCoeff()}*sin(x/${randDivisor()}) + cos(y)`, name: 'sin,cos,multiply,divide,add' },
+      { expr: () => `tan(x/${randDivisor()}) + ${randCoeff()}*sin(y)`, name: 'tan,sin,multiply,divide,add' },
+      { expr: () => `${randCoeff()}*sinh(x/${randDivisor()}) - cosh(y)`, name: 'sinh,cosh,multiply,divide,subtract' },
+      { expr: () => `x^${randPower()} - y^${randPower()}`, name: 'pow,subtract' },
+      { expr: () => `sqrt(x^${randPower()} + y^${randPower()})`, name: 'sqrt,pow,add' },
+      { expr: () => `cbrt(x^${randPower()} + y^${randPower()})`, name: 'cbrt,pow,add' },
+      { expr: () => `${randCoeff()}*abs(x) + abs(y)`, name: 'abs,multiply,add' },
+      { expr: () => `ceil(x/${randDivisor()}) + floor(y)`, name: 'ceil,floor,divide,add' },
+      { expr: () => `${randCoeff()}*max(x, y) + min(x, y)`, name: 'max,min,multiply,add' },
+      { expr: () => `log10(x^${randPower()}) + log10(y)`, name: 'log10,pow,add' },
+      { expr: () => `log2(x) - log2(y^${randPower()})`, name: 'log2,pow,subtract' },
+      { expr: () => `exp(x / ${randDivisor()})`, name: 'exp,divide' },
+      { expr: () => `atan2(x/${randDivisor()}, y)`, name: 'atan2,divide' },
+      { expr: () => `hypot(x, y) * ${randSmallCoeff()}`, name: 'hypot,multiply' },
+      { expr: () => `pow(x, ${randSmallCoeff()})`, name: 'pow' },
+      { expr: () => `log(x^${randPower()}, ${Math.floor(Math.random() * 8) + 2})`, name: 'log,pow' },
+      { expr: () => `asinh(x / ${randDivisor()})`, name: 'asinh,divide' },
+      { expr: () => `acosh(abs(x) + ${randOffset()})`, name: 'acosh,abs,add' },
+      { expr: () => `atanh(x / ${randDivisor()})`, name: 'atanh,divide' },
+      { expr: () => `fix(x * y) / ${randDivisor()}`, name: 'fix,multiply,divide' },
+      // Randomized unit conversions
+      { expr: () => `(x^${randPower()} + y) ${randLengthConversion()}`, name: 'pow,add,unit_conversion' },
+      { expr: () => `(x * y) ${randAngleConversion()}`, name: 'multiply,unit_conversion' },
+      { expr: () => `sqrt(x + y) ${randLengthConversion()}`, name: 'sqrt,add,unit_conversion' },
+      { expr: () => `(x^${randPower()} - y) ${randMassConversion()}`, name: 'pow,subtract,unit_conversion' },
+      { expr: () => `(x / y) ${randTempConversion()}`, name: 'divide,unit_conversion' },
+      { expr: () => `(x*y + ${randOffset()}) ${randLengthConversion()}`, name: 'multiply,add,unit_conversion' },
+      { expr: () => `abs(x - y) ${randLengthConversion()}`, name: 'abs,subtract,unit_conversion' },
+      { expr: () => `max(x, y) ${randVolumeConversion()}`, name: 'max,unit_conversion' },
       // Special functions
       { expr: 'combinations(floor(abs(x)), floor(abs(y)))', name: 'combinations,floor,abs' },
       { expr: 'permutations(floor(abs(x)), floor(abs(y)))', name: 'permutations,floor,abs' },
@@ -348,6 +422,14 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: () => `${randCoeff()}*det(m) + ${randCoeff()}*trace(m)`, name: 'det,trace,multiply,add,matrix' },
       { expr: () => `sqrt(abs(det(m)))`, name: 'sqrt,abs,det,matrix' },
       { expr: () => `log(abs(det(m)) + 1)`, name: 'log,abs,det,add,matrix' },
+      // Advanced functions (proof-of-concept) - Timeseries/Signal/Stats
+      { expr: 'ts.ma(mr(1-3), 3)', name: 'timeseries,movingAverage,matrix' },
+      { expr: 'ts.es(m(2), 0.3)', name: 'timeseries,exponentialSmoothing,matrix' },
+      { expr: 'sig.lp(mc(odd), 0.5)', name: 'signal,lowPassFilter,matrix' },
+      { expr: 'sig.f(mr(all))', name: 'signal,fft,matrix' },
+      { expr: 's.hm(m(2))', name: 'stats,harmonicMean,matrix' },
+      { expr: 's.gm(mr(even))', name: 'stats,geometricMean,matrix' },
+      { expr: 's.cor(mr(1), mr(2))', name: 'stats,correlation,matrix' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     // Handle both string expressions and generator functions
@@ -408,34 +490,36 @@ export function genFunction(complexity?: number, size?: number) {
         name: 'pow,abs,divide,add',
       },
       { expr: () => `sin(x/${randDivisor()}) * cos(y/${randDivisor()})`, name: 'sin,cos,divide,multiply' },
-      { expr: 'log(x) + exp(y)', name: 'log,exp,add' },
-      { expr: 'log10(x^2) + log2(y^2)', name: 'log10,log2,pow,add' },
-      { expr: 'sqrt(abs(x)) + cbrt(abs(y))', name: 'sqrt,cbrt,abs,add' },
-      { expr: 'sin(x)^2 + cos(x)^2', name: 'sin,cos,pow,add' },
-      { expr: 'tan(x/y) + atan(y/x)', name: 'tan,atan,divide,add' },
-      { expr: 'sinh(x) * cosh(y)', name: 'sinh,cosh,multiply' },
-      { expr: 'asinh(x) + acosh(abs(y) + 1)', name: 'asinh,acosh,abs,add' },
-      { expr: 'max(x^2, y^2) - min(x, y)', name: 'max,min,pow,subtract' },
-      { expr: 'ceil(x/y) + floor(y/x)', name: 'ceil,floor,divide,add' },
-      { expr: 'abs(x - y) / max(x, y)', name: 'abs,max,subtract,divide' },
-      { expr: 'gcd(x, y) + lcm(x, y)', name: 'gcd,lcm,add' },
-      { expr: 'mod(x^2, y) + mod(y^2, x)', name: 'mod,pow,add' },
-      { expr: 'sign(x) * abs(y) + sign(y) * abs(x)', name: 'sign,abs,multiply,add' },
-      { expr: 'hypot(x, y) + sqrt(x*y)', name: 'hypot,sqrt,multiply,add' },
-      { expr: 'pow(abs(x), 1/3) + pow(abs(y), 1/2)', name: 'pow,abs,divide,add' },
-      { expr: 'log(x^2 + y^2, 10)', name: 'log,pow,add' },
-      { expr: 'exp(x/100) * exp(y/100)', name: 'exp,divide,multiply' },
-      { expr: 'atan2(sin(x), cos(y))', name: 'atan2,sin,cos' },
-      { expr: 'fix(x * y) / ceil(x + y)', name: 'fix,ceil,multiply,add,divide' },
-      { expr: 'round(sqrt(x^2 + y^2))', name: 'round,sqrt,pow,add' },
-      { expr: '(x^2 + y^2) inch to cm', name: 'pow,add,unit_conversion' },
-      { expr: 'sqrt(x^2 + y^2) m to ft', name: 'sqrt,pow,add,unit_conversion' },
-      { expr: '(x + y) deg to rad', name: 'add,unit_conversion' },
-      { expr: '(x * y + x) kg to lb', name: 'multiply,add,unit_conversion' },
-      { expr: 'abs(x^2 - y^2) mm to cm', name: 'abs,pow,subtract,unit_conversion' },
-      { expr: 'max(x, y)^2 liter to gallon', name: 'max,pow,unit_conversion' },
-      { expr: 'cbrt(x^3 + y^3) km to mile', name: 'cbrt,pow,add,unit_conversion' },
-      { expr: '(x + y) degC to degF', name: 'add,unit_conversion' },
+      // Randomize static templates to reduce duplicates
+      { expr: () => `${randCoeff()}*log(x) + exp(y/${randDivisor()})`, name: 'log,exp,multiply,divide,add' },
+      { expr: () => `log10(x^${randPower()}) + log2(y^${randPower()})`, name: 'log10,log2,pow,add' },
+      { expr: () => `${randCoeff()}*sqrt(abs(x)) + cbrt(abs(y))`, name: 'sqrt,cbrt,abs,multiply,add' },
+      { expr: () => `sin(x/${randDivisor()})^${randPower()} + cos(x)^2`, name: 'sin,cos,divide,pow,add' },
+      { expr: () => `tan(x/y) + ${randCoeff()}*atan(y/x)`, name: 'tan,atan,divide,multiply,add' },
+      { expr: () => `${randCoeff()}*sinh(x/${randDivisor()}) * cosh(y)`, name: 'sinh,cosh,divide,multiply' },
+      { expr: () => `asinh(x/${randDivisor()}) + acosh(abs(y) + ${randOffset()})`, name: 'asinh,acosh,abs,divide,add' },
+      { expr: () => `max(x^${randPower()}, y^2) - ${randCoeff()}*min(x, y)`, name: 'max,min,pow,multiply,subtract' },
+      { expr: () => `ceil(x/y) + floor(y/x) * ${randSmallCoeff()}`, name: 'ceil,floor,divide,multiply,add' },
+      { expr: () => `abs(x - y) / (max(x, y) + ${randOffset()})`, name: 'abs,max,subtract,divide,add' },
+      { expr: () => `${randCoeff()}*gcd(x, y) + lcm(x, y)`, name: 'gcd,lcm,multiply,add' },
+      { expr: () => `mod(x^${randPower()}, y) + mod(y^2, x)`, name: 'mod,pow,add' },
+      { expr: () => `${randCoeff()}*sign(x) * abs(y) + sign(y) * abs(x)`, name: 'sign,abs,multiply,add' },
+      { expr: () => `hypot(x, y) + ${randCoeff()}*sqrt(x*y)`, name: 'hypot,sqrt,multiply,add' },
+      { expr: () => `pow(abs(x), ${randFraction()}) + pow(abs(y), ${randFraction()})`, name: 'pow,abs,divide,add' },
+      { expr: () => `log(x^${randPower()} + y^2, ${Math.floor(Math.random() * 8) + 2})`, name: 'log,pow,add' },
+      { expr: () => `exp(x/${randDivisor() * 10}) * exp(y/${randDivisor() * 10})`, name: 'exp,divide,multiply' },
+      { expr: () => `atan2(sin(x/${randDivisor()}), cos(y))`, name: 'atan2,sin,cos,divide' },
+      { expr: () => `fix(x * y) / (ceil(x + y) + ${randOffset()})`, name: 'fix,ceil,multiply,add,divide' },
+      { expr: () => `round(sqrt(x^${randPower()} + y^2))`, name: 'round,sqrt,pow,add' },
+      // Randomized unit conversions
+      { expr: () => `(x^${randPower()} + y^2) ${randLengthConversion()}`, name: 'pow,add,unit_conversion' },
+      { expr: () => `sqrt(x^${randPower()} + y^2) ${randLengthConversion()}`, name: 'sqrt,pow,add,unit_conversion' },
+      { expr: () => `(x + y) ${randAngleConversion()}`, name: 'add,unit_conversion' },
+      { expr: () => `(x * y + ${randOffset()}) ${randMassConversion()}`, name: 'multiply,add,unit_conversion' },
+      { expr: () => `abs(x^${randPower()} - y^2) ${randLengthConversion()}`, name: 'abs,pow,subtract,unit_conversion' },
+      { expr: () => `max(x, y)^${randPower()} ${randVolumeConversion()}`, name: 'max,pow,unit_conversion' },
+      { expr: () => `cbrt(x^${randPower()} + y^3) ${randLengthConversion()}`, name: 'cbrt,pow,add,unit_conversion' },
+      { expr: () => `(${randCoeff()}*x + y) ${randTempConversion()}`, name: 'multiply,add,unit_conversion' },
       // Special functions
       { expr: 'factorial(floor(abs(x))) + factorial(floor(abs(y)))', name: 'factorial,floor,abs,add' },
       { expr: 'combinations(floor(abs(x)+abs(y)), floor(abs(y)))', name: 'combinations,floor,abs,add' },
@@ -501,9 +585,13 @@ export function genFunction(complexity?: number, size?: number) {
   const uniqueFunctions = [...new Set(operations)]
   const readable = `Expression: ${expression} with x=grid[${xCell.row}][${xCell.col}], y=grid[${yCell.row}][${yCell.col}]`
 
+  // Generate verbose form for shorthand functions (ts.ma -> timeseries.movingAverage)
+  const verboseExpression = toFullVerbose(expression)
+
   return {
     id: functionId,
     expression,
+    verboseExpression,
     compactExpression: simplifiedExpression,
     simplifiedExpression,
     xCell,
@@ -589,6 +677,22 @@ export function evaluate(
     // Parse and replace matrix references in expression
     let processedExpression = func.expression
 
+    // Replace m(size, row, col) - submatrix at specific position (1-indexed, with defaults)
+    // Examples: m() = 5x5 at (1,1), m(3) = 3x3 at (1,1), m(3, 2, 1) = 3x3 at (2,1)
+    processedExpression = processedExpression.replace(/\bm\(([^)]*)\)/g, (match, params) => {
+      const args = params
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0)
+      const size = args[0] ? parseInt(args[0]) : 5
+      const row = args[1] ? parseInt(args[1]) : 1
+      const col = args[2] ? parseInt(args[2]) : 1
+
+      const subgrid = getSubgridAt(grid, size, row, col)
+      const flattened = flattenMatrix(subgrid)
+      return `[${flattened.join(',')}]`
+    })
+
     // Replace mr(spec) - matrix rows
     processedExpression = processedExpression.replace(/mr\(([^)]+)\)/g, (match, spec) => {
       const rows = getMatrixRows(grid, spec)
@@ -617,6 +721,82 @@ export function evaluate(
         return `[${flattened.join(',')}]`
       }
     })
+
+    // Handle shorthand functions (proof-of-concept: ts.ma, ts.es, sig.lp, sig.f, s.hm, s.gm, s.cor)
+    // These need to be evaluated before mathjs since they're not mathjs functions
+    const tsInstance = new TimeSeries()
+    const sigInstance = new SignalProcessing()
+    const statsInstance = new StatisticalFunctions()
+
+    // Check if expression contains shorthand functions we need to handle
+    if (
+      processedExpression.includes('ts.') ||
+      processedExpression.includes('sig.') ||
+      processedExpression.includes('s.')
+    ) {
+      // Extract the data array from the processed expression and evaluate the shorthand function
+      // Pattern: shorthandFunc([...data...], ...params)
+      const shorthandMatch = processedExpression.match(
+        /(ts\.ma|ts\.es|sig\.lp|sig\.f|s\.hm|s\.gm|s\.cor)\(\[([^\]]+)\](?:,\s*(.+))?\)/,
+      )
+
+      if (shorthandMatch) {
+        const funcName = shorthandMatch[1]
+        const dataStr = shorthandMatch[2]
+        const paramsStr = shorthandMatch[3]
+
+        // Parse data array
+        const data = dataStr.split(',').map(v => parseFloat(v.trim()))
+
+        // Call the appropriate function
+        let result: number | { real: number[]; imaginary: number[] } = 0
+
+        switch (funcName) {
+          case 'ts.ma': {
+            const windowSize = paramsStr ? parseInt(paramsStr.trim()) : 3
+            const maResult = tsInstance.movingAverage(data, windowSize)
+            result = maResult.length > 0 ? maResult[maResult.length - 1] : 0 // Return last value
+            break
+          }
+          case 'ts.es': {
+            const alpha = paramsStr ? parseFloat(paramsStr.trim()) : 0.3
+            const esResult = tsInstance.exponentialSmoothing(data, alpha)
+            result = esResult.length > 0 ? esResult[esResult.length - 1] : 0 // Return last value
+            break
+          }
+          case 'sig.lp': {
+            const cutoff = paramsStr ? parseFloat(paramsStr.trim()) : 0.5
+            const lpResult = sigInstance.lowPassFilter(data, cutoff)
+            result = lpResult.length > 0 ? lpResult[lpResult.length - 1] : 0 // Return last value
+            break
+          }
+          case 'sig.f': {
+            const fftResult = sigInstance.fft(data)
+            // Return magnitude of first frequency component
+            result = Math.sqrt(fftResult.real[0] ** 2 + fftResult.imaginary[0] ** 2)
+            break
+          }
+          case 's.hm': {
+            result = statsInstance.harmonicMean(data)
+            break
+          }
+          case 's.gm': {
+            result = statsInstance.geometricMean(data)
+            break
+          }
+          case 's.cor': {
+            // For correlation, we need two arrays - split the data in half
+            const mid = Math.floor(data.length / 2)
+            const arr1 = data.slice(0, mid)
+            const arr2 = data.slice(mid)
+            result = arr1.length > 0 && arr2.length > 0 ? statsInstance.correlation(arr1, arr2) : 0
+            break
+          }
+        }
+
+        return typeof result === 'number' ? Math.round(result * 1000) / 1000 : 0
+      }
+    }
 
     // Common scope for all evaluations with safe wrappers for expensive operations
     // Save references to original functions to avoid recursion
