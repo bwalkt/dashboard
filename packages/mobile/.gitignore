@@ -4,6 +4,7 @@
 
 # Xcode
 #
+*.zip
 .claude
 build/
 *.pbxuser

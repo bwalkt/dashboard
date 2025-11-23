@@ -1,5 +1,5 @@
 import type { Endpoint } from '@pzero/shared/pzero'
-import { uuid } from '@pzero/shared/uuid'
+import { normalizeBleUuid, uuid } from '@pzero/shared/uuid'
 import { NativeModules, PermissionsAndroid, Platform } from 'react-native'
 import { BleManager, type State } from 'react-native-ble-plx'
 
@@ -16,10 +16,11 @@ interface BLEPeripheralNativeModule {
 /**
  * BLE Service UUIDs
  * These should match between mobile and verifier
+ * Note: UUIDs are normalized (no dashes) to match BLE library behavior (@abandonware/noble)
  */
-export const BLE_SERVICE_UUID = '550e8400-e29b-41d4-a716-446655440000'
-export const BLE_CHARACTERISTIC_GET_ENDPOINTS = '550e8400-e29b-41d4-a716-446655440001'
-export const BLE_CHARACTERISTIC_GET_TOKEN = '550e8400-e29b-41d4-a716-446655440002'
+export const BLE_SERVICE_UUID = normalizeBleUuid('550e8400-e29b-41d4-a716-446655440000')
+export const BLE_CHARACTERISTIC_GET_ENDPOINTS = normalizeBleUuid('550e8400-e29b-41d4-a716-446655440001')
+export const BLE_CHARACTERISTIC_GET_TOKEN = normalizeBleUuid('550e8400-e29b-41d4-a716-446655440002')
 
 /**
  * BLE Message Types

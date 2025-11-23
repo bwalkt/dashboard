@@ -519,7 +519,7 @@ This setup gives you:
 
   Implementation Steps:
 
-⏺ Day 1-2: Add Centrifuge Server
+⏺ Step 1-2: Add Centrifuge Server
 
 # Install Centrifuge
 
@@ -529,7 +529,7 @@ npm install centrifuge
 
 # Configure basic WebSocket + gRPC
 
-Day 3: Auth Integration Bridge
+Step 3: Auth Integration Bridge
 // Add single endpoint to your existing Fastify server
 app.post('/centrifuge/connect', async (req, reply) => {
 // Reuse your existing auth validation logic
@@ -537,10 +537,10 @@ const user = await authService.verifyAccessToken(req.headers.authorization)
 return { result: { user: user.id.toString() } }
 })
 
-Day 4: gRPC Service
+Step 4: gRPC Service
 // Add gRPC handlers to Centrifuge for Envoy ext_proc
 // Move complex header validation from middleware to gRPC
 
-Day 5: Frontend Integration
+Step 5: Frontend Integration
 // Update frontend to connect to Centrifuge for real-time
 // Keep all existing HTTP API calls to Fastify unchanged
