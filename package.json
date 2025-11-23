@@ -34,7 +34,10 @@
     "overrides": {
       "esbuild": "^0.25.0",
       "metro-config": "0.82.5",
-      "vite": ">=7.1.11"
+      "vite": ">=7.1.11",
+      "react": "19.1.1",
+      "react-test-renderer": "19.1.1",
+      "react-native-renderer": "19.1.1"
     },
     "ignoredBuiltDependencies": [
       "core-js",

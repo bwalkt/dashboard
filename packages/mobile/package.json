@@ -7,6 +7,8 @@
     "ios": "rvm use 3.1.0 && react-native run-ios",
     "clean:ios": "rm -rf ios/build; rm -rf ios/Pods; rvm use 3.1.0; cd ios; pod install --clean-install && rm -rf ~/Library/Developer/Xcode/DerivedData/*pzero* && cd ..",
     "build:ios": "cd ios && xcodebuild -workspace pzero.xcworkspace -scheme pzero -configuration Release -archivePath build/mobile.xcarchive -destination \"generic/platform=iOS\" archive CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO",
+    "testflight": "cd ios && bundle exec fastlane beta",
+    "testflight:build": "cd ios && bundle exec fastlane build_only",
     "copy-icons": "node scripts/copy-icons.js",
     "lint:fix": "biome check --write .",
     "start": "react-native start --reset-cache",

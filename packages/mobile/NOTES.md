@@ -33,3 +33,15 @@ https://github.com/garg-lucifer/react-native-simcard-info
   - All privacy descriptions included
   - App icons fixed (no alpha channel)
   - Signed with App Store distribution certificate
+
+
+s, app icons, bundle ID, signing)
+
+  Next steps when you get the .p8 file:
+  1. Place the .p8 file in a secure location (e.g.,
+  ~/.appstoreconnect/private_keys/)
+  2. Update the Appfile with:
+    - Key ID
+    - Issuer ID
+    - Path to .p8 file
+  3. Then fastlane beta will build and upload automatically without any prompts
