@@ -67,8 +67,8 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = ({ navig
     setIsLoading(true)
     try {
       // Call the backend SMS verification endpoint
-      await api.post('/sms/verify', {
-        phoneNumber: phoneNumber,
+      await api.post('/sms/verify/confirm', {
+        phone: phoneNumber,
         code: code,
       })
 
@@ -111,8 +111,8 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = ({ navig
     setIsResending(true)
     try {
       // Call the backend to resend the SMS code
-      await api.post('/sms/send', {
-        phoneNumber: phoneNumber,
+      await api.post('/sms/verify/resend', {
+        phone: phoneNumber,
       })
 
       setCode('')

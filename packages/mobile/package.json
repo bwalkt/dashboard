@@ -11,7 +11,7 @@
     "testflight:build": "cd ios && bundle exec fastlane build_only",
     "copy-icons": "node scripts/copy-icons.js",
     "lint:fix": "biome check --write .",
-    "start": "react-native start --reset-cache",
+    "start": "REACT_NATIVE_NO_WATCHMAN=1 react-native start --reset-cache",
     "test": "jest"
   },
   "dependencies": {

@@ -76,6 +76,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const [previousData, setPreviousData] = useState<FormData>(formData)
   const [errors, setErrors] = useState<FormErrors>({})
   const [isLoading, setIsLoading] = useState(false)
+
+  // Phone verification state
   const [isPhoneVerified, setIsPhoneVerified] = useState(false)
   const [isSendingCode, setIsSendingCode] = useState(false)
   const [showVerificationCode, setShowVerificationCode] = useState(false)
@@ -83,6 +85,16 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const [isVerifyingCode, setIsVerifyingCode] = useState(false)
   const [verificationAttempts, setVerificationAttempts] = useState(0)
   const [isVerificationLocked, setIsVerificationLocked] = useState(false)
+
+  // Email verification state
+  const [isEmailVerified, setIsEmailVerified] = useState(false)
+  const [isSendingEmailCode, setIsSendingEmailCode] = useState(false)
+  const [showEmailVerificationCode, setShowEmailVerificationCode] = useState(false)
+  const [emailVerificationCode, setEmailVerificationCode] = useState('')
+  const [isVerifyingEmailCode, setIsVerifyingEmailCode] = useState(false)
+  const [emailVerificationAttempts, setEmailVerificationAttempts] = useState(0)
+  const [isEmailVerificationLocked, setIsEmailVerificationLocked] = useState(false)
+
   const { DevicesStore } = stores
   // Use reactive Zustand store
 
@@ -92,6 +104,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const [codeFieldProps, getCellOnLayoutHandler] = useClearByFocusCell({
     value: verificationCode,
     setValue: setVerificationCode,
+  })
+
+  const emailCodeFieldRef = useBlurOnFulfill({ value: emailVerificationCode, cellCount: CELL_COUNT })
+  const [emailCodeFieldProps, getEmailCellOnLayoutHandler] = useClearByFocusCell({
+    value: emailVerificationCode,
+    setValue: setEmailVerificationCode,
   })
 
   useEffect(() => {
@@ -108,6 +126,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     }
   }, [verificationCode])
 
+  useEffect(() => {
+    if (emailVerificationCode.length === CELL_COUNT) {
+      handleVerifyEmailCode()
+    }
+  }, [emailVerificationCode])
+
   const handleResetSettings = () => {
     setFormData(previousData)
     setErrors({})
@@ -121,6 +145,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       let classificationType = SettingsStore.getItem(settingsKeys.classificationType) || ''
       const isPrimary = SettingsStore.getItem(settingsKeys.isPrimary) || false
       const phoneVerified = SettingsStore.getItem(settingsKeys.phoneVerified) || false
+      const emailVerified = SettingsStore.getItem(settingsKeys.emailVerified) || false
       // Auto-set classification based on email if classification is empty or unknown
       if (email && (!classificationType || classificationType === 'unknown')) {
         const isBusiness = isBusinessEmail(email)
@@ -135,6 +160,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         isPrimary: isPrimary as boolean,
       })
       setIsPhoneVerified(phoneVerified as boolean)
+      setIsEmailVerified(emailVerified as boolean)
     } catch (error) {
       console.error('Error loading settings:', error)
     }
@@ -247,6 +273,20 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       // Clear the phoneVerified flag in storage
       SettingsStore.setItem({
         key: settingsKeys.phoneVerified,
+        data: false,
+      })
+    }
+
+    // Reset email verification state when the email changes
+    if (field === 'email' && typeof value === 'string' && value !== formData.email) {
+      setIsEmailVerified(false)
+      setShowEmailVerificationCode(false)
+      setEmailVerificationCode('')
+      setEmailVerificationAttempts(0)
+      setIsEmailVerificationLocked(false)
+      // Clear the emailVerified flag in storage
+      SettingsStore.setItem({
+        key: settingsKeys.emailVerified,
         data: false,
       })
     }
@@ -364,8 +404,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     setIsSendingCode(true)
     try {
       // Send verification code via SMS
-      await api.post('/sms/send', {
-        phoneNumber: formData.phoneNumber,
+      await api.post('/sms/verify', {
+        phone: formData.phoneNumber,
       })
 
       // Reset verification attempts when sending new code
@@ -406,8 +446,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     setIsVerifyingCode(true)
     try {
       // Verify the SMS code with the backend
-      await api.post('/sms/verify', {
-        phoneNumber: formData.phoneNumber,
+      await api.post('/sms/verify/confirm', {
+        phone: formData.phoneNumber,
         code: verificationCode,
       })
 
@@ -453,8 +493,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const handleResendCode = async () => {
     setIsSendingCode(true)
     try {
-      await api.post('/sms/send', {
-        phoneNumber: formData.phoneNumber,
+      await api.post('/sms/verify/resend', {
+        phone: formData.phoneNumber,
       })
 
       // Reset attempts when resending
@@ -468,6 +508,125 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       Alert.alert(labels.error, errorMessage)
     } finally {
       setIsSendingCode(false)
+    }
+  }
+
+  const handleVerifyEmail = async () => {
+    // Validate email first
+    if (!formData.email || formData.email.trim() === '') {
+      Alert.alert(labels.error, 'Please enter an email address first')
+      return
+    }
+
+    setIsSendingEmailCode(true)
+    try {
+      // Send verification code via email using /auth/register endpoint
+      await api.post('/auth/register', {
+        email: formData.email,
+        name: formData.nickName || formData.email.split('@')[0],
+      })
+
+      // Reset verification attempts when sending new code
+      setShowEmailVerificationCode(true)
+      setEmailVerificationCode('')
+      setEmailVerificationAttempts(0)
+      setIsEmailVerificationLocked(false)
+      Alert.alert(labels.success, 'Verification code sent to your email')
+    } catch (error: any) {
+      console.error('Send email error:', error)
+      const errorMessage = error?.message || 'Failed to send verification code. Please try again.'
+      Alert.alert(labels.error, errorMessage)
+    } finally {
+      setIsSendingEmailCode(false)
+    }
+  }
+
+  const handleVerifyEmailCode = async () => {
+    if (emailVerificationCode.length !== CELL_COUNT) {
+      return
+    }
+
+    if (isEmailVerificationLocked) {
+      Alert.alert('Verification Locked', 'Too many failed attempts. Please request a new verification code.', [
+        {
+          text: 'OK',
+          onPress: () => {
+            setShowEmailVerificationCode(false)
+            setEmailVerificationCode('')
+            setEmailVerificationAttempts(0)
+            setIsEmailVerificationLocked(false)
+          },
+        },
+      ])
+      return
+    }
+
+    setIsVerifyingEmailCode(true)
+    try {
+      // Verify the email code with the backend
+      await api.post('/auth/register/verify', {
+        email: formData.email,
+        code: emailVerificationCode,
+      })
+
+      // Mark email as verified
+      SettingsStore.setItem({
+        key: settingsKeys.emailVerified,
+        data: true,
+      })
+      setIsEmailVerified(true)
+      setShowEmailVerificationCode(false)
+      setEmailVerificationCode('')
+      setEmailVerificationAttempts(0)
+
+      Alert.alert(labels.success, 'Email address verified successfully!')
+    } catch (error: any) {
+      console.error('Email verification error:', error)
+      const newAttempts = emailVerificationAttempts + 1
+      setEmailVerificationAttempts(newAttempts)
+      setEmailVerificationCode('')
+
+      if (newAttempts >= MAX_VERIFICATION_ATTEMPTS) {
+        setIsEmailVerificationLocked(true)
+        Alert.alert('Verification Locked', 'Too many failed attempts. Please request a new verification code.', [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowEmailVerificationCode(false)
+              setEmailVerificationAttempts(0)
+              setIsEmailVerificationLocked(false)
+            },
+          },
+        ])
+      } else {
+        const remainingAttempts = MAX_VERIFICATION_ATTEMPTS - newAttempts
+        const errorMessage = error?.message || 'Invalid or expired verification code. Please try again.'
+        Alert.alert(labels.error, `${errorMessage}\n\nAttempts remaining: ${remainingAttempts}`)
+      }
+    } finally {
+      setIsVerifyingEmailCode(false)
+    }
+  }
+
+  const handleResendEmailCode = async () => {
+    setIsSendingEmailCode(true)
+    try {
+      await api.post('/auth/register', {
+        email: formData.email,
+        name: formData.nickName || formData.email.split('@')[0],
+      })
+
+      // Reset attempts when resending
+      setEmailVerificationCode('')
+      setEmailVerificationAttempts(0)
+      setIsEmailVerificationLocked(false)
+      Alert.alert(labels.success, 'New verification code sent to your email')
+    } catch (error: any) {
+      console.error('Resend email error:', error)
+      const errorMessage = error?.message || 'Failed to resend code. Please try again.'
+      Alert.alert(labels.error, errorMessage)
+    } finally {
+      setIsSendingEmailCode(false)
     }
   }
 
@@ -494,9 +653,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         </View>
 
         <View marginB-20>
-          <Text text70 color={colors.textLightColor} marginB-10>
-            {labels.emailRequired}
-          </Text>
+          <View
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}
+          >
+            <Text text70 color={colors.textLightColor}>
+              {labels.emailRequired}
+            </Text>
+            {isEmailVerified && (
+              <Text text80 style={{ color: '#4CAF50' }}>
+                ✓ Verified
+              </Text>
+            )}
+          </View>
           <TextField
             placeholder={labels.emailPlaceholder}
             value={formData.email}
@@ -512,6 +680,72 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             validationMessageStyle={styles.errorText}
             enableErrors={!!errors.email}
           />
+
+          {!isEmailVerified && !showEmailVerificationCode && (
+            <Button
+              label="Verify Email Address"
+              onPress={handleVerifyEmail}
+              disabled={isSendingEmailCode || !formData.email}
+              loading={isSendingEmailCode}
+              variant="secondary"
+              size="small"
+              style={{ marginTop: 10 }}
+            />
+          )}
+
+          {showEmailVerificationCode && (
+            <View marginT-20>
+              <Text text70 color={colors.textLightColor} marginB-10 center>
+                Enter Verification Code
+              </Text>
+              <Text text80 color={colors.textDarkColor} marginB-15 center>
+                We've sent a 6-digit code to your email
+              </Text>
+
+              <CodeField
+                ref={emailCodeFieldRef}
+                {...emailCodeFieldProps}
+                value={emailVerificationCode}
+                onChangeText={setEmailVerificationCode}
+                cellCount={CELL_COUNT}
+                rootStyle={styles.codeFieldRoot}
+                keyboardType="number-pad"
+                textContentType="oneTimeCode"
+                renderCell={({ index, symbol, isFocused }) => (
+                  <View
+                    key={index}
+                    style={[styles.codeCell, isFocused && styles.codeCellFocused]}
+                    onLayout={getEmailCellOnLayoutHandler(index)}
+                  >
+                    <Text style={styles.codeCellText}>{symbol || (isFocused ? <Cursor /> : null)}</Text>
+                  </View>
+                )}
+              />
+
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 15 }}>
+                <Button
+                  label="Resend Code"
+                  onPress={handleResendEmailCode}
+                  disabled={isSendingEmailCode || isVerifyingEmailCode}
+                  loading={isSendingEmailCode}
+                  variant="secondary"
+                  size="small"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  label="Cancel"
+                  onPress={() => {
+                    setShowEmailVerificationCode(false)
+                    setEmailVerificationCode('')
+                  }}
+                  disabled={isSendingEmailCode || isVerifyingEmailCode}
+                  variant="ghost"
+                  size="small"
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </View>
+          )}
         </View>
 
         <View marginB-20>

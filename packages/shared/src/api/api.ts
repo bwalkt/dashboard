@@ -90,6 +90,7 @@ function getBackendUrl(): string {
  */
 const defaultHeaders: Record<string, string> = {
   'Content-Type': 'application/json',
+  'User-Agent': 'P-Zero-Mobile/1.0',
 }
 
 /**
