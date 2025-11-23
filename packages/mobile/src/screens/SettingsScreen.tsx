@@ -1,4 +1,5 @@
 import { api } from '@pzero/shared/api'
+import { DEFAULT_COUNTRY, getAllowedCountryCodes } from '@pzero/shared/phone'
 import { colors } from '@pzero/shared/theme'
 import { isBusinessEmail } from '@pzero/shared/validator'
 import type { NavigationProp } from '@react-navigation/native'
@@ -529,7 +530,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
           <PhoneInput
             value={formData.phoneNumber}
             onChangePhoneNumber={value => updateField('phoneNumber', value)}
-            defaultCountry="US"
+            defaultCountry={DEFAULT_COUNTRY}
+            selectedCountries={getAllowedCountryCodes()}
             placeholder={labels.phoneNumberPlaceholder}
             phoneInputStyles={{
               container: {

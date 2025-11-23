@@ -1,5 +1,6 @@
 export * from './math'
 export * from './mock/data-table'
+export * from './phone'
 export * from './pzero'
 export * from './types/index'
 export * from './utils/functionHeader'

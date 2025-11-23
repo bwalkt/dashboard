@@ -1,5 +1,5 @@
 import type { ErrorResponse } from "@pzero/shared";
-import { validateUSPhoneNumber } from "@pzero/shared/validator";
+import { validateUSPhoneNumber } from "@pzero/shared/phone";
 import type { FastifyReply } from "fastify";
 import { redis } from "../config/redis";
 import { smsService } from "../services/sms.service";

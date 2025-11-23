@@ -3,7 +3,7 @@ import {
   isPossiblePhoneNumber,
   isValidPhoneNumber,
   type PhoneNumber,
-  parsePhoneNumber,
+  parsePhoneNumberWithError,
 } from 'libphonenumber-js'
 
 /**
@@ -56,7 +56,7 @@ export function validatePhoneNumber(phoneNumber: string, defaultCountry?: Countr
     }
 
     // Parse the phone number to get detailed information
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+    const parsed = parsePhoneNumberWithError(phoneNumber, defaultCountry)
 
     return {
       isValid: true,
@@ -95,7 +95,7 @@ export function isPossiblePhone(phoneNumber: string, defaultCountry?: CountryCod
  */
 export function formatPhoneInternational(phoneNumber: string, defaultCountry?: CountryCode): string | null {
   try {
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+    const parsed = parsePhoneNumberWithError(phoneNumber, defaultCountry)
     return parsed.format('INTERNATIONAL')
   } catch {
     return null
@@ -107,7 +107,7 @@ export function formatPhoneInternational(phoneNumber: string, defaultCountry?: C
  */
 export function formatPhoneNational(phoneNumber: string, defaultCountry?: CountryCode): string | null {
   try {
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+    const parsed = parsePhoneNumberWithError(phoneNumber, defaultCountry)
     return parsed.format('NATIONAL')
   } catch {
     return null
@@ -119,7 +119,7 @@ export function formatPhoneNational(phoneNumber: string, defaultCountry?: Countr
  */
 export function formatPhoneE164(phoneNumber: string, defaultCountry?: CountryCode): string | null {
   try {
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+    const parsed = parsePhoneNumberWithError(phoneNumber, defaultCountry)
     return parsed.format('E.164')
   } catch {
     return null
@@ -131,7 +131,7 @@ export function formatPhoneE164(phoneNumber: string, defaultCountry?: CountryCod
  */
 export function getPhoneCountry(phoneNumber: string, defaultCountry?: CountryCode): string | null {
   try {
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+    const parsed = parsePhoneNumberWithError(phoneNumber, defaultCountry)
     return parsed.country || null
   } catch {
     return null
@@ -143,7 +143,7 @@ export function getPhoneCountry(phoneNumber: string, defaultCountry?: CountryCod
  */
 export function isPhoneFromCountry(phoneNumber: string, country: CountryCode, defaultCountry?: CountryCode): boolean {
   try {
-    const parsed = parsePhoneNumber(phoneNumber, defaultCountry)
+    const parsed = parsePhoneNumberWithError(phoneNumber, defaultCountry)
     return parsed.country === country
   } catch {
     return false
@@ -180,5 +180,5 @@ export {
   isPossiblePhoneNumber,
   isValidPhoneNumber,
   type PhoneNumber,
-  parsePhoneNumber,
+  parsePhoneNumberWithError,
 } from 'libphonenumber-js'

@@ -14,7 +14,6 @@ export {
 
 // Export other validators
 export * from './email'
-export * from './phone'
 export * from './validator'
 
 // Note: AjvExamples is available for testing at '@pzero/shared/validator/test-ajv'
