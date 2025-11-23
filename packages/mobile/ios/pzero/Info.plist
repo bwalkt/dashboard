@@ -41,10 +41,8 @@
 	<string>This app uses Face ID for secure authentication</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>This app requires local network access to establish secure TCP connections with nearby devices</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>This app uses location for perimeter security validation</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app uses location for perimeter security validation</string>
+	<string>This app uses your location to verify you're within authorized areas when accessing secure features</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>RCTNewArchEnabled</key>

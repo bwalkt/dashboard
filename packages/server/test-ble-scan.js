@@ -1,33 +1,68 @@
 #!/usr/bin/env node
 
+/**
+ * BLE Scanner Test Script
+ *
+ * Requirements:
+ * - Linux: bluez installed, may require sudo or CAP_NET_ADMIN
+ * - macOS: Bluetooth permissions granted in System Preferences
+ * - Windows: Compatible Bluetooth 4.0+ adapter
+ *
+ * Usage:
+ *   node test-ble-scan.js
+ *   # or make executable: chmod +x test-ble-scan.js && ./test-ble-scan.js
+ *
+ * This script scans for BLE devices, first targeting service UUID
+ * 550e8400e29b41d4a716446655440000, then performing a general scan.
+ */
+
 // Simple BLE scanner test using noble
 import noble from "@abandonware/noble";
 
 console.log("Starting BLE scanner test...");
-console.log("Target service UUID: 550e8400-e29b-41d4-a716-446655440000");
+console.log("Target service UUID: 550e8400e29b41d4a716446655440000");
+
+let scanTimeout1, scanTimeout2;
 
 noble.on("stateChange", (state) => {
   console.log("BLE State:", state);
 
   if (state === "poweredOn") {
     console.log("Starting scan for BLE devices...");
-    // Scan for our specific service UUID
-    noble.startScanning(["550e8400-e29b-41d4-a716-446655440000"], false);
+    try {
+      // Scan for our specific service UUID
+      noble.startScanning(["550e8400e29b41d4a716446655440000"], false);
+    } catch (error) {
+      console.error("Failed to start scanning:", error);
+      process.exit(1);
+    }
 
     // Also scan for all devices to test general functionality
-    setTimeout(() => {
+    scanTimeout1 = setTimeout(() => {
       console.log("Starting general scan...");
-      noble.stopScanning();
-      noble.startScanning([], false);
+      try {
+        noble.stopScanning();
+        noble.startScanning([], false);
+      } catch (error) {
+        console.error("Failed to start general scan:", error);
+      }
     }, 5000);
 
     // Stop after 15 seconds
-    setTimeout(() => {
+    scanTimeout2 = setTimeout(() => {
       console.log("Stopping scan...");
-      noble.stopScanning();
-      process.exit(0);
+      try {
+        noble.stopScanning();
+      } catch (error) {
+        console.error("Failed to stop scanning:", error);
+      }
+      // Give stopScanning time to complete
+      setTimeout(() => process.exit(0), 100);
     }, 15000);
   } else {
+    // Clean up any pending timeouts
+    if (scanTimeout1) clearTimeout(scanTimeout1);
+    if (scanTimeout2) clearTimeout(scanTimeout2);
     console.log("BLE not available. State:", state);
     process.exit(1);
   }
@@ -52,7 +87,10 @@ noble.on("discover", (peripheral) => {
   }
 
   // Check if this is our target device
-  if (serviceUuids.includes("550e8400-e29b-41d4-a716-446655440000")) {
+  const targetUuid = "550e8400e29b41d4a716446655440000";
+  if (
+    serviceUuids.some((uuid) => uuid.toLowerCase() === targetUuid.toLowerCase())
+  ) {
     console.log("🎯 FOUND TARGET DEVICE! This is our mobile app!");
   }
 });

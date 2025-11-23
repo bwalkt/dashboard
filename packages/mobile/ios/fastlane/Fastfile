@@ -17,7 +17,6 @@ platform :ios do
 
     # Upload to TestFlight
     upload_to_testflight(
-      apple_id: "uma.krishnan@boardwalktech.com",
       skip_waiting_for_build_processing: true
     )
   end
