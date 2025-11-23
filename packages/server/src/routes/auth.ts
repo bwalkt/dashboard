@@ -162,7 +162,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Generate JWT tokens
         const { accessToken, refreshToken } = authService.generateTokenPair(
-          user.id,
+          user.id.toString(),
           user.github_id,
           user.email,
         );
@@ -261,7 +261,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         }
 
         // Get user from database
-        const user = await userService.getUserById(payload.userId);
+        const user = await userService.getUserById(payload.userId.toString());
 
         if (!user) {
           return reply.status(401).send({
@@ -272,7 +272,11 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Generate new token pair
         const { accessToken, refreshToken: newRefreshToken } =
-          authService.generateTokenPair(user.id, user.github_id, user.email);
+          authService.generateTokenPair(
+            user.id.toString(),
+            user.github_id,
+            user.email,
+          );
 
         // Set JWT tokens as cookies
         reply.setCookie("accessToken", accessToken, {
@@ -500,7 +504,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Generate JWT tokens
         const { accessToken, refreshToken } = authService.generateTokenPair(
-          user.id,
+          user.id.toString(),
           "", // No GitHub ID for email users
           user.email,
         );
@@ -675,7 +679,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Generate JWT tokens
         const { accessToken, refreshToken } = authService.generateTokenPair(
-          user.id,
+          user.id.toString(),
           user.github_id || "",
           user.email,
         );
@@ -734,7 +738,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
               user: {
                 type: "object",
                 properties: {
-                  id: { type: "number" },
+                  id: { type: "string" },
                   email: { type: "string" },
                   name: { type: "string" },
                   role: { type: "array", items: { type: "string" } },

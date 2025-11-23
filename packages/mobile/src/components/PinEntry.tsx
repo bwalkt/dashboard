@@ -23,26 +23,40 @@ const PinEntry: React.FC<PinEntryProps> = ({
   const [isVerifying, setIsVerifying] = useState(false)
 
   const handleNumberPress = async (num: string) => {
-    if (isVerifying || pin.length >= PIN_LENGTH) return
+    if (isVerifying) return
 
-    const newPin = pin + num
+    setPin(prev => {
+      if (prev.length >= PIN_LENGTH) return prev
 
-    if (newPin.length === PIN_LENGTH) {
-      setIsVerifying(true)
-      const isValid = await onPinEntered(newPin)
-      if (!isValid) {
-        setPin('')
-        Alert.alert('Invalid PIN', 'The PIN you entered is incorrect. Please try again.')
+      const newPin = prev + num
+
+      if (newPin.length === PIN_LENGTH) {
+        // Trigger verification asynchronously
+        setIsVerifying(true)
+        onPinEntered(newPin)
+          .then(isValid => {
+            if (!isValid) {
+              setPin('')
+              Alert.alert('Invalid PIN', 'The PIN you entered is incorrect. Please try again.')
+            }
+          })
+          .catch(error => {
+            console.error('PIN verification error:', error)
+            setPin('')
+            Alert.alert('Error', 'Something went wrong verifying your PIN. Please try again.')
+          })
+          .finally(() => {
+            setIsVerifying(false)
+          })
       }
-      setIsVerifying(false)
-    } else {
-      setPin(newPin)
-    }
+
+      return newPin
+    })
   }
 
   const handleBackspace = () => {
     if (isVerifying) return
-    setPin(pin.slice(0, -1))
+    setPin(prev => prev.slice(0, -1))
   }
 
   const renderPinDots = () => {

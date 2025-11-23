@@ -17,7 +17,7 @@ export class UserService {
    * Get user by internal ID
    */
   public async getUserById(
-    id: number,
+    id: string,
     schema: string = "pzero",
   ): Promise<User | null> {
     const result = await db.pool.query(

@@ -236,6 +236,20 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   }
 
   const updateField = async (field: keyof FormData, value: string | boolean) => {
+    // Reset phone verification state when the phone number changes
+    if (field === 'phoneNumber' && typeof value === 'string' && value !== formData.phoneNumber) {
+      setIsPhoneVerified(false)
+      setShowVerificationCode(false)
+      setVerificationCode('')
+      setVerificationAttempts(0)
+      setIsVerificationLocked(false)
+      // Clear the phoneVerified flag in storage
+      SettingsStore.setItem({
+        key: settingsKeys.phoneVerified,
+        data: false,
+      })
+    }
+
     // Special handling for isPrimary toggle
     if (field === 'isPrimary' && value === false && formData.isPrimary === true) {
       // Check if there are connected devices

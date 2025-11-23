@@ -50,8 +50,17 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = ({ navig
   }, [code])
 
   const handleVerifyCode = async () => {
+    if (isLoading) {
+      return
+    }
+
     if (code.length !== CELL_COUNT) {
       Alert.alert(labels.error, 'Please enter the complete verification code')
+      return
+    }
+
+    if (!phoneNumber) {
+      Alert.alert(labels.error, 'Missing phone number for verification.')
       return
     }
 
@@ -94,6 +103,11 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = ({ navig
   }
 
   const handleResendCode = async () => {
+    if (!phoneNumber) {
+      Alert.alert(labels.error, 'Missing phone number for resending code.')
+      return
+    }
+
     setIsResending(true)
     try {
       // Call the backend to resend the SMS code

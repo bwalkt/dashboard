@@ -122,12 +122,10 @@ async function refreshToken(): Promise<void> {
     try {
       const backendUrl = getBackendUrl()
       const refreshUrl = backendUrl ? `${backendUrl}/auth/refresh` : '/auth/refresh'
+      // Don't send Content-Type header with empty body to avoid Fastify empty body error
       const response = await fetch(refreshUrl, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       })
 
       if (!response.ok) {

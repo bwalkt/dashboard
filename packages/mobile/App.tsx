@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { useEffect, useState } from 'react'
 import { Alert, BackHandler, Platform, StatusBar } from 'react-native'
 import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics'
+import DeviceInfo from 'react-native-device-info'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { Colors } from 'react-native-ui-lib'
 import PinEntry from './src/components/PinEntry'
@@ -45,7 +46,6 @@ function App() {
   const [showPinEntry, setShowPinEntry] = useState(false)
 
   const MAX_ATTEMPTS = 3
-  const isSimulator = Platform.OS === 'ios' && !Platform.isPad && Platform.isTV === false
 
   useEffect(() => {
     // Initialize app and trigger authentication after splash
@@ -53,13 +53,16 @@ function App() {
       try {
         Colors.loadColors(colors)
 
+        // Check if running on emulator
+        const isEmulator = await DeviceInfo.isEmulator()
+
         // Show splash for 2 seconds
         setTimeout(async () => {
           setShowSplash(false)
 
-          // Auto-trigger authentication after splash (skip on simulator)
-          if (isSimulator) {
-            console.log('Running on simulator - skipping authentication')
+          // Auto-trigger authentication after splash (skip on emulator)
+          if (isEmulator) {
+            console.log('Running on emulator - skipping authentication')
             setIsAuthenticated(true)
           } else {
             // Real device - trigger authentication
