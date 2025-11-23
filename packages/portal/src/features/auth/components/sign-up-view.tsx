@@ -1,3 +1,4 @@
+import { api } from '@pzero/shared/api'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -7,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/AuthContext'
-import { api } from '@/lib/api'
 
 /**
  * Render the sign-up page with a local form and a GitHub OAuth sign-in option.

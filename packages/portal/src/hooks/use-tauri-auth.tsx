@@ -1,5 +1,5 @@
+import { api } from '@pzero/shared/api'
 import { useMutation } from '@tanstack/react-query'
-import { api } from '@/lib/api'
 
 /**
  * Starts a GitHub sign-in flow by requesting an OAuth URL from the backend and navigating the browser to it.

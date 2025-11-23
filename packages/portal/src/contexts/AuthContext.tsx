@@ -1,8 +1,8 @@
 import type { User } from '@pzero/shared'
+import { api } from '@pzero/shared/api'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type React from 'react'
 import { createContext, useContext } from 'react'
-import { api } from '@/lib/api'
 
 interface AuthContextType {
   user: User | null
