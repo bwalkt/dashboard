@@ -25,6 +25,7 @@
     "ajv": "catalog:",
     "ajv-formats": "catalog:",
     "buffer": "^6.0.3",
+    "object-assign": "^4.1.1",
     "p-queue": "catalog:",
     "react": "19.2.0",
     "react-native": "catalog:",

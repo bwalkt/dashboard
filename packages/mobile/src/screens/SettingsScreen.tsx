@@ -22,8 +22,10 @@ import PhoneInput from 'react-native-international-phone-number'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Switch, Text, TextField, View } from 'react-native-ui-lib'
 import Button from '../components/Button'
+import DrawerOverlay from '../components/DrawerOverlay'
 import Header from '../components/Header'
 import { labels } from '../constants/labels'
+import { fetchTermsAndConditions, type TermsSection } from '../services/terms'
 import { stores } from '../stores'
 import {
   type ClassificationType,
@@ -51,6 +53,7 @@ interface FormData {
   phoneNumber: string
   classificationType: ClassificationType
   isPrimary: boolean
+  termsAccepted: boolean
 }
 
 interface FormErrors {
@@ -82,6 +85,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     phoneNumber: '',
     classificationType: '' as ClassificationType,
     isPrimary: false,
+    termsAccepted: false,
   })
   const [previousData, setPreviousData] = useState<FormData>(formData)
   const [errors, setErrors] = useState<FormErrors>({})
@@ -107,6 +111,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
   // Popover state
   const [showPrimaryHint, setShowPrimaryHint] = useState(false)
+
+  // Terms and conditions state
+  const [showTermsDrawer, setShowTermsDrawer] = useState(false)
+  const [termsData, setTermsData] = useState<TermsSection[]>([])
+  const [isLoadingTerms, setIsLoadingTerms] = useState(false)
 
   const { DevicesStore } = stores
   // Use reactive Zustand store
@@ -159,18 +168,20 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       const isPrimary = SettingsStore.getItem(settingsKeys.isPrimary) || false
       const phoneVerified = SettingsStore.getItem(settingsKeys.phoneVerified) || false
       const emailVerified = SettingsStore.getItem(settingsKeys.emailVerified) || false
+      const termsAccepted = SettingsStore.getItem(settingsKeys.termsAccepted) || false
       // Auto-set classification based on email if classification is empty or unknown
       if (email && (!classificationType || classificationType === 'unknown')) {
         const isBusiness = isBusinessEmail(email)
         classificationType = isBusiness ? 'corp' : 'personal'
       }
-      setPreviousData({ nickName, email, phoneNumber, classificationType, isPrimary })
+      setPreviousData({ nickName, email, phoneNumber, classificationType, isPrimary, termsAccepted })
       setFormData({
         nickName,
         email,
         phoneNumber,
-        classificationType: (classificationType || 'unknown') as DeviceClassificationType,
+        classificationType: (classificationType || 'unknown') as ClassificationType,
         isPrimary: isPrimary as boolean,
+        termsAccepted: termsAccepted as boolean,
       })
       setIsPhoneVerified(phoneVerified as boolean)
       setIsEmailVerified(emailVerified as boolean)
@@ -215,8 +226,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     const newErrors: FormErrors = {}
 
     // Custom validation for classification type
-    if (!formData.classificationType || formData.classificationType === ('' as DeviceClassificationType)) {
+    if (!formData.classificationType || formData.classificationType === ('' as ClassificationType)) {
       newErrors.classificationType = labels.pleaseSelectClassification
+    }
+
+    // Security requirement: Email and phone must be verified
+    if (!isEmailVerified) {
+      Alert.alert('Email Verification Required', 'For security purposes, you must verify your email address before saving your settings.')
+      return false
+    }
+
+    if (!isPhoneVerified) {
+      Alert.alert('Phone Verification Required', 'For security purposes, you must verify your phone number before saving your settings.')
+      return false
     }
 
     if (!isValid) {
@@ -252,6 +274,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         { key: settingsKeys.phone, data: formData.phoneNumber },
         { key: settingsKeys.classificationType, data: formData.classificationType },
         { key: settingsKeys.isPrimary, data: formData.isPrimary },
+        { key: settingsKeys.termsAccepted, data: formData.termsAccepted },
       ]
 
       for (const operation of saveOperations) {
@@ -351,7 +374,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         setFormData(prev => ({
           ...prev,
           [field]: value,
-          classificationType: autoClassification as DeviceClassificationType,
+          classificationType: autoClassification as ClassificationType,
         }))
 
         // Clear errors for both fields
@@ -531,13 +554,26 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       return
     }
 
+    // Validate nickname for registration
+    if (!formData.nickName || formData.nickName.trim() === '') {
+      Alert.alert(labels.error, 'Please enter a nickname first before verifying your email')
+      return
+    }
+
     setIsSendingEmailCode(true)
     try {
-      // Send verification code via email using /auth/register endpoint
-      await api.post('/auth/register', {
-        email: formData.email,
-        name: formData.nickName || formData.email.split('@')[0],
+      console.log('Attempting email registration with:', {
+        email: formData.email.trim().toLowerCase(),
+        name: formData.nickName.trim()
       })
+      
+      // Send verification code via email using /auth/register endpoint
+      const response = await api.post('/auth/register', {
+        email: formData.email.trim().toLowerCase(),
+        name: formData.nickName.trim(),
+      })
+      
+      console.log('Registration response:', response)
 
       // Reset verification attempts when sending new code
       setShowEmailVerificationCode(true)
@@ -547,7 +583,31 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       Alert.alert(labels.success, 'Verification code sent to your email')
     } catch (error: any) {
       console.error('Send email error:', error)
-      const errorMessage = error?.message || 'Failed to send verification code. Please try again.'
+      console.error('Error details:', {
+        message: error?.message,
+        status: error?.status,
+        code: error?.code,
+        response: error?.response
+      })
+      
+      // Handle specific error cases
+      let errorMessage = 'Failed to send verification code. Please try again.'
+      if (error?.message) {
+        if (error.message.toLowerCase().includes('registration failed')) {
+          errorMessage = 'Registration failed. Please check your email address and try again. If the problem persists, contact support.'
+        } else if (error.message.toLowerCase().includes('already exists') || error.message.toLowerCase().includes('already registered')) {
+          errorMessage = 'This email is already registered. Please try a different email address or contact support if this is your email.'
+        } else if (error.message.toLowerCase().includes('network') || error.message.toLowerCase().includes('fetch')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.'
+        } else if (error.status === 404) {
+          errorMessage = 'Registration service not found. Please contact support.'
+        } else if (error.status === 500) {
+          errorMessage = 'Server error occurred. Please try again later or contact support.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
       Alert.alert(labels.error, errorMessage)
     } finally {
       setIsSendingEmailCode(false)
@@ -625,8 +685,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     setIsSendingEmailCode(true)
     try {
       await api.post('/auth/register', {
-        email: formData.email,
-        name: formData.nickName || formData.email.split('@')[0],
+        email: formData.email.trim().toLowerCase(),
+        name: formData.nickName?.trim() || formData.email.split('@')[0],
       })
 
       // Reset attempts when resending
@@ -636,11 +696,41 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       Alert.alert(labels.success, 'New verification code sent to your email')
     } catch (error: any) {
       console.error('Resend email error:', error)
-      const errorMessage = error?.message || 'Failed to resend code. Please try again.'
+      
+      // Handle specific error cases
+      let errorMessage = 'Failed to resend code. Please try again.'
+      if (error?.message) {
+        if (error.message.toLowerCase().includes('registration failed')) {
+          errorMessage = 'Registration failed. Please check your email address and try again. If the problem persists, contact support.'
+        } else if (error.message.toLowerCase().includes('already exists') || error.message.toLowerCase().includes('already registered')) {
+          errorMessage = 'This email is already registered. Please try a different email address or contact support if this is your email.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
       Alert.alert(labels.error, errorMessage)
     } finally {
       setIsSendingEmailCode(false)
     }
+  }
+
+  const handleTermsPress = async () => {
+    if (termsData.length === 0) {
+      setIsLoadingTerms(true)
+      try {
+        const terms = await fetchTermsAndConditions()
+        setTermsData(terms.sections)
+      } catch (error) {
+        console.error('Failed to load terms:', error)
+        // Since we have fallback content, this shouldn't happen, but just in case
+        Alert.alert('Error', 'Failed to load terms and conditions. Please try again.')
+        return
+      } finally {
+        setIsLoadingTerms(false)
+      }
+    }
+    setShowTermsDrawer(true)
   }
 
   return (
@@ -752,7 +842,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                     setEmailVerificationCode('')
                   }}
                   disabled={isSendingEmailCode || isVerifyingEmailCode}
-                  variant="ghost"
+                  variant="outline"
                   size="small"
                   style={{ flex: 1 }}
                 />
@@ -870,7 +960,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                     setVerificationCode('')
                   }}
                   disabled={isSendingCode || isVerifyingCode}
-                  variant="ghost"
+                  variant="outline"
                   size="small"
                   style={{ flex: 1 }}
                 />
@@ -890,7 +980,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             <Text
               style={[
                 styles.pickerText,
-                (!formData.classificationType || formData.classificationType === ('' as DeviceClassificationType)) &&
+                (!formData.classificationType || formData.classificationType === ('' as ClassificationType)) &&
                   styles.placeholderText,
               ]}
             >
@@ -946,6 +1036,47 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             </Pressable>
           </Pressable>
         </Modal>
+
+        <View marginB-30>
+          <View style={styles.switchContainer}>
+            <View style={styles.switchLabelContainer}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text text70 color={colors.textLightColor}>
+                  I have read and agree to the{' '}
+                </Text>
+                <TouchableOpacity onPress={handleTermsPress} disabled={isLoadingTerms}>
+                  <Text style={[styles.linkText, isLoadingTerms && { opacity: 0.5 }]}>
+                    {isLoadingTerms ? 'Loading...' : 'terms and conditions'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <Switch
+              value={formData.termsAccepted}
+              onValueChange={value => updateField('termsAccepted', value)}
+              onColor={colors.primaryColor}
+              offColor="#333"
+              thumbColor="#ffffff"
+            />
+          </View>
+        </View>
+
+        {/* Terms and Conditions Drawer */}
+        <DrawerOverlay
+          visible={showTermsDrawer}
+          onClose={() => setShowTermsDrawer(false)}
+          title="Terms and Conditions"
+          width="100%"
+        >
+          <View style={styles.termsContent}>
+            {termsData.map((section, index) => (
+              <View key={index} style={styles.termsSection}>
+                <Text style={styles.termsSectionTitle}>{section.title}</Text>
+                <Text style={styles.termsSectionContent}>{section.content}</Text>
+              </View>
+            ))}
+          </View>
+        </DrawerOverlay>
 
         <Button
           label={labels.saveSettings}
@@ -1125,6 +1256,30 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  linkText: {
+    color: colors.primaryColor || '#007AFF',
+    textDecorationLine: 'underline',
+    fontSize: 14,
+  },
+  termsContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    flexGrow: 1,
+  },
+  termsSection: {
+    marginBottom: 25,
+  },
+  termsSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.textLightColor || '#ffffff',
+    marginBottom: 10,
+  },
+  termsSectionContent: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textLightColor || '#ffffff',
   },
 })
 

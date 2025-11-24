@@ -16,6 +16,7 @@ import { faqRoutes } from "./routes/faq";
 import { gatewayRoutes } from "./routes/gateway";
 import { proxyRoutes } from "./routes/proxy";
 import { smsRoutes } from "./routes/sms";
+import { termsRoutes } from "./routes/terms";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -84,6 +85,7 @@ export default async function (
   await fastify.register(gatewayRoutes);
   await fastify.register(proxyRoutes);
   await fastify.register(smsRoutes);
+  await fastify.register(termsRoutes);
 
   // Console log when server starts
   fastify.addHook("onReady", async () => {});

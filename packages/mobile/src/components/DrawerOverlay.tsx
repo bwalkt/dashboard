@@ -45,18 +45,19 @@ const DrawerOverlay: React.FC<DrawerOverlayProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Pressable style={styles.modalContainer} onPress={onClose}>
+      <View style={styles.modalContainer}>
         <Animated.View
           style={[
             styles.drawerContainer,
             {
               paddingTop: safeAreaInsets.top,
-              transform: [{ translateX: slideAnim }],
-              width: width,
+              width: width as any,
               ...(maxWidth && { maxWidth: maxWidth }),
             },
+            {
+              transform: [{ translateX: slideAnim }],
+            },
           ]}
-          onStartShouldSetResponder={() => true}
         >
           {title && (
             <View style={styles.header}>
@@ -72,12 +73,20 @@ const DrawerOverlay: React.FC<DrawerOverlayProps> = ({
           <ScrollView
             style={styles.content}
             contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={true}
+            bounces={true}
+            scrollEnabled={true}
           >
             {children}
           </ScrollView>
         </Animated.View>
-      </Pressable>
+        
+        {/* Background overlay for closing */}
+        <Pressable 
+          style={[styles.backgroundOverlay, { opacity: visible ? 0.5 : 0 }]} 
+          onPress={onClose}
+        />
+      </View>
     </Modal>
   )
 }
@@ -94,6 +103,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     backgroundColor: '#000000',
+    width: '100%',
     shadowColor: '#000',
     shadowOffset: {
       width: -2,
@@ -123,7 +133,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
+    flexGrow: 1,
     paddingVertical: 10,
+    paddingBottom: 20,
+  },
+  backgroundOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000000',
+    zIndex: -1,
   },
 })
 
