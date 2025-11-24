@@ -46,6 +46,12 @@ const DrawerOverlay: React.FC<DrawerOverlayProps> = ({
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.modalContainer}>
+        {/* Background overlay for closing */}
+        <Pressable 
+          style={styles.backgroundOverlay} 
+          onPress={onClose}
+        />
+        
         <Animated.View
           style={[
             styles.drawerContainer,
@@ -80,12 +86,6 @@ const DrawerOverlay: React.FC<DrawerOverlayProps> = ({
             {children}
           </ScrollView>
         </Animated.View>
-        
-        {/* Background overlay for closing */}
-        <Pressable 
-          style={[styles.backgroundOverlay, { opacity: visible ? 0.5 : 0 }]} 
-          onPress={onClose}
-        />
       </View>
     </Modal>
   )
@@ -143,8 +143,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#000000',
-    zIndex: -1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
 })
 
