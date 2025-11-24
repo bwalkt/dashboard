@@ -26,4 +26,7 @@ export interface EnvironmentConfig {
   DATABASE_PATH: string
   PORT?: number
   FRONTEND_URL: string
+  REDIS_HOST: string
+  REDIS_PORT: number
+  REDIS_PASSWORD: string
 }

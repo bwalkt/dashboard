@@ -6,7 +6,7 @@
     "dev:mobile": "pnpm --filter @pzero/mobile start",
     "dev:example-b2b-server": "pnpm --filter @pzero/sfdc-server-vanilla dev",
     "dev:example-b2b-docker": "cd examples/b2b && docker-compose -f ./docker-compose.yml up --build",
-    "dev:example-b2b-dashboard": "pnpm --filter @pzero/sfdc dev",
+    "dev:example-b2b-dashboard": "pnpm build:shared && pnpm --filter @pzero/sfdc dev",
     "dev:example-b2b": "pnpm dev:example-b2b-docker && pnpm run dev:example-b2b-server & pnpm run dev:example-b2b-dashboard",
     "build:mobile": "pnpm --filter @pzero/mobile build",
     "build:server": "pnpm --filter @pzero/sfdc-server-vanilla build",
@@ -37,6 +37,7 @@
       "metro-config": "0.82.5",
       "vite": ">=7.1.11",
       "react": "19.1.1",
+      "react-dom": "19.1.1",
       "react-test-renderer": "19.1.1",
       "react-native-renderer": "19.1.1"
     },

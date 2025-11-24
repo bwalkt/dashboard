@@ -1,5 +1,7 @@
-import type { AuthenticatedRequest } from '@pzero/shared'
+import type { AuthenticatedRequest, ErrorResponse } from '@pzero/shared'
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import { isNumberObject } from 'util/types'
+import { redis } from '../config/redis.js'
 import { authService } from '../services/auth.service.js'
 import { userService } from '../services/user.service.js'
 
@@ -34,13 +36,22 @@ export async function authenticateToken(request: FastifyRequest, reply: FastifyR
     }
 
     // Get user from database
-    const user = userService.getUserById(payload.userId)
+    const user = userService.getUserById(Number(payload.userId))
 
     if (!user) {
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'User not found',
       })
+    }
+
+    const expected = await redis.get(`user:${user.id}:header`)
+    const actual = request.headers['x-test-eval']
+    if (expected !== actual) {
+      return reply.status(401).send({
+        error: 'Unauthorized',
+        message: 'Invalid header value',
+      } as ErrorResponse)
     }
     // Attach user to request
     ;(request as unknown as AuthenticatedRequest).user = user

@@ -25,8 +25,13 @@ COPY examples/b2b/packages/sfdc-server-vanilla ./examples/b2b/packages/sfdc-serv
 WORKDIR /app/examples/b2b/packages/sfdc-server-vanilla
 
 # Rebuild better-sqlite3 for the container architecture
-# Using npm rebuild instead of pnpm because pnpm requires interactive approval of build scripts
-RUN cd /app/node_modules/.pnpm/better-sqlite3@12.4.1/node_modules/better-sqlite3 && npm rebuild
+# Find better-sqlite3 package and rebuild it for the container's architecture
+RUN BETTER_SQLITE3_PATH=$(find /app/node_modules -name "better-sqlite3" -type d -path "*/node_modules/better-sqlite3" | head -1) && \
+    if [ -n "$BETTER_SQLITE3_PATH" ]; then \
+      cd "$BETTER_SQLITE3_PATH" && npm rebuild; \
+    else \
+      echo "Warning: better-sqlite3 not found, skipping rebuild"; \
+    fi
 
 # Expose port
 EXPOSE 8080

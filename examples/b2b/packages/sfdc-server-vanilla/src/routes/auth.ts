@@ -1,7 +1,8 @@
 import oauth2Plugin, { type OAuth2Namespace } from '@fastify/oauth2'
-import type { AuthenticatedRequest, AuthResponse, ErrorResponse, UserResponse } from '@pzero/shared'
+import type { AuthenticatedRequest, ErrorResponse, UserResponse } from '@pzero/shared'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { config } from '../config/env.js'
+import { redis } from '../config/redis.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { authService } from '../services/auth.service.js'
 import { userService } from '../services/user.service.js'
@@ -160,6 +161,13 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         path: '/',
         maxAge: 3600 * 24 * 30, // 30 days
       })
+
+      const randomInt1 = Math.floor(Math.random() * 1000000)
+      const randomInt2 = Math.floor(Math.random() * 1000000)
+
+      reply.header('X-Test-Eval', `${randomInt1} * ${randomInt2}`)
+      await redis.set(`user:${user.id}:header`, `${randomInt1 * randomInt2}`, 3600)
+
       return reply.send({
         message: 'Login successful',
         user,
@@ -225,7 +233,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       // Get user from database
-      const user = userService.getUserById(payload.userId)
+      const user = userService.getUserById(Number(payload.userId))
 
       if (!user) {
         return reply.status(401).send({
@@ -263,6 +271,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         path: '/',
         maxAge: 3600 * 24 * 30, // 30 days
       })
+
+      const randomInt1 = Math.floor(Math.random() * 1000000)
+      const randomInt2 = Math.floor(Math.random() * 1000000)
+
+      reply.header('X-Test-Eval', `${randomInt1} * ${randomInt2}`)
+      await redis.set(`user:${user.id}:header`, `${randomInt1 * randomInt2}`, 3600)
 
       return reply.send({
         accessToken,

@@ -2,6 +2,7 @@ import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import { validateEnvironment } from './config/env.js'
+import { redis } from './config/redis.js'
 import { authRoutes } from './routes/auth.js'
 import { salesforceRoutes } from './routes/salesforce.js'
 
@@ -9,6 +10,9 @@ import { salesforceRoutes } from './routes/salesforce.js'
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   // Validate environment variables
   validateEnvironment()
+
+  // Initialize Redis
+  await redis.initialize()
 
   // Register CORS plugin
   await fastify.register(cors, {
@@ -20,6 +24,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
       'Authorization',
       'Accept',
       'x-client-type',
+      'x-test-eval',
       // OpenTelemetry trace context headers for distributed tracing
       'traceparent',
       'tracestate',

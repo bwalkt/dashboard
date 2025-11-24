@@ -153,6 +153,7 @@ function serializeBody(
  * Parse a direct API response (non-proxy)
  */
 async function parseDirectResponse<T>(response: Response): Promise<T> {
+  storeValidationHeader(response)
   // Handle empty responses (e.g., 204 No Content)
   if (response.status === 204 || response.headers.get('content-length') === '0') {
     return {} as T
@@ -172,6 +173,7 @@ async function parseDirectResponse<T>(response: Response): Promise<T> {
  * Parse a proxy API response
  */
 async function parseProxyResponse<T>(response: Response): Promise<T> {
+  storeValidationHeader(response)
   // Handle empty responses (e.g., 204 No Content)
   if (response.status === 204 || response.headers.get('content-length') === '0') {
     return {} as T
@@ -327,6 +329,23 @@ async function refreshTokenWithProxy(): Promise<void> {
   return refreshPromise
 }
 
+const storeValidationHeader = (response: Response) => {
+  const value = response.headers.get('x-test-eval')
+
+  if (value === null) {
+    return
+  }
+
+  const [randomInt1, randomInt2] = value.split('*').map(Number)
+  if (randomInt1 === undefined || randomInt2 === undefined) {
+    throw new ApiError('Invalid header value', response.status, response.statusText, response)
+  }
+
+  const res = randomInt1 * randomInt2
+
+  localStorage.setItem('x-test-eval', res.toString())
+}
+
 /**
  * Make an API request with standardized error handling and configuration
  *
@@ -351,6 +370,11 @@ export async function apiRequestWithoutProxy<T = any>(endpoint: string, options:
 
   // Handle body serialization
   const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, false)
+
+  const storedValidationHeader = localStorage.getItem('x-test-eval')
+  if (storedValidationHeader) {
+    updatedHeaders['x-test-eval'] = storedValidationHeader
+  }
 
   // Prepare the request configuration
   const requestConfig: RequestInit = {
@@ -442,6 +466,10 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
   // Extract method and preserve all other RequestInit properties (signal, cache, redirect, etc.)
   const { method = 'GET', ...remainingFetchOptions } = fetchOptions
 
+  const storedValidationHeader = localStorage.getItem('x-test-eval')
+  if (storedValidationHeader) {
+    updatedHeaders['x-test-eval'] = storedValidationHeader
+  }
   // Create proxy fetch options
   const { proxyUrl, fetchOptions: proxyFetchOptions } = createProxyFetchOptions(
     targetUrl,
