@@ -17,9 +17,10 @@ type DrawerParamList = {
 
 interface HomeScreenProps {
   navigation: NavigationProp<DrawerParamList>
+  onFAQPress?: () => void
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onFAQPress }) => {
   const safeAreaInsets = useSafeAreaInsets()
   const isVerified = SettingsStore.isVerified
 
@@ -35,9 +36,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             {labels.menuIcon}
           </Text>
         </TouchableOpacity>
-        <Text text50 color={colors.textLightColor}>
+        <Text text50 color={colors.textLightColor} style={styles.title}>
           {labels.appName}
         </Text>
+        {onFAQPress && (
+          <TouchableOpacity onPress={onFAQPress} style={styles.faqButton}>
+            <Text style={styles.faqIcon}>?</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View center flex>
@@ -70,10 +76,21 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
+    justifyContent: 'space-between',
   },
   menuButton: {
     marginRight: 15,
     padding: 5,
+  },
+  title: {
+    flex: 1,
+  },
+  faqButton: {
+    padding: 5,
+  },
+  faqIcon: {
+    fontSize: 16,
+    color: '#ffffff',
   },
 })
 

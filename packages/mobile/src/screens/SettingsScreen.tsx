@@ -7,7 +7,16 @@ import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import type React from 'react'
 import { useEffect, useState } from 'react'
-import { ActionSheetIOS, Alert, Platform, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
+import {
+  ActionSheetIOS,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native'
 import { CodeField, Cursor, useBlurOnFulfill, useClearByFocusCell } from 'react-native-confirmation-code-field'
 import PhoneInput from 'react-native-international-phone-number'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -62,9 +71,10 @@ type DrawerParamList = {
 interface SettingsScreenProps {
   navigation?: NavigationProp<DrawerParamList>
   onSettingsComplete?: () => void
+  onFAQPress?: () => void
 }
 
-const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsComplete }) => {
+const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsComplete, onFAQPress }) => {
   const safeAreaInsets = useSafeAreaInsets()
   const [formData, setFormData] = useState<FormData>({
     nickName: '',
@@ -94,6 +104,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const [isVerifyingEmailCode, setIsVerifyingEmailCode] = useState(false)
   const [emailVerificationAttempts, setEmailVerificationAttempts] = useState(0)
   const [isEmailVerificationLocked, setIsEmailVerificationLocked] = useState(false)
+
+  // Popover state
+  const [showPrimaryHint, setShowPrimaryHint] = useState(false)
 
   const { DevicesStore } = stores
   // Use reactive Zustand store
@@ -632,7 +645,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
   return (
     <ScrollView style={[styles.container, { paddingTop: safeAreaInsets.top }]}>
-      <Header title={labels.settingsTitle} navigation={navigation} />
+      <Header title={labels.settingsTitle} navigation={navigation} onFAQPress={onFAQPress} />
 
       <View style={styles.content}>
         <View marginB-20>
@@ -891,12 +904,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         <View marginB-30>
           <View style={styles.switchContainer}>
             <View style={styles.switchLabelContainer}>
-              <Text text70 color={colors.textLightColor}>
-                {labels.setPrimaryDevice}
-              </Text>
-              <Text text80 color={colors.textDarkColor} marginT-5>
-                {labels.primaryDeviceDescription}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text text70 color={colors.textLightColor}>
+                  {labels.setPrimaryDevice}
+                </Text>
+                <TouchableOpacity
+                  style={styles.infoIcon}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  onPress={() => setShowPrimaryHint(true)}
+                >
+                  <Text style={styles.infoIconText}>ⓘ</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <Switch
               value={formData.isPrimary}
@@ -907,6 +926,26 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             />
           </View>
         </View>
+
+        {/* Info Popover Modal */}
+        <Modal
+          visible={showPrimaryHint}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowPrimaryHint(false)}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setShowPrimaryHint(false)}>
+            <Pressable style={styles.popoverContainer} onPress={e => e.stopPropagation()}>
+              <View style={styles.popoverArrow} />
+              <View style={styles.popoverContent}>
+                <Text style={styles.popoverText}>{labels.primaryDeviceDescription}</Text>
+                <TouchableOpacity onPress={() => setShowPrimaryHint(false)} style={styles.popoverCloseButton}>
+                  <Text style={styles.popoverCloseText}>Got it</Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         <Button
           label={labels.saveSettings}
@@ -1017,6 +1056,75 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.textLightColor || '#ffffff',
     textAlign: 'center',
+  },
+  infoIcon: {
+    marginLeft: 8,
+    padding: 2,
+  },
+  infoIconText: {
+    color: colors.primaryColor || '#007AFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popoverContainer: {
+    position: 'relative',
+    width: '85%',
+    maxWidth: 320,
+  },
+  popoverArrow: {
+    position: 'absolute',
+    top: -8,
+    left: '50%',
+    marginLeft: -8,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#2a2a2a',
+  },
+  popoverContent: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#444',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  popoverText: {
+    color: '#ffffff',
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '500',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  popoverCloseButton: {
+    alignSelf: 'center',
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    backgroundColor: colors.primaryColor || '#007AFF',
+    borderRadius: 8,
+  },
+  popoverCloseText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 })
 

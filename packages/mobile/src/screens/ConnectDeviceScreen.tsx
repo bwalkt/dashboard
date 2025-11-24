@@ -47,9 +47,10 @@ interface QRCodeEvent {
 
 interface ConnectDeviceScreenProps {
   navigation?: NavigationProp<DrawerParamList>
+  onFAQPress?: () => void
 }
 
-const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation }) => {
+const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, onFAQPress }) => {
   const safeAreaInsets = useSafeAreaInsets()
   const [isScanning, setIsScanning] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
@@ -541,7 +542,7 @@ const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation })
 
   return (
     <View style={[styles.container, { paddingTop: safeAreaInsets.top }]}>
-      <Header title={labels.connectDeviceTitle} navigation={navigation} />
+      <Header title={labels.connectDeviceTitle} navigation={navigation} onFAQPress={onFAQPress} />
 
       {activeTab === 'add' ? renderAddTab() : renderConnectionsTab()}
 

@@ -14,9 +14,10 @@ type DrawerParamList = {
 interface HeaderProps {
   title: string
   navigation?: NavigationProp<DrawerParamList>
+  onFAQPress?: () => void
 }
 
-const Header: React.FC<HeaderProps> = ({ title, navigation }) => {
+const Header: React.FC<HeaderProps> = ({ title, navigation, onFAQPress }) => {
   const openDrawer = () => {
     navigation?.dispatch(DrawerActions.openDrawer())
   }
@@ -26,9 +27,14 @@ const Header: React.FC<HeaderProps> = ({ title, navigation }) => {
       <TouchableOpacity onPress={openDrawer} style={styles.menuButton}>
         <Text style={styles.hamburgerIcon}>☰</Text>
       </TouchableOpacity>
-      <Text text50 color={colors.textLightColor}>
+      <Text text50 color={colors.textLightColor} style={styles.title}>
         {title}
       </Text>
+      {onFAQPress && (
+        <TouchableOpacity onPress={onFAQPress} style={styles.faqButton}>
+          <Text style={styles.faqIcon}>?</Text>
+        </TouchableOpacity>
+      )}
     </View>
   )
 }
@@ -41,6 +47,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
+    justifyContent: 'space-between',
   },
   menuButton: {
     marginRight: 15,
@@ -48,6 +55,17 @@ const styles = StyleSheet.create({
   },
   hamburgerIcon: {
     fontSize: 24,
+    color: '#ffffff',
+  },
+  title: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  faqButton: {
+    padding: 5,
+  },
+  faqIcon: {
+    fontSize: 16,
     color: '#ffffff',
   },
 })

@@ -35,6 +35,9 @@ export const PUBLIC_ROUTES = [
   "/public",
   "/docs",
   "/assets",
+
+  // FAQ endpoint (public access)
+  "/faq",
 ] as const;
 
 /**

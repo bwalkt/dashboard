@@ -29,6 +29,7 @@ type DrawerParamList = {
 
 interface EndpointsScreenProps {
   navigation?: NavigationProp<DrawerParamList>
+  onFAQPress?: () => void
 }
 
 interface FormData {
@@ -42,7 +43,7 @@ interface FormErrors {
   baseURI?: string
 }
 
-const EndpointsScreen: React.FC<EndpointsScreenProps> = ({ navigation }) => {
+const EndpointsScreen: React.FC<EndpointsScreenProps> = ({ navigation, onFAQPress }) => {
   const safeAreaInsets = useSafeAreaInsets()
   const [activeTab, setActiveTab] = useState<'add' | 'endpoints'>('add')
   const [endpoints, setEndpoints] = useState<Endpoint[]>([])
@@ -338,7 +339,7 @@ const EndpointsScreen: React.FC<EndpointsScreenProps> = ({ navigation }) => {
 
   return (
     <View style={[styles.container, { paddingTop: safeAreaInsets.top }]}>
-      <Header title={labels.endpointsTitle} navigation={navigation as any} />
+      <Header title={labels.endpointsTitle} navigation={navigation as any} onFAQPress={onFAQPress} />
 
       {activeTab === 'add' ? renderAddTab() : renderEndpointsTab()}
 
