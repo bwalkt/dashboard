@@ -75,8 +75,8 @@ services:
       - SERVER_BASE_URL=${SERVER_BASE_URL:-http://localhost:8090}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://sfdc-example.incmix.com}
       - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-true}
-      - CORS_EXPOSED_HEADERS=${CORS_EXPOSED_HEADERS:-Content-Range,X-Content-Range}
-      - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS:-Content-Type,Authorization,X-Requested-With,Accept,traceparent,x-client-type,x-auth-token,tracestate,X-Custom-Auth,x-grpc-web,x-grpc-web-accept-encoding,X-Custom-Header}
+      - CORS_EXPOSED_HEADERS=${CORS_EXPOSED_HEADERS:-Content-Range,X-Content-Range,X-Test-Eval}
+      - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS:-Content-Type,Authorization,X-Requested-With,Accept,traceparent,x-client-type,x-auth-token,tracestate,X-Custom-Auth,x-grpc-web,x-grpc-web-accept-encoding,X-Custom-Header,X-Test-Eval}
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
       - ENVIRONMENT=${ENVIRONMENT:-production}
