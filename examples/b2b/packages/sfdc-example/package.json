@@ -83,7 +83,7 @@
     "nprogress": "catalog:",
     "nuqs": "catalog:",
     "postcss": "catalog:",
-    "react": "19.2.0",
+    "react": "catalog:",
     "react-day-picker": "catalog:",
     "react-dom": "catalog:",
     "react-dropzone": "catalog:",
