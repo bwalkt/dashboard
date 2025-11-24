@@ -13,9 +13,10 @@ interface SendVerificationCodeOptions {
 
 class SMSService {
   private client!: Awaited<ReturnType<typeof SignalWire>>;
+  private clientPromise: Promise<void>;
 
   constructor() {
-    this.initializeClient();
+    this.clientPromise = this.initializeClient();
   }
 
   private async initializeClient() {
@@ -26,10 +27,22 @@ class SMSService {
   }
 
   /**
+   * Ensure the client is initialized before use
+   */
+  private async ensureInitialized(): Promise<void> {
+    await this.clientPromise;
+  }
+
+  /**
    * Send an SMS message using SignalWire
    */
   public async sendSMS(options: SendSMSOptions): Promise<void> {
     try {
+      console.log("🔧 Ensuring client is initialized...");
+      await this.ensureInitialized();
+      console.log("📱 Attempting to send SMS to:", options.to);
+      console.log("📱 From:", config.SIGNALWIRE_PHONE_NUMBER);
+
       const result = await this.client.messaging.send({
         from: config.SIGNALWIRE_PHONE_NUMBER,
         to: options.to,
@@ -38,7 +51,13 @@ class SMSService {
 
       console.log("✅ SMS sent successfully:", result);
     } catch (error) {
-      console.error("❌ Failed to send SMS:", error);
+      console.error("❌ Failed to send SMS - Full error:", error);
+      console.error("❌ Error type:", typeof error);
+      console.error("❌ Error constructor:", error?.constructor?.name);
+      if (error instanceof Error) {
+        console.error("❌ Error message:", error.message);
+        console.error("❌ Error stack:", error.stack);
+      }
       throw new Error("Failed to send SMS");
     }
   }

@@ -291,7 +291,7 @@ export async function emailRoutes(fastify: FastifyInstance): Promise<void> {
         const html = await render(
           VerificationEmail({
             name: "John Doe",
-            verificationLink: "https://example.com/verify-email?token=abc123",
+            verificationLink: "https://example.com/verify/email?token=abc123",
           }),
           {
             pretty: true,

@@ -279,7 +279,7 @@ export class AuthService extends JWTService {
   public async validateToken(token: string): Promise<{
     valid: boolean;
     user?: {
-      id: number;
+      id: string;
       email: string;
       name: string;
       role?: string[];

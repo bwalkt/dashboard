@@ -11,7 +11,7 @@
     "testflight:build": "cd ios && bundle exec fastlane build_only",
     "copy-icons": "node scripts/copy-icons.js",
     "lint:fix": "biome check --write .",
-    "start": "react-native start --reset-cache",
+    "start": "REACT_NATIVE_NO_WATCHMAN=1 react-native start --reset-cache",
     "test": "jest"
   },
   "dependencies": {
@@ -26,7 +26,7 @@
     "ajv-formats": "catalog:",
     "buffer": "^6.0.3",
     "p-queue": "catalog:",
-    "react": "catalog:",
+    "react": "19.2.0",
     "react-native": "catalog:",
     "react-native-autocomplete-input": "^5.5.6",
     "react-native-biometrics": "catalog:",
@@ -36,9 +36,10 @@
     "react-native-dotenv": "catalog:",
     "react-native-geolocation-service": "catalog:",
     "react-native-gesture-handler": "catalog:",
-    "react-native-get-random-values": "^1.11.0",
+    "react-native-get-random-values": "^2.0.0",
+    "react-native-international-phone-number": "^0.11.3",
     "react-native-mmkv": "catalog:",
-    "react-native-network-info": "^5.2.1",
+    "react-native-network-info": "^5.2.2",
     "react-native-qrcode-svg": "catalog:",
     "react-native-quick-crypto": "^0.7.17",
     "react-native-reanimated": "catalog:",
@@ -68,8 +69,8 @@
     "@types/react": "catalog:",
     "@types/react-test-renderer": "catalog:",
     "jest": "catalog:",
-    "metro-config": "catalog:",
-    "react-test-renderer": "catalog:",
+    "metro-config": "0.83.3",
+    "react-test-renderer": "19.2.0",
     "typescript": "catalog:"
   },
   "engines": {

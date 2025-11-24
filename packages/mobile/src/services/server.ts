@@ -10,8 +10,8 @@ import { HistoryStore, Keys } from '../stores/history'
 import { ZStorage } from '../stores/store'
 import { getLocalIPAddress } from '../utils/network'
 
-const DEFAULT_PORT = Number.parseInt(SERVER_PORT || '8070', 10)
-
+const DEFAULT_PORT = Number.parseInt(SERVER_PORT || '8090', 10)
+export const ServerURL = `${SERVER_HOST || 'http://localhost'}:${SERVER_PORT || DEFAULT_PORT}`
 /**
  * WEBSOCKET_MAGIC_STRING is a constant defined in RFC 6455 (WebSocket Protocol Specification).
  * This GUID is used during the WebSocket handshake to generate the Sec-WebSocket-Accept header.

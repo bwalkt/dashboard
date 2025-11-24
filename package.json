@@ -21,7 +21,7 @@
     "test": "pnpm -r test"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.2",
+    "@biomejs/biome": "2.3.7",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },
@@ -33,6 +33,7 @@
   "pnpm": {
     "overrides": {
       "esbuild": "^0.25.0",
+      "glob": ">=11.1.0",
       "metro-config": "0.82.5",
       "vite": ">=7.1.11",
       "react": "19.1.1",

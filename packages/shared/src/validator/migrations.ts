@@ -16,7 +16,7 @@ import { createValidator, MigrationHelpers, SchemaBuilder, ValidationResult } fr
 
 // AJV equivalent with dynamic field support
 export interface User {
-  id: number
+  id: string
   github_id: string | null
   name: string
   email: string
@@ -30,7 +30,7 @@ export interface User {
 export const UserSchema: any = {
   type: 'object',
   properties: {
-    id: { type: 'number' },
+    id: { type: 'string' },
     github_id: { type: 'string', nullable: true },
     name: { type: 'string' },
     email: { type: 'string', format: 'email' },

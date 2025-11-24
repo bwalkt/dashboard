@@ -59,7 +59,7 @@ export function isPublicPath(path: string): boolean {
  * Create authentication headers for successful validation
  */
 export function createAuthHeaders(
-  userId: number,
+  userId: string,
   email: string,
 ): Array<{ header: string; value: string; append: boolean }> {
   const clientId = `user_${userId}_${Date.now()}`

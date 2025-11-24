@@ -13,8 +13,8 @@ import {
   URL as ENV_URL,
 } from '@env'
 
-const URL = ENV_URL ?? 'https://www.pzero.com'
-const BASE_API_URL = ENV_API_BASE_URL ?? 'https://api.pzero.com'
+const URL = ENV_URL ?? 'http://localhost'
+const BASE_API_URL = ENV_API_BASE_URL ?? 'http://localhost:8090'
 const env = ENV_NODE_ENV ?? 'dev'
 
 export const isDevelopment = env === 'dev'

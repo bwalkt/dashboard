@@ -9,6 +9,7 @@ export const settingsKeys = {
   nickName: 'nickName',
   classificationType: 'classificationType',
   isPrimary: 'isPrimary',
+  pin: 'pin',
 }
 
 export const classificationTypes = {

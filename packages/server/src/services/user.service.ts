@@ -17,7 +17,7 @@ export class UserService {
    * Get user by internal ID
    */
   public async getUserById(
-    id: number,
+    id: string,
     schema: string = "pzero",
   ): Promise<User | null> {
     const result = await db.pool.query(
@@ -67,7 +67,7 @@ export class UserService {
     // Extract username part from email and sanitize
     const username = email.split("@")[0];
     // Remove invalid characters and truncate to 10 chars
-    const handle = username.replace(/[^A-Za-z0-9._\-]/g, "").substring(0, 10);
+    const handle = username?.replace(/[^A-Za-z0-9._-]/g, "").substring(0, 10);
     return handle || "user";
   }
 

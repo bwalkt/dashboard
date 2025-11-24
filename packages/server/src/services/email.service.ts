@@ -73,7 +73,10 @@ class EmailService {
   public async sendVerificationEmail(
     options: SendVerificationEmailOptions,
   ): Promise<void> {
-    const verificationLink = `${config.OAUTH_REDIRECT_URL}/verify-email?token=${options.verificationToken}`;
+    // Construct verification link safely to avoid trailing slash issues
+    const baseUrlString = config.FRONTEND_URL || config.SERVER_BASE_URL;
+    const baseUrl = new URL(baseUrlString);
+    const verificationLink = `${baseUrl.toString().replace(/\/$/, "")}/verify/email?token=${options.verificationToken}`;
     const name = options.name || "User";
 
     // Render the React Email template to HTML
