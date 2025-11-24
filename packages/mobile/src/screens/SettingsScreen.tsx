@@ -232,12 +232,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
     // Security requirement: Email and phone must be verified
     if (!isEmailVerified) {
-      Alert.alert('Email Verification Required', 'For security purposes, you must verify your email address before saving your settings.')
+      Alert.alert(
+        'Email Verification Required',
+        'For security purposes, you must verify your email address before saving your settings.',
+      )
       return false
     }
 
     if (!isPhoneVerified) {
-      Alert.alert('Phone Verification Required', 'For security purposes, you must verify your phone number before saving your settings.')
+      Alert.alert(
+        'Phone Verification Required',
+        'For security purposes, you must verify your phone number before saving your settings.',
+      )
       return false
     }
 
@@ -564,15 +570,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     try {
       console.log('Attempting email registration with:', {
         email: formData.email.trim().toLowerCase(),
-        name: formData.nickName.trim()
+        name: formData.nickName.trim(),
       })
-      
+
       // Send verification code via email using /auth/register endpoint
       const response = await api.post('/auth/register', {
         email: formData.email.trim().toLowerCase(),
         name: formData.nickName.trim(),
       })
-      
+
       console.log('Registration response:', response)
 
       // Reset verification attempts when sending new code
@@ -587,16 +593,21 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         message: error?.message,
         status: error?.status,
         code: error?.code,
-        response: error?.response
+        response: error?.response,
       })
-      
+
       // Handle specific error cases
       let errorMessage = 'Failed to send verification code. Please try again.'
       if (error?.message) {
         if (error.message.toLowerCase().includes('registration failed')) {
-          errorMessage = 'Registration failed. Please check your email address and try again. If the problem persists, contact support.'
-        } else if (error.message.toLowerCase().includes('already exists') || error.message.toLowerCase().includes('already registered')) {
-          errorMessage = 'This email is already registered. Please try a different email address or contact support if this is your email.'
+          errorMessage =
+            'Registration failed. Please check your email address and try again. If the problem persists, contact support.'
+        } else if (
+          error.message.toLowerCase().includes('already exists') ||
+          error.message.toLowerCase().includes('already registered')
+        ) {
+          errorMessage =
+            'This email is already registered. Please try a different email address or contact support if this is your email.'
         } else if (error.message.toLowerCase().includes('network') || error.message.toLowerCase().includes('fetch')) {
           errorMessage = 'Network error. Please check your internet connection and try again.'
         } else if (error.status === 404) {
@@ -607,7 +618,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
           errorMessage = error.message
         }
       }
-      
+
       Alert.alert(labels.error, errorMessage)
     } finally {
       setIsSendingEmailCode(false)
@@ -696,19 +707,24 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       Alert.alert(labels.success, 'New verification code sent to your email')
     } catch (error: any) {
       console.error('Resend email error:', error)
-      
+
       // Handle specific error cases
       let errorMessage = 'Failed to resend code. Please try again.'
       if (error?.message) {
         if (error.message.toLowerCase().includes('registration failed')) {
-          errorMessage = 'Registration failed. Please check your email address and try again. If the problem persists, contact support.'
-        } else if (error.message.toLowerCase().includes('already exists') || error.message.toLowerCase().includes('already registered')) {
-          errorMessage = 'This email is already registered. Please try a different email address or contact support if this is your email.'
+          errorMessage =
+            'Registration failed. Please check your email address and try again. If the problem persists, contact support.'
+        } else if (
+          error.message.toLowerCase().includes('already exists') ||
+          error.message.toLowerCase().includes('already registered')
+        ) {
+          errorMessage =
+            'This email is already registered. Please try a different email address or contact support if this is your email.'
         } else {
           errorMessage = error.message
         }
       }
-      
+
       Alert.alert(labels.error, errorMessage)
     } finally {
       setIsSendingEmailCode(false)
