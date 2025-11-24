@@ -162,7 +162,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Generate JWT tokens
         const { accessToken, refreshToken } = authService.generateTokenPair(
-          user.id.toString(),
+          user.id,
           user.github_id,
           user.email,
         );

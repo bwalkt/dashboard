@@ -215,7 +215,7 @@ export const SchemaBuilder = {
 export const CommonSchemas = {
   // User schema that allows dynamic profile fields
   user: SchemaBuilder.createEntitySchema({
-    id: { type: 'number' },
+    id: { type: 'string' },
     email: { type: 'string', format: 'email' },
     name: { type: 'string' },
     created_at: { type: 'string', format: 'date-time' },
