@@ -14,7 +14,12 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({ title, onClose }) => {
       <Text text50 color={colors.textLightColor} style={styles.title}>
         {title}
       </Text>
-      <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+      <TouchableOpacity
+        onPress={onClose}
+        style={styles.closeButton}
+        accessibilityLabel="Close drawer"
+        accessibilityRole="button"
+      >
         <Text style={styles.closeIcon}>✕</Text>
       </TouchableOpacity>
     </View>

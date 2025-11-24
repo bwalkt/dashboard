@@ -77,7 +77,7 @@ const FAQContent: React.FC = () => {
 
   return (
     <View>
-      {faqs?.faqs.map((faq, index) => (
+      {(faqs?.faqs ?? []).map((faq, index) => (
         <TouchableOpacity key={index} onPress={() => toggleExpanded(index)} style={styles.faqItem} activeOpacity={0.7}>
           <View style={styles.questionContainer}>
             <Text text70 color={colors.textLightColor} style={styles.question}>
