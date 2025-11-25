@@ -1,4 +1,8 @@
 import { config as envConfig } from "../config/env";
+import { parseRedisUrl } from "../config/redis-url";
+
+// Parse Redis URL to extract components for Centrifuge
+const parsedRedis = parseRedisUrl(envConfig.REDIS_URL);
 
 export const centrifugeConfig = {
   // Centrifuge server configuration
@@ -6,10 +10,11 @@ export const centrifugeConfig = {
     host: "0.0.0.0",
     port: parseInt(process.env.CENTRIFUGE_PORT || "8091"),
     engine: "memory", // Use memory for development, Redis for production
-    redis_host: envConfig.REDIS_HOST,
-    redis_port: envConfig.REDIS_PORT,
-    redis_password: envConfig.REDIS_PASSWORD,
-    redis_db: 1, // Different DB from main app Redis
+    redis_host: parsedRedis.host,
+    redis_port: parsedRedis.port,
+    redis_username: parsedRedis.username,
+    redis_password: parsedRedis.password,
+    redis_db: parsedRedis.db ?? 1, // Different DB from main app Redis (default to 1)
   },
 
   // gRPC server for Envoy ext_proc

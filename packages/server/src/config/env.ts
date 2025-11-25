@@ -29,9 +29,7 @@ export interface EnvironmentConfig {
   POSTGRES_USER: string;
   POSTGRES_PASSWORD: string;
   POSTGRES_DB: string;
-  REDIS_HOST: string;
-  REDIS_PORT: number;
-  REDIS_PASSWORD: string;
+  REDIS_URL: string;
   BREVO_API_KEY: string;
   BREVO_SENDER_EMAIL: string;
   BREVO_SENDER_NAME: string;
@@ -107,9 +105,21 @@ export const config: EnvironmentConfig = {
   POSTGRES_USER: process.env.POSTGRES_USER || "postgres",
   POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD || "postgres",
   POSTGRES_DB: process.env.POSTGRES_DB || "pzero",
-  REDIS_HOST: process.env.REDIS_HOST || "localhost",
-  REDIS_PORT: parseInt(process.env.REDIS_PORT || "6379", 10),
-  REDIS_PASSWORD: process.env.REDIS_PASSWORD || "",
+  REDIS_URL:
+    process.env.REDIS_URL ||
+    (() => {
+      // Fallback: construct URL from individual components for backward compatibility
+      const host = process.env.REDIS_HOST || "localhost";
+      const port = process.env.REDIS_PORT || "6379";
+      const username = process.env.REDIS_USERNAME;
+      const password = process.env.REDIS_PASSWORD;
+      if (username && password) {
+        return `redis://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:${port}`;
+      } else if (password) {
+        return `redis://:${encodeURIComponent(password)}@${host}:${port}`;
+      }
+      return `redis://${host}:${port}`;
+    })(),
   BREVO_API_KEY: process.env.BREVO_API_KEY || "",
   BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL || "",
   BREVO_SENDER_NAME: process.env.BREVO_SENDER_NAME || "P-Zero",

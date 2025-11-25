@@ -1,4 +1,4 @@
-import Redis from "ioredis";
+import Redis, { type RedisOptions } from "ioredis";
 import { config } from "./env";
 
 class RedisManager {
@@ -6,16 +6,15 @@ class RedisManager {
   private initialized: boolean = false;
 
   constructor() {
-    this.client = new Redis({
-      host: config.REDIS_HOST,
-      port: config.REDIS_PORT,
-      ...(config.REDIS_PASSWORD && { password: config.REDIS_PASSWORD }),
+    // ioredis supports connection via URL directly
+    // We can pass the URL string or parse it for additional options
+    const redisOptions: RedisOptions = {
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         const delay = Math.min(times * 50, 2000);
         return delay;
       },
-      reconnectOnError: (err) => {
+      reconnectOnError: (err: Error) => {
         const targetError = "READONLY";
         if (err.message?.includes(targetError)) {
           // Only reconnect when the error contains "READONLY"
@@ -23,7 +22,10 @@ class RedisManager {
         }
         return false;
       },
-    });
+    };
+
+    // ioredis can accept a URL string directly
+    this.client = new Redis(config.REDIS_URL, redisOptions);
 
     // Handle connection events
     this.client.on("connect", () => {

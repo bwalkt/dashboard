@@ -54,8 +54,7 @@ beforeAll(async () => {
     NODE_ENV: process.env.NODE_ENV,
     hasJWTSecret: !!config.JWT_SECRET,
     hasDBConfig: !!config.POSTGRES_HOST,
-    redisHost: config.REDIS_HOST,
-    oauthRedirectUrl: config.OAUTH_REDIRECT_URL,
+    redisUrl: config.REDIS_URL,
     serverBaseUrl: config.SERVER_BASE_URL,
   });
 });

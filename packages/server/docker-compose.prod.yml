@@ -44,9 +44,8 @@ services:
       - POSTGRES_MAX_CLIENTS=${POSTGRES_MAX_CLIENTS:-20}
       - POSTGRES_IDLE_TIMEOUT=${POSTGRES_IDLE_TIMEOUT:-30000}
       - POSTGRES_CONNECTION_TIMEOUT=${POSTGRES_CONNECTION_TIMEOUT:-2000}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      # Redis connection URL (supports password via redis://:password@host:port or redis://username:password@host:port)
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - BREVO_API_KEY=${BREVO_API_KEY}
       - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
       - BREVO_SENDER_NAME=${BREVO_SENDER_NAME:-P-Zero}
