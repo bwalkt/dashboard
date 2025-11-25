@@ -278,14 +278,23 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       return
     }
 
-    // Check if verification is needed
-    if (!isEmailVerified || !isPhoneVerified) {
-      setVerificationStep('email')
-      setShowVerificationDrawer(true)
+    // Check if email or phone changed and needs verification
+    const emailChanged = formData.email !== previousData.email
+    const phoneChanged = formData.phoneNumber !== previousData.phoneNumber
+
+    // Only require verification for changed fields
+    const needsEmailVerification = emailChanged && !isEmailVerified
+    const needsPhoneVerification = phoneChanged && !isPhoneVerified
+
+    // If no verification needed, save directly
+    if (!needsEmailVerification && !needsPhoneVerification) {
+      await performSave()
       return
     }
 
-    await performSave()
+    // Show verification drawer starting with the first field that needs verification
+    setVerificationStep(needsEmailVerification ? 'email' : 'phone')
+    setShowVerificationDrawer(true)
   }
 
   const performSave = async () => {
@@ -323,6 +332,25 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   }
 
   const updateField = async (field: keyof FormData, value: string | boolean) => {
+    // Handle isPrimary toggle immediately
+    if (field === 'isPrimary' && typeof value === 'boolean') {
+      console.log('Settings: Updating isPrimary to', value)
+      // Update DevicesStore immediately
+      if (value) {
+        DevicesStore.isPrimaryDevice = true
+        const currentDevice = await DevicesStore.getCurrentDeviceInfo()
+        currentDevice.isPrimaryDevice = true
+        DevicesStore.setItem({ key: 'isPrimary', data: currentDevice })
+      } else {
+        DevicesStore.isPrimaryDevice = false
+        const currentDevice = await DevicesStore.getCurrentDeviceInfo()
+        currentDevice.isPrimaryDevice = false
+        DevicesStore.setItem({ key: 'isPrimary', data: currentDevice })
+      }
+      console.log('Settings: DevicesStore.isPrimaryDevice is now', DevicesStore.isPrimaryDevice)
+      setFormData(prev => ({ ...prev, [field]: value }))
+    }
+
     // Reset phone verification state when the phone number changes
     if (field === 'phoneNumber' && typeof value === 'string' && value !== formData.phoneNumber) {
       setIsPhoneVerified(false)
@@ -478,7 +506,23 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       .join(' ')
   }
 
+  const hasFormChanges = () => {
+    return (
+      formData.nickName !== previousData.nickName ||
+      formData.email !== previousData.email ||
+      formData.phoneNumber !== previousData.phoneNumber ||
+      formData.classificationType !== previousData.classificationType ||
+      formData.isPrimary !== previousData.isPrimary ||
+      formData.termsAccepted !== previousData.termsAccepted
+    )
+  }
+
   const isFormValid = () => {
+    // Check if there are any changes
+    if (!hasFormChanges()) {
+      return false
+    }
+
     // Check each required field individually using validation functions
     const nicknameValid = !validateNickName(formData.nickName)
     const emailValid = !validateEmail(formData.email)
@@ -776,7 +820,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       // Auto-transition to next step after showing success
       successTimeoutRef.current = setTimeout(async () => {
         try {
-          if (!isPhoneVerified) {
+          // Check if phone changed and needs verification
+          const phoneChanged = formData.phoneNumber !== previousData.phoneNumber
+          const needsPhoneVerification = phoneChanged && !isPhoneVerified
+
+          if (needsPhoneVerification) {
             // Reset phone verification state and prepare transition
             setIsEditing(false)
             setTempPhone('')
@@ -786,10 +834,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             setIsVerificationLocked(false)
             setVerificationStep('phone')
           } else if (!formData.termsAccepted) {
-            // If phone is verified but terms not accepted, show terms
+            // If phone doesn't need verification but terms not accepted, show terms
             setShowVerificationDrawer(false)
             handleTermsPress()
           } else {
+            // All done, save
             setShowVerificationDrawer(false)
             await performSave()
           }
