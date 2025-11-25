@@ -119,15 +119,6 @@ class TwilioService {
       return { valid: false };
     }
   }
-
-  /**
-   * Validate phone number format (basic E.164 validation)
-   */
-  public validatePhoneFormat(phone: string): boolean {
-    // E.164 format: +[country code][number] (up to 15 digits)
-    const phoneRegex = /^\+[1-9]\d{1,14}$/;
-    return phoneRegex.test(phone);
-  }
 }
 
 // Export singleton instance

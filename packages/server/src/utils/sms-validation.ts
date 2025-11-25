@@ -1,9 +1,26 @@
 import type { ErrorResponse } from "@pzero/shared";
 import { formatPhoneE164, validateUSPhoneNumber } from "@pzero/shared/phone";
+import { randomInt } from "crypto";
 import type { FastifyReply } from "fastify";
 import { config } from "../config/env";
 import { redis } from "../config/redis";
 import { twilioService } from "../services/twilio.service";
+
+/**
+ * Generate and store a verification code in Redis (for custom SMS)
+ */
+async function generateAndStoreCode(formattedPhone: string): Promise<string> {
+  // Generate cryptographically secure 6-digit verification code
+  const code = randomInt(100000, 1000000).toString();
+
+  // Store verification code in Redis with 10 minute expiry (only for custom SMS)
+  if (config.TWILIO_MESSAGE) {
+    const verificationKey = `sms_verification_code:${formattedPhone}`;
+    await redis.set(verificationKey, code, 600); // 10 minutes
+  }
+
+  return code;
+}
 
 /**
  * Validate phone number format and return error response if invalid
@@ -79,14 +96,8 @@ export async function sendSmsVerification(phone: string): Promise<{
     throw new Error("Invalid phone number format for SMS");
   }
 
-  // Generate 6-digit verification code for custom SMS (not needed for Twilio Verify)
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-  // Only store in Redis if using custom SMS
-  if (config.TWILIO_MESSAGE) {
-    const verificationKey = `sms_verification_code:${formattedPhone}`;
-    await redis.set(verificationKey, code, 600); // 10 minutes
-  }
+  // Generate and store verification code
+  const code = await generateAndStoreCode(formattedPhone);
 
   // Send SMS verification using Twilio (will choose method based on TWILIO_MESSAGE)
   await twilioService.sendVerificationSMS({
@@ -113,14 +124,8 @@ export async function resendSmsVerification(phone: string): Promise<{
     throw new Error("Invalid phone number format for SMS");
   }
 
-  // Generate new 6-digit verification code for custom SMS (not needed for Twilio Verify)
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-  // Only store in Redis if using custom SMS
-  if (config.TWILIO_MESSAGE) {
-    const verificationKey = `sms_verification_code:${formattedPhone}`;
-    await redis.set(verificationKey, code, 600); // 10 minutes
-  }
+  // Generate and store verification code
+  const code = await generateAndStoreCode(formattedPhone);
 
   // Resend SMS verification using Twilio (will choose method based on TWILIO_MESSAGE)
   await twilioService.sendVerificationSMS({

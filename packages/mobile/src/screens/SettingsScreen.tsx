@@ -5,7 +5,7 @@ import type { NavigationProp } from '@react-navigation/native'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ActionSheetIOS,
   Alert,
@@ -118,6 +118,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   // Popover state
   const [showPrimaryHint, setShowPrimaryHint] = useState(false)
 
+  // Cleanup ref for timeouts
+  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   // Terms and conditions state
   const [showTermsDrawer, setShowTermsDrawer] = useState(false)
   const [termsData, setTermsData] = useState<TermsSection[]>([])
@@ -154,7 +157,13 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     const intervalId = setInterval(() => {
       // check if dirty
     }, 5000)
-    return () => clearInterval(intervalId)
+    return () => {
+      clearInterval(intervalId)
+      // Clean up any pending timeouts
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current)
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -759,24 +768,34 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       // Show success screen with smooth transition
       setVerificationStep('emailSuccess')
 
+      // Clear any existing timeout
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current)
+      }
+
       // Auto-transition to next step after showing success
-      setTimeout(async () => {
-        if (!isPhoneVerified) {
-          // Reset phone verification state and prepare transition
-          setIsEditing(false)
-          setTempPhone('')
-          setShowVerificationCode(false)
-          setVerificationCode('')
-          setVerificationAttempts(0)
-          setIsVerificationLocked(false)
-          setVerificationStep('phone')
-        } else if (!formData.termsAccepted) {
-          // If phone is verified but terms not accepted, show terms
-          setShowVerificationDrawer(false)
-          handleTermsPress()
-        } else {
-          setShowVerificationDrawer(false)
-          await performSave()
+      successTimeoutRef.current = setTimeout(async () => {
+        try {
+          if (!isPhoneVerified) {
+            // Reset phone verification state and prepare transition
+            setIsEditing(false)
+            setTempPhone('')
+            setShowVerificationCode(false)
+            setVerificationCode('')
+            setVerificationAttempts(0)
+            setIsVerificationLocked(false)
+            setVerificationStep('phone')
+          } else if (!formData.termsAccepted) {
+            // If phone is verified but terms not accepted, show terms
+            setShowVerificationDrawer(false)
+            handleTermsPress()
+          } else {
+            setShowVerificationDrawer(false)
+            await performSave()
+          }
+        } catch (error) {
+          console.error('Error completing verification:', error)
+          Alert.alert(labels.error, 'Failed to save settings. Please try again.')
         }
       }, 2000) // Show success for 2 seconds
     } catch (error: any) {
