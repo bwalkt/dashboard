@@ -830,8 +830,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     setIsSendingEmailCode(true)
     try {
       await api.post('/auth/register', {
-        email: formData.email.trim().toLowerCase(),
-        name: formData.nickName?.trim() || formData.email.split('@')[0],
+        email: emailBeingVerified,
+        name: formData.nickName?.trim() || emailBeingVerified.split('@')[0],
       })
 
       // Reset attempts when resending
