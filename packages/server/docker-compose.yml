@@ -23,14 +23,12 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:latest
-    container_name: pzero-redis
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: pzero-dragonfly
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
     volumes:
-      - redis_data:/data
+      - dragonfly_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -56,7 +54,7 @@ services:
       - POSTGRES_MAX_CLIENTS=${POSTGRES_MAX_CLIENTS:-20}
       - POSTGRES_IDLE_TIMEOUT=${POSTGRES_IDLE_TIMEOUT:-30000}
       - POSTGRES_CONNECTION_TIMEOUT=${POSTGRES_CONNECTION_TIMEOUT:-2000}
-      - REDIS_HOST=redis
+      - REDIS_HOST=dragonfly
       - REDIS_PORT=6379
       - BREVO_API_KEY=${BREVO_API_KEY}
       - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
@@ -80,7 +78,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      dragonfly:
         condition: service_healthy
     volumes:
       - ./src:/app/packages/server/src
@@ -103,4 +101,4 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
+  dragonfly_data:

@@ -1,11 +1,11 @@
 name: pzero-b2b
 services:
-  redis:
-    image: redis:latest
-    container_name: pzero-b2b-redis
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: pzero-b2b-dragonfly
     restart: unless-stopped
     volumes:
-      - redis_data:/data
+      - dragonfly_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -37,8 +37,8 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       # Database Configuration
       - DATABASE_PATH=${DATABASE_PATH:-./database.db}
-      # Redis Configuration
-      - REDIS_HOST=${REDIS_HOST:-redis}
+      # Redis Configuration (Dragonfly is Redis-compatible)
+      - REDIS_HOST=${REDIS_HOST:-dragonfly}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       # OAuth Callback URL
@@ -52,8 +52,8 @@ services:
         source: ./packages/sfdc-server-vanilla/src/keys/certificate.crt
         target: /app/examples/b2b/packages/sfdc-server-vanilla/src/keys/certificate.crt
     depends_on:
-      redis:
+      dragonfly:
         condition: service_healthy
 
 volumes:
-  redis_data:
+  dragonfly_data:
