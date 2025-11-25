@@ -1,6 +1,17 @@
 name: pzero-b2b
 version: "3.9"
 services:
+  redis:
+    image: redis:latest
+    container_name: pzero-b2b-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
   pzero-sfdc-server:
     # Image from GitHub Container Registry
     # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
@@ -20,6 +31,10 @@ services:
       # GitHub OAuth Configuration
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      # Redis Configuration
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       # JWT Configuration
       - JWT_SECRET=${JWT_SECRET}
       # Database Configuration
