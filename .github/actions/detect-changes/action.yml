@@ -90,6 +90,12 @@ runs:
           if [[ ! " ${SERVICES_ARRAY[@]} " =~ " server " ]]; then
             SERVICES_ARRAY+=("server")
           fi
+          if [[ ! " ${SERVICES_ARRAY[@]} " =~ " sfdc-example " ]]; then
+            SERVICES_ARRAY+=("sfdc-example")
+          fi
+          if [[ ! " ${SERVICES_ARRAY[@]} " =~ " portal " ]]; then
+            SERVICES_ARRAY+=("portal")
+          fi
         fi
 
         # If server changes, also build server-postgres (they're part of the same package)

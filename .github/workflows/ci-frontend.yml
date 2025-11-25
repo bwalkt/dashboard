@@ -1,4 +1,4 @@
-name: CI Build
+name: CI Frontend
 
 on:
   push:
@@ -63,6 +63,62 @@ jobs:
           SERVICE_CONFIG=$(cat .github/actions/service-config/services.json | jq -r --arg name "${{ matrix.service }}" '.services[] | select(.name == $name) | tojson')
           echo "config=$SERVICE_CONFIG" >> $GITHUB_OUTPUT
 
+      - name: Prepare build args for sfdc-example
+        id: build-args-sfdc
+        if: matrix.service == 'sfdc-example'
+        run: |
+          BUILD_ARGS=""
+          if [ -n "${{ secrets.VITE_BACKEND_URL }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL }},"
+          fi
+          if [ -n "${{ secrets.VITE_USE_PROXY }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_USE_PROXY=${{ secrets.VITE_USE_PROXY }},"
+          fi
+          if [ -n "${{ secrets.VITE_PROXY_URL }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_PROXY_URL=${{ secrets.VITE_PROXY_URL }},"
+          fi
+          if [ -n "${{ secrets.VITE_PROXY_TARGET }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_PROXY_TARGET=${{ secrets.VITE_PROXY_TARGET }},"
+          fi
+          if [ -n "${{ secrets.VITE_OTEL_EXPORTER_URL }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_OTEL_EXPORTER_URL=${{ secrets.VITE_OTEL_EXPORTER_URL }},"
+          fi
+          # Remove trailing comma
+          BUILD_ARGS=$(echo "$BUILD_ARGS" | sed 's/,$//')
+          echo "args=$BUILD_ARGS" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Prepare build args for portal
+        id: build-args-portal
+        if: matrix.service == 'portal'
+        run: |
+          BUILD_ARGS=""
+          if [ -n "${{ secrets.VITE_BACKEND_URL }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL }},"
+          fi
+          if [ -n "${{ secrets.VITE_CONFIG_BREADCRUMB }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_CONFIG_BREADCRUMB=${{ secrets.VITE_CONFIG_BREADCRUMB }},"
+          fi
+          if [ -n "${{ secrets.VITE_POSTHOG_API_KEY }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_POSTHOG_API_KEY=${{ secrets.VITE_POSTHOG_API_KEY }},"
+          fi
+          if [ -n "${{ secrets.VITE_POSTHOG_HOST }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_POSTHOG_HOST=${{ secrets.VITE_POSTHOG_HOST }},"
+          fi
+          if [ -n "${{ secrets.VITE_TABLE_DEBUG }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_TABLE_DEBUG=${{ secrets.VITE_TABLE_DEBUG }},"
+          fi
+          if [ -n "${{ secrets.VITE_SENTRY_DSN }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_SENTRY_DSN=${{ secrets.VITE_SENTRY_DSN }},"
+          fi
+          if [ -n "${{ secrets.VITE_SENTRY_DISABLED }}" ]; then
+            BUILD_ARGS="${BUILD_ARGS}VITE_SENTRY_DISABLED=${{ secrets.VITE_SENTRY_DISABLED }},"
+          fi
+          # Remove trailing comma
+          BUILD_ARGS=$(echo "$BUILD_ARGS" | sed 's/,$//')
+          echo "args=$BUILD_ARGS" >> $GITHUB_OUTPUT
+        shell: bash
+
       - name: Build Docker image
         id: build
         uses: ./.github/actions/docker-build-push
@@ -77,10 +133,11 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           cache-from: ${{ env.REGISTRY_URL }}/${{ env.GITHUB_OWNER }}/${{ fromJSON(steps.service-config.outputs.config).image_name }}:cache
           cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}/{2}:cache,mode=max', env.REGISTRY_URL, env.GITHUB_OWNER, fromJSON(steps.service-config.outputs.config).image_name) || '' }}
+          build-args: ${{ matrix.service == 'sfdc-example' && steps.build-args-sfdc.outputs.args || (matrix.service == 'portal' && steps.build-args-portal.outputs.args || '') }}
 
-  deploy-sfdc-server-vanilla:
+  deploy-sfdc-example:
     needs: [detect-changes, build-services]
-    if: ${{ github.event_name != 'pull_request' && needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' && contains(needs.detect-changes.outputs.services, '"sfdc-server-vanilla"') }}
+    if: ${{ github.event_name != 'pull_request' && needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' && contains(needs.detect-changes.outputs.services, '"sfdc-example"') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -90,12 +147,12 @@ jobs:
       - name: Trigger Coolify deployment
         uses: ./.github/actions/trigger-coolify-deployment
         with:
-          webhook_url: ${{ secrets.COOLIFY_WEBHOOK_URL_SFDC }}
+          webhook_url: ${{ secrets.COOLIFY_WEBHOOK_URL_SFDC_EXAMPLE }}
           coolify_token: ${{ secrets.COOLIFY_TOKEN }}
 
-  deploy-golang-proxy:
+  deploy-portal:
     needs: [detect-changes, build-services]
-    if: ${{ github.event_name != 'pull_request' && needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' && contains(needs.detect-changes.outputs.services, '"golang-proxy"') }}
+    if: ${{ github.event_name != 'pull_request' && needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' && contains(needs.detect-changes.outputs.services, '"portal"') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -105,20 +162,6 @@ jobs:
       - name: Trigger Coolify deployment
         uses: ./.github/actions/trigger-coolify-deployment
         with:
-          webhook_url: ${{ secrets.COOLIFY_WEBHOOK_URL_GOLANG_PROXY }}
+          webhook_url: ${{ secrets.COOLIFY_WEBHOOK_URL_PORTAL }}
           coolify_token: ${{ secrets.COOLIFY_TOKEN }}
 
-  deploy-server:
-    needs: [detect-changes, build-services]
-    if: ${{ github.event_name != 'pull_request' && needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' && contains(needs.detect-changes.outputs.services, '"server"') }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target_branch || github.ref }}
-      - name: Trigger Coolify deployment
-        uses: ./.github/actions/trigger-coolify-deployment
-        with:
-          webhook_url: ${{ secrets.COOLIFY_WEBHOOK_URL_SERVER }}
-          coolify_token: ${{ secrets.COOLIFY_TOKEN }}
