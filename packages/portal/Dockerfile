@@ -13,11 +13,16 @@ ARG VITE_BACKEND_URL
 # Set build-time environment variables
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 ENV VITE_CONFIG_BREADCRUMB=true
-ENV VITE_POSTHOG_API_KEY="phc_example1234567890" # This is an example PostHog API key
-ENV VITE_POSTHOG_HOST="https://us.i.posthog.com" # This is a placeholder for the PostHog host
-ENV VITE_TABLE_DEBUG=false # This is a placeholder for the table debug mode
-ENV VITE_SENTRY_DSN="https://examplePublicKey@o0.ingest.sentry.io/0" # This is an example Sentry DSN
-ENV VITE_SENTRY_DISABLED=true # This is a placeholder for the Sentry disabled mode
+# This is an example PostHog API key
+ENV VITE_POSTHOG_API_KEY="phc_example1234567890"
+# This is a placeholder for the PostHog host
+ENV VITE_POSTHOG_HOST="https://us.i.posthog.com"
+# This is a placeholder for the table debug mode
+ENV VITE_TABLE_DEBUG=false
+# This is an example Sentry DSN
+ENV VITE_SENTRY_DSN="https://examplePublicKey@o0.ingest.sentry.io/0"
+# This is a placeholder for the Sentry disabled mode
+ENV VITE_SENTRY_DISABLED=true
 
 # Copy workspace configuration files
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
