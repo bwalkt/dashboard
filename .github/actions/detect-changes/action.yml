@@ -13,6 +13,10 @@ inputs:
     description: "Target branch for comparison (default: main)"
     required: false
     default: "main"
+  services_config:
+    description: "Path to services configuration file (default: .github/actions/service-config/services.json)"
+    required: false
+    default: ".github/actions/service-config/services.json"
 
 outputs:
   services:
@@ -44,8 +48,8 @@ runs:
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
         fi
 
-        # Load services from services.json
-        SERVICES_CONFIG=".github/actions/service-config/services.json"
+        # Load services from services config file
+        SERVICES_CONFIG="${{ inputs.services_config }}"
         if [ ! -f "$SERVICES_CONFIG" ]; then
           echo "services=[]" >> $GITHUB_OUTPUT
           exit 1
@@ -82,33 +86,33 @@ runs:
         done
 
         # Check for shared directory changes (packages/shared/)
+        # Only add services that are in the current services config
         if echo "$CHANGED_FILES" | grep -q "^packages/shared/"; then
-          # If shared code changed, build services that depend on it
-          if [[ ! " ${SERVICES_ARRAY[@]} " =~ " sfdc-server-vanilla " ]]; then
-            SERVICES_ARRAY+=("sfdc-server-vanilla")
-          fi
-          if [[ ! " ${SERVICES_ARRAY[@]} " =~ " server " ]]; then
-            SERVICES_ARRAY+=("server")
-          fi
-          if [[ ! " ${SERVICES_ARRAY[@]} " =~ " sfdc-example " ]]; then
-            SERVICES_ARRAY+=("sfdc-example")
-          fi
-          if [[ ! " ${SERVICES_ARRAY[@]} " =~ " portal " ]]; then
-            SERVICES_ARRAY+=("portal")
-          fi
+          # If shared code changed, build services that depend on it and are in the config
+          for service_name in "${ALL_SERVICES_ARRAY[@]}"; do
+            if [[ ! " ${SERVICES_ARRAY[@]} " =~ " $service_name " ]]; then
+              SERVICES_ARRAY+=("$service_name")
+            fi
+          done
         fi
 
         # If server changes, also build server-postgres (they're part of the same package)
+        # Only if server-postgres is in the services config
         if [[ " ${SERVICES_ARRAY[@]} " =~ " server " ]]; then
-          if [[ ! " ${SERVICES_ARRAY[@]} " =~ " server-postgres " ]]; then
-            SERVICES_ARRAY+=("server-postgres")
+          if [[ " ${ALL_SERVICES_ARRAY[@]} " =~ " server-postgres " ]]; then
+            if [[ ! " ${SERVICES_ARRAY[@]} " =~ " server-postgres " ]]; then
+              SERVICES_ARRAY+=("server-postgres")
+            fi
           fi
         fi
 
         # If server-postgres Dockerfile changes, build it
+        # Only if server-postgres is in the services config
         if echo "$CHANGED_FILES" | grep -q "packages/server/Dockerfile.postgres"; then
-          if [[ ! " ${SERVICES_ARRAY[@]} " =~ " server-postgres " ]]; then
-            SERVICES_ARRAY+=("server-postgres")
+          if [[ " ${ALL_SERVICES_ARRAY[@]} " =~ " server-postgres " ]]; then
+            if [[ ! " ${SERVICES_ARRAY[@]} " =~ " server-postgres " ]]; then
+              SERVICES_ARRAY+=("server-postgres")
+            fi
           fi
         fi
 

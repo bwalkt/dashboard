@@ -42,6 +42,7 @@ jobs:
           force_build_all: ${{ github.event.inputs.force_build_all || false }}
           event_name: ${{ github.event_name }}
           target_branch: ${{ github.event.inputs.target_branch || 'main' }}
+          services_config: ".github/actions/service-config/services-frontend.json"
 
   build-services:
     needs: detect-changes
@@ -60,7 +61,7 @@ jobs:
       - name: Load service configuration
         id: service-config
         run: |
-          SERVICE_CONFIG=$(cat .github/actions/service-config/services.json | jq -r --arg name "${{ matrix.service }}" '.services[] | select(.name == $name) | tojson')
+          SERVICE_CONFIG=$(cat .github/actions/service-config/services-frontend.json | jq -r --arg name "${{ matrix.service }}" '.services[] | select(.name == $name) | tojson')
           echo "config=$SERVICE_CONFIG" >> $GITHUB_OUTPUT
 
       - name: Prepare build args for sfdc-example
