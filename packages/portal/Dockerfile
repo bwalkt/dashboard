@@ -8,21 +8,16 @@ RUN npm install -g pnpm@10.18.3
 
 # Build arguments for Vite environment variables
 ARG VITE_BACKEND_URL
-ARG VITE_CONFIG_BREADCRUMB
-ARG VITE_POSTHOG_API_KEY
-ARG VITE_POSTHOG_HOST
-ARG VITE_TABLE_DEBUG
-ARG VITE_SENTRY_DSN
-ARG VITE_SENTRY_DISABLED
+
 
 # Set build-time environment variables
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
-ENV VITE_CONFIG_BREADCRUMB=${VITE_CONFIG_BREADCRUMB}
-ENV VITE_POSTHOG_API_KEY=${VITE_POSTHOG_API_KEY}
-ENV VITE_POSTHOG_HOST=${VITE_POSTHOG_HOST}
-ENV VITE_TABLE_DEBUG=${VITE_TABLE_DEBUG}
-ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
-ENV VITE_SENTRY_DISABLED=${VITE_SENTRY_DISABLED}
+ENV VITE_CONFIG_BREADCRUMB=true
+ENV VITE_POSTHOG_API_KEY="" # This is a placeholder for the PostHog API key
+ENV VITE_POSTHOG_HOST="https://us.i.posthog.com" # This is a placeholder for the PostHog host
+ENV VITE_TABLE_DEBUG=false # This is a placeholder for the table debug mode
+ENV VITE_SENTRY_DSN="" # This is a placeholder for the Sentry DSN
+ENV VITE_SENTRY_DISABLED=true # This is a placeholder for the Sentry disabled mode
 
 # Copy workspace configuration files
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./

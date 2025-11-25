@@ -72,7 +72,7 @@ jobs:
             BUILD_ARGS="${BUILD_ARGS}VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL }},"
           fi
           if [ -n "${{ secrets.VITE_USE_PROXY }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_USE_PROXY=${{ secrets.VITE_USE_PROXY }},"
+            BUILD_ARGS="${BUILD_ARGS}VITE_USE_PROXY=true,"
           fi
           if [ -n "${{ secrets.VITE_PROXY_URL }}" ]; then
             BUILD_ARGS="${BUILD_ARGS}VITE_PROXY_URL=${{ secrets.VITE_PROXY_URL }},"
@@ -95,24 +95,6 @@ jobs:
           BUILD_ARGS=""
           if [ -n "${{ secrets.VITE_BACKEND_URL }}" ]; then
             BUILD_ARGS="${BUILD_ARGS}VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL }},"
-          fi
-          if [ -n "${{ secrets.VITE_CONFIG_BREADCRUMB }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_CONFIG_BREADCRUMB=${{ secrets.VITE_CONFIG_BREADCRUMB }},"
-          fi
-          if [ -n "${{ secrets.VITE_POSTHOG_API_KEY }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_POSTHOG_API_KEY=${{ secrets.VITE_POSTHOG_API_KEY }},"
-          fi
-          if [ -n "${{ secrets.VITE_POSTHOG_HOST }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_POSTHOG_HOST=${{ secrets.VITE_POSTHOG_HOST }},"
-          fi
-          if [ -n "${{ secrets.VITE_TABLE_DEBUG }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_TABLE_DEBUG=${{ secrets.VITE_TABLE_DEBUG }},"
-          fi
-          if [ -n "${{ secrets.VITE_SENTRY_DSN }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_SENTRY_DSN=${{ secrets.VITE_SENTRY_DSN }},"
-          fi
-          if [ -n "${{ secrets.VITE_SENTRY_DISABLED }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_SENTRY_DISABLED=${{ secrets.VITE_SENTRY_DISABLED }},"
           fi
           # Remove trailing comma
           BUILD_ARGS=$(echo "$BUILD_ARGS" | sed 's/,$//')
@@ -164,4 +146,3 @@ jobs:
         with:
           webhook_url: ${{ secrets.COOLIFY_WEBHOOK_URL_PORTAL }}
           coolify_token: ${{ secrets.COOLIFY_TOKEN }}
-
