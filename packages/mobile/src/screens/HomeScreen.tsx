@@ -1,4 +1,3 @@
-import { colors } from '@pzero/shared/theme'
 import { DrawerActions, type NavigationProp } from '@react-navigation/native'
 import type React from 'react'
 import { StyleSheet, TouchableOpacity } from 'react-native'
@@ -7,6 +6,7 @@ import { Text, View } from 'react-native-ui-lib'
 import Button from '../components/Button'
 import { labels } from '../constants/labels'
 import { SettingsStore } from '../stores/settings'
+import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 
 type DrawerParamList = {
   Home: undefined
@@ -17,9 +17,10 @@ type DrawerParamList = {
 
 interface HomeScreenProps {
   navigation: NavigationProp<DrawerParamList>
+  onFAQPress?: () => void
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onFAQPress }) => {
   const safeAreaInsets = useSafeAreaInsets()
   const isVerified = SettingsStore.isVerified
 
@@ -35,9 +36,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             {labels.menuIcon}
           </Text>
         </TouchableOpacity>
-        <Text text50 color={colors.textLightColor}>
+        <Text text50 color={colors.textLightColor} style={styles.title}>
           {labels.appName}
         </Text>
+        {onFAQPress && (
+          <TouchableOpacity onPress={onFAQPress} style={styles.faqButton}>
+            <Text style={styles.faqIcon}>?</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View center flex>
@@ -61,19 +67,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: surfaces.primary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg - 1,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: colors.borderColor,
+    justifyContent: 'space-between',
   },
   menuButton: {
-    marginRight: 15,
-    padding: 5,
+    marginRight: spacing.lg - 1,
+    padding: spacing.xs + 1,
+  },
+  title: {
+    flex: 1,
+  },
+  faqButton: {
+    padding: spacing.xs + 1,
+  },
+  faqIcon: {
+    fontSize: fontSize.md,
+    color: text.primary,
   },
 })
 

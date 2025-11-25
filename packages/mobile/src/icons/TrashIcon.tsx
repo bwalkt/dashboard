@@ -1,12 +1,13 @@
 import type React from 'react'
 import Svg, { Path } from 'react-native-svg'
+import { text } from '../theme'
 
 interface TrashIconProps {
   size?: number
   color?: string
 }
 
-const TrashIcon: React.FC<TrashIconProps> = ({ size = 20, color = '#ffffff' }) => {
+const TrashIcon: React.FC<TrashIconProps> = ({ size = 20, color = text.primary }) => {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path

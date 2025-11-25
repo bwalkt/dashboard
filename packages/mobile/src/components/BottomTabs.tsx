@@ -1,6 +1,7 @@
 import type React from 'react'
 import { StyleSheet, TouchableOpacity } from 'react-native'
 import { Text, View } from 'react-native-ui-lib'
+import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 
 export interface TabItem {
   id: string
@@ -44,36 +45,36 @@ const styles = StyleSheet.create({
   bottomTabs: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#333',
-    backgroundColor: '#1a1a1a',
+    borderTopColor: colors.borderColor,
+    backgroundColor: surfaces.primary,
   },
   tab: {
     flex: 1,
-    paddingVertical: 15,
+    paddingVertical: spacing.lg - 1,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
   },
   activeTab: {
-    backgroundColor: '#333',
+    backgroundColor: surfaces.secondary,
   },
   iconContainer: {
-    marginRight: 6,
+    marginRight: spacing.xs + 2,
   },
   tabText: {
-    color: '#666',
-    fontSize: 14,
+    color: text.muted,
+    fontSize: fontSize.sm,
   },
   activeTabText: {
-    color: '#007AFF',
+    color: colors.primaryColor,
   },
   textIcon: {
-    color: '#666',
-    fontSize: 18,
-    fontWeight: '600',
+    color: text.muted,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
   },
   activeTextIcon: {
-    color: '#007AFF',
+    color: colors.primaryColor,
   },
 })
 

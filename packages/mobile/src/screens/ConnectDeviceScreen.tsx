@@ -1,4 +1,3 @@
-import { colors } from '@pzero/shared/theme'
 import type { NavigationProp } from '@react-navigation/native'
 import type React from 'react'
 import { useEffect, useState } from 'react'
@@ -9,14 +8,14 @@ import { SwipeListView } from 'react-native-swipe-list-view'
 import { Text, TextField, View } from 'react-native-ui-lib'
 import BottomTabs, { type TabItem } from '../components/BottomTabs'
 import Button from '../components/Button'
-import ConnectionsIcon from '../components/ConnectionsIcon'
 import Header from '../components/Header'
 import InstructionText from '../components/InstructionText'
 import ScreenHeader from '../components/ScreenHeader'
-import TrashIcon from '../components/TrashIcon'
 import { isSimulator } from '../constants/envs'
 import { labels } from '../constants/labels'
+import { ConnectionsIcon, TrashIcon } from '../icons'
 import { stores } from '../stores'
+import { borderRadius, buttons, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 import { isAndroid } from '../utils/validate'
 
 type DrawerParamList = {
@@ -47,9 +46,10 @@ interface QRCodeEvent {
 
 interface ConnectDeviceScreenProps {
   navigation?: NavigationProp<DrawerParamList>
+  onFAQPress?: () => void
 }
 
-const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation }) => {
+const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, onFAQPress }) => {
   const safeAreaInsets = useSafeAreaInsets()
   const [isScanning, setIsScanning] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
@@ -357,7 +357,7 @@ const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation })
     {
       id: 'connections',
       label: labels.connectionsTab,
-      icon: <ConnectionsIcon size={24} color={activeTab === 'connections' ? '#007AFF' : '#666'} />,
+      icon: <ConnectionsIcon size={24} color={activeTab === 'connections' ? colors.primaryColor : text.muted} />,
     },
   ]
 
@@ -541,7 +541,7 @@ const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation })
 
   return (
     <View style={[styles.container, { paddingTop: safeAreaInsets.top }]}>
-      <Header title={labels.connectDeviceTitle} navigation={navigation} />
+      <Header title={labels.connectDeviceTitle} navigation={navigation} onFAQPress={onFAQPress} />
 
       {activeTab === 'add' ? renderAddTab() : renderConnectionsTab()}
 
@@ -559,42 +559,42 @@ const { height } = Dimensions.get('window')
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: surfaces.primary,
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: spacing.xl,
     justifyContent: 'center',
   },
   infoCard: {
-    backgroundColor: '#1a1a1a',
-    padding: 20,
-    borderRadius: 12,
+    backgroundColor: surfaces.secondary,
+    padding: spacing.xl,
+    borderRadius: borderRadius.xl,
     marginBottom: 30,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: colors.borderColor,
   },
   scanButton: {
-    marginBottom: 15,
+    marginBottom: spacing.lg - 1,
   },
   qrButton: {
-    marginBottom: 15,
+    marginBottom: spacing.lg - 1,
   },
   backButton: {
-    marginTop: 10,
+    marginTop: spacing.sm + 2,
   },
   qrContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-    margin: 20,
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: surfaces.secondary,
+    margin: spacing.xl,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xl,
   },
   scannerContainer: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: surfaces.primary,
   },
   camera: {
     height: height * 0.6,
@@ -604,22 +604,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: surfaces.secondary,
   },
   footer: {
-    padding: 20,
+    padding: spacing.xl,
     paddingTop: 0,
   },
   cancelButton: {
-    backgroundColor: '#333',
+    backgroundColor: colors.borderColor,
   },
   connectionItem: {
-    backgroundColor: '#1a1a1a',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
+    backgroundColor: surfaces.secondary,
+    padding: spacing.lg - 1,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.sm + 2,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: colors.borderColor,
   },
   emptyState: {
     flex: 1,
@@ -632,44 +632,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-    marginBottom: 10,
-    borderRadius: 8,
+    backgroundColor: surfaces.secondary,
+    marginBottom: spacing.sm + 2,
+    borderRadius: borderRadius.lg,
   },
   deleteButton: {
-    backgroundColor: '#ff4444',
+    backgroundColor: colors.errorColor,
     justifyContent: 'center',
     alignItems: 'center',
     width: 75,
     height: '100%',
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
+    borderTopRightRadius: borderRadius.lg,
+    borderBottomRightRadius: borderRadius.lg,
   },
   deleteButtonLabel: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.white,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
   },
   qrInput: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: surfaces.secondary,
     borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 20,
+    borderColor: colors.borderColor,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg - 1,
+    marginBottom: spacing.xl,
     minHeight: 120,
     textAlignVertical: 'top',
     fontFamily: 'monospace',
-    fontSize: 12,
+    fontSize: fontSize.xs,
   },
   manualInputButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: spacing.sm + 2,
   },
   sampleButton: {
     flex: 1,
-    backgroundColor: '#333',
+    backgroundColor: colors.borderColor,
   },
   submitButton: {
     flex: 1,

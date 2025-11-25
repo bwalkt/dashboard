@@ -9,6 +9,8 @@ import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics'
 import DeviceInfo from 'react-native-device-info'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { Colors } from 'react-native-ui-lib'
+import DrawerOverlay from './src/components/DrawerOverlay'
+import FAQContent from './src/components/FAQContent'
 import PinEntry from './src/components/PinEntry'
 import SidebarMenu from './src/components/SidebarMenu'
 import { envs } from './src/constants/envs'
@@ -189,27 +191,44 @@ function App() {
     // Check if user is verified to determine initial route
     const isVerified = SettingsStore.isVerified
     const initialRoute = isVerified ? 'Endpoints' : 'Settings'
+    const [showFAQ, setShowFAQ] = useState(false)
 
     return (
-      <Drawer.Navigator
-        drawerContent={props => <SidebarMenu {...props} />}
-        screenOptions={{
-          headerShown: false,
-          drawerStyle: {
-            backgroundColor: colors.backgroundDarkColor || '#1a1a1a',
-          },
-        }}
-        initialRouteName={initialRoute}
-      >
-        <Drawer.Screen name="Home" component={HomeScreen} />
-        <Drawer.Screen name="ConnectDevice" component={ConnectDeviceScreen} />
-        <Drawer.Screen name="Endpoints" component={EndpointsScreen} />
-        <Drawer.Screen name="Settings">
-          {props => (
-            <SettingsScreen {...props} navigation={props.navigation} onSettingsComplete={handleSettingsComplete} />
-          )}
-        </Drawer.Screen>
-      </Drawer.Navigator>
+      <>
+        <Drawer.Navigator
+          drawerContent={props => <SidebarMenu {...props} />}
+          screenOptions={{
+            headerShown: false,
+            drawerStyle: {
+              backgroundColor: colors.backgroundDarkColor,
+            },
+          }}
+          initialRouteName={initialRoute}
+        >
+          <Drawer.Screen name="Home">
+            {props => <HomeScreen {...props} onFAQPress={() => setShowFAQ(true)} />}
+          </Drawer.Screen>
+          <Drawer.Screen name="ConnectDevice">
+            {props => <ConnectDeviceScreen {...props} onFAQPress={() => setShowFAQ(true)} />}
+          </Drawer.Screen>
+          <Drawer.Screen name="Endpoints">
+            {props => <EndpointsScreen {...props} onFAQPress={() => setShowFAQ(true)} />}
+          </Drawer.Screen>
+          <Drawer.Screen name="Settings">
+            {props => (
+              <SettingsScreen
+                {...props}
+                navigation={props.navigation}
+                onSettingsComplete={handleSettingsComplete}
+                onFAQPress={() => setShowFAQ(true)}
+              />
+            )}
+          </Drawer.Screen>
+        </Drawer.Navigator>
+        <DrawerOverlay visible={showFAQ} onClose={() => setShowFAQ(false)} title="FAQs">
+          <FAQContent />
+        </DrawerOverlay>
+      </>
     )
   }
 

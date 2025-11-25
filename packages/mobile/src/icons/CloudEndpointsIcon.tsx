@@ -1,13 +1,14 @@
 import type React from 'react'
 import Svg, { Polygon } from 'react-native-svg'
+import { colors } from '../theme'
 
 interface CloudEndpointsIconProps {
   size?: number
   color?: string
 }
 
-const CloudEndpointsIcon: React.FC<CloudEndpointsIconProps> = ({ size = 24, color = '#4285f4' }) => {
-  const secondaryColor = color === '#4285f4' ? '#aecbfa' : `${color}80` // Add opacity for secondary color
+const CloudEndpointsIcon: React.FC<CloudEndpointsIconProps> = ({ size = 24, color = colors.primaryColor }) => {
+  const secondaryColor = color === colors.primaryColor ? `${color}80` : `${color}80` // Add opacity for secondary color
 
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">

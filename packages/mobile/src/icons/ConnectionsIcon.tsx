@@ -1,12 +1,13 @@
 import type React from 'react'
 import Svg, { Circle, Line } from 'react-native-svg'
+import { text } from '../theme'
 
 interface ConnectionsIconProps {
   size?: number
   color?: string
 }
 
-const ConnectionsIcon: React.FC<ConnectionsIconProps> = ({ size = 24, color = '#ffffff' }) => {
+const ConnectionsIcon: React.FC<ConnectionsIconProps> = ({ size = 24, color = text.primary }) => {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       {/* Central hub circle */}

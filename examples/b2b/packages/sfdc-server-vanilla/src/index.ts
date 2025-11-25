@@ -1,64 +1,64 @@
-import cookie from "@fastify/cookie";
-import cors from "@fastify/cors";
-import type { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { validateEnvironment } from "./config/env.js";
-import { redis } from "./config/redis.js";
-import { authRoutes } from "./routes/auth.js";
-import { salesforceRoutes } from "./routes/salesforce.js";
+import cookie from '@fastify/cookie'
+import cors from '@fastify/cors'
+import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
+import { validateEnvironment } from './config/env.js'
+import { redis } from './config/redis.js'
+import { authRoutes } from './routes/auth.js'
+import { salesforceRoutes } from './routes/salesforce.js'
 
 // Export a function that returns a Fastify instance
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   // Validate environment variables
-  validateEnvironment();
+  validateEnvironment()
 
   // Initialize Redis with timeout and error handling
   try {
-    const REDIS_CONNECTION_TIMEOUT_MS = 10000; // 10 seconds
+    const REDIS_CONNECTION_TIMEOUT_MS = 10000 // 10 seconds
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
-        reject(new Error(`Redis connection timeout after ${REDIS_CONNECTION_TIMEOUT_MS}ms`));
-      }, REDIS_CONNECTION_TIMEOUT_MS);
-    });
+        reject(new Error(`Redis connection timeout after ${REDIS_CONNECTION_TIMEOUT_MS}ms`))
+      }, REDIS_CONNECTION_TIMEOUT_MS)
+    })
 
-    await Promise.race([redis.initialize(), timeoutPromise]);
+    await Promise.race([redis.initialize(), timeoutPromise])
   } catch (error) {
-    console.error("❌ Failed to initialize Redis connection:", error);
-    console.error("Server startup aborted due to Redis connection failure.");
-    process.exit(1);
+    console.error('❌ Failed to initialize Redis connection:', error)
+    console.error('Server startup aborted due to Redis connection failure.')
+    process.exit(1)
   }
 
   // Register CORS plugin
   await fastify.register(cors, {
     origin: true, // Allow all origins in development - you can restrict this in production
     credentials: true, // Allow credentials (cookies, authorization headers)
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "Accept",
-      "x-client-type",
-      "X-Test-Eval",
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'x-client-type',
+      'X-Test-Eval',
       // OpenTelemetry trace context headers for distributed tracing
-      "traceparent",
-      "tracestate",
+      'traceparent',
+      'tracestate',
     ],
-    exposedHeaders: ["Content-Range", "X-Content-Range", "X-Test-Eval"],
+    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Test-Eval'],
     maxAge: 86400, // Cache preflight response for 1 day
     preflightContinue: false,
     optionsSuccessStatus: 204,
-  });
+  })
 
   // Register cookie plugin for OAuth state management
   await fastify.register(cookie, {
-    secret: process.env.JWT_SECRET || "default-cookie-secret",
-  });
+    secret: process.env.JWT_SECRET || 'default-cookie-secret',
+  })
 
   // Console log when server starts
-  fastify.addHook("onReady", async () => {});
+  fastify.addHook('onReady', async () => {})
 
   // Register authentication routes
-  await fastify.register(authRoutes);
+  await fastify.register(authRoutes)
 
   // Register Salesforce routes
-  await fastify.register(salesforceRoutes);
+  await fastify.register(salesforceRoutes)
 }
