@@ -1,5 +1,4 @@
 import { type Endpoint, endpointSchema, endpointStatuses } from '@pzero/shared/pzero'
-import { colors } from '@pzero/shared/theme'
 import type { NavigationProp } from '@react-navigation/native'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
@@ -10,10 +9,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Text, TextField, View } from 'react-native-ui-lib'
 import BottomTabs, { type TabItem } from '../components/BottomTabs'
 import Button from '../components/Button'
-import CloudEndpointsIcon from '../components/CloudEndpointsIcon'
 import Header from '../components/Header'
 import { labels } from '../constants/labels'
+import { CloudEndpointsIcon } from '../icons'
 import { stores } from '../stores'
+import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 
 const ajv = new Ajv()
 addFormats(ajv)
@@ -29,6 +29,7 @@ type DrawerParamList = {
 
 interface EndpointsScreenProps {
   navigation?: NavigationProp<DrawerParamList>
+  onFAQPress?: () => void
 }
 
 interface FormData {
@@ -42,7 +43,7 @@ interface FormErrors {
   baseURI?: string
 }
 
-const EndpointsScreen: React.FC<EndpointsScreenProps> = ({ navigation }) => {
+const EndpointsScreen: React.FC<EndpointsScreenProps> = ({ navigation, onFAQPress }) => {
   const safeAreaInsets = useSafeAreaInsets()
   const [activeTab, setActiveTab] = useState<'add' | 'endpoints'>('add')
   const [endpoints, setEndpoints] = useState<Endpoint[]>([])
@@ -243,7 +244,7 @@ const EndpointsScreen: React.FC<EndpointsScreenProps> = ({ navigation }) => {
     {
       id: 'endpoints',
       label: labels.endpointsTab,
-      icon: <CloudEndpointsIcon size={24} color={activeTab === 'endpoints' ? '#007AFF' : '#666'} />,
+      icon: <CloudEndpointsIcon size={24} color={activeTab === 'endpoints' ? colors.primaryColor : text.muted} />,
     },
   ]
 
@@ -338,7 +339,7 @@ const EndpointsScreen: React.FC<EndpointsScreenProps> = ({ navigation }) => {
 
   return (
     <View style={[styles.container, { paddingTop: safeAreaInsets.top }]}>
-      <Header title={labels.endpointsTitle} navigation={navigation as any} />
+      <Header title={labels.endpointsTitle} navigation={navigation as any} onFAQPress={onFAQPress} />
 
       {activeTab === 'add' ? renderAddTab() : renderEndpointsTab()}
 
@@ -350,34 +351,34 @@ const EndpointsScreen: React.FC<EndpointsScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundColor,
+    backgroundColor: surfaces.primary,
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: spacing.xl,
   },
   input: {
-    backgroundColor: colors.cardBackgroundColor,
+    backgroundColor: surfaces.secondary,
     borderWidth: 1,
     borderColor: colors.borderColor,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: fontSize.md,
   },
   errorText: {
     color: colors.errorColor,
-    fontSize: 14,
-    marginTop: 5,
+    fontSize: fontSize.sm,
+    marginTop: spacing.xs + 1,
   },
   saveButton: {
-    marginTop: 20,
+    marginTop: spacing.xl,
   },
   endpointItem: {
-    backgroundColor: colors.cardBackgroundColor,
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
+    backgroundColor: surfaces.secondary,
+    padding: spacing.lg - 1,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.sm + 2,
     borderWidth: 1,
     borderColor: colors.borderColor,
   },
@@ -387,21 +388,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: spacing.xs,
   },
   deleteButton: {
     backgroundColor: colors.errorColor,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
     alignSelf: 'flex-start',
   },
   deleteButtonText: {
     color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
   },
   emptyState: {
     flex: 1,

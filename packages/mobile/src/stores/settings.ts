@@ -10,6 +10,7 @@ export const settingsKeys = {
   classificationType: 'classificationType',
   isPrimary: 'isPrimary',
   pin: 'pin',
+  termsAccepted: 'termsAccepted',
 }
 
 export const classificationTypes = {

@@ -2,6 +2,7 @@ import type React from 'react'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics'
+import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 
 interface BiometricAuthProps {
   onSuccess: () => void
@@ -119,7 +120,7 @@ const BiometricAuth: React.FC<BiometricAuthProps> = ({ onSuccess, onCancel }) =>
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.primaryColor} />
         <Text style={styles.loadingText}>Checking biometrics...</Text>
       </View>
     )
@@ -130,7 +131,7 @@ const BiometricAuth: React.FC<BiometricAuthProps> = ({ onSuccess, onCancel }) =>
     return (
       <View style={styles.container}>
         <View style={styles.authContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={colors.primaryColor} />
           <Text style={styles.authenticatingText}>Authenticating...</Text>
         </View>
       </View>
@@ -162,16 +163,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 20,
+    backgroundColor: surfaces.primary,
+    padding: spacing.xl,
   },
   authContainer: {
     width: '100%',
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 30,
+    backgroundColor: surfaces.secondary,
+    borderRadius: spacing.xl,
+    padding: spacing.xl + 10,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.backgroundColor,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -181,44 +182,49 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    fontSize: fontSize.xxl + 4,
+    fontWeight: fontWeight.bold,
+    color: text.primary,
+    marginBottom: spacing.sm + 2,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: fontSize.md,
+    color: text.secondary,
     textAlign: 'center',
     marginBottom: 40,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.sm + 2,
   },
   authButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 15,
+    backgroundColor: colors.primaryColor,
+    paddingVertical: spacing.lg - 1,
     paddingHorizontal: 40,
     borderRadius: 30,
-    marginBottom: 20,
+    marginBottom: spacing.xl,
     width: '100%',
     alignItems: 'center',
   },
   authButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
+    color: colors.buttonTextColor,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
   },
   cancelButton: {
-    paddingVertical: 10,
+    paddingVertical: spacing.sm + 2,
     paddingHorizontal: 30,
   },
   cancelButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
+    color: colors.primaryColor,
+    fontSize: fontSize.md,
   },
   loadingText: {
-    marginTop: 20,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.xl,
+    fontSize: fontSize.md,
+    color: text.secondary,
+  },
+  authenticatingText: {
+    marginTop: spacing.xl,
+    fontSize: fontSize.md,
+    color: text.primary,
   },
 })
 

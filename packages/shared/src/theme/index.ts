@@ -1,3 +1,5 @@
+// https://www.color-hex.com/color-palette/108347
+// https://www.color-hex.com/color-palette/1067046
 export const colors = {
   primaryColor: '#80eeff',
   accentColor: '#80eeff',

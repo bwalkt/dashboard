@@ -38,6 +38,12 @@ export interface EnvironmentConfig {
   SIGNALWIRE_PROJECT_ID: string;
   SIGNALWIRE_TOKEN: string;
   SIGNALWIRE_PHONE_NUMBER: string;
+  TWILIO_ACCOUNT_SID: string;
+  TWILIO_API_KEY: string;
+  TWILIO_API_SECRET: string;
+  TWILIO_VERIFY_SERVICE_SID: string;
+  TWILIO_PHONE_NUMBER: string;
+  TWILIO_MESSAGE: string;
   PORT: number;
   SERVER_BASE_URL: string;
   FRONTEND_URL: string | undefined;
@@ -110,6 +116,12 @@ export const config: EnvironmentConfig = {
   SIGNALWIRE_PROJECT_ID: process.env.SIGNALWIRE_PROJECT_ID || "",
   SIGNALWIRE_TOKEN: process.env.SIGNALWIRE_TOKEN || "",
   SIGNALWIRE_PHONE_NUMBER: process.env.SIGNALWIRE_PHONE_NUMBER || "",
+  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || "",
+  TWILIO_API_KEY: process.env.TWILIO_API_KEY || "",
+  TWILIO_API_SECRET: process.env.TWILIO_API_SECRET || "",
+  TWILIO_VERIFY_SERVICE_SID: process.env.TWILIO_VERIFY_SERVICE_SID || "",
+  TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER || "",
+  TWILIO_MESSAGE: process.env.TWILIO_MESSAGE || "",
   PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : 8090,
   SERVER_BASE_URL: process.env.SERVER_BASE_URL || "http://localhost:8090",
   FRONTEND_URL: process.env.FRONTEND_URL,
@@ -157,6 +169,10 @@ export function validateEnvironment(): void {
     "SIGNALWIRE_PROJECT_ID",
     "SIGNALWIRE_TOKEN",
     "SIGNALWIRE_PHONE_NUMBER",
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_API_KEY",
+    "TWILIO_API_SECRET",
+    "TWILIO_PHONE_NUMBER",
   ];
 
   const missingVars = requiredVars.filter((varName) => !process.env[varName]);
