@@ -1,9 +1,9 @@
 import { api } from '@pzero/shared/api'
-import { colors } from '@pzero/shared/theme'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native'
 import { Text, View } from 'react-native-ui-lib'
+import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 
 interface FAQ {
   question: string
@@ -53,7 +53,7 @@ const FAQContent: React.FC = () => {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={colors.primaryColor} />
-        <Text text70 color={colors.textDarkColor} marginT-10>
+        <Text text70 color={text.secondary} marginT-10>
           Loading FAQs...
         </Text>
       </View>
@@ -63,7 +63,7 @@ const FAQContent: React.FC = () => {
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text text70 color="#ff4444" center>
+        <Text text70 color={colors.errorColor} center>
           {error}
         </Text>
         <TouchableOpacity onPress={fetchFAQs} style={styles.retryButton}>
@@ -80,7 +80,7 @@ const FAQContent: React.FC = () => {
       {(faqs?.faqs ?? []).map((faq, index) => (
         <TouchableOpacity key={index} onPress={() => toggleExpanded(index)} style={styles.faqItem} activeOpacity={0.7}>
           <View style={styles.questionContainer}>
-            <Text text70 color={colors.textLightColor} style={styles.question}>
+            <Text text70 color={text.primary} style={styles.question}>
               {faq.question}
             </Text>
             <Text style={styles.expandIcon}>{expandedItems.has(index) ? '−' : '+'}</Text>
@@ -88,7 +88,7 @@ const FAQContent: React.FC = () => {
 
           {expandedItems.has(index) && (
             <View style={styles.answerContainer}>
-              <Text text80 color={colors.textDarkColor} style={styles.answer}>
+              <Text text80 color={text.secondary} style={styles.answer}>
                 {faq.answer}
               </Text>
             </View>
@@ -107,14 +107,14 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
   retryButton: {
-    marginTop: 20,
-    padding: 10,
+    marginTop: spacing.xl,
+    padding: spacing.sm + 2,
   },
   faqItem: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg - 1,
     borderBottomWidth: 1,
-    borderBottomColor: '#2a2a2a',
+    borderBottomColor: colors.borderColor,
   },
   questionContainer: {
     flexDirection: 'row',
@@ -123,28 +123,28 @@ const styles = StyleSheet.create({
   },
   question: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
     lineHeight: 22,
-    marginRight: 10,
+    marginRight: spacing.sm + 2,
   },
   expandIcon: {
-    fontSize: 20,
-    color: colors.primaryColor || '#007AFF',
-    fontWeight: 'bold',
+    fontSize: fontSize.xl,
+    color: colors.primaryColor,
+    fontWeight: fontWeight.bold,
     width: 24,
     textAlign: 'center',
   },
   answerContainer: {
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: '#2a2a2a',
+    borderTopColor: colors.borderColor,
   },
   answer: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     lineHeight: 21,
-    color: colors.textDarkColor || '#999',
+    color: text.secondary,
   },
 })
 

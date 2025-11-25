@@ -1,8 +1,8 @@
-import { colors } from '@pzero/shared/theme'
 import { DrawerActions, type NavigationProp } from '@react-navigation/native'
 import type React from 'react'
 import { StyleSheet, TouchableOpacity } from 'react-native'
 import { Text, View } from 'react-native-ui-lib'
+import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 
 type DrawerParamList = {
   Home: undefined
@@ -27,7 +27,7 @@ const Header: React.FC<HeaderProps> = ({ title, navigation, onFAQPress }) => {
       <TouchableOpacity onPress={openDrawer} style={styles.menuButton}>
         <Text style={styles.hamburgerIcon}>☰</Text>
       </TouchableOpacity>
-      <Text text50 color={colors.textLightColor} style={styles.title}>
+      <Text text50 color={text.primary} style={styles.title}>
         {title}
       </Text>
       {onFAQPress && (
@@ -43,30 +43,30 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg - 1,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: colors.borderColor,
     justifyContent: 'space-between',
   },
   menuButton: {
-    marginRight: 15,
-    padding: 5,
+    marginRight: spacing.lg - 1,
+    padding: spacing.xs + 1,
   },
   hamburgerIcon: {
-    fontSize: 24,
-    color: '#ffffff',
+    fontSize: fontSize.xl,
+    color: text.primary,
   },
   title: {
     flex: 1,
-    marginLeft: 15,
+    marginLeft: spacing.lg - 1,
   },
   faqButton: {
-    padding: 5,
+    padding: spacing.xs + 1,
   },
   faqIcon: {
-    fontSize: 16,
-    color: '#ffffff',
+    fontSize: fontSize.md,
+    color: text.primary,
   },
 })
 

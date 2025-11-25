@@ -1,5 +1,4 @@
 import { api } from '@pzero/shared/api'
-import { colors } from '@pzero/shared/theme'
 import type { NavigationProp } from '@react-navigation/native'
 import type React from 'react'
 import { useEffect, useState } from 'react'
@@ -11,6 +10,7 @@ import Button from '../components/Button'
 import Header from '../components/Header'
 import { labels } from '../constants/labels'
 import { SettingsStore, settingsKeys } from '../stores/settings'
+import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 
 const CELL_COUNT = 6
 
@@ -207,14 +207,14 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = ({ navig
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: surfaces.primary,
   },
   content: {
-    padding: 20,
+    padding: spacing.xl,
   },
   codeFieldRoot: {
-    marginTop: 20,
-    marginBottom: 20,
+    marginTop: spacing.xl,
+    marginBottom: spacing.xl,
     justifyContent: 'center',
   },
   cell: {
@@ -223,24 +223,24 @@ const styles = StyleSheet.create({
     lineHeight: 58,
     fontSize: 24,
     borderWidth: 2,
-    borderColor: '#333',
-    backgroundColor: '#1a1a1a',
-    borderRadius: 8,
+    borderColor: colors.borderColor,
+    backgroundColor: surfaces.secondary,
+    borderRadius: borderRadius.lg,
     textAlign: 'center',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 4,
+    marginHorizontal: spacing.xs,
   },
   focusCell: {
-    borderColor: colors.primaryColor || '#007AFF',
+    borderColor: colors.primaryColor,
   },
   cellText: {
     fontSize: 24,
-    color: colors.textLightColor || '#ffffff',
+    color: text.primary,
     textAlign: 'center',
   },
   button: {
-    marginTop: 15,
+    marginTop: spacing.lg - 1,
   },
 })
 

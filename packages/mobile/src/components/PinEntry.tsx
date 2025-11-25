@@ -1,8 +1,8 @@
-import { colors } from '@pzero/shared/theme'
 import type React from 'react'
 import { useState } from 'react'
 import { Alert, StyleSheet, TouchableOpacity } from 'react-native'
 import { Text, View } from 'react-native-ui-lib'
+import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 
 const PIN_LENGTH = 6
 
@@ -122,20 +122,20 @@ const PinEntry: React.FC<PinEntryProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: surfaces.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.textLightColor || '#ffffff',
-    marginBottom: 10,
+    fontSize: fontSize.xxl + 4,
+    fontWeight: fontWeight.bold,
+    color: text.primary,
+    marginBottom: spacing.sm + 2,
   },
   subtitle: {
-    fontSize: 16,
-    color: colors.textDarkColor || '#666',
+    fontSize: fontSize.md,
+    color: text.secondary,
     marginBottom: 40,
     textAlign: 'center',
   },
@@ -149,11 +149,11 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#333',
-    marginHorizontal: 8,
+    backgroundColor: surfaces.secondary,
+    marginHorizontal: spacing.sm,
   },
   pinDotFilled: {
-    backgroundColor: colors.primaryColor || '#007AFF',
+    backgroundColor: colors.primaryColor,
   },
   keypadContainer: {
     width: '100%',
@@ -162,30 +162,30 @@ const styles = StyleSheet.create({
   keypadRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   numberButton: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: surfaces.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: colors.borderColor,
   },
   numberButtonText: {
-    fontSize: 28,
-    color: colors.textLightColor || '#ffffff',
-    fontWeight: '400',
+    fontSize: fontSize.xxl + 4,
+    color: text.primary,
+    fontWeight: fontWeight.normal,
   },
   backspaceButtonText: {
-    fontSize: 28,
-    color: colors.textLightColor || '#ffffff',
+    fontSize: fontSize.xxl + 4,
+    color: text.primary,
   },
   cancelButtonText: {
-    fontSize: 16,
-    color: colors.textDarkColor || '#666',
+    fontSize: fontSize.md,
+    color: text.secondary,
   },
 })
 

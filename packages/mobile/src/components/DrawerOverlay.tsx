@@ -1,9 +1,9 @@
-import { colors } from '@pzero/shared/theme'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Animated, Dimensions, Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Text, View } from 'react-native-ui-lib'
+import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 
 interface DrawerOverlayProps {
   visible: boolean
@@ -79,7 +79,7 @@ const DrawerOverlay: React.FC<DrawerOverlayProps> = ({
         >
           {title && (
             <View style={styles.header}>
-              <Text text40 color={colors.textLightColor}>
+              <Text text40 color={text.primary}>
                 {title}
               </Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -141,9 +141,9 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: '#000000',
+    backgroundColor: surfaces.primary,
     width: '100%',
-    shadowColor: '#000',
+    shadowColor: colors.backgroundColor,
     shadowOffset: {
       width: -2,
       height: 0,
@@ -156,17 +156,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: colors.borderColor,
   },
   closeButton: {
-    padding: 5,
+    padding: spacing.xs + 1,
   },
   closeIcon: {
-    fontSize: 24,
-    color: '#ffffff',
+    fontSize: fontSize.xl,
+    color: text.primary,
   },
   scrollContainer: {
     flex: 1,
@@ -177,8 +177,8 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flexGrow: 1,
-    paddingVertical: 10,
-    paddingBottom: 20,
+    paddingVertical: spacing.sm + 2,
+    paddingBottom: spacing.xl,
   },
   backgroundOverlay: {
     position: 'absolute',
@@ -195,14 +195,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 2,
+    borderRadius: borderRadius.xs,
   },
   scrollBar: {
     position: 'absolute',
     right: 0,
     width: 4,
-    backgroundColor: colors.primaryColor || '#007AFF',
-    borderRadius: 2,
+    backgroundColor: colors.primaryColor,
+    borderRadius: borderRadius.xs,
     minHeight: 20,
   },
 })

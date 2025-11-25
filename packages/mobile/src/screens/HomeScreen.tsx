@@ -1,4 +1,3 @@
-import { colors } from '@pzero/shared/theme'
 import { DrawerActions, type NavigationProp } from '@react-navigation/native'
 import type React from 'react'
 import { StyleSheet, TouchableOpacity } from 'react-native'
@@ -7,6 +6,7 @@ import { Text, View } from 'react-native-ui-lib'
 import Button from '../components/Button'
 import { labels } from '../constants/labels'
 import { SettingsStore } from '../stores/settings'
+import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 
 type DrawerParamList = {
   Home: undefined
@@ -67,30 +67,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onFAQPress }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: surfaces.primary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg - 1,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: colors.borderColor,
     justifyContent: 'space-between',
   },
   menuButton: {
-    marginRight: 15,
-    padding: 5,
+    marginRight: spacing.lg - 1,
+    padding: spacing.xs + 1,
   },
   title: {
     flex: 1,
   },
   faqButton: {
-    padding: 5,
+    padding: spacing.xs + 1,
   },
   faqIcon: {
-    fontSize: 16,
-    color: '#ffffff',
+    fontSize: fontSize.md,
+    color: text.primary,
   },
 })
 

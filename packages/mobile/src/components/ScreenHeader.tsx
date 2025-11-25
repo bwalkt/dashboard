@@ -1,7 +1,7 @@
-import { colors } from '@pzero/shared/theme'
 import type React from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Text } from 'react-native-ui-lib'
+import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 import AnimatedBackButton from './AnimatedBackButton'
 
 interface ScreenHeaderProps {
@@ -19,7 +19,7 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, onBack, showBackButt
         ) : (
           <View style={styles.headerSpacer} />
         )}
-        <Text text60 color={colors.textLightColor} style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
+        <Text text60 color={text.primary} style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
           {title}
         </Text>
         <View style={styles.headerSpacer} />
@@ -32,10 +32,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg - 1,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: colors.borderColor,
   },
   headerContent: {
     flexDirection: 'row',
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   backButtonHeader: {
-    padding: 10,
+    padding: spacing.sm + 2,
     minWidth: 80,
   },
   headerTitle: {
