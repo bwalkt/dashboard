@@ -1,6 +1,7 @@
 import type { ErrorResponse } from "@pzero/shared";
 import { formatPhoneE164, validateUSPhoneNumber } from "@pzero/shared/phone";
 import type { FastifyReply } from "fastify";
+import { config } from "../config/env";
 import { redis } from "../config/redis";
 import { twilioService } from "../services/twilio.service";
 
@@ -78,14 +79,16 @@ export async function sendSmsVerification(phone: string): Promise<{
     throw new Error("Invalid phone number format for SMS");
   }
 
-  // Generate 6-digit verification code
+  // Generate 6-digit verification code for custom SMS (not needed for Twilio Verify)
   const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Store verification code in Redis with 10 minute expiry
-  const verificationKey = `sms_verification_code:${formattedPhone}`;
-  await redis.set(verificationKey, code, 600); // 10 minutes
+  // Only store in Redis if using custom SMS
+  if (config.TWILIO_MESSAGE) {
+    const verificationKey = `sms_verification_code:${formattedPhone}`;
+    await redis.set(verificationKey, code, 600); // 10 minutes
+  }
 
-  // Send SMS verification using Twilio
+  // Send SMS verification using Twilio (will choose method based on TWILIO_MESSAGE)
   await twilioService.sendVerificationSMS({
     to: formattedPhone,
     code: code,
@@ -110,14 +113,16 @@ export async function resendSmsVerification(phone: string): Promise<{
     throw new Error("Invalid phone number format for SMS");
   }
 
-  // Generate new 6-digit verification code
+  // Generate new 6-digit verification code for custom SMS (not needed for Twilio Verify)
   const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Store new verification code in Redis with 10 minute expiry
-  const verificationKey = `sms_verification_code:${formattedPhone}`;
-  await redis.set(verificationKey, code, 600); // 10 minutes
+  // Only store in Redis if using custom SMS
+  if (config.TWILIO_MESSAGE) {
+    const verificationKey = `sms_verification_code:${formattedPhone}`;
+    await redis.set(verificationKey, code, 600); // 10 minutes
+  }
 
-  // Resend SMS verification using Twilio
+  // Resend SMS verification using Twilio (will choose method based on TWILIO_MESSAGE)
   await twilioService.sendVerificationSMS({
     to: formattedPhone,
     code: code,

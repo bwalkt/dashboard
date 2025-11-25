@@ -122,6 +122,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const [showTermsDrawer, setShowTermsDrawer] = useState(false)
   const [termsData, setTermsData] = useState<TermsSection[]>([])
   const [isLoadingTerms, setIsLoadingTerms] = useState(false)
+  const [readTerms, setReadTerms] = useState(false)
+  const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false)
 
   // Verification drawer state
   const [showVerificationDrawer, setShowVerificationDrawer] = useState(false)
@@ -568,9 +570,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       setVerificationCode('')
       setVerificationAttempts(0)
 
-      // Complete the save process
-      setShowVerificationDrawer(false)
-      await performSave()
+      // Check if terms need to be accepted
+      if (!formData.termsAccepted) {
+        setShowVerificationDrawer(false)
+        handleTermsPress()
+      } else {
+        // Complete the save process
+        setShowVerificationDrawer(false)
+        await performSave()
+      }
     } catch (error: any) {
       console.error('Verification error:', error)
       const newAttempts = verificationAttempts + 1
@@ -762,6 +770,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
           setVerificationAttempts(0)
           setIsVerificationLocked(false)
           setVerificationStep('phone')
+        } else if (!formData.termsAccepted) {
+          // If phone is verified but terms not accepted, show terms
+          setShowVerificationDrawer(false)
+          handleTermsPress()
         } else {
           setShowVerificationDrawer(false)
           await performSave()
@@ -835,6 +847,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   }
 
   const handleTermsPress = async () => {
+    // Reset scroll state when opening
+    setHasScrolledToEnd(false)
+
     if (termsData.length === 0) {
       setIsLoadingTerms(true)
       try {
@@ -1092,7 +1107,13 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             </View>
             <Switch
               value={formData.termsAccepted}
-              onValueChange={value => updateField('termsAccepted', value)}
+              onValueChange={value => {
+                if (value && !readTerms) {
+                  handleTermsPress()
+                } else {
+                  updateField('termsAccepted', value)
+                }
+              }}
               onColor={colors.primaryColor}
               offColor={colors.borderColor}
               thumbColor={colors.white}
@@ -1107,14 +1128,40 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
           title="Terms and Conditions"
           width="100%"
         >
-          <View style={styles.termsContent}>
-            {termsData.map((section, index) => (
-              <View key={index} style={styles.termsSection}>
-                <Text style={styles.termsSectionTitle}>{section.title}</Text>
-                <Text style={styles.termsSectionContent}>{section.content}</Text>
+          <ScrollView
+            style={styles.termsScrollView}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            showsVerticalScrollIndicator={true}
+          >
+            <View style={styles.termsContent}>
+              {termsData.map((section, index) => (
+                <View key={index} style={styles.termsSection}>
+                  <Text style={styles.termsSectionTitle}>{section.title}</Text>
+                  <Text style={styles.termsSectionContent}>{section.content}</Text>
+                </View>
+              ))}
+
+              {/* Accept Terms Button at the end of content */}
+              <View style={styles.termsButtonContainer}>
+                <Button
+                  label="Accept Terms"
+                  onPress={async () => {
+                    setReadTerms(true)
+                    updateField('termsAccepted', true)
+                    setShowTermsDrawer(false)
+
+                    // If both email and phone are verified, complete the save
+                    if (isEmailVerified && isPhoneVerified) {
+                      await performSave()
+                    }
+                  }}
+                  variant="primary"
+                  size="medium"
+                  style={styles.acceptTermsButton}
+                />
               </View>
-            ))}
-          </View>
+            </View>
+          </ScrollView>
         </DrawerOverlay>
 
         {/* Verification Drawer */}
@@ -1594,6 +1641,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     lineHeight: 20,
     color: text.primary,
+  },
+  termsScrollView: {
+    flex: 1,
+  },
+  termsButtonContainer: {
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  acceptTermsButton: {
+    marginBottom: 0,
   },
   verificationContent: {
     paddingHorizontal: spacing.xl,

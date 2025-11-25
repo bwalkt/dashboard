@@ -1,7 +1,9 @@
 import type { ErrorResponse } from "@pzero/shared";
 import { formatPhoneE164 } from "@pzero/shared/phone";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { config } from "../config/env";
 import { redis } from "../config/redis";
+import { twilioService } from "../services/twilio.service";
 import {
   checkSmsRateLimit,
   resendSmsVerification,
@@ -70,19 +72,35 @@ export async function smsRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
-        // Retrieve stored verification code from Redis
-        const verificationKey = `sms_verification_code:${formattedPhone}`;
-        const storedCode = await redis.get(verificationKey);
+        let isValid = false;
 
-        if (!storedCode) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Verification code has expired or does not exist",
-          } as ErrorResponse);
+        // Choose verification method based on TWILIO_MESSAGE setting
+        if (config.TWILIO_MESSAGE) {
+          // Custom SMS verification using Redis
+          const verificationKey = `sms_verification_code:${formattedPhone}`;
+          const storedCode = await redis.get(verificationKey);
+
+          if (!storedCode) {
+            return reply.status(400).send({
+              error: "Bad Request",
+              message: "Verification code has expired or does not exist",
+            } as ErrorResponse);
+          }
+
+          isValid = storedCode === code;
+
+          if (isValid) {
+            // Delete the verification code after successful verification
+            await redis.del(verificationKey);
+          }
+        } else {
+          // Twilio Verify API verification
+          const verificationResult = await twilioService.verifySMSCode({
+            to: formattedPhone,
+            code: code,
+          });
+          isValid = verificationResult.valid;
         }
-
-        // Verify code matches
-        const isValid = storedCode === code;
 
         if (!isValid) {
           return reply.status(400).send({
@@ -90,9 +108,6 @@ export async function smsRoutes(fastify: FastifyInstance): Promise<void> {
             message: "Invalid or expired verification code",
           } as ErrorResponse);
         }
-
-        // Delete the verification code after successful verification
-        await redis.del(verificationKey);
 
         return reply.send({
           message: "Phone number verified successfully",
