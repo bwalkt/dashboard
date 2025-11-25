@@ -64,44 +64,6 @@ jobs:
           SERVICE_CONFIG=$(cat .github/actions/service-config/services-frontend.json | jq -r --arg name "${{ matrix.service }}" '.services[] | select(.name == $name) | tojson')
           echo "config=$SERVICE_CONFIG" >> $GITHUB_OUTPUT
 
-      - name: Prepare build args for sfdc-example
-        id: build-args-sfdc
-        if: matrix.service == 'sfdc-example'
-        run: |
-          BUILD_ARGS=""
-          if [ -n "${{ secrets.VITE_BACKEND_URL }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL }},"
-          fi
-          if [ -n "${{ secrets.VITE_USE_PROXY }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_USE_PROXY=true,"
-          fi
-          if [ -n "${{ secrets.VITE_PROXY_URL }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_PROXY_URL=${{ secrets.VITE_PROXY_URL }},"
-          fi
-          if [ -n "${{ secrets.VITE_PROXY_TARGET }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_PROXY_TARGET=${{ secrets.VITE_PROXY_TARGET }},"
-          fi
-          if [ -n "${{ secrets.VITE_OTEL_EXPORTER_URL }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_OTEL_EXPORTER_URL=${{ secrets.VITE_OTEL_EXPORTER_URL }},"
-          fi
-          # Remove trailing comma
-          BUILD_ARGS=$(echo "$BUILD_ARGS" | sed 's/,$//')
-          echo "args=$BUILD_ARGS" >> $GITHUB_OUTPUT
-        shell: bash
-
-      - name: Prepare build args for portal
-        id: build-args-portal
-        if: matrix.service == 'portal'
-        run: |
-          BUILD_ARGS=""
-          if [ -n "${{ secrets.VITE_BACKEND_URL }}" ]; then
-            BUILD_ARGS="${BUILD_ARGS}VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL }},"
-          fi
-          # Remove trailing comma
-          BUILD_ARGS=$(echo "$BUILD_ARGS" | sed 's/,$//')
-          echo "args=$BUILD_ARGS" >> $GITHUB_OUTPUT
-        shell: bash
-
       - name: Build Docker image
         id: build
         uses: ./.github/actions/docker-build-push
@@ -116,7 +78,12 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           cache-from: ${{ env.REGISTRY_URL }}/${{ env.GITHUB_OWNER }}/${{ fromJSON(steps.service-config.outputs.config).image_name }}:cache
           cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}/{2}:cache,mode=max', env.REGISTRY_URL, env.GITHUB_OWNER, fromJSON(steps.service-config.outputs.config).image_name) || '' }}
-          build-args: ${{ matrix.service == 'sfdc-example' && steps.build-args-sfdc.outputs.args || (matrix.service == 'portal' && steps.build-args-portal.outputs.args || '') }}
+          build-args: |
+            VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL || '' }}
+            VITE_USE_PROXY=${{ secrets.VITE_USE_PROXY || '' }}
+            VITE_PROXY_URL=${{ secrets.VITE_PROXY_URL || '' }}
+            VITE_PROXY_TARGET=${{ secrets.VITE_PROXY_TARGET || '' }}
+            VITE_OTEL_EXPORTER_URL=${{ secrets.VITE_OTEL_EXPORTER_URL || '' }}
 
   deploy-sfdc-example:
     needs: [detect-changes, build-services]
