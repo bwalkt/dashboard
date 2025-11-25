@@ -69,8 +69,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
 
   pzero-envoy:
     image: envoyproxy/envoy:v1.30-latest
