@@ -169,6 +169,10 @@ export function validateEnvironment(): void {
     "SIGNALWIRE_PROJECT_ID",
     "SIGNALWIRE_TOKEN",
     "SIGNALWIRE_PHONE_NUMBER",
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_API_KEY",
+    "TWILIO_API_SECRET",
+    "TWILIO_PHONE_NUMBER",
   ];
 
   const missingVars = requiredVars.filter((varName) => !process.env[varName]);
