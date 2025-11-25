@@ -17,12 +17,12 @@ import {
   TouchableOpacity,
 } from 'react-native'
 import { CodeField, Cursor, useBlurOnFulfill, useClearByFocusCell } from 'react-native-confirmation-code-field'
-import PhoneInput from 'react-native-international-phone-number'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Switch, Text, TextField, View } from 'react-native-ui-lib'
 import Button from '../components/Button'
 import DrawerOverlay from '../components/DrawerOverlay'
 import Header from '../components/Header'
+import PhoneNumberInput from '../components/PhoneNumberInput'
 import { labels } from '../constants/labels'
 import { PencilIcon } from '../icons'
 import { fetchTermsAndConditions, type TermsSection } from '../services/terms'
@@ -111,6 +111,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const [isVerifyingEmailCode, setIsVerifyingEmailCode] = useState(false)
   const [emailVerificationAttempts, setEmailVerificationAttempts] = useState(0)
   const [isEmailVerificationLocked, setIsEmailVerificationLocked] = useState(false)
+  const [emailBeingVerified, setEmailBeingVerified] = useState('')
+  const [phoneBeingVerified, setPhoneBeingVerified] = useState('')
+  const [tempPhone, setTempPhone] = useState('')
 
   // Popover state
   const [showPrimaryHint, setShowPrimaryHint] = useState(false)
@@ -122,7 +125,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
   // Verification drawer state
   const [showVerificationDrawer, setShowVerificationDrawer] = useState(false)
-  const [verificationStep, setVerificationStep] = useState<'email' | 'phone'>('email')
+  const [verificationStep, setVerificationStep] = useState<'email' | 'emailSuccess' | 'phone'>('email')
   const [isEditing, setIsEditing] = useState(false)
   const [tempName, setTempName] = useState('')
   const [tempEmail, setTempEmail] = useState('')
@@ -482,28 +485,41 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     // Validate phone number using libphonenumber-js
     const phoneValid = !validatePhone(formData.phoneNumber)
 
-    return nicknameValid && emailValid && phoneValid && formData.termsAccepted
+    return nicknameValid && emailValid && phoneValid
   }
 
   const handleVerifyPhone = async () => {
+    // Apply changes if editing
+    const finalPhone = isEditing && tempPhone ? tempPhone.trim() : formData.phoneNumber
+
     // Validate phone number first
-    if (!formData.phoneNumber || formData.phoneNumber.trim() === '') {
+    if (!finalPhone || finalPhone.trim() === '') {
       Alert.alert(labels.error, 'Please enter a phone number first')
       return
+    }
+
+    // Update the form data with the edited value
+    if (isEditing) {
+      if (tempPhone && tempPhone.trim() !== formData.phoneNumber) {
+        updateField('phoneNumber', tempPhone.trim())
+      }
+      setIsEditing(false)
+      setTempPhone('')
     }
 
     setIsSendingCode(true)
     try {
       // Send verification code via SMS
       await api.post('/sms/verify', {
-        phone: formData.phoneNumber,
+        phone: finalPhone.trim(),
       })
 
-      // Reset verification attempts when sending new code and show code input
+      // Reset verification attempts when sending new code, show code input, and store phone being verified
       setShowVerificationCode(true)
       setVerificationCode('')
       setVerificationAttempts(0)
       setIsVerificationLocked(false)
+      setPhoneBeingVerified(finalPhone.trim())
       // Don't show alert, just proceed to code input
     } catch (error: any) {
       console.error('Send SMS error:', error)
@@ -538,7 +554,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     try {
       // Verify the SMS code with the backend
       await api.post('/sms/verify/confirm', {
-        phone: formData.phoneNumber,
+        phone: phoneBeingVerified,
         code: verificationCode,
       })
 
@@ -587,7 +603,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     setIsSendingCode(true)
     try {
       await api.post('/sms/verify/resend', {
-        phone: formData.phoneNumber,
+        phone: phoneBeingVerified,
       })
 
       // Reset attempts when resending
@@ -649,11 +665,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
       console.log('Registration response:', response)
 
-      // Reset verification attempts when sending new code
+      // Reset verification attempts when sending new code and store the email being verified
       setShowEmailVerificationCode(true)
       setEmailVerificationCode('')
       setEmailVerificationAttempts(0)
       setIsEmailVerificationLocked(false)
+      setEmailBeingVerified(finalEmail.trim().toLowerCase())
       // Don't show alert, just proceed to code input
     } catch (error: any) {
       console.error('Send email error:', error)
@@ -717,7 +734,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     try {
       // Verify the email code with the backend
       await api.post('/auth/register/verify', {
-        email: formData.email,
+        email: emailBeingVerified,
         code: emailVerificationCode,
       })
 
@@ -731,13 +748,25 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       setEmailVerificationCode('')
       setEmailVerificationAttempts(0)
 
-      // Move to phone verification if needed, otherwise complete the save
-      if (!isPhoneVerified) {
-        setVerificationStep('phone')
-      } else {
-        setShowVerificationDrawer(false)
-        await performSave()
-      }
+      // Show success screen with smooth transition
+      setVerificationStep('emailSuccess')
+
+      // Auto-transition to next step after showing success
+      setTimeout(async () => {
+        if (!isPhoneVerified) {
+          // Reset phone verification state and prepare transition
+          setIsEditing(false)
+          setTempPhone('')
+          setShowVerificationCode(false)
+          setVerificationCode('')
+          setVerificationAttempts(0)
+          setIsVerificationLocked(false)
+          setVerificationStep('phone')
+        } else {
+          setShowVerificationDrawer(false)
+          await performSave()
+        }
+      }, 2000) // Show success for 2 seconds
     } catch (error: any) {
       console.error('Email verification error:', error)
       const newAttempts = emailVerificationAttempts + 1
@@ -826,12 +855,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const handleEdit = () => {
     setTempName(formData.nickName)
     setTempEmail(formData.email)
+    setTempPhone(formData.phoneNumber)
     setIsEditing(true)
   }
 
   const handleCancelEdit = () => {
     setTempName('')
     setTempEmail('')
+    setTempPhone('')
     setIsEditing(false)
   }
 
@@ -963,45 +994,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
               </Text>
             )}
           </View>
-          <PhoneInput
+          <PhoneNumberInput
             value={formData.phoneNumber}
             onChangePhoneNumber={value => updateField('phoneNumber', value)}
             onBlur={() => handleFieldBlur('phoneNumber', formData.phoneNumber)}
             defaultCountry={DEFAULT_COUNTRY}
             selectedCountries={getAllowedCountryCodes()}
             placeholder={labels.phoneNumberPlaceholder}
-            phoneInputStyles={{
-              container: {
-                backgroundColor: surfaces.input,
-                borderWidth: 1,
-                borderColor:
-                  touchedFields.has('phoneNumber') && fieldsWithInput.has('phoneNumber') && errors.phoneNumber
-                    ? inputs.borderColorError
-                    : inputs.borderColor,
-                borderRadius: borderRadius.lg,
-              },
-              flagContainer: {
-                backgroundColor: surfaces.input,
-                borderTopLeftRadius: borderRadius.lg,
-                borderBottomLeftRadius: borderRadius.lg,
-              },
-              flag: {},
-              caret: {
-                color: text.muted,
-                fontSize: fontSize.md,
-              },
-              divider: {
-                backgroundColor: inputs.borderColor,
-              },
-              callingCode: {
-                color: text.primary,
-                fontSize: fontSize.md,
-              },
-              input: {
-                color: text.primary,
-                fontSize: fontSize.md,
-              },
-            }}
+            hasError={touchedFields.has('phoneNumber') && fieldsWithInput.has('phoneNumber') && !!errors.phoneNumber}
           />
           {touchedFields.has('phoneNumber') && fieldsWithInput.has('phoneNumber') && errors.phoneNumber && (
             <Text style={styles.errorText}>{errors.phoneNumber}</Text>
@@ -1121,7 +1121,13 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         <DrawerOverlay
           visible={showVerificationDrawer}
           onClose={() => setShowVerificationDrawer(false)}
-          title={verificationStep === 'email' ? 'Verify Email Address' : 'Verify Phone Number'}
+          title={
+            verificationStep === 'email'
+              ? 'Verify Email Address'
+              : verificationStep === 'emailSuccess'
+                ? 'Email Verified'
+                : 'Verify Phone Number'
+          }
           width="100%"
         >
           <View style={styles.verificationContent}>
@@ -1199,6 +1205,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                     <Text style={styles.verificationCodeTitle}>Enter Verification Code</Text>
                     <Text style={styles.verificationCodeDescription}>We've sent a 6-digit code to your email</Text>
 
+                    {/* Display email address as read-only */}
+                    <View style={styles.emailDisplayContainer}>
+                      <Text style={styles.emailDisplayLabel}>Email:</Text>
+                      <Text style={styles.emailDisplayValue}>{emailBeingVerified}</Text>
+                    </View>
+
                     <CodeField
                       ref={emailCodeFieldRef}
                       {...emailCodeFieldProps}
@@ -1247,6 +1259,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
               </View>
             )}
 
+            {verificationStep === 'emailSuccess' && (
+              <View style={styles.successContainer}>
+                <View style={styles.successIconContainer}>
+                  <Text style={styles.successIcon}>✓</Text>
+                </View>
+                <Text style={styles.successTitle}>Email Verified!</Text>
+                <Text style={styles.successMessage}>Your email address has been successfully verified.</Text>
+                {!isPhoneVerified && (
+                  <Text style={styles.successNextStep}>Next, we'll verify your phone number...</Text>
+                )}
+              </View>
+            )}
+
             {verificationStep === 'phone' && (
               <View>
                 {!showVerificationCode ? (
@@ -1254,10 +1279,38 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                     <Text style={styles.verificationDescription}>
                       Now please verify your phone number to complete the process.
                     </Text>
+
+                    {/* Edit Button - Pencil Icon */}
+                    <View style={styles.editButtonContainer}>
+                      <TouchableOpacity onPress={isEditing ? handleCancelEdit : handleEdit} style={styles.pencilButton}>
+                        {isEditing ? (
+                          <Text style={styles.cancelIcon}>✕</Text>
+                        ) : (
+                          <PencilIcon size={20} color={colors.primaryColor} />
+                        )}
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Phone Field */}
+                    <View style={styles.fieldContainer}>
+                      <Text style={styles.fieldLabel}>Phone Number:</Text>
+                      {!isEditing ? (
+                        <Text style={styles.fieldDisplayText}>{formData.phoneNumber}</Text>
+                      ) : (
+                        <PhoneNumberInput
+                          value={tempPhone}
+                          onChangePhoneNumber={setTempPhone}
+                          defaultCountry={DEFAULT_COUNTRY}
+                          selectedCountries={getAllowedCountryCodes()}
+                          placeholder={labels.phoneNumberPlaceholder}
+                        />
+                      )}
+                    </View>
+
                     <Button
                       label="Verify Phone Number"
                       onPress={handleVerifyPhone}
-                      disabled={isSendingCode || !formData.phoneNumber}
+                      disabled={isSendingCode || (!isEditing && !formData.phoneNumber) || (isEditing && !tempPhone)}
                       loading={isSendingCode}
                       variant="primary"
                       size="medium"
@@ -1268,6 +1321,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                   <View>
                     <Text style={styles.verificationCodeTitle}>Enter Verification Code</Text>
                     <Text style={styles.verificationCodeDescription}>We've sent a 6-digit code to your phone</Text>
+
+                    {/* Display phone number as read-only */}
+                    <View style={styles.emailDisplayContainer}>
+                      <Text style={styles.emailDisplayLabel}>Phone:</Text>
+                      <Text style={styles.emailDisplayValue}>{phoneBeingVerified}</Text>
+                    </View>
 
                     <CodeField
                       ref={codeFieldRef}
@@ -1560,6 +1619,66 @@ const styles = StyleSheet.create({
     color: text.secondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
+  },
+  emailDisplayContainer: {
+    backgroundColor: surfaces.secondary,
+    paddingHorizontal: spacing.md + 1,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.sm + 1,
+    marginBottom: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  emailDisplayLabel: {
+    fontSize: fontSize.sm,
+    color: text.secondary,
+    fontWeight: fontWeight.medium,
+    marginRight: spacing.sm + 2,
+  },
+  emailDisplayValue: {
+    fontSize: fontSize.sm,
+    color: text.primary,
+    flex: 1,
+  },
+  successContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
+  },
+  successIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.successColor,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xl,
+  },
+  successIcon: {
+    fontSize: 40,
+    color: colors.backgroundColor,
+    fontWeight: fontWeight.bold,
+  },
+  successTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: text.primary,
+    marginBottom: spacing.md + 1,
+    textAlign: 'center',
+  },
+  successMessage: {
+    fontSize: fontSize.md,
+    color: text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    lineHeight: 22,
+  },
+  successNextStep: {
+    fontSize: fontSize.sm,
+    color: text.muted,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   verificationButton: {
     marginTop: spacing.sm + 2,

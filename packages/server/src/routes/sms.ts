@@ -1,4 +1,5 @@
 import type { ErrorResponse } from "@pzero/shared";
+import { formatPhoneE164 } from "@pzero/shared/phone";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { redis } from "../config/redis";
 import {
@@ -60,27 +61,38 @@ export async function smsRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
-        // Get verification code from Redis
-        const redisKey = `phone_verification:${phone}`;
-        const storedCode = await redis.get(redisKey);
+        // Format phone number to E.164 format
+        const formattedPhone = formatPhoneE164(phone, "US");
+        if (!formattedPhone) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Invalid phone number format",
+          } as ErrorResponse);
+        }
+
+        // Retrieve stored verification code from Redis
+        const verificationKey = `sms_verification_code:${formattedPhone}`;
+        const storedCode = await redis.get(verificationKey);
 
         if (!storedCode) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Verification code has expired or does not exist",
+          } as ErrorResponse);
+        }
+
+        // Verify code matches
+        const isValid = storedCode === code;
+
+        if (!isValid) {
           return reply.status(400).send({
             error: "Bad Request",
             message: "Invalid or expired verification code",
           } as ErrorResponse);
         }
 
-        // Verify code
-        if (code !== storedCode) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Invalid verification code",
-          } as ErrorResponse);
-        }
-
-        // Delete verification code from Redis (one-time use)
-        await redis.delete(redisKey);
+        // Delete the verification code after successful verification
+        await redis.del(verificationKey);
 
         return reply.send({
           message: "Phone number verified successfully",
