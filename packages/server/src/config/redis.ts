@@ -9,6 +9,7 @@ class RedisManager {
     this.client = new Redis({
       host: config.REDIS_HOST,
       port: config.REDIS_PORT,
+      ...(config.REDIS_PASSWORD && { password: config.REDIS_PASSWORD }),
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         const delay = Math.min(times * 50, 2000);
