@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
@@ -11,7 +10,7 @@ const CallbackPage = () => {
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({
     queryKey: ['auth', 'callback'],
-    queryFn: () => {
+    queryFn: async () => {
       const code = searchParams.get('code')
       const state = searchParams.get('state')
       if (!code || !state) {
@@ -19,20 +18,19 @@ const CallbackPage = () => {
         toast.error('Invalid auth state')
         return null
       }
-      return api.get<{ user: User; message: string }>(
+      const data = await api.get<{ user: User; message: string }>(
         `/auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`,
       )
+      if (data?.user.id) {
+        // Invalidate user query to refetch user data in AuthContext
+        queryClient.invalidateQueries({ queryKey: ['user'] })
+        // Navigate directly to dashboard overview
+        navigate('/dashboard/overview')
+      }
+      return data
     },
+    retry: false,
   })
-
-  useEffect(() => {
-    if (data?.user.id) {
-      // Invalidate user query to refetch user data in AuthContext
-      queryClient.invalidateQueries({ queryKey: ['user'] })
-      // Navigate directly to dashboard overview
-      navigate('/dashboard/overview', { replace: true })
-    }
-  }, [data, navigate, queryClient])
 
   if (isLoading) {
     return <div>Loading...</div>

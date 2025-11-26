@@ -17,7 +17,7 @@
     "android": "pnpm --filter @pzero/mobile android",
     "approve-builds": "pnpm install --ignore-scripts=false && pnpm rebuild",
     "lint": "biome check .",
-    "lint:fix": "cd packages/server && pnpm format && cd ../.. && biome check --write .",
+    "lint:fix": "biome check --write .",
     "test": "pnpm -r test"
   },
   "devDependencies": {

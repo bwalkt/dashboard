@@ -122,20 +122,6 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
     }
   }
 
-  // Create user object for UserAvatarProfile
-  const user = authUser
-    ? {
-        fullName: authUser.user_metadata?.full_name || authUser.user_metadata?.name || 'User',
-        emailAddresses: [{ emailAddress: authUser.email || 'user@example.com' }],
-        imageUrl:
-          authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || authUser.user_metadata?.avatar_url,
-      }
-    : {
-        fullName: 'Dashboard User',
-        emailAddresses: [{ emailAddress: 'user@example.com' }],
-        imageUrl: undefined,
-      }
-
   // Load filter fields for data table pages
   React.useEffect(() => {
     if (pathname.includes('/users') || pathname.includes('/dashboard/users')) {
@@ -237,11 +223,11 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                   <DropdownMenu>
                     <DropdownMenuTrigger className="flex items-center gap-2 p-2 w-full hover:bg-accent rounded-md">
                       <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <UserAvatarProfile user={user} />
+                        <UserAvatarProfile user={authUser} />
                       </div>
                       <div className="flex-1 text-left text-sm">
-                        <div className="font-semibold">{user?.fullName}</div>
-                        <div className="text-xs text-muted-foreground">{user?.emailAddresses[0]?.emailAddress}</div>
+                        <div className="font-semibold">{authUser?.name}</div>
+                        <div className="text-xs text-muted-foreground">{authUser?.email}</div>
                       </div>
                       <IconChevronsDown className="h-4 w-4" />
                     </DropdownMenuTrigger>
@@ -356,12 +342,12 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  {user && (
+                  {authUser && (
                     <div className="flex items-center gap-2">
-                      <UserAvatarProfile user={user} />
+                      <UserAvatarProfile user={authUser} />
                       <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">{user.fullName}</span>
-                        <span className="truncate text-xs">{user.emailAddresses[0]?.emailAddress}</span>
+                        <span className="truncate font-semibold">{authUser.name}</span>
+                        <span className="truncate text-xs">{authUser.email}</span>
                       </div>
                     </div>
                   )}
@@ -376,12 +362,12 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
               >
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="px-1 py-1.5">
-                    {user && (
+                    {authUser && (
                       <div className="flex items-center gap-2">
-                        <UserAvatarProfile user={user} />
+                        <UserAvatarProfile user={authUser} />
                         <div className="grid flex-1 text-left text-sm leading-tight">
-                          <span className="truncate font-semibold">{user.fullName}</span>
-                          <span className="truncate text-xs">{user.emailAddresses[0]?.emailAddress}</span>
+                          <span className="truncate font-semibold">{authUser.name}</span>
+                          <span className="truncate text-xs">{authUser.email}</span>
                         </div>
                       </div>
                     )}

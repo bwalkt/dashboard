@@ -4,7 +4,7 @@ import { User } from '@/types'
 interface UserAvatarProfileProps {
   className?: string
   showInfo?: boolean
-  user: User | null
+  user?: User | null
 }
 
 export function UserAvatarProfile({ className, showInfo = false, user }: UserAvatarProfileProps) {

@@ -1,15 +1,16 @@
 import { toast } from 'sonner'
 import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/use-auth'
 import { useTauriAuth } from '@/hooks/use-tauri-auth'
 
 export default function GithubSignInButton() {
-  const { signInWithGitHub: webSignIn, loading: webLoading } = useAuth()
-  const { signInWithGitHub: tauriSignIn, isLoading: tauriLoading, error: tauriError } = useTauriAuth()
+  const { signInWithGitHub: webSignIn, signInWithGitHubLoading } = useAuth()
+  const { signInWithGitHub: tauriSignIn, error: tauriError, isLoading: tauriLoading } = useTauriAuth()
 
   const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__
-  const loading = isTauri ? tauriLoading : webLoading
+
+  const loading = isTauri ? tauriLoading : signInWithGitHubLoading
 
   const handleGitHubSignIn = async () => {
     try {

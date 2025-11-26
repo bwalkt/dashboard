@@ -1,6 +1,7 @@
 import oauth2Plugin, { type OAuth2Namespace } from '@fastify/oauth2'
 import type { AuthenticatedRequest, ErrorResponse, UserResponse } from '@pzero/shared'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import { VALIDATION_HEADER_NAME } from '../config/constants.js'
 import { config } from '../config/env.js'
 import { redis } from '../config/redis.js'
 import { authenticateToken } from '../middleware/auth.js'
@@ -165,7 +166,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       const randomInt1 = Math.floor(Math.random() * 1000000)
       const randomInt2 = Math.floor(Math.random() * 1000000)
 
-      reply.header('X-Test-Eval', `${randomInt1} * ${randomInt2}`)
+      reply.header(VALIDATION_HEADER_NAME, `${randomInt1} * ${randomInt2}`)
       await redis.set(`user:${user.id}:header`, `${randomInt1 * randomInt2}`, 3600)
 
       return reply.send({
@@ -271,16 +272,17 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         path: '/',
         maxAge: 3600 * 24 * 30, // 30 days
       })
+      const cachedHeader = await redis.get(`user:${user.id}:header`)
+      if (!cachedHeader) {
+        const randomInt1 = Math.floor(Math.random() * 1000000)
+        const randomInt2 = Math.floor(Math.random() * 1000000)
 
-      const randomInt1 = Math.floor(Math.random() * 1000000)
-      const randomInt2 = Math.floor(Math.random() * 1000000)
-
-      reply.header('X-Test-Eval', `${randomInt1} * ${randomInt2}`)
-      await redis.set(`user:${user.id}:header`, `${randomInt1 * randomInt2}`, 3600)
-
+        reply.header(VALIDATION_HEADER_NAME, `${randomInt1} * ${randomInt2}`)
+        await redis.set(`user:${user.id}:header`, `${randomInt1 * randomInt2}`, 3600)
+      } else {
+        reply.header(VALIDATION_HEADER_NAME, cachedHeader)
+      }
       return reply.send({
-        accessToken,
-        refreshToken: newRefreshToken,
         user,
       })
     } catch (error) {

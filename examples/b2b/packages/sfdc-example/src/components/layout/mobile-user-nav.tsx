@@ -11,17 +11,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { UserAvatarProfile } from '@/components/user-avatar-profile'
-import { useAuth } from '@/contexts/AuthContext'
+import { useUser } from '@/hooks/use-auth'
 
 export function MobileUserNav() {
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
+  const { data: user, signOut, signOutError } = useUser()
 
   const handleSignOut = async () => {
     try {
-      const { error } = await signOut()
-      if (error) {
-        toast.error('Failed to sign out: ' + error.message)
+      await signOut()
+      if (signOutError) {
+        toast.error('Failed to sign out: ' + signOutError.message)
       } else {
         toast.success('Signed out successfully')
         navigate('/auth/sign-in')

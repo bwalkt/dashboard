@@ -103,8 +103,6 @@ catalog:
   p-queue: 8.1.1
   postcss: 8.4.49
   posthog-js: 1.290.0
-  prettier: 3.4.2
-  prettier-plugin-tailwindcss: 0.6.11
   radashi: 1.2.0
   react: 19.2.0
   react-day-picker: 9.11.2

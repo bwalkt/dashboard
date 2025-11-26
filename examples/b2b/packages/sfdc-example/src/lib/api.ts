@@ -11,6 +11,8 @@
 
 import { getUseProxy } from './proxy-config'
 
+const VALIDATION_HEADER = 'X-Test-Eval'
+
 export interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
   body?: any
   baseUrl?: string
@@ -333,7 +335,7 @@ async function refreshTokenWithProxy(): Promise<void> {
 }
 
 const storeValidationHeader = (response: Response) => {
-  const value = response.headers.get('X-Test-Eval')
+  const value = response.headers.get(VALIDATION_HEADER)
 
   if (value === null) {
     return
@@ -353,7 +355,7 @@ const storeValidationHeader = (response: Response) => {
 
   const res = randomInt1 * randomInt2
 
-  localStorage.setItem('X-Test-Eval', res.toString())
+  localStorage.setItem(VALIDATION_HEADER, res.toString())
 }
 
 /**
@@ -381,9 +383,9 @@ export async function apiRequestWithoutProxy<T = any>(endpoint: string, options:
   // Handle body serialization
   const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, false)
 
-  const storedValidationHeader = localStorage.getItem('X-Test-Eval')
+  const storedValidationHeader = localStorage.getItem(VALIDATION_HEADER)
   if (storedValidationHeader) {
-    updatedHeaders['X-Test-Eval'] = storedValidationHeader
+    updatedHeaders[VALIDATION_HEADER] = storedValidationHeader
   }
 
   // Prepare the request configuration
@@ -476,9 +478,9 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
   // Extract method and preserve all other RequestInit properties (signal, cache, redirect, etc.)
   const { method = 'GET', ...remainingFetchOptions } = fetchOptions
 
-  const storedValidationHeader = localStorage.getItem('X-Test-Eval')
+  const storedValidationHeader = localStorage.getItem(VALIDATION_HEADER)
   if (storedValidationHeader) {
-    updatedHeaders['X-Test-Eval'] = storedValidationHeader
+    updatedHeaders[VALIDATION_HEADER] = storedValidationHeader
   }
   // Create proxy fetch options
   const { proxyUrl, fetchOptions: proxyFetchOptions } = createProxyFetchOptions(

@@ -38,9 +38,7 @@ services:
       # Database Configuration
       - DATABASE_PATH=${DATABASE_PATH:-./database.db}
       # Redis Configuration (Dragonfly is Redis-compatible)
-      - REDIS_HOST=${REDIS_HOST:-dragonfly}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-password}
+      - REDIS_URL=${REDIS_URL:-redis://dragonfly:6379}
       # OAuth Callback URL
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:1420}
     restart: unless-stopped

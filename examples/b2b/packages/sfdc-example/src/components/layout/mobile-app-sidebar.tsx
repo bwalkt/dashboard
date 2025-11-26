@@ -38,7 +38,7 @@ import {
 } from '@/components/ui/sidebar'
 import { Switch } from '@/components/ui/switch'
 import { mobileNavItems } from '@/constants/mobile-nav'
-import { useAuth } from '@/contexts/AuthContext'
+import { useUser } from '@/hooks/use-auth'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { getUseProxy, setUseProxy } from '@/lib/proxy-config'
 import { Icons } from '../icons'
@@ -104,7 +104,7 @@ export default function MobileAppSidebar() {
     }
   }
 
-  const { user } = useAuth()
+  const { data: user } = useUser()
 
   return (
     <Sidebar collapsible="icon">

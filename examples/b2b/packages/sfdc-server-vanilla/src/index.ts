@@ -1,6 +1,7 @@
 import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
+import { VALIDATION_HEADER_NAME } from './config/constants.js'
 import { validateEnvironment } from './config/env.js'
 import { redis } from './config/redis.js'
 import { authRoutes } from './routes/auth.js'
@@ -37,12 +38,12 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
       'Authorization',
       'Accept',
       'x-client-type',
-      'X-Test-Eval',
+      VALIDATION_HEADER_NAME,
       // OpenTelemetry trace context headers for distributed tracing
       'traceparent',
       'tracestate',
     ],
-    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Test-Eval'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range', VALIDATION_HEADER_NAME],
     maxAge: 86400, // Cache preflight response for 1 day
     preflightContinue: false,
     optionsSuccessStatus: 204,

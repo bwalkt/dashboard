@@ -255,9 +255,6 @@ catalogs:
     posthog-js:
       specifier: 1.290.0
       version: 1.290.0
-    prettier:
-      specifier: 3.4.2
-      version: 3.4.2
     react-day-picker:
       specifier: 9.11.2
       version: 9.11.2
@@ -745,7 +742,7 @@ importers:
         version: 7.4.7(@react-navigation/native@7.1.21(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1))(react-native-safe-area-context@5.6.1(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1))(react-native-screens@4.16.0(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1))(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1)
       '@react-navigation/drawer':
         specifier: 'catalog:'
-        version: 7.7.4(n6hgp435w4xstt43agwuiwznny)
+        version: 7.7.4(eadfdba5fa1448a8b61d392de98684dd)
       '@react-navigation/native':
         specifier: 'catalog:'
         version: 7.1.21(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1)
@@ -838,7 +835,7 @@ importers:
         version: 6.3.0(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))
       react-native-ui-lib:
         specifier: 'catalog:'
-        version: 8.0.1(2rpdzqfw25zaucza325qm7oqwy)
+        version: 8.0.1(ed01ae141c9e779ed7a60ab09f08e619)
       react-native-vision-camera:
         specifier: 'catalog:'
         version: 4.7.3(react-native-reanimated@4.1.3(@babel/core@7.25.2)(react-native-worklets@0.6.1(@babel/core@7.25.2)(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1))(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1))(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1)
@@ -1301,12 +1298,6 @@ importers:
       grpc-tools:
         specifier: ^1.13.0
         version: 1.13.0(encoding@0.1.13)
-      prettier:
-        specifier: 'catalog:'
-        version: 3.4.2
-      prettier-plugin-sql:
-        specifier: 0.19.2
-        version: 0.19.2(prettier@3.4.2)
       supertest:
         specifier: ^7.1.4
         version: 7.1.4
@@ -4551,9 +4542,6 @@ packages:
   '@types/node@24.10.1':
     resolution: {integrity: sha512-GNWcUTRBgIRJD5zj+Tq0fKOJ5XZajIiBroOF0yvj2bSU1WvNdYS/dn9UxwsujGW4JX06dnHyjV2y9rRaybH0iQ==}
 
-  '@types/pegjs@0.10.6':
-    resolution: {integrity: sha512-eLYXDbZWXh2uxf+w8sXS8d6KSoXTswfps6fvCUuVAGN8eRpfe7h9eSRydxiSJvo9Bf+GzifsDOr9TMQlmJdmkw==}
-
   '@types/pg@8.15.6':
     resolution: {integrity: sha512-NoaMtzhxOrubeL/7UZuNTrejB4MPAJ0RpxZqXQf2qXuVlTPuG6Y8p4u9dKRaue4yjmC7ZhzVO2/Yyyn25znrPQ==}
 
@@ -4892,10 +4880,6 @@ packages:
   better-sqlite3@12.4.6:
     resolution: {integrity: sha512-gaYt9yqTbQ1iOxLpJA8FPR5PiaHP+jlg8I5EX0Rs2KFwNzhBsF40KzMZS5FwelY7RG0wzaucWdqSAJM3uNCPCg==}
     engines: {node: 20.x || 22.x || 23.x || 24.x || 25.x}
-
-  big-integer@1.6.52:
-    resolution: {integrity: sha512-QxD8cf2eVqJOOz63z6JIN9BzvVs/dlySa5HGSBH5xtR8dPteIRQnBxxKqkNTiT6jbDTF6jAfrd4oMcND9RGbQg==}
-    engines: {node: '>=0.6'}
 
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
@@ -5453,9 +5437,6 @@ packages:
 
   dijkstrajs@1.0.3:
     resolution: {integrity: sha512-qiSlmBq9+BCdCA/L46dw8Uy93mloxsPSbwnm5yrKn2vMPiy8KyAskTF6zuV/j5BMsmOGZDPs7KjU+mjb670kfA==}
-
-  discontinuous-range@1.0.0:
-    resolution: {integrity: sha512-c68LpLbO+7kP/b1Hr1qs8/BJ09F5khZGTxqxZuhzxpmwJKOgRFHJWIb9/KmqnqHhLdO55aOxFH/EGBvUQbL/RQ==}
 
   doc-path@4.1.1:
     resolution: {integrity: sha512-h1ErTglQAVv2gCnOpD3sFS6uolDbOKHDU1BZq+Kl3npPqroU3dYL42lUgMfd5UimlwtRgp7C9dLGwqQ5D2HYgQ==}
@@ -6475,10 +6456,6 @@ packages:
     resolution: {integrity: sha512-PRp66vJ865SSqOlgqS8hujT5U4AOgMfhrwYIuIhfKaoSCZcirrmASQr8CX7cUg+RMih+hgznrjp99o+W4pJLHQ==}
     engines: {node: '>=12', npm: '>=6'}
 
-  jsox@1.2.124:
-    resolution: {integrity: sha512-KwptI8xUfOt7qJ+P+2utrJIEHTgDjXpBsDhPSM4GDq++4by+LX9nUFee97QfRloGcMh5iA9Ha/4UCVZl7zWzuA==}
-    hasBin: true
-
   jwa@1.4.2:
     resolution: {integrity: sha512-eeH5JO+21J78qMvTIDdBXidBd6nG2kZjg5Ohz/1fpa28Z4CcsWUzJ1ZZyFq/3z3N17aZy+ZuBoHljASbL1WfOw==}
 
@@ -6963,9 +6940,6 @@ packages:
   module-details-from-path@1.0.4:
     resolution: {integrity: sha512-EGWKgxALGMgzvxYF1UyGTy0HXX/2vHLkw6+NvDKW2jypWbHpjQuj4UMcqQWXHERJhVGKikolT06G3bcKe4fi7w==}
 
-  moo@0.5.2:
-    resolution: {integrity: sha512-iSAJLHYKnX41mKcJKjqvnAN9sf0LMDTXDEvFv+ffuRR9a1MIuXLjMNL6EsnDHSkKLTWNqQQ5uo61P4EbU4NU+Q==}
-
   motion-dom@11.18.1:
     resolution: {integrity: sha512-g76KvA001z+atjfxczdRtw/RXOM3OMSdd1f4DL77qCTF/+avrRJiawSG4yDibEQ215sr9kpinSlX2pCTJ9zbhw==}
 
@@ -7012,10 +6986,6 @@ packages:
 
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
-
-  nearley@2.20.1:
-    resolution: {integrity: sha512-+Mc8UaAebFzgV+KpI5n7DasuuQCHA89dmwm7JXw3TV43ukfNQ9DnBH3Mdb2g/I4Fdxc26pwimBWvjIw0UAILSQ==}
-    hasBin: true
 
   negotiator@0.6.3:
     resolution: {integrity: sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==}
@@ -7081,10 +7051,6 @@ packages:
 
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
-
-  node-sql-parser@5.3.13:
-    resolution: {integrity: sha512-heyWv3lLjKHpcBDMUSR+R0DohRYZTYq+Ro3hJ4m9Ia8ccdKbL5UijIaWr2L4co+bmmFuvBVZ4v23QW2PqvBFAA==}
-    engines: {node: '>=8'}
 
   node-stream-zip@1.15.0:
     resolution: {integrity: sha512-LN4fydt9TqhZhThkZIVQnF9cwjU3qmUH9h78Mx/K7d3VvfRqqwthLwJEUOEL0QPZ0XQmNN7be5Ggit5+4dq3Bw==}
@@ -7412,17 +7378,6 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
-  prettier-plugin-sql@0.19.2:
-    resolution: {integrity: sha512-DAu1Jcanpvs32OAOXsqaVXOpPs4nFLVkB3XwzRiZZVNL5/c+XdlNxWFMiMpMhYhmCG5BW3srK8mhikCOv5tPfg==}
-    engines: {node: ^14.18.0 || >=16.0.0}
-    peerDependencies:
-      prettier: ^3.0.3
-
-  prettier@3.4.2:
-    resolution: {integrity: sha512-e9MewbtFo+Fevyuxn/4rrcDAaq0IYxPGLvObpQjiZBMAzB9IGmzlnG9RZy3FFas+eBMu2vA0CszMeduow5dIuQ==}
-    engines: {node: '>=14'}
-    hasBin: true
-
   prettier@3.6.2:
     resolution: {integrity: sha512-I7AIg5boAr5R0FFtJ6rCfD+LFsWHp81dolrFD8S79U9tb8Az2nGrJncnMSnys+bpQJfRUzqs9hnA81OAA3hCuQ==}
     engines: {node: '>=14'}
@@ -7512,13 +7467,6 @@ packages:
 
   quick-format-unescaped@4.0.4:
     resolution: {integrity: sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg==}
-
-  railroad-diagrams@1.0.0:
-    resolution: {integrity: sha512-cz93DjNeLY0idrCNOH6PviZGRN9GJhsdm9hpn1YCS879fj4W+x5IFJhhkRZcwVgMmFF7R82UA/7Oh+R8lLZg6A==}
-
-  randexp@0.4.6:
-    resolution: {integrity: sha512-80WNmd9DA0tmZrw9qQa62GPPWfuXJknrmVmLcxvq4uZBdYqb1wYoKTmnlGUchvVWe0XiLupYkBoXVOxz3C8DYQ==}
-    engines: {node: '>=0.12'}
 
   range-parser@1.2.1:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
@@ -7996,10 +7944,6 @@ packages:
     resolution: {integrity: sha512-l+sSefzHpj5qimhFSE5a8nufZYAM3sBSVMAPtYkmC+4EH2anSGaEMXSD0izRQbu9nfyQ9y5JrVmp7E8oZrUjvA==}
     engines: {node: '>=8'}
 
-  ret@0.1.15:
-    resolution: {integrity: sha512-TTlYpa+OL+vMMNG24xSlQGEJ3B/RzEfUlLct7b5G/ytav+wPrplCpVMFuwzXbkecJrb6IYo1iFb0S9v37754mg==}
-    engines: {node: '>=0.12'}
-
   ret@0.5.0:
     resolution: {integrity: sha512-I1XxrZSQ+oErkRR4jYbAyEEu2I0avBvvMM5JN+6EBprOGRCs63ENqZ3vjavq8fBw2+62G5LF5XelKwuJpcvcxw==}
     engines: {node: '>=10'}
@@ -8264,10 +8208,6 @@ packages:
 
   sprintf-js@1.0.3:
     resolution: {integrity: sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==}
-
-  sql-formatter@15.6.10:
-    resolution: {integrity: sha512-0bJOPQrRO/JkjQhiThVayq0hOKnI1tHI+2OTkmT7TGtc6kqS+V7kveeMzRW+RNQGxofmTmet9ILvztyuxv0cJQ==}
-    hasBin: true
 
   ssri@10.0.6:
     resolution: {integrity: sha512-MGrFH9Z4NP9Iyhqn16sDtBpRRNJ0Y2hNa6D65h736fVSaPCHr4DM4sWUNvVaSuC+0OBGhwsrydQwmgfg5LncqQ==}
@@ -12005,7 +11945,7 @@ snapshots:
       use-latest-callback: 0.2.6(react@19.1.1)
       use-sync-external-store: 1.6.0(react@19.1.1)
 
-  '@react-navigation/drawer@7.7.4(n6hgp435w4xstt43agwuiwznny)':
+  '@react-navigation/drawer@7.7.4(eadfdba5fa1448a8b61d392de98684dd)':
     dependencies:
       '@react-navigation/elements': 2.8.3(@react-navigation/native@7.1.21(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1))(react-native-safe-area-context@5.6.1(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1))(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1)
       '@react-navigation/native': 7.1.21(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1)
@@ -12663,8 +12603,6 @@ snapshots:
     dependencies:
       undici-types: 7.16.0
 
-  '@types/pegjs@0.10.6': {}
-
   '@types/pg@8.15.6':
     dependencies:
       '@types/node': 24.10.1
@@ -13071,8 +13009,6 @@ snapshots:
     dependencies:
       bindings: 1.5.0
       prebuild-install: 7.1.3
-
-  big-integer@1.6.52: {}
 
   binary-extensions@2.3.0: {}
 
@@ -13633,8 +13569,6 @@ snapshots:
   diff@8.0.2: {}
 
   dijkstrajs@1.0.3: {}
-
-  discontinuous-range@1.0.0: {}
 
   doc-path@4.1.1: {}
 
@@ -14902,8 +14836,6 @@ snapshots:
       ms: 2.1.3
       semver: 7.7.3
 
-  jsox@1.2.124: {}
-
   jwa@1.4.2:
     dependencies:
       buffer-equal-constant-time: 1.0.1
@@ -15586,8 +15518,6 @@ snapshots:
 
   module-details-from-path@1.0.4: {}
 
-  moo@0.5.2: {}
-
   motion-dom@11.18.1:
     dependencies:
       motion-utils: 11.18.1
@@ -15618,13 +15548,6 @@ snapshots:
   napi-thread-safe-callback@0.0.6: {}
 
   natural-compare@1.4.0: {}
-
-  nearley@2.20.1:
-    dependencies:
-      commander: 2.20.3
-      moo: 0.5.2
-      railroad-diagrams: 1.0.0
-      randexp: 0.4.6
 
   negotiator@0.6.3: {}
 
@@ -15680,11 +15603,6 @@ snapshots:
       '@types/pg': 8.15.6
 
   node-releases@2.0.27: {}
-
-  node-sql-parser@5.3.13:
-    dependencies:
-      '@types/pegjs': 0.10.6
-      big-integer: 1.6.52
 
   node-stream-zip@1.15.0: {}
 
@@ -16016,16 +15934,6 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
-  prettier-plugin-sql@0.19.2(prettier@3.4.2):
-    dependencies:
-      jsox: 1.2.124
-      node-sql-parser: 5.3.13
-      prettier: 3.4.2
-      sql-formatter: 15.6.10
-      tslib: 2.8.1
-
-  prettier@3.4.2: {}
-
   prettier@3.6.2: {}
 
   pretty-format@29.7.0:
@@ -16124,13 +16032,6 @@ snapshots:
       inherits: 2.0.4
 
   quick-format-unescaped@4.0.4: {}
-
-  railroad-diagrams@1.0.0: {}
-
-  randexp@0.4.6:
-    dependencies:
-      discontinuous-range: 1.0.0
-      ret: 0.1.15
 
   range-parser@1.2.1: {}
 
@@ -16358,7 +16259,7 @@ snapshots:
       eventemitter3: 4.0.7
       react-native: 0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1)
 
-  react-native-ui-lib@8.0.1(2rpdzqfw25zaucza325qm7oqwy):
+  react-native-ui-lib@8.0.1(ed01ae141c9e779ed7a60ab09f08e619):
     dependencies:
       babel-plugin-transform-inline-environment-variables: 0.0.2
       color: 3.2.1
@@ -16665,8 +16566,6 @@ snapshots:
     dependencies:
       onetime: 5.1.2
       signal-exit: 3.0.7
-
-  ret@0.1.15: {}
 
   ret@0.5.0: {}
 
@@ -16987,11 +16886,6 @@ snapshots:
   split2@4.2.0: {}
 
   sprintf-js@1.0.3: {}
-
-  sql-formatter@15.6.10:
-    dependencies:
-      argparse: 2.0.1
-      nearley: 2.20.1
 
   ssri@10.0.6:
     dependencies:

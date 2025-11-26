@@ -1,5 +1,6 @@
 import type { AuthenticatedRequest, ErrorResponse } from '@pzero/shared'
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import { VALIDATION_HEADER_NAME } from '../config/constants.js'
 import { redis } from '../config/redis.js'
 import { authService } from '../services/auth.service.js'
 import { userService } from '../services/user.service.js'
@@ -53,8 +54,10 @@ export async function authenticateToken(request: FastifyRequest, reply: FastifyR
       })
     }
 
+    // Validate header value
     const expected = await redis.get(`user:${user.id}:header`)
-    const headerValue = request.headers['X-Test-Eval']
+    const headerValue = request.headers[VALIDATION_HEADER_NAME]
+
     const actual = Array.isArray(headerValue) ? headerValue[0] : headerValue || ''
     if (expected !== actual) {
       return reply.status(401).send({

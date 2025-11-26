@@ -12,7 +12,6 @@ export function useTauriAuth() {
         headers: {
           'X-Client-Type': 'tauri',
         },
-        skipAuth: true,
       })
       // Redirect to GitHub; backend callback will set cookies then redirect to app home
       window.location.href = authUrl

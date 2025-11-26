@@ -7,7 +7,6 @@
   "scripts": {
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
@@ -77,30 +76,9 @@
     "c8": "^10.1.3",
     "concurrently": "^9.2.1",
     "grpc-tools": "^1.13.0",
-    "prettier": "catalog:",
-    "prettier-plugin-sql": "0.19.2",
     "supertest": "^7.1.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "catalog:"
-  },
-  "prettier": {
-    "plugins": [
-      "prettier-plugin-sql"
-    ],
-    "overrides": [
-      {
-        "files": [
-          "*.sql"
-        ],
-        "options": {
-          "language": "postgresql",
-          "keywordCase": "upper",
-          "identifierCase": "lower",
-          "dataTypeCase": "lower",
-          "functionCase": "lower"
-        }
-      }
-    ]
   }
 }
