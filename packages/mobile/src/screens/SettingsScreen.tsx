@@ -189,7 +189,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       const email = SettingsStore.getItem(settingsKeys.email) || ''
       const phoneNumber = SettingsStore.getItem(settingsKeys.phone) || ''
       let classificationType = SettingsStore.getItem(settingsKeys.classificationType) || ''
-      const isPrimary = SettingsStore.getItem(settingsKeys.isPrimary) || false
+
+      // Load isPrimary from DevicesStore (source of truth)
+      await DevicesStore.init()
+      const isPrimary = DevicesStore.isPrimaryDevice
+
       const phoneVerified = SettingsStore.getItem(settingsKeys.phoneVerified) || false
       const emailVerified = SettingsStore.getItem(settingsKeys.emailVerified) || false
       const termsAccepted = SettingsStore.getItem(settingsKeys.termsAccepted) || false
@@ -300,13 +304,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const performSave = async () => {
     setIsLoading(true)
     try {
-      // Save to SettingsStore with error checking
+      // Save to SettingsStore with error checking (except isPrimary which is handled by DevicesStore)
       const saveOperations = [
         { key: settingsKeys.nickName, data: formData.nickName },
         { key: settingsKeys.email, data: formData.email },
         { key: settingsKeys.phone, data: formData.phoneNumber },
         { key: settingsKeys.classificationType, data: formData.classificationType },
-        { key: settingsKeys.isPrimary, data: formData.isPrimary },
         { key: settingsKeys.termsAccepted, data: formData.termsAccepted },
       ]
 
@@ -316,8 +319,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
           throw new Error(labels.saveOperationFailed(operation.key))
         }
       }
+
+      // Also save isPrimary to SettingsStore for consistency (DevicesStore is the source of truth)
+      SettingsStore.setItem({ key: settingsKeys.isPrimary, data: DevicesStore.isPrimaryDevice })
+
       // Update previousData after successful save
-      setPreviousData(formData)
+      setPreviousData({ ...formData, isPrimary: DevicesStore.isPrimaryDevice })
       Alert.alert(labels.success, labels.settingsSavedSuccess)
 
       if (onSettingsComplete) {
@@ -336,18 +343,21 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     if (field === 'isPrimary' && typeof value === 'boolean') {
       console.log('Settings: Updating isPrimary to', value)
       // Update DevicesStore immediately
-      if (value) {
-        DevicesStore.isPrimaryDevice = true
-        const currentDevice = await DevicesStore.getCurrentDeviceInfo()
-        currentDevice.isPrimaryDevice = true
-        DevicesStore.setItem({ key: 'isPrimary', data: currentDevice })
-      } else {
-        DevicesStore.isPrimaryDevice = false
-        const currentDevice = await DevicesStore.getCurrentDeviceInfo()
-        currentDevice.isPrimaryDevice = false
-        DevicesStore.setItem({ key: 'isPrimary', data: currentDevice })
+      DevicesStore.isPrimaryDevice = value
+      const currentDevice = await DevicesStore.getCurrentDeviceInfo()
+
+      // Ensure the field exists and set the value
+      if (currentDevice.isPrimaryDevice === undefined) {
+        console.log('Settings: isPrimaryDevice was undefined, initializing...')
       }
+      currentDevice.isPrimaryDevice = value
+      DevicesStore.currentDevice = currentDevice
+
+      // Save to storage with correct key
+      DevicesStore.setItem({ key: 'current', data: currentDevice })
       console.log('Settings: DevicesStore.isPrimaryDevice is now', DevicesStore.isPrimaryDevice)
+      console.log('Settings: Saved to storage with isPrimary:', currentDevice.isPrimaryDevice)
+
       setFormData(prev => ({ ...prev, [field]: value }))
     }
 

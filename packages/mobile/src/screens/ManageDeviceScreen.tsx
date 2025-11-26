@@ -8,6 +8,7 @@ import { SwipeListView } from 'react-native-swipe-list-view'
 import { Text, TextField, View } from 'react-native-ui-lib'
 import BottomTabs, { type TabItem } from '../components/BottomTabs'
 import Button from '../components/Button'
+import DrawerOverlay from '../components/DrawerOverlay'
 import Header from '../components/Header'
 import InstructionText from '../components/InstructionText'
 import ScreenHeader from '../components/ScreenHeader'
@@ -54,20 +55,27 @@ const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, o
   const [isScanning, setIsScanning] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
-  const [activeTab, setActiveTab] = useState<'add' | 'connections'>('add')
+  const [activeTab, setActiveTab] = useState<'add' | 'connections'>('connections')
   const [connectedDevices, setConnectedDevices] = useState<DeviceInfo[]>([])
   const [manualQRInput, setManualQRInput] = useState('')
+  const [showConnectDrawer, setShowConnectDrawer] = useState(false)
 
   // Use reactive Zustand store
   const devicesStore = stores.DevicesStore
-
-  const { isPrimaryDevice, currentDevice } = devicesStore
-
-  // Debug logging
-  console.log('ConnectDevice - isPrimaryDevice from Zustand:', isPrimaryDevice)
-  console.log('ConnectDevice - currentDevice from Zustand:', currentDevice?.nickname)
+  const [isPrimaryDevice, setIsPrimaryDevice] = useState(false)
+  const [currentDevice, setCurrentDevice] = useState(devicesStore.currentDevice)
 
   useEffect(() => {
+    const initializeDeviceStatus = async () => {
+      // Initialize DevicesStore to get latest status
+      await devicesStore.init()
+      setIsPrimaryDevice(devicesStore.isPrimaryDevice)
+      setCurrentDevice(devicesStore.currentDevice)
+      console.log('ManageDevices - isPrimaryDevice:', devicesStore.isPrimaryDevice)
+      console.log('ManageDevices - currentDevice:', devicesStore.currentDevice?.nickname)
+    }
+
+    initializeDeviceStatus()
     initializeScreen()
     loadConnectedDevices()
   }, [])
@@ -371,9 +379,12 @@ const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, o
           <Text text60 color={colors.textDarkColor} center marginB-10>
             {labels.noConnectedDevices}
           </Text>
-          <Text text80 color={colors.textDarkColor} center>
-            {labels.useAddTabInstruction}
+          <Text text80 color={colors.textDarkColor} center marginB-20>
+            {isPrimaryDevice
+              ? 'Connect secondary devices to manage them'
+              : 'Connect to a primary device to get started'}
           </Text>
+          <Button label="Connect Device" onPress={() => setShowConnectDrawer(true)} variant="primary" size="large" />
         </View>
       ) : (
         <SwipeListView
@@ -412,21 +423,41 @@ const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, o
         )}
       </View>
 
-      <Button
-        label={isPrimaryDevice ? labels.scanSecondaryDevice : labels.scanPrimaryDevice}
-        onPress={startScanning}
-        variant="primary"
-        size="large"
-        style={styles.scanButton}
-      />
-
-      <Button
-        label={labels.showMyQRCode}
-        onPress={showMyQRCode}
-        variant="primary"
-        size="large"
-        style={styles.qrButton}
-      />
+      {isPrimaryDevice ? (
+        <>
+          <Button
+            label={labels.scanSecondaryDevice}
+            onPress={startScanning}
+            variant="primary"
+            size="large"
+            style={styles.scanButton}
+          />
+          <Button
+            label={labels.showMyQRCode}
+            onPress={showMyQRCode}
+            variant="primary"
+            size="large"
+            style={styles.qrButton}
+          />
+        </>
+      ) : (
+        <>
+          <Button
+            label="Scan Primary Device QR Code"
+            onPress={startScanning}
+            variant="primary"
+            size="large"
+            style={styles.scanButton}
+          />
+          <Button
+            label={labels.showMyQRCode}
+            onPress={showMyQRCode}
+            variant="primary"
+            size="large"
+            style={styles.qrButton}
+          />
+        </>
+      )}
 
       <Button
         label={labels.back}
@@ -541,15 +572,72 @@ const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, o
 
   return (
     <View style={[styles.container, { paddingTop: safeAreaInsets.top }]}>
-      <Header title={labels.connectDeviceTitle} navigation={navigation} onFAQPress={onFAQPress} />
+      <Header title="Manage Devices" navigation={navigation} onFAQPress={onFAQPress} />
 
-      {activeTab === 'add' ? renderAddTab() : renderConnectionsTab()}
+      {connectedDevices.length === 0 && !showConnectDrawer ? (
+        // Empty state - no tabs
+        <View style={styles.content}>
+          <View style={styles.emptyStateContainer}>
+            <Text text40 color={colors.textLightColor} center marginB-20>
+              No Devices Connected
+            </Text>
+            <Text text70 color={colors.textDarkColor} center marginB-30>
+              {isPrimaryDevice
+                ? 'Connect secondary devices to manage them'
+                : 'Connect to a primary device to get started'}
+            </Text>
+            <Button label="Connect Device" onPress={() => setShowConnectDrawer(true)} variant="primary" size="large" />
+          </View>
+        </View>
+      ) : (
+        // Normal view with tabs
+        <>
+          {activeTab === 'add' ? renderAddTab() : renderConnectionsTab()}
+          <BottomTabs
+            tabs={tabs}
+            activeTab={activeTab}
+            onTabPress={tabId => setActiveTab(tabId as 'add' | 'connections')}
+          />
+        </>
+      )}
 
-      <BottomTabs
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabPress={tabId => setActiveTab(tabId as 'add' | 'connections')}
-      />
+      {/* Connect Device Drawer */}
+      <DrawerOverlay
+        visible={showConnectDrawer}
+        onClose={() => setShowConnectDrawer(false)}
+        title="Connect Device"
+        width="100%"
+      >
+        <View style={styles.drawerContent}>
+          <Text text60 color={colors.textLightColor} center marginB-30>
+            {isPrimaryDevice ? 'Let secondary devices scan your QR code' : 'Scan the QR code from the primary device'}
+          </Text>
+
+          {isPrimaryDevice ? (
+            <Button
+              label="Show My QR Code"
+              onPress={() => {
+                setShowConnectDrawer(false)
+                showMyQRCode()
+              }}
+              variant="primary"
+              size="large"
+              style={styles.drawerButton}
+            />
+          ) : (
+            <Button
+              label="Scan Primary Device QR Code"
+              onPress={() => {
+                setShowConnectDrawer(false)
+                startScanning()
+              }}
+              variant="primary"
+              size="large"
+              style={styles.drawerButton}
+            />
+          )}
+        </View>
+      </DrawerOverlay>
     </View>
   )
 }
@@ -673,6 +761,19 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flex: 1,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  drawerContent: {
+    padding: spacing.xl,
+    paddingBottom: spacing.xl + 20,
+  },
+  drawerButton: {
+    marginBottom: spacing.md,
   },
 })
 

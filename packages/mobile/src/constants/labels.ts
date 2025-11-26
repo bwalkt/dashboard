@@ -62,6 +62,7 @@ export const labels = {
     `You have ${count} connected device${count !== 1 ? 's' : ''}. Changing from primary to secondary device will disconnect all connected devices and reset your connections. This action cannot be undone.\n\nDo you want to continue?`,
 
   // Connect Device Screen
+  manageDeviceTitle: 'Manage Devices',
   connectDeviceTitle: 'Connect Device',
   deviceStatus: 'Device Status',
   deviceType: 'Device Type',
