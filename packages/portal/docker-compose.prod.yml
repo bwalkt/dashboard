@@ -10,5 +10,5 @@ services:
     container_name: portal
     ports:
       - "${PORT:-1430}:80"
-    restart: unless-stopped
+    restart: "no"
 

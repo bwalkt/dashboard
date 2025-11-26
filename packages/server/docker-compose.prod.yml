@@ -5,9 +5,9 @@ services:
     # Image from GitHub Container Registry
     # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
     # Or set POSTGRES_IMAGE to override the full image path
-    image: ${POSTGRES_IMAGE:-ghcr.io/${GITHUB_OWNER}/server-postgres:latest}
+    image: ${POSTGRES_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/server-postgres:latest}
     container_name: pzero-postgres
-    restart: unless-stopped
+    restart: "no"
     command: ["postgres", "-c", "shared_preload_libraries=pgx_ulid"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -18,11 +18,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   pzero-server:
     # Image from GitHub Container Registry
@@ -30,7 +25,7 @@ services:
     # Or set SERVER_IMAGE to override the full image path
     image: ${SERVER_IMAGE:-ghcr.io/${GITHUB_OWNER}/server:latest}
     container_name: pzero-server
-    restart: unless-stopped
+    restart: "no"
     ports:
       - "${PORT:-8090}:${PORT:-8090}"
     environment:
@@ -73,7 +68,7 @@ services:
       - TWILIO_MESSAGE=${TWILIO_MESSAGE}
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_started
 
   pzero-envoy:
     image: envoyproxy/envoy:v1.30-latest
@@ -85,11 +80,8 @@ services:
       - type: bind
         source: ./envoy.yaml
         target: /etc/envoy/envoy.yaml
-        is_directory: false
-        content: |
-          envoy.yaml content
     command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
-    restart: unless-stopped
+    restart: "no"
     environment:
       - ENVOY_LOG_LEVEL=info
     depends_on:
