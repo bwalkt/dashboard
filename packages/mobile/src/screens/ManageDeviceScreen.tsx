@@ -62,19 +62,20 @@ const ManageDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, on
 
   // Access store directly - it will be initialized in useEffect
   const devicesStore = stores.DevicesStore
-  const [storeInitialized, setStoreInitialized] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
 
-  // Direct store access - these values are read from store each render
-  const isPrimaryDevice = devicesStore.isPrimaryDevice
-  const currentDevice = devicesStore.currentDevice
+  // Reactive state variables for store values to trigger re-renders
+  const [isPrimaryDevice, setIsPrimaryDevice] = useState(devicesStore.isPrimaryDevice)
+  const [currentDevice, setCurrentDevice] = useState(devicesStore.currentDevice)
 
   useEffect(() => {
     const initializeDeviceStatus = async () => {
       setIsInitializing(true)
       // Initialize DevicesStore to get latest status
       await devicesStore.init()
-      setStoreInitialized(true)
+      // Update reactive state variables
+      setIsPrimaryDevice(devicesStore.isPrimaryDevice)
+      setCurrentDevice(devicesStore.currentDevice)
       setIsInitializing(false)
       console.log('ManageDevices - isPrimaryDevice:', devicesStore.isPrimaryDevice)
       console.log('ManageDevices - currentDevice:', devicesStore.currentDevice?.nickname)
@@ -138,7 +139,8 @@ const ManageDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, on
       // Add the secondary device to connected devices
       await devicesStore.addConnectedDevice(qrData)
       await loadConnectedDevices() // Refresh the list
-      setStoreInitialized(prev => !prev) // Force re-render to update UI
+      setIsPrimaryDevice(devicesStore.isPrimaryDevice)
+      setCurrentDevice(devicesStore.currentDevice)
 
       Alert.alert(
         labels.success,
@@ -170,7 +172,8 @@ const ManageDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, on
 
       // Set the scanned device as the primary device
       await devicesStore.setPrimaryDevice(qrData)
-      setStoreInitialized(prev => !prev) // Force re-render to update UI
+      setIsPrimaryDevice(devicesStore.isPrimaryDevice)
+      setCurrentDevice(devicesStore.currentDevice)
 
       Alert.alert(
         labels.success,
@@ -321,7 +324,8 @@ const ManageDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, on
           try {
             await devicesStore.removeConnectedDevice(deviceId)
             await loadConnectedDevices() // Refresh the list
-            setStoreInitialized(prev => !prev) // Force re-render to update UI
+            setIsPrimaryDevice(devicesStore.isPrimaryDevice)
+            setCurrentDevice(devicesStore.currentDevice)
             Alert.alert(labels.success, labels.deviceRemovedSuccess)
           } catch (error) {
             console.error('Error removing device:', error)

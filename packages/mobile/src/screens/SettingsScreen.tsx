@@ -370,7 +370,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
               {
                 text: labels.continue,
                 style: 'destructive',
-                onPress: () => applyPrimaryDeviceChange(value),
+                onPress: async () => await applyPrimaryDeviceChange(value),
               },
             ])
             return
@@ -379,7 +379,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
           console.error('Error checking connected devices:', error)
         }
       }
-      applyPrimaryDeviceChange(value)
+      await applyPrimaryDeviceChange(value)
       return
     }
 

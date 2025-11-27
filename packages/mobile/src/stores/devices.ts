@@ -87,10 +87,18 @@ export class DevicesStoreClass extends ZStorage {
     }
     let deviceInfo = this.getItem(deviceAssignmentTypes.current)
     if (!deviceInfo) {
-      deviceInfo = (await getDeviceInfo()) as unknown as DeviceInfoType
-      deviceInfo.dateAdded = Date.now()
-      deviceInfo.uuid = uuid()
-      this.setItem({ key: deviceAssignmentTypes.current, data: deviceInfo, isTransit: false })
+      try {
+        deviceInfo = (await getDeviceInfo()) as unknown as DeviceInfoType
+        deviceInfo.dateAdded = Date.now()
+        deviceInfo.uuid = uuid()
+        const saved = this.setItem({ key: deviceAssignmentTypes.current, data: deviceInfo, isTransit: false })
+        if (!saved) {
+          throw new Error('Failed to save current device info to storage')
+        }
+      } catch (error) {
+        console.error('Failed to get current device info:', error)
+        throw error
+      }
     } else {
       if (deviceInfo.isPrimaryDevice) {
         this.isPrimaryDevice = true
@@ -133,70 +141,168 @@ export class DevicesStoreClass extends ZStorage {
     if (primaryDevice && primaryDevice.deviceId === device.deviceId) {
       return primaryDevice
     }
-    device.isPrimaryDevice = true
-    if (this.currentDevice && this.currentDevice.deviceId === device.deviceId) {
-      this.isPrimaryDevice = true
-      this.currentDevice.isPrimaryDevice = true
-      this.setItem({ key: deviceAssignmentTypes.primary, data: this.currentDevice, isTransit: false })
-      this.setItem({ key: deviceAssignmentTypes.current, data: this.currentDevice, isTransit: false })
-      return this.currentDevice
+
+    try {
+      device.isPrimaryDevice = true
+      if (this.currentDevice && this.currentDevice.deviceId === device.deviceId) {
+        this.isPrimaryDevice = true
+        this.currentDevice.isPrimaryDevice = true
+
+        const primarySaved = this.setItem({
+          key: deviceAssignmentTypes.primary,
+          data: this.currentDevice,
+          isTransit: false,
+        })
+        if (!primarySaved) {
+          throw new Error('Failed to save primary device data')
+        }
+
+        const currentSaved = this.setItem({
+          key: deviceAssignmentTypes.current,
+          data: this.currentDevice,
+          isTransit: false,
+        })
+        if (!currentSaved) {
+          throw new Error('Failed to save current device data')
+        }
+
+        return this.currentDevice
+      }
+
+      device.dateAdded = Date.now()
+      const saved = this.setItem({ key: deviceAssignmentTypes.primary, data: device, isTransit: false })
+      if (!saved) {
+        throw new Error('Failed to save primary device data')
+      }
+    } catch (error) {
+      console.error('Failed to set primary device:', error)
+      throw error
     }
-    device.dateAdded = Date.now()
-    this.setItem({ key: deviceAssignmentTypes.primary, data: device, isTransit: false })
   }
   async setToggleThisDeviceAsPrimary() {
     const isPrimary = !this.isPrimaryDevice
     const currentDevice = await this.getCurrentDeviceInfo()
-    currentDevice.isPrimaryDevice = isPrimary
-    this.isPrimaryDevice = isPrimary
-    this.setItem({ key: deviceAssignmentTypes.current, data: currentDevice })
-    if (!isPrimary) {
-      this.setItem({ key: deviceAssignmentTypes.primary, data: null })
-      this.primaryDevice = undefined
-      const connections = this.getItem(deviceAssignmentTypes.connected)
-      if (connections && Array.isArray(connections) && connections.length) {
-        this.setItem({ key: deviceAssignmentTypes.backedup_connections, data: connections })
-        this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+
+    // Store original state for rollback
+    const originalIsPrimary = this.isPrimaryDevice
+    const originalPrimaryDevice = this.primaryDevice
+    const originalCurrentDevice = { ...this.currentDevice }
+
+    try {
+      currentDevice.isPrimaryDevice = isPrimary
+      this.isPrimaryDevice = isPrimary
+
+      const currentSaved = this.setItem({ key: deviceAssignmentTypes.current, data: currentDevice })
+      if (!currentSaved) {
+        throw new Error('Failed to save current device data')
       }
-    } else {
-      this.setItem({ key: deviceAssignmentTypes.primary, data: currentDevice })
-      this.primaryDevice = currentDevice
+
+      if (!isPrimary) {
+        const primaryCleared = this.setItem({ key: deviceAssignmentTypes.primary, data: null })
+        if (!primaryCleared) {
+          throw new Error('Failed to clear primary device data')
+        }
+        this.primaryDevice = undefined
+
+        const connections = this.getItem(deviceAssignmentTypes.connected)
+        if (connections && Array.isArray(connections) && connections.length) {
+          const backupSaved = this.setItem({ key: deviceAssignmentTypes.backedup_connections, data: connections })
+          if (!backupSaved) {
+            throw new Error('Failed to backup connected devices')
+          }
+          const connectionsCleared = this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+          if (!connectionsCleared) {
+            throw new Error('Failed to clear connected devices')
+          }
+        }
+      } else {
+        const primarySaved = this.setItem({ key: deviceAssignmentTypes.primary, data: currentDevice })
+        if (!primarySaved) {
+          throw new Error('Failed to save primary device data')
+        }
+        this.primaryDevice = currentDevice
+      }
+
+      const connectionsCleared = this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+      if (!connectionsCleared) {
+        throw new Error('Failed to clear connected devices list')
+      }
+    } catch (error) {
+      // Rollback in-memory state on failure
+      this.isPrimaryDevice = originalIsPrimary
+      this.primaryDevice = originalPrimaryDevice
+      this.currentDevice = originalCurrentDevice
+
+      console.error('Failed to toggle device primary status:', error)
+      throw error
     }
-    this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
   }
 
   async setIsPrimaryDevice(value: boolean) {
     const currentDevice = await this.getCurrentDeviceInfo()
 
-    // Update the current device's primary status
-    currentDevice.isPrimaryDevice = value
-    this.isPrimaryDevice = value
-    this.currentDevice = currentDevice
+    // Store original state for rollback
+    const originalIsPrimary = this.isPrimaryDevice
+    const originalPrimaryDevice = this.primaryDevice
+    const originalCurrentDevice = { ...this.currentDevice }
 
-    // Save to storage
-    this.setItem({ key: deviceAssignmentTypes.current, data: currentDevice })
+    try {
+      // Update the current device's primary status
+      currentDevice.isPrimaryDevice = value
+      this.isPrimaryDevice = value
+      this.currentDevice = currentDevice
 
-    if (!value) {
-      // If removing primary status, clear primary device reference
-      this.setItem({ key: deviceAssignmentTypes.primary, data: null })
-      this.primaryDevice = undefined
-
-      // Backup connected devices if any exist
-      const connections = this.getItem(deviceAssignmentTypes.connected)
-      if (connections && Array.isArray(connections) && connections.length) {
-        this.setItem({ key: deviceAssignmentTypes.backedup_connections, data: connections })
-        this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+      // Save to storage
+      const currentDeviceSaved = this.setItem({ key: deviceAssignmentTypes.current, data: currentDevice })
+      if (!currentDeviceSaved) {
+        throw new Error('Failed to save current device data')
       }
-    } else {
-      // If setting as primary, save current device as primary
-      this.setItem({ key: deviceAssignmentTypes.primary, data: currentDevice })
-      this.primaryDevice = currentDevice
+
+      if (!value) {
+        // If removing primary status, clear primary device reference
+        const primaryCleared = this.setItem({ key: deviceAssignmentTypes.primary, data: null })
+        if (!primaryCleared) {
+          throw new Error('Failed to clear primary device data')
+        }
+        this.primaryDevice = undefined
+
+        // Backup connected devices if any exist
+        const connections = this.getItem(deviceAssignmentTypes.connected)
+        if (connections && Array.isArray(connections) && connections.length) {
+          const backupSaved = this.setItem({ key: deviceAssignmentTypes.backedup_connections, data: connections })
+          if (!backupSaved) {
+            throw new Error('Failed to backup connected devices')
+          }
+          const connectionsCleared = this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+          if (!connectionsCleared) {
+            throw new Error('Failed to clear connected devices')
+          }
+        }
+      } else {
+        // If setting as primary, save current device as primary
+        const primarySaved = this.setItem({ key: deviceAssignmentTypes.primary, data: currentDevice })
+        if (!primarySaved) {
+          throw new Error('Failed to save primary device data')
+        }
+        this.primaryDevice = currentDevice
+      }
+
+      // Clear connected devices list when changing primary status
+      const connectionsCleared = this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+      if (!connectionsCleared) {
+        throw new Error('Failed to clear connected devices list')
+      }
+
+      return currentDevice
+    } catch (error) {
+      // Rollback in-memory state on failure
+      this.isPrimaryDevice = originalIsPrimary
+      this.primaryDevice = originalPrimaryDevice
+      this.currentDevice = originalCurrentDevice
+
+      console.error('Failed to set primary device status:', error)
+      throw error
     }
-
-    // Clear connected devices list when changing primary status
-    this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
-
-    return currentDevice
   }
   async getConnectedDevices() {
     const devices = await this.getItem(deviceAssignmentTypes.connected)
@@ -209,23 +315,43 @@ export class DevicesStoreClass extends ZStorage {
     if (!this.isPrimaryDevice || device.isPrimaryDevice) {
       throw new Error('Only primary device can add connected devices')
     }
-    let devices = this.getItem(deviceAssignmentTypes.connected)
-    if (!devices) {
-      devices = []
+
+    try {
+      let devices = this.getItem(deviceAssignmentTypes.connected)
+      if (!devices) {
+        devices = []
+      }
+      devices.push(device)
+
+      const saved = this.setItem({ key: deviceAssignmentTypes.connected, data: devices })
+      if (!saved) {
+        throw new Error('Failed to save connected device data')
+      }
+    } catch (error) {
+      console.error('Failed to add connected device:', error)
+      throw error
     }
-    devices.push(device)
-    this.setItem({ key: deviceAssignmentTypes.connected, data: devices })
   }
   async removeConnectedDevice(deviceId: string) {
     if (!this.isPrimaryDevice) {
       throw new Error('Only primary device can remove connected devices')
     }
-    const devices = this.getItem(deviceAssignmentTypes.connected)
-    if (!devices || !Array.isArray(devices)) {
-      return
+
+    try {
+      const devices = this.getItem(deviceAssignmentTypes.connected)
+      if (!devices || !Array.isArray(devices)) {
+        return
+      }
+
+      const updatedDevices = devices.filter(device => device.deviceId !== deviceId)
+      const saved = this.setItem({ key: deviceAssignmentTypes.connected, data: updatedDevices })
+      if (!saved) {
+        throw new Error('Failed to save updated connected devices list')
+      }
+    } catch (error) {
+      console.error('Failed to remove connected device:', error)
+      throw error
     }
-    const updatedDevices = devices.filter(device => device.deviceId !== deviceId)
-    this.setItem({ key: deviceAssignmentTypes.connected, data: updatedDevices })
   }
 }
 
