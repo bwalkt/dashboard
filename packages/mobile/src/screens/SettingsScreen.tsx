@@ -340,10 +340,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
   const applyPrimaryDeviceChange = async (value: boolean) => {
     console.log('Settings: Updating isPrimary to', value)
-    
+
     // Use the proper store method to update primary device status
     const updatedDevice = await DevicesStore.setIsPrimaryDevice(value)
-    
+
     console.log('Settings: DevicesStore.isPrimaryDevice is now', DevicesStore.isPrimaryDevice)
     console.log('Settings: Saved to storage with isPrimary:', updatedDevice.isPrimaryDevice)
 

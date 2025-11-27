@@ -63,7 +63,7 @@ const ManageDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, on
   // Access store directly - it will be initialized in useEffect
   const devicesStore = stores.DevicesStore
   const [storeInitialized, setStoreInitialized] = useState(false)
-  
+
   // Direct store access - these values are read from store each render
   const isPrimaryDevice = devicesStore.isPrimaryDevice
   const currentDevice = devicesStore.currentDevice

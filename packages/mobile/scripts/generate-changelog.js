@@ -7,7 +7,7 @@ const path = require('path')
 function validateWorkingDirectory() {
   const iosDir = path.join(process.cwd(), 'ios')
   const packagePath = path.join(process.cwd(), 'package.json')
-  
+
   if (!fs.existsSync(iosDir) || !fs.existsSync(packagePath)) {
     console.error('❌ This script must be run from packages/mobile/ directory')
     console.error('   Current directory:', process.cwd())
@@ -46,7 +46,7 @@ function categorizeCommits(commits) {
 
   commits.forEach(commit => {
     const lower = commit.toLowerCase()
-    
+
     // Use regex with word boundaries for precise matching
     // This prevents matching prefixes inside words
     if (/\b(feat|feature|add):/.test(lower)) {
@@ -75,7 +75,7 @@ function categorizeCommits(commits) {
 function generateChangelog() {
   // Validate we're in the correct directory
   validateWorkingDirectory()
-  
+
   const latestTag = getLatestTag()
   const commits = getCommitsSinceTag(latestTag)
 

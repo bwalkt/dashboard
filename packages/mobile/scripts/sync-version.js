@@ -7,7 +7,7 @@ const path = require('path')
 function validateWorkingDirectory() {
   const iosDir = path.join(process.cwd(), 'ios')
   const packagePath = path.join(process.cwd(), 'package.json')
-  
+
   if (!fs.existsSync(iosDir) || !fs.existsSync(packagePath)) {
     console.error('❌ This script must be run from packages/mobile/ directory')
     console.error('   Current directory:', process.cwd())
@@ -35,13 +35,13 @@ function getCurrentBuildNumber() {
 
 /**
  * Updates package.json version based on iOS build number.
- * 
+ *
  * Version Format: 0.{buildNumber}.0
  * This intentionally couples the package version to the iOS build number
  * to maintain version consistency across platforms.
- * 
+ *
  * Example: iOS build 22 -> package version 0.22.0
- * 
+ *
  * @param {number} buildNumber - The iOS build number
  * @returns {string} The new semantic version
  */
@@ -52,9 +52,9 @@ function updatePackageVersion(buildNumber) {
   // Version format configuration
   // Change these values if you need a different versioning strategy
   const VERSION_CONFIG = {
-    major: 0,           // Major version (breaking changes)
+    major: 0, // Major version (breaking changes)
     minor: buildNumber, // Minor version (tied to iOS build)
-    patch: 0           // Patch version (bug fixes)
+    patch: 0, // Patch version (bug fixes)
   }
 
   // Generate semantic version from configuration
@@ -68,7 +68,7 @@ function updatePackageVersion(buildNumber) {
 
 function syncVersions() {
   console.log('🔄 Syncing versions...')
-  
+
   // Validate we're in the correct directory
   validateWorkingDirectory()
 
