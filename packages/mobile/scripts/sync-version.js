@@ -4,6 +4,17 @@ const { execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 
+function validateWorkingDirectory() {
+  const iosDir = path.join(process.cwd(), 'ios')
+  const packagePath = path.join(process.cwd(), 'package.json')
+  
+  if (!fs.existsSync(iosDir) || !fs.existsSync(packagePath)) {
+    console.error('❌ This script must be run from packages/mobile/ directory')
+    console.error('   Current directory:', process.cwd())
+    process.exit(1)
+  }
+}
+
 function getCurrentBuildNumber() {
   try {
     const iosDir = path.join(__dirname, '..', 'ios')
@@ -22,12 +33,32 @@ function getCurrentBuildNumber() {
   }
 }
 
+/**
+ * Updates package.json version based on iOS build number.
+ * 
+ * Version Format: 0.{buildNumber}.0
+ * This intentionally couples the package version to the iOS build number
+ * to maintain version consistency across platforms.
+ * 
+ * Example: iOS build 22 -> package version 0.22.0
+ * 
+ * @param {number} buildNumber - The iOS build number
+ * @returns {string} The new semantic version
+ */
 function updatePackageVersion(buildNumber) {
   const packagePath = path.join(__dirname, '..', 'package.json')
   const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
 
-  // Convert build number to semantic version (e.g., 22 -> 0.22.0)
-  const newVersion = `0.${buildNumber}.0`
+  // Version format configuration
+  // Change these values if you need a different versioning strategy
+  const VERSION_CONFIG = {
+    major: 0,           // Major version (breaking changes)
+    minor: buildNumber, // Minor version (tied to iOS build)
+    patch: 0           // Patch version (bug fixes)
+  }
+
+  // Generate semantic version from configuration
+  const newVersion = `${VERSION_CONFIG.major}.${VERSION_CONFIG.minor}.${VERSION_CONFIG.patch}`
   packageJson.version = newVersion
 
   fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + '\n')
@@ -37,6 +68,9 @@ function updatePackageVersion(buildNumber) {
 
 function syncVersions() {
   console.log('🔄 Syncing versions...')
+  
+  // Validate we're in the correct directory
+  validateWorkingDirectory()
 
   const buildNumber = getCurrentBuildNumber()
   if (buildNumber == null || Number.isNaN(buildNumber)) {

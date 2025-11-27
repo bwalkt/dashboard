@@ -50,7 +50,7 @@ interface ConnectDeviceScreenProps {
   onFAQPress?: () => void
 }
 
-const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, onFAQPress }) => {
+const ManageDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, onFAQPress }) => {
   const safeAreaInsets = useSafeAreaInsets()
   const [isScanning, setIsScanning] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
@@ -60,17 +60,19 @@ const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, o
   const [manualQRInput, setManualQRInput] = useState('')
   const [showConnectDrawer, setShowConnectDrawer] = useState(false)
 
-  // Use reactive Zustand store
+  // Access store directly - it will be initialized in useEffect
   const devicesStore = stores.DevicesStore
-  const [isPrimaryDevice, setIsPrimaryDevice] = useState(false)
-  const [currentDevice, setCurrentDevice] = useState(devicesStore.currentDevice)
+  const [storeInitialized, setStoreInitialized] = useState(false)
+  
+  // Direct store access - these values are read from store each render
+  const isPrimaryDevice = devicesStore.isPrimaryDevice
+  const currentDevice = devicesStore.currentDevice
 
   useEffect(() => {
     const initializeDeviceStatus = async () => {
       // Initialize DevicesStore to get latest status
       await devicesStore.init()
-      setIsPrimaryDevice(devicesStore.isPrimaryDevice)
-      setCurrentDevice(devicesStore.currentDevice)
+      setStoreInitialized(true)
       console.log('ManageDevices - isPrimaryDevice:', devicesStore.isPrimaryDevice)
       console.log('ManageDevices - currentDevice:', devicesStore.currentDevice?.nickname)
     }
@@ -133,6 +135,7 @@ const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, o
       // Add the secondary device to connected devices
       await devicesStore.addConnectedDevice(qrData)
       await loadConnectedDevices() // Refresh the list
+      setStoreInitialized(prev => !prev) // Force re-render to update UI
 
       Alert.alert(
         labels.success,
@@ -164,6 +167,7 @@ const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, o
 
       // Set the scanned device as the primary device
       await devicesStore.setPrimaryDevice(qrData)
+      setStoreInitialized(prev => !prev) // Force re-render to update UI
 
       Alert.alert(
         labels.success,
@@ -314,6 +318,7 @@ const ConnectDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, o
           try {
             await devicesStore.removeConnectedDevice(deviceId)
             await loadConnectedDevices() // Refresh the list
+            setStoreInitialized(prev => !prev) // Force re-render to update UI
             Alert.alert(labels.success, labels.deviceRemovedSuccess)
           } catch (error) {
             console.error('Error removing device:', error)
@@ -783,4 +788,4 @@ const styles = StyleSheet.create({
   },
 })
 
-export default ConnectDeviceScreen
+export default ManageDeviceScreen

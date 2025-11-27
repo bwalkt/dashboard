@@ -340,21 +340,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
   const applyPrimaryDeviceChange = async (value: boolean) => {
     console.log('Settings: Updating isPrimary to', value)
-    // Update DevicesStore
-    DevicesStore.isPrimaryDevice = value
-    const currentDevice = await DevicesStore.getCurrentDeviceInfo()
-
-    // Ensure the field exists and set the value
-    if (currentDevice.isPrimaryDevice === undefined) {
-      console.log('Settings: isPrimaryDevice was undefined, initializing...')
-    }
-    currentDevice.isPrimaryDevice = value
-    DevicesStore.currentDevice = currentDevice
-
-    // Save to storage with correct key
-    DevicesStore.setItem({ key: 'current', data: currentDevice })
+    
+    // Use the proper store method to update primary device status
+    const updatedDevice = await DevicesStore.setIsPrimaryDevice(value)
+    
     console.log('Settings: DevicesStore.isPrimaryDevice is now', DevicesStore.isPrimaryDevice)
-    console.log('Settings: Saved to storage with isPrimary:', currentDevice.isPrimaryDevice)
+    console.log('Settings: Saved to storage with isPrimary:', updatedDevice.isPrimaryDevice)
 
     setFormData(prev => ({ ...prev, isPrimary: value }))
   }

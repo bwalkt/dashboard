@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const { execSync } = require('child_process')
+const fs = require('fs')
 const { syncVersions } = require('./sync-version.js')
 const { generateChangelog } = require('./generate-changelog.js')
 
@@ -30,7 +31,6 @@ function incrementVersion(packageVersion, versionType) {
 }
 
 function updatePackageVersion(newVersion) {
-  const fs = require('fs')
   const packagePath = 'package.json'
   const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
   packageJson.version = newVersion

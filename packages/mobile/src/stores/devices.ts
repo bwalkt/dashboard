@@ -164,6 +164,40 @@ export class DevicesStoreClass extends ZStorage {
     }
     this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
   }
+  
+  async setIsPrimaryDevice(value: boolean) {
+    const currentDevice = await this.getCurrentDeviceInfo()
+    
+    // Update the current device's primary status
+    currentDevice.isPrimaryDevice = value
+    this.isPrimaryDevice = value
+    this.currentDevice = currentDevice
+    
+    // Save to storage
+    this.setItem({ key: deviceAssignmentTypes.current, data: currentDevice })
+    
+    if (!value) {
+      // If removing primary status, clear primary device reference
+      this.setItem({ key: deviceAssignmentTypes.primary, data: null })
+      this.primaryDevice = undefined
+      
+      // Backup connected devices if any exist
+      const connections = this.getItem(deviceAssignmentTypes.connected)
+      if (connections && Array.isArray(connections) && connections.length) {
+        this.setItem({ key: deviceAssignmentTypes.backedup_connections, data: connections })
+        this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+      }
+    } else {
+      // If setting as primary, save current device as primary
+      this.setItem({ key: deviceAssignmentTypes.primary, data: currentDevice })
+      this.primaryDevice = currentDevice
+    }
+    
+    // Clear connected devices list when changing primary status
+    this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+    
+    return currentDevice
+  }
   async getConnectedDevices() {
     const devices = await this.getItem(deviceAssignmentTypes.connected)
     if (devices && Array.isArray(devices)) {

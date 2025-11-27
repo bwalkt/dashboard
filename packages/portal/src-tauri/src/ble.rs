@@ -123,6 +123,7 @@ impl BLEManager {
         println!("Found {} peripherals", peripherals.len());
 
         // Connect to the first peripheral with our service
+        let service_uuid = Uuid::parse_str(BLE_SERVICE_UUID)?;
         for peripheral in peripherals {
             let properties = peripheral.properties().await?;
             let is_connected = peripheral.is_connected().await?;
@@ -139,7 +140,6 @@ impl BLEManager {
             // Check if this peripheral has our service
             if let Some(props) = properties {
                 let services = props.services;
-                let service_uuid = Uuid::parse_str(BLE_SERVICE_UUID)?;
                 if services.contains(&service_uuid) {
                     println!("Connecting to peripheral: {}", local_name);
 

@@ -4,6 +4,17 @@ const { execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 
+function validateWorkingDirectory() {
+  const iosDir = path.join(process.cwd(), 'ios')
+  const packagePath = path.join(process.cwd(), 'package.json')
+  
+  if (!fs.existsSync(iosDir) || !fs.existsSync(packagePath)) {
+    console.error('❌ This script must be run from packages/mobile/ directory')
+    console.error('   Current directory:', process.cwd())
+    process.exit(1)
+  }
+}
+
 function getLatestTag() {
   try {
     return execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim()
@@ -35,12 +46,24 @@ function categorizeCommits(commits) {
 
   commits.forEach(commit => {
     const lower = commit.toLowerCase()
-    if (lower.includes('feat:') || lower.includes('feature:') || lower.includes('add:')) {
+    
+    // Use regex with word boundaries for precise matching
+    // This prevents matching prefixes inside words
+    if (/\b(feat|feature|add):/.test(lower)) {
       categories.features.push(commit)
-    } else if (lower.includes('fix:') || lower.includes('bug:') || lower.includes('hotfix:')) {
+    } else if (/\b(fix|bug|hotfix):/.test(lower)) {
       categories.fixes.push(commit)
-    } else if (lower.includes('improve:') || lower.includes('update:') || lower.includes('enhance:')) {
+    } else if (/\b(improve|update|enhance|refactor|perf|style):/.test(lower)) {
       categories.improvements.push(commit)
+    } else if (/\b(docs|doc):/.test(lower)) {
+      // Separate documentation changes (optional category)
+      categories.other.push(commit)
+    } else if (/\b(test|tests):/.test(lower)) {
+      // Test-related changes
+      categories.other.push(commit)
+    } else if (/\b(chore|build|ci):/.test(lower)) {
+      // Maintenance and build-related changes
+      categories.other.push(commit)
     } else {
       categories.other.push(commit)
     }
@@ -50,6 +73,9 @@ function categorizeCommits(commits) {
 }
 
 function generateChangelog() {
+  // Validate we're in the correct directory
+  validateWorkingDirectory()
+  
   const latestTag = getLatestTag()
   const commits = getCommitsSinceTag(latestTag)
 
