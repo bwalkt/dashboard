@@ -15,12 +15,124 @@ static_resources:
                     - name: backend
                       domains: ["*"]
                       routes:
+                        # Public routes - skip ext_authz
+                        - match: { path: "/health" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { prefix: "/auth/" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { prefix: "/centrifugo/" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { prefix: "/sms/" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { prefix: "/email/" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { prefix: "/proxy/auth/login" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { prefix: "/proxy/auth/callback" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { path: "/faq" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { path: "/terms" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { prefix: "/public" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { prefix: "/docs" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match: { prefix: "/assets" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        # Skip ext_authz for OPTIONS requests (CORS preflight)
+                        - match:
+                            prefix: "/"
+                            headers:
+                              - name: ":method"
+                                exact_match: "OPTIONS"
+                          route: { cluster: server_cluster }
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        # Protected routes - require ext_authz (default behavior)
                         - match: { prefix: "/" }
                           route: { cluster: server_cluster }
                 http_filters:
                   - name: envoy.filters.http.cors
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                  - name: envoy.filters.http.ext_authz
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                      http_service:
+                        server_uri:
+                          uri: http://authz-service:3000/authz
+                          cluster: authz_cluster
+                          timeout: 0.25s
+                        authorization_request:
+                          allowed_headers:
+                            patterns:
+                              - exact: x-challenge-id
+                              - exact: x-challenge-answer
+                      failure_mode_allow: false
+                      include_peer_certificate: false
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -36,6 +148,19 @@ static_resources:
               - endpoint:
                   address:
                     socket_address: { address: pzero-server, port_value: 8090 }
+    - name: authz_cluster
+      type: LOGICAL_DNS
+      connect_timeout: 0.5s
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: authz_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: authz-service
+                      port_value: 3000
 
 admin:
   address:

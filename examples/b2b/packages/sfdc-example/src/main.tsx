@@ -1,5 +1,5 @@
 // Import tracing first to initialize OpenTelemetry instrumentation
-import './tracing'
+// import './tracing'
 
 // Initialize USE_PROXY from localStorage before any API requests are made
 import { initializeUseProxy } from './lib/proxy-config'

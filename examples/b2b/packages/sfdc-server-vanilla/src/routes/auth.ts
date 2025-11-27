@@ -6,6 +6,7 @@ import { config } from '../config/env.js'
 import { redis } from '../config/redis.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { authService } from '../services/auth.service.js'
+import { authzService } from '../services/authz.service.js'
 import { userService } from '../services/user.service.js'
 
 declare module 'fastify' {
@@ -163,11 +164,16 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         maxAge: 3600 * 24 * 30, // 30 days
       })
 
-      const randomInt1 = Math.floor(Math.random() * 1000000)
-      const randomInt2 = Math.floor(Math.random() * 1000000)
+      // Issue challenge from authz-service
+      const challengeResponse = await authzService.issueChallenge()
 
-      reply.header(VALIDATION_HEADER_NAME, `${randomInt1} * ${randomInt2}`)
-      await redis.set(`user:${user.id}:header`, `${randomInt1 * randomInt2}`, 3600)
+      if (challengeResponse?.challengeId) {
+        // Store challenge ID in Redis for later refresh
+        await redis.set(`user:${user.id}:challengeId`, challengeResponse.challengeId, 3600)
+        // Send challenge as headers
+        reply.header('x-challenge-id', challengeResponse.challengeId)
+        reply.header('x-challenge', challengeResponse.challenge)
+      }
 
       return reply.send({
         message: 'Login successful',
@@ -272,16 +278,18 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         path: '/',
         maxAge: 3600 * 24 * 30, // 30 days
       })
-      const cachedHeader = await redis.get(`user:${user.id}:header`)
-      if (!cachedHeader) {
-        const randomInt1 = Math.floor(Math.random() * 1000000)
-        const randomInt2 = Math.floor(Math.random() * 1000000)
+      // Refresh challenge from authz-service when JWT is refreshed
+      const oldChallengeId = await redis.get(`user:${user.id}:challengeId`)
+      const challengeResponse = await authzService.refreshChallenge(oldChallengeId)
 
-        reply.header(VALIDATION_HEADER_NAME, `${randomInt1} * ${randomInt2}`)
-        await redis.set(`user:${user.id}:header`, `${randomInt1 * randomInt2}`, 3600)
-      } else {
-        reply.header(VALIDATION_HEADER_NAME, cachedHeader)
+      if (challengeResponse?.challengeId) {
+        // Store new challenge ID in Redis
+        await redis.set(`user:${user.id}:challengeId`, challengeResponse.challengeId, 3600)
+        // Send challenge as headers
+        reply.header('x-challenge-id', challengeResponse.challengeId)
+        reply.header('x-challenge', challengeResponse.challenge)
       }
+
       return reply.send({
         user,
       })

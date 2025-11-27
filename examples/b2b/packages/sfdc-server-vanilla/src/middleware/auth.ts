@@ -53,18 +53,17 @@ export async function authenticateToken(request: FastifyRequest, reply: FastifyR
         message: 'User not found',
       })
     }
-
     // Validate header value
-    const expected = await redis.get(`user:${user.id}:header`)
-    const headerValue = request.headers[VALIDATION_HEADER_NAME]
+    // const expected = await redis.get(`user:${user.id}:header`)
+    // const headerValue = request.headers[VALIDATION_HEADER_NAME]
 
-    const actual = Array.isArray(headerValue) ? headerValue[0] : headerValue || ''
-    if (expected !== actual) {
-      return reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'Invalid header value',
-      } as ErrorResponse)
-    }
+    // const actual = Array.isArray(headerValue) ? headerValue[0] : headerValue || ''
+    // if (expected !== actual) {
+    //   return reply.status(401).send({
+    //     error: 'Unauthorized',
+    //     message: 'Invalid header value',
+    //   } as ErrorResponse)
+    // }
     // Attach user to request
     ;(request as unknown as AuthenticatedRequest).user = user
   } catch (error) {
