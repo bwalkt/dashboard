@@ -161,7 +161,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 3600 * 24 * 30, // 30 days
+        maxAge: 3600, // 1 hour
       })
 
       // Issue challenge from authz-service

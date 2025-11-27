@@ -123,7 +123,7 @@ static_resources:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
                       http_service:
                         server_uri:
-                          uri: http://authz-service:3000/authz
+                          uri: http://authz-service:3000
                           cluster: authz_cluster
                           timeout: 0.25s
                         authorization_request:

@@ -8,7 +8,7 @@ import { verifyChallenge } from './verifyChallenge.js'
 
 const PORT = parseInt(process.env.PORT || '3000', 10)
 const CHALLENGE_SECRET = process.env.CHALLENGE_SECRET || 'default-secret-change-in-production'
-const CHALLENGE_TTL = parseInt(process.env.CHALLENGE_TTL || '300', 10) // 5 minutes default
+const CHALLENGE_TTL = parseInt(process.env.CHALLENGE_TTL || '3600', 10) // 1 hour default
 
 const fastify = Fastify({
   logger: true,
@@ -47,16 +47,53 @@ const start = async (): Promise<void> => {
     })
 
     /**
-     * OPTIONS /authz
-     * Handle CORS preflight requests - always allow
+     * OPTIONS / (root path)
+     * Handle CORS preflight requests from Envoy - always allow
      */
-    fastify.options('/authz', async (_request, reply) => {
+    fastify.options('/', async (_request, reply) => {
       return reply.code(200).send({ ok: true })
     })
 
     /**
-     * POST /authz
+     * POST / (root path)
      * Envoy calls this endpoint to validate requests
+     * Envoy sends a POST request with CheckRequest JSON in the body
+     * The CheckRequest contains the original request headers
+     */
+    fastify.post<{ Headers: Record<string, string | undefined>; Body?: any }>(
+      '/',
+      async (request, reply): Promise<AuthzResponse> => {
+        // Envoy sends CheckRequest with original request headers
+        // Headers can be in the request body (CheckRequest.attributes.request.http.headers)
+        // or forwarded as HTTP headers (if allowed_headers is configured)
+        let headers = request.headers
+
+        // Try to extract headers from CheckRequest body if present
+        if (request.body && typeof request.body === 'object') {
+          const body = request.body as any
+          // CheckRequest structure: { attributes: { request: { http: { headers: {...} } } } }
+          if (body.attributes?.request?.http?.headers) {
+            // Merge body headers with request headers (body headers take precedence)
+            headers = { ...headers, ...body.attributes.request.http.headers }
+          }
+        }
+
+        const result = await verifyChallenge(headers)
+
+        if (result.ok) {
+          return reply.code(200).send({ ok: true })
+        }
+
+        return reply.code(403).send({
+          ok: false,
+          message: result.reason || 'invalid challenge',
+        })
+      },
+    )
+
+    /**
+     * POST /authz
+     * Keep this for backward compatibility or direct calls
      */
     fastify.post<{ Headers: Record<string, string | undefined> }>(
       '/authz',
@@ -138,6 +175,36 @@ const start = async (): Promise<void> => {
      */
     fastify.get('/health', async (_request, reply) => {
       return reply.code(200).send({ status: 'ok' })
+    })
+
+    /**
+     * Catch-all handler for any unmatched routes
+     * Handle requests that don't match specific routes (e.g., if Envoy forwards original requests)
+     * Extract challenge headers and validate them
+     */
+    fastify.setNotFoundHandler(async (request, reply) => {
+      const headers = request.headers
+
+      // Try to validate challenge if headers are present
+      if (headers['x-challenge-id'] && headers['x-challenge-answer']) {
+        const result = await verifyChallenge(headers)
+
+        if (result.ok) {
+          return reply.code(200).send({ ok: true })
+        }
+
+        return reply.code(403).send({
+          ok: false,
+          message: result.reason || 'invalid challenge',
+        })
+      }
+
+      // No challenge headers - return 404
+      return reply.code(404).send({
+        error: 'Route not found',
+        method: request.method,
+        path: request.url,
+      })
     })
 
     await fastify.listen({ port: PORT, host: '0.0.0.0' })
