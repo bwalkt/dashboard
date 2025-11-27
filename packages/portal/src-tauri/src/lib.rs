@@ -10,6 +10,7 @@ use tauri::{
 #[cfg(target_os = "ios")]
 use tauri::Listener;
 use tokio::sync::{oneshot, Mutex};
+use uuid::Uuid;
 
 mod ble;
 
@@ -62,13 +63,7 @@ async fn request_authorization(
     window: tauri::Window,
     state: State<'_, AppState>,
 ) -> Result<bool, String> {
-    let request_id = format!(
-        "{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|e| format!("System time error: {}", e))?
-            .as_millis()
-    );
+    let request_id = Uuid::now_v7().to_string();
 
     let auth_request = AuthRequest {
         id: request_id.clone(),
@@ -170,37 +165,49 @@ async fn handle_auth_response(
 
 #[tauri::command]
 async fn ble_initialize(state: State<'_, AppState>) -> Result<(), String> {
-    let mut ble = state.ble_manager.lock().await;
+    // Clone the Arc to release the State borrow, then lock
+    let ble_manager = state.ble_manager.clone();
+    let mut ble = ble_manager.lock().await;
     ble.initialize().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn ble_connect(state: State<'_, AppState>) -> Result<(), String> {
-    let ble = state.ble_manager.lock().await;
+    // Clone the Arc to release the State borrow, then lock
+    let ble_manager = state.ble_manager.clone();
+    let ble = ble_manager.lock().await;
     ble.connect().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn ble_disconnect(state: State<'_, AppState>) -> Result<(), String> {
-    let ble = state.ble_manager.lock().await;
+    // Clone the Arc to release the State borrow, then lock
+    let ble_manager = state.ble_manager.clone();
+    let ble = ble_manager.lock().await;
     ble.disconnect().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn ble_is_connected(state: State<'_, AppState>) -> Result<bool, String> {
-    let ble = state.ble_manager.lock().await;
+    // Clone the Arc to release the State borrow, then lock
+    let ble_manager = state.ble_manager.clone();
+    let ble = ble_manager.lock().await;
     Ok(ble.is_connected().await)
 }
 
 #[tauri::command]
 async fn ble_get_endpoints(state: State<'_, AppState>) -> Result<Vec<ble::Endpoint>, String> {
-    let ble = state.ble_manager.lock().await;
+    // Clone the Arc to release the State borrow, then lock
+    let ble_manager = state.ble_manager.clone();
+    let ble = ble_manager.lock().await;
     ble.get_endpoints().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn ble_get_token(endpoint_id: String, state: State<'_, AppState>) -> Result<String, String> {
-    let ble = state.ble_manager.lock().await;
+    // Clone the Arc to release the State borrow, then lock
+    let ble_manager = state.ble_manager.clone();
+    let ble = ble_manager.lock().await;
     ble.get_token(endpoint_id).await.map_err(|e| e.to_string())
 }
 

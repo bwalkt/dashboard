@@ -60,7 +60,10 @@ function generateChangelog() {
 
   const categories = categorizeCommits(commits)
   const currentDate = new Date().toISOString().split('T')[0]
-  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+
+  const projectRoot = path.resolve(__dirname, '..')
+  const packageJsonPath = path.join(projectRoot, 'package.json')
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
   const version = packageJson.version
 
   let changelog = `# Changelog\n\n`
@@ -105,13 +108,18 @@ function generateChangelog() {
   }
 
   // Append to existing changelog or create new one
-  const changelogPath = 'CHANGELOG.md'
+  const changelogPath = path.join(projectRoot, 'CHANGELOG.md')
   let existingChangelog = ''
 
   if (fs.existsSync(changelogPath)) {
     existingChangelog = fs.readFileSync(changelogPath, 'utf8')
-    // Remove the header if it exists
-    existingChangelog = existingChangelog.replace(/^# Changelog\n\n/, '')
+    // Remove the header if it exists - more tolerant approach
+    existingChangelog = existingChangelog.trim()
+    if (existingChangelog.startsWith('# Changelog')) {
+      const lines = existingChangelog.split('\n')
+      lines.shift() // Remove the header line
+      existingChangelog = lines.join('\n').replace(/^\n+/, '') // Remove leading newlines
+    }
   }
 
   const finalChangelog = changelog + existingChangelog

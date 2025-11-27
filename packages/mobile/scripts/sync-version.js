@@ -6,8 +6,16 @@ const path = require('path')
 
 function getCurrentBuildNumber() {
   try {
-    const buildNumber = execSync('cd ios && agvtool what-version -terse', { encoding: 'utf8' }).trim()
-    return parseInt(buildNumber, 10)
+    const iosDir = path.join(__dirname, '..', 'ios')
+    const buildNumberStr = execSync('agvtool what-version -terse', {
+      encoding: 'utf8',
+      cwd: iosDir,
+    }).trim()
+    const buildNumber = Number.parseInt(buildNumberStr, 10)
+    if (Number.isNaN(buildNumber)) {
+      throw new Error(`Invalid build number from agvtool: "${buildNumberStr}"`)
+    }
+    return buildNumber
   } catch (error) {
     console.error('Error getting build number:', error.message)
     return null
@@ -15,7 +23,7 @@ function getCurrentBuildNumber() {
 }
 
 function updatePackageVersion(buildNumber) {
-  const packagePath = 'package.json'
+  const packagePath = path.join(__dirname, '..', 'package.json')
   const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
 
   // Convert build number to semantic version (e.g., 22 -> 0.22.0)
@@ -31,7 +39,7 @@ function syncVersions() {
   console.log('🔄 Syncing versions...')
 
   const buildNumber = getCurrentBuildNumber()
-  if (!buildNumber) {
+  if (buildNumber == null || Number.isNaN(buildNumber)) {
     console.error('❌ Could not get iOS build number')
     process.exit(1)
   }

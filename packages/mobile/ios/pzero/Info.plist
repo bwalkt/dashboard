@@ -43,8 +43,6 @@
 	<string>This app requires local network access to establish secure TCP connections with nearby devices</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>This app uses your location to verify you're within authorized areas when accessing secure features</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>This app uses your location to verify you're within authorized areas when accessing secure features</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>RCTNewArchEnabled</key>

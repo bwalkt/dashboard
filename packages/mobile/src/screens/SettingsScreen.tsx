@@ -338,27 +338,51 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     }
   }
 
+  const applyPrimaryDeviceChange = async (value: boolean) => {
+    console.log('Settings: Updating isPrimary to', value)
+    // Update DevicesStore
+    DevicesStore.isPrimaryDevice = value
+    const currentDevice = await DevicesStore.getCurrentDeviceInfo()
+
+    // Ensure the field exists and set the value
+    if (currentDevice.isPrimaryDevice === undefined) {
+      console.log('Settings: isPrimaryDevice was undefined, initializing...')
+    }
+    currentDevice.isPrimaryDevice = value
+    DevicesStore.currentDevice = currentDevice
+
+    // Save to storage with correct key
+    DevicesStore.setItem({ key: 'current', data: currentDevice })
+    console.log('Settings: DevicesStore.isPrimaryDevice is now', DevicesStore.isPrimaryDevice)
+    console.log('Settings: Saved to storage with isPrimary:', currentDevice.isPrimaryDevice)
+
+    setFormData(prev => ({ ...prev, isPrimary: value }))
+  }
+
   const updateField = async (field: keyof FormData, value: string | boolean) => {
-    // Handle isPrimary toggle immediately
+    // Handle isPrimary toggle - check for confirmation first if disabling
     if (field === 'isPrimary' && typeof value === 'boolean') {
-      console.log('Settings: Updating isPrimary to', value)
-      // Update DevicesStore immediately
-      DevicesStore.isPrimaryDevice = value
-      const currentDevice = await DevicesStore.getCurrentDeviceInfo()
-
-      // Ensure the field exists and set the value
-      if (currentDevice.isPrimaryDevice === undefined) {
-        console.log('Settings: isPrimaryDevice was undefined, initializing...')
+      if (value === false && formData.isPrimary === true) {
+        // Check if there are connected devices first
+        try {
+          const connectedDevices = await DevicesStore.getConnectedDevices()
+          if (connectedDevices && connectedDevices.length > 0) {
+            Alert.alert(labels.confirmDeviceStatusChange, labels.deviceStatusChangeWarning(connectedDevices.length), [
+              { text: labels.cancel, style: 'cancel' },
+              {
+                text: labels.continue,
+                style: 'destructive',
+                onPress: () => applyPrimaryDeviceChange(value),
+              },
+            ])
+            return
+          }
+        } catch (error) {
+          console.error('Error checking connected devices:', error)
+        }
       }
-      currentDevice.isPrimaryDevice = value
-      DevicesStore.currentDevice = currentDevice
-
-      // Save to storage with correct key
-      DevicesStore.setItem({ key: 'current', data: currentDevice })
-      console.log('Settings: DevicesStore.isPrimaryDevice is now', DevicesStore.isPrimaryDevice)
-      console.log('Settings: Saved to storage with isPrimary:', currentDevice.isPrimaryDevice)
-
-      setFormData(prev => ({ ...prev, [field]: value }))
+      applyPrimaryDeviceChange(value)
+      return
     }
 
     // Reset phone verification state when the phone number changes
@@ -387,41 +411,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         key: settingsKeys.emailVerified,
         data: false,
       })
-    }
-
-    // Special handling for isPrimary toggle
-    if (field === 'isPrimary' && value === false && formData.isPrimary === true) {
-      // Check if there are connected devices
-      try {
-        const connectedDevices = await DevicesStore.getConnectedDevices()
-        if (connectedDevices && connectedDevices.length > 0) {
-          // Show confirmation dialog
-          Alert.alert(labels.confirmDeviceStatusChange, labels.deviceStatusChangeWarning(connectedDevices.length), [
-            {
-              text: labels.cancel,
-              style: 'cancel',
-              onPress: () => {
-                // Don't change the value, keep it as primary
-                return
-              },
-            },
-            {
-              text: labels.continue,
-              style: 'destructive',
-              onPress: () => {
-                setFormData(prev => ({ ...prev, [field]: value }))
-                // Clear error for this field
-                if (errors[field]) {
-                  setErrors(prev => ({ ...prev, [field]: undefined }))
-                }
-              },
-            },
-          ])
-          return
-        }
-      } catch (error) {
-        console.error('Error checking connected devices:', error)
-      }
     }
 
     // Auto-set device classification based on email type when user changes email

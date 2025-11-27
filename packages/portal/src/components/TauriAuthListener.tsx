@@ -14,7 +14,9 @@ export function TauriAuthListener() {
 
     // Listen for authorization requests from the backend
     const unlisten = listen<AuthRequest>('auth-request', event => {
-      console.log('Received auth request:', event.payload)
+      if (import.meta.env.DEV) {
+        console.log('Received auth request:', event.payload)
+      }
       // Navigate to auth-prompt route with the request data
       navigate({
         to: '/auth-prompt',

@@ -38,14 +38,10 @@ function updatePackageVersion(newVersion) {
 }
 
 function createGitTag(version) {
-  try {
-    execSync(`git add -A`, { stdio: 'inherit' })
-    execSync(`git commit -m "chore: release version ${version}"`, { stdio: 'inherit' })
-    execSync(`git tag -a v${version} -m "Release version ${version}"`, { stdio: 'inherit' })
-    console.log(`✅ Created git tag: v${version}`)
-  } catch (error) {
-    console.error('❌ Error creating git tag:', error.message)
-  }
+  execSync(`git add package.json CHANGELOG.md ios/`, { stdio: 'inherit' })
+  execSync(`git commit -m "chore: release version ${version}"`, { stdio: 'inherit' })
+  execSync(`git tag -a v${version} -m "Release version ${version}"`, { stdio: 'inherit' })
+  console.log(`✅ Created git tag: v${version}`)
 }
 
 function performRelease(versionType) {
@@ -68,6 +64,8 @@ function performRelease(versionType) {
     console.log(`📱 iOS build incremented to: ${newBuildNumber}`)
   } catch (error) {
     console.error('❌ Error incrementing iOS build:', error.message)
+    console.error('⚠️  Release aborted to prevent version mismatch.')
+    process.exit(1)
   }
 
   // Step 5: Generate changelog
@@ -76,7 +74,13 @@ function performRelease(versionType) {
 
   // Step 6: Create git tag
   console.log('🏷️ Creating git tag...')
-  createGitTag(newVersion)
+  try {
+    createGitTag(newVersion)
+  } catch (error) {
+    console.error('❌ Error creating git tag:', error.message)
+    console.error('💥 Release aborted due to git error')
+    process.exit(1)
+  }
 
   console.log(`🎉 Release ${newVersion} completed!`)
   console.log(`\nNext steps:`)
