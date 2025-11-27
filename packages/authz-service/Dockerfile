@@ -5,18 +5,21 @@ WORKDIR /app
 # Install wget for health checks
 RUN apk add --no-cache wget
 
+# Install pnpm
+RUN npm install -g pnpm@10.18.3
+
 # Copy package files
 COPY package.json ./
 COPY tsconfig.json ./
 
 # Install dependencies
-RUN npm install
+RUN pnpm install
 
 # Copy source code
 COPY src ./src
 
 # Build TypeScript
-RUN npm run build
+RUN pnpm run build
 
 # Expose port
 EXPOSE 3000
