@@ -96,13 +96,11 @@ export const labels = {
   connectedDevices: 'Connected Devices',
   noConnectedDevices: 'No connected devices',
   useAddTabInstruction: 'Use the Add tab to connect new devices',
-  manageDevices: 'Manage Devices',
   connectDevice: 'Connect Device',
   noDevicesConnected: 'No Devices Connected',
   connectSecondaryDevicesInstruction: 'Connect secondary devices to manage them',
   connectToPrimaryInstruction: 'Connect to a primary device to get started',
   scanPrimaryDeviceQRCode: 'Scan Primary Device QR Code',
-  showMyQRCode: 'Show My QR Code',
   letSecondaryDevicesScanInstruction: 'Let secondary devices scan your QR code',
   scanQRFromPrimaryInstruction: 'Scan the QR code from the primary device',
 

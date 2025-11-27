@@ -38,7 +38,9 @@ function updatePackageVersion(newVersion) {
 }
 
 function createGitTag(version) {
-  execSync(`git add package.json CHANGELOG.md ios/`, { stdio: 'inherit' })
+  execSync(`git add package.json CHANGELOG.md ios/pzero.xcodeproj/project.pbxproj ios/pzero/Info.plist`, {
+    stdio: 'inherit',
+  })
   execSync(`git commit -m "chore: release version ${version}"`, { stdio: 'inherit' })
   execSync(`git tag -a v${version} -m "Release version ${version}"`, { stdio: 'inherit' })
   console.log(`✅ Created git tag: v${version}`)

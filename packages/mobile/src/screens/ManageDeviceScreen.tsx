@@ -63,6 +63,7 @@ const ManageDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, on
   // Access store directly - it will be initialized in useEffect
   const devicesStore = stores.DevicesStore
   const [storeInitialized, setStoreInitialized] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
 
   // Direct store access - these values are read from store each render
   const isPrimaryDevice = devicesStore.isPrimaryDevice
@@ -70,9 +71,11 @@ const ManageDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, on
 
   useEffect(() => {
     const initializeDeviceStatus = async () => {
+      setIsInitializing(true)
       // Initialize DevicesStore to get latest status
       await devicesStore.init()
       setStoreInitialized(true)
+      setIsInitializing(false)
       console.log('ManageDevices - isPrimaryDevice:', devicesStore.isPrimaryDevice)
       console.log('ManageDevices - currentDevice:', devicesStore.currentDevice?.nickname)
     }
@@ -578,9 +581,22 @@ const ManageDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, on
     )
   }
 
+  if (isInitializing) {
+    return (
+      <View style={[styles.container, { paddingTop: safeAreaInsets.top }]}>
+        <Header title={labels.manageDeviceTitle} navigation={navigation} onFAQPress={onFAQPress} />
+        <View style={styles.loadingContainer}>
+          <Text text60 color={colors.textLightColor} center>
+            {labels.loading}
+          </Text>
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View style={[styles.container, { paddingTop: safeAreaInsets.top }]}>
-      <Header title={labels.manageDevices} navigation={navigation} onFAQPress={onFAQPress} />
+      <Header title={labels.manageDeviceTitle} navigation={navigation} onFAQPress={onFAQPress} />
 
       {connectedDevices.length === 0 && !showConnectDrawer ? (
         // Empty state - no tabs
@@ -664,6 +680,11 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.xl,
     justifyContent: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   infoCard: {
     backgroundColor: surfaces.secondary,
