@@ -14,9 +14,9 @@ import FAQContent from './src/components/FAQContent'
 import PinEntry from './src/components/PinEntry'
 import SidebarMenu from './src/components/SidebarMenu'
 import { envs } from './src/constants/envs'
-import ConnectDeviceScreen from './src/screens/ConnectDeviceScreen'
 import EndpointsScreen from './src/screens/EndpointsScreen'
 import HomeScreen from './src/screens/HomeScreen'
+import ManageDeviceScreen from './src/screens/ManageDeviceScreen'
 import SettingsScreen from './src/screens/SettingsScreen'
 import SplashScreen from './src/screens/SplashScreen'
 import { SettingsStore, settingsKeys } from './src/stores/settings'
@@ -209,7 +209,7 @@ function App() {
             {props => <HomeScreen {...props} onFAQPress={() => setShowFAQ(true)} />}
           </Drawer.Screen>
           <Drawer.Screen name="ConnectDevice">
-            {props => <ConnectDeviceScreen {...props} onFAQPress={() => setShowFAQ(true)} />}
+            {props => <ManageDeviceScreen {...props} onFAQPress={() => setShowFAQ(true)} />}
           </Drawer.Screen>
           <Drawer.Screen name="Endpoints">
             {props => <EndpointsScreen {...props} onFAQPress={() => setShowFAQ(true)} />}

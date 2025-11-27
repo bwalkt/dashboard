@@ -189,7 +189,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       const email = SettingsStore.getItem(settingsKeys.email) || ''
       const phoneNumber = SettingsStore.getItem(settingsKeys.phone) || ''
       let classificationType = SettingsStore.getItem(settingsKeys.classificationType) || ''
-      const isPrimary = SettingsStore.getItem(settingsKeys.isPrimary) || false
+
+      // Load isPrimary from DevicesStore (source of truth)
+      let isPrimary = false
+      try {
+        await DevicesStore.init()
+        isPrimary = DevicesStore.isPrimaryDevice
+      } catch (error) {
+        console.error('Failed to initialize DevicesStore:', error)
+        // Default to false if we can't load the device status
+        // This ensures UI remains functional even if store fails
+      }
+
       const phoneVerified = SettingsStore.getItem(settingsKeys.phoneVerified) || false
       const emailVerified = SettingsStore.getItem(settingsKeys.emailVerified) || false
       const termsAccepted = SettingsStore.getItem(settingsKeys.termsAccepted) || false
@@ -278,26 +289,34 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       return
     }
 
-    // Check if verification is needed
-    if (!isEmailVerified || !isPhoneVerified) {
-      setVerificationStep('email')
-      setShowVerificationDrawer(true)
+    // Check if email or phone changed and needs verification
+    const emailChanged = formData.email !== previousData.email
+    const phoneChanged = formData.phoneNumber !== previousData.phoneNumber
+
+    // Only require verification for changed fields
+    const needsEmailVerification = emailChanged && !isEmailVerified
+    const needsPhoneVerification = phoneChanged && !isPhoneVerified
+
+    // If no verification needed, save directly
+    if (!needsEmailVerification && !needsPhoneVerification) {
+      await performSave()
       return
     }
 
-    await performSave()
+    // Show verification drawer starting with the first field that needs verification
+    setVerificationStep(needsEmailVerification ? 'email' : 'phone')
+    setShowVerificationDrawer(true)
   }
 
   const performSave = async () => {
     setIsLoading(true)
     try {
-      // Save to SettingsStore with error checking
+      // Save to SettingsStore with error checking (except isPrimary which is handled by DevicesStore)
       const saveOperations = [
         { key: settingsKeys.nickName, data: formData.nickName },
         { key: settingsKeys.email, data: formData.email },
         { key: settingsKeys.phone, data: formData.phoneNumber },
         { key: settingsKeys.classificationType, data: formData.classificationType },
-        { key: settingsKeys.isPrimary, data: formData.isPrimary },
         { key: settingsKeys.termsAccepted, data: formData.termsAccepted },
       ]
 
@@ -307,8 +326,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
           throw new Error(labels.saveOperationFailed(operation.key))
         }
       }
+
+      // Also save isPrimary to SettingsStore for consistency (DevicesStore is the source of truth)
+      SettingsStore.setItem({ key: settingsKeys.isPrimary, data: DevicesStore.isPrimaryDevice })
+
       // Update previousData after successful save
-      setPreviousData(formData)
+      setPreviousData({ ...formData, isPrimary: DevicesStore.isPrimaryDevice })
       Alert.alert(labels.success, labels.settingsSavedSuccess)
 
       if (onSettingsComplete) {
@@ -322,7 +345,44 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     }
   }
 
+  const applyPrimaryDeviceChange = async (value: boolean) => {
+    console.log('Settings: Updating isPrimary to', value)
+
+    // Use the proper store method to update primary device status
+    const updatedDevice = await DevicesStore.setIsPrimaryDevice(value)
+
+    console.log('Settings: DevicesStore.isPrimaryDevice is now', DevicesStore.isPrimaryDevice)
+    console.log('Settings: Saved to storage with isPrimary:', updatedDevice.isPrimaryDevice)
+
+    setFormData(prev => ({ ...prev, isPrimary: value }))
+  }
+
   const updateField = async (field: keyof FormData, value: string | boolean) => {
+    // Handle isPrimary toggle - check for confirmation first if disabling
+    if (field === 'isPrimary' && typeof value === 'boolean') {
+      if (value === false && formData.isPrimary === true) {
+        // Check if there are connected devices first
+        try {
+          const connectedDevices = await DevicesStore.getConnectedDevices()
+          if (connectedDevices && connectedDevices.length > 0) {
+            Alert.alert(labels.confirmDeviceStatusChange, labels.deviceStatusChangeWarning(connectedDevices.length), [
+              { text: labels.cancel, style: 'cancel' },
+              {
+                text: labels.continue,
+                style: 'destructive',
+                onPress: async () => await applyPrimaryDeviceChange(value),
+              },
+            ])
+            return
+          }
+        } catch (error) {
+          console.error('Error checking connected devices:', error)
+        }
+      }
+      await applyPrimaryDeviceChange(value)
+      return
+    }
+
     // Reset phone verification state when the phone number changes
     if (field === 'phoneNumber' && typeof value === 'string' && value !== formData.phoneNumber) {
       setIsPhoneVerified(false)
@@ -349,41 +409,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         key: settingsKeys.emailVerified,
         data: false,
       })
-    }
-
-    // Special handling for isPrimary toggle
-    if (field === 'isPrimary' && value === false && formData.isPrimary === true) {
-      // Check if there are connected devices
-      try {
-        const connectedDevices = await DevicesStore.getConnectedDevices()
-        if (connectedDevices && connectedDevices.length > 0) {
-          // Show confirmation dialog
-          Alert.alert(labels.confirmDeviceStatusChange, labels.deviceStatusChangeWarning(connectedDevices.length), [
-            {
-              text: labels.cancel,
-              style: 'cancel',
-              onPress: () => {
-                // Don't change the value, keep it as primary
-                return
-              },
-            },
-            {
-              text: labels.continue,
-              style: 'destructive',
-              onPress: () => {
-                setFormData(prev => ({ ...prev, [field]: value }))
-                // Clear error for this field
-                if (errors[field]) {
-                  setErrors(prev => ({ ...prev, [field]: undefined }))
-                }
-              },
-            },
-          ])
-          return
-        }
-      } catch (error) {
-        console.error('Error checking connected devices:', error)
-      }
     }
 
     // Auto-set device classification based on email type when user changes email
@@ -478,7 +503,23 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       .join(' ')
   }
 
+  const hasFormChanges = () => {
+    return (
+      formData.nickName !== previousData.nickName ||
+      formData.email !== previousData.email ||
+      formData.phoneNumber !== previousData.phoneNumber ||
+      formData.classificationType !== previousData.classificationType ||
+      formData.isPrimary !== previousData.isPrimary ||
+      formData.termsAccepted !== previousData.termsAccepted
+    )
+  }
+
   const isFormValid = () => {
+    // Check if there are any changes
+    if (!hasFormChanges()) {
+      return false
+    }
+
     // Check each required field individually using validation functions
     const nicknameValid = !validateNickName(formData.nickName)
     const emailValid = !validateEmail(formData.email)
@@ -776,7 +817,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       // Auto-transition to next step after showing success
       successTimeoutRef.current = setTimeout(async () => {
         try {
-          if (!isPhoneVerified) {
+          // Check if phone changed and needs verification
+          const phoneChanged = formData.phoneNumber !== previousData.phoneNumber
+          const needsPhoneVerification = phoneChanged && !isPhoneVerified
+
+          if (needsPhoneVerification) {
             // Reset phone verification state and prepare transition
             setIsEditing(false)
             setTempPhone('')
@@ -786,10 +831,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             setIsVerificationLocked(false)
             setVerificationStep('phone')
           } else if (!formData.termsAccepted) {
-            // If phone is verified but terms not accepted, show terms
+            // If phone doesn't need verification but terms not accepted, show terms
             setShowVerificationDrawer(false)
             handleTermsPress()
           } else {
+            // All done, save
             setShowVerificationDrawer(false)
             await performSave()
           }

@@ -63,3 +63,8 @@
 -- CREATE INDEX example_active_idx ON example_simple (id) WHERE is_active = true;
 -- CREATE INDEX example_inactive_idx ON example_simple (id) WHERE is_active = false;
 -- ===========================================
+When you deploy to production, set SERVER_BASE_URL to your actual domain:
+SERVER_BASE_URL=https://your-production-domain.com
+
+1. Then the logo will be served from
+   https://your-production-domain.com/assets/images/logo.png

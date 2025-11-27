@@ -10,5 +10,5 @@
 /// main();
 /// ```
 fn main() {
-    salesforce_dashboard_lib::run()
+    pzero_portal_lib::run().expect("error while running tauri application")
 }
