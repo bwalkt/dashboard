@@ -86,10 +86,12 @@ impl BLEManager {
         // Use a bounded retry loop instead of fixed sleep
         // Read NO_RETRIES from environment variable, default to 10
         // Each retry waits 500ms, so 10 retries = 5 seconds total timeout
+        // Ensure at least 1 retry to provide minimum 500ms discovery window
         let max_tries = std::env::var("NO_RETRIES")
             .ok()
             .and_then(|v| v.parse::<u32>().ok())
-            .unwrap_or(10);
+            .unwrap_or(10)
+            .max(1); // Ensure at least one retry attempt (500ms discovery window)
         let mut tries = 0;
 
         println!("Waiting for devices to be discovered...");
