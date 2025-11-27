@@ -23,7 +23,8 @@
       "id": "main",
       "iconPath": "icons/logo.png",
       "iconAsTemplate": true,
-      "tooltip": "PZero Portal"
+      "tooltip": "PZero Portal",
+      "menuOnLeftClick": true
     },
     "security": {
       "csp": {
