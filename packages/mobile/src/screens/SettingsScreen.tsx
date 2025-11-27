@@ -191,8 +191,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       let classificationType = SettingsStore.getItem(settingsKeys.classificationType) || ''
 
       // Load isPrimary from DevicesStore (source of truth)
-      await DevicesStore.init()
-      const isPrimary = DevicesStore.isPrimaryDevice
+      let isPrimary = false
+      try {
+        await DevicesStore.init()
+        isPrimary = DevicesStore.isPrimaryDevice
+      } catch (error) {
+        console.error('Failed to initialize DevicesStore:', error)
+        // Default to false if we can't load the device status
+        // This ensures UI remains functional even if store fails
+      }
 
       const phoneVerified = SettingsStore.getItem(settingsKeys.phoneVerified) || false
       const emailVerified = SettingsStore.getItem(settingsKeys.emailVerified) || false
