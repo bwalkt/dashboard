@@ -1,5 +1,5 @@
 import type { CreateUserData, GitHubUser, User } from "@pzero/shared";
-import { db } from "../config/database";
+import { db } from "../config/database.js";
 
 export class UserService {
   /**

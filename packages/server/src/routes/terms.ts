@@ -44,7 +44,7 @@ export async function termsRoutes(fastify: FastifyInstance): Promise<void> {
 
       return reply.code(200).send(termsData);
     } catch (error) {
-      fastify.log.error("Error fetching terms:", error);
+      fastify.log.error({ err: error }, "Error fetching terms:");
       return reply.code(500).send({ error: "Failed to fetch terms" });
     }
   });

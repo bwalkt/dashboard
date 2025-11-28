@@ -1,5 +1,5 @@
 import { SignalWire } from "@signalwire/realtime-api";
-import { config } from "../config/env";
+import { config } from "../config/env.js";
 
 interface SendSMSOptions {
   to: string;

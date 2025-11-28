@@ -13,12 +13,18 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-pzero}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}"]
+      interval: 60s
+      timeout: 5s
+      retries: 5
     ports:
       - "${POSTGRES_PORT:-5433}:5432" # Changed default from 5432 to 5433 to avoid conflicts with local PostgreSQL
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql
-
+    networks:
+      - dokploy-network # Dokploy network required in production
   pzero-server:
     # Image from GitHub Container Registry
     # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
@@ -31,8 +37,8 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=${PORT:-8090}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-pzero}
@@ -68,7 +74,7 @@ services:
       - TWILIO_MESSAGE=${TWILIO_MESSAGE}
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
 
   pzero-envoy:
     image: envoyproxy/envoy:v1.30-latest
@@ -76,10 +82,6 @@ services:
     ports:
       - "8181:8080" # External port for client requests
       - "9901:9901" # Admin interface
-    volumes:
-      - type: bind
-        source: ./envoy.yaml
-        target: /etc/envoy/envoy.yaml
     command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
     restart: "no"
     environment:
@@ -87,6 +89,8 @@ services:
     depends_on:
       pzero-server:
         condition: service_started
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml
 
 volumes:
   postgres_data:

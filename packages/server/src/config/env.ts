@@ -54,6 +54,7 @@ export interface EnvironmentConfig {
   EMAIL_EXPIRY_MINUTES: number;
   ALLOWED_DOMAINS: string | undefined;
   COOKIE_DOMAIN: string | undefined;
+  LOGO_PUBLIC_URL: string | undefined;
 }
 const DEFAULT_ALLOWED_HEADERS = [
   "Content-Type",
@@ -158,6 +159,7 @@ export const config: EnvironmentConfig = {
   EMAIL_EXPIRY_MINUTES: parseInt(process.env.EMAIL_EXPIRY_MINUTES || "100", 10),
   ALLOWED_DOMAINS: process.env.ALLOWED_DOMAINS,
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
+  LOGO_PUBLIC_URL: process.env.LOGO_PUBLIC_URL,
 };
 
 /**
@@ -215,5 +217,11 @@ export function validateEnvironment(): void {
     console.warn(
       "⚠️  Using default JWT secret. Please set JWT_SECRET environment variable for production.",
     );
+  }
+
+  // Validate SERVER_BASE_URL is not empty and properly formatted
+  if (!config.SERVER_BASE_URL || config.SERVER_BASE_URL.trim() === "") {
+    console.error("❌ SERVER_BASE_URL cannot be empty or undefined");
+    process.exit(1);
   }
 }

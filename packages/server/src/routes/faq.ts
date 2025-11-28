@@ -77,7 +77,7 @@ export async function faqRoutes(fastify: FastifyInstance): Promise<void> {
 
       return reply.code(200).send(faqData);
     } catch (error) {
-      fastify.log.error("Error fetching FAQs:", error);
+      fastify.log.error({ err: error }, "Error fetching FAQs:");
       return reply.code(500).send({ error: "Failed to fetch FAQs" });
     }
   });

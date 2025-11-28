@@ -41,7 +41,7 @@ const SidebarMenu: React.FC<DrawerContentComponentProps> = ({ navigation }) => {
 
         <TouchableOpacity style={styles.menuItem} onPress={navigateToConnectDevice}>
           <Text text60 color={text.primary}>
-            Connect Device
+            Manage Devices
           </Text>
         </TouchableOpacity>
 

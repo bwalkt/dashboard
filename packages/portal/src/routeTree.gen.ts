@@ -9,18 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
-import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
-import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
-import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
-import { Route as DashboardOverviewRouteImport } from './routes/dashboard/overview'
-import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
-import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
-import { Route as DataTableTreeRouteImport } from './routes/data-table.tree'
-import { Route as IndexRouteImport } from './routes/index'
 import { Route as TableRouteImport } from './routes/table'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AuthPromptRouteImport } from './routes/auth-prompt'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as DataTableTreeRouteImport } from './routes/data-table.tree'
+import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
+import { Route as DashboardOverviewRouteImport } from './routes/dashboard/overview'
+import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
+import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
+import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
+import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 
 const TableRoute = TableRouteImport.update({
   id: '/table',
@@ -30,6 +30,11 @@ const TableRoute = TableRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthPromptRoute = AuthPromptRouteImport.update({
+  id: '/auth-prompt',
+  path: '/auth-prompt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -80,6 +85,7 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth-prompt': typeof AuthPromptRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/table': typeof TableRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth-prompt': typeof AuthPromptRoute
   '/table': typeof TableRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth-prompt': typeof AuthPromptRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/table': typeof TableRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -121,6 +129,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth-prompt'
     | '/dashboard'
     | '/table'
     | '/auth/callback'
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth-prompt'
     | '/table'
     | '/auth/callback'
     | '/auth/sign-in'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/auth-prompt'
     | '/dashboard'
     | '/table'
     | '/auth/callback'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthPromptRoute: typeof AuthPromptRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   TableRoute: typeof TableRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -182,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth-prompt': {
+      id: '/auth-prompt'
+      path: '/auth-prompt'
+      fullPath: '/auth-prompt'
+      preLoaderRoute: typeof AuthPromptRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -264,10 +283,13 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardIndexRoute: DashboardIndexRoute,
 }
 
-const DashboardRouteWithChildren = DashboardRoute._addFileChildren(DashboardRouteChildren)
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthPromptRoute: AuthPromptRoute,
   DashboardRoute: DashboardRouteWithChildren,
   TableRoute: TableRoute,
   AuthCallbackRoute: AuthCallbackRoute,
@@ -275,4 +297,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthSignUpRoute: AuthSignUpRoute,
   DataTableTreeRoute: DataTableTreeRoute,
 }
-export const routeTree = rootRouteImport._addFileChildren(rootRouteChildren)._addFileTypes<FileRouteTypes>()
+export const routeTree = rootRouteImport
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()

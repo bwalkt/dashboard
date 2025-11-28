@@ -70,10 +70,10 @@ services:
     volumes:
       - type: bind
         source: ./packages/sfdc-server-vanilla/src/keys/private.key
-        target: /app/examples/b2b/packages/sfdc-server-vanilla/src/keys/private.key
+        target: /app/examples/b2b/packages/sfdc-server-vanilla/dist/keys/private.key
       - type: bind
         source: ./packages/sfdc-server-vanilla/src/keys/certificate.crt
-        target: /app/examples/b2b/packages/sfdc-server-vanilla/src/keys/certificate.crt
+        target: /app/examples/b2b/packages/sfdc-server-vanilla/dist/keys/certificate.crt
     depends_on:
       dragonfly:
         condition: service_healthy

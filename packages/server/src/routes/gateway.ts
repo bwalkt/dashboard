@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { config } from "../config/env";
+import { config } from "../config/env.js";
 
 // Multi-target gateway with header validation and authentication
 // Supports multiple backend services through different route prefixes

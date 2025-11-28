@@ -1,5 +1,5 @@
 import Twilio from "twilio";
-import { config } from "../config/env";
+import { config } from "../config/env.js";
 
 interface SendSMSVerificationOptions {
   to: string;

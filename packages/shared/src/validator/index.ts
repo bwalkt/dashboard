@@ -10,11 +10,11 @@ export {
   type ValidationError,
   type ValidationResult,
   validateData,
-} from './ajv'
+} from './ajv.js'
 
 // Export other validators
-export * from './email'
-export * from './validator'
+export * from './email.js'
+export * from './validator.js'
 
 // Note: AjvExamples is available for testing at '@pzero/shared/validator/test-ajv'
 // but not exported from the main index to keep the public API surface clean

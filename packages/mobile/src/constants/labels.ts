@@ -62,6 +62,7 @@ export const labels = {
     `You have ${count} connected device${count !== 1 ? 's' : ''}. Changing from primary to secondary device will disconnect all connected devices and reset your connections. This action cannot be undone.\n\nDo you want to continue?`,
 
   // Connect Device Screen
+  manageDeviceTitle: 'Manage Devices',
   connectDeviceTitle: 'Connect Device',
   deviceStatus: 'Device Status',
   deviceType: 'Device Type',
@@ -95,6 +96,13 @@ export const labels = {
   connectedDevices: 'Connected Devices',
   noConnectedDevices: 'No connected devices',
   useAddTabInstruction: 'Use the Add tab to connect new devices',
+  connectDevice: 'Connect Device',
+  noDevicesConnected: 'No Devices Connected',
+  connectSecondaryDevicesInstruction: 'Connect secondary devices to manage them',
+  connectToPrimaryInstruction: 'Connect to a primary device to get started',
+  scanPrimaryDeviceQRCode: 'Scan Primary Device QR Code',
+  letSecondaryDevicesScanInstruction: 'Let secondary devices scan your QR code',
+  scanQRFromPrimaryInstruction: 'Scan the QR code from the primary device',
 
   // Connect Device - Device Info
   deviceLabel: (deviceName: string) => `Device: ${deviceName}`,

@@ -43,15 +43,7 @@ FROM nginx:alpine
 COPY --from=builder /app/examples/b2b/packages/sfdc-example/dist /usr/share/nginx/html
 
 # Copy nginx configuration for SPA routing
-RUN echo 'server { \
-    listen 80; \
-    server_name _; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+COPY examples/b2b/packages/sfdc-example/nginx.conf /etc/nginx/conf.d/default.conf=-0-=-09-=-09-=-09o0-=-0
 
 EXPOSE 80
 

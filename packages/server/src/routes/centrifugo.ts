@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { authService } from "../services/auth.service";
+import { authService } from "../services/auth.service.js";
 
 // Centrifugo proxy endpoints for authentication and authorization
 export async function centrifugoRoutes(

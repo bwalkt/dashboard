@@ -1,0 +1,421 @@
+# Changelog
+
+## [0.22.0] - 2025-11-26
+
+Initial release:
+
+### 🚀 New Features
+- 497465f feat: react version set to catalog
+- a64394c feat: required envs
+- 12ff33e feat: required envs
+- 8e7de06 feat: cr comments
+- dc93f93 feat: fix terms
+- 2410bfa feat: wip
+- f46857a feat: wip
+- 6a5a33f feat: fix cr comments
+- 2c864c9 feat: terms-and-faqs
+- d2b599b feat: wip
+- 44d6b1c feat: wip
+- 7f8b59a feat: mobile-faq-terms-verify
+- cd760ce feat: custom header validation
+- 97c7225 feat: face-id-and-email-phone-verification
+- 17f9017 feat: cr
+- 7b3a7e3 feat: phone import
+- b791a0f feat: phone import
+- d683189 feat: wip
+- 6838811 feat: wip
+- bf962b0 feat: wip
+- b6e3971 feat: fix mobile store
+- d374413 feat: wip
+- ff455b6 feat: prepare testflight
+- b21d935 feat: wip
+- bcd8ab9 feat: wip
+- 5e2d93d feat: more functions
+- 4e2c932 feat: wip
+- e7393a5 feat: wip
+- 8e2d1a1 feat: wip
+- a9f0718 feat: wip
+- 09eb3c5 feat: more-functions
+- d8d9254 feat: fixed cr comments
+- d29807a feat: simplify
+- 0513f4e feat: simplify
+- 09c6c71 feat: simplify-function
+- b0af26d feat: simplified functions
+- 732a007 feat: simplify
+- de6d6f7 feat: fix registration-signin flow
+- f82b152 feat: complete registration
+- c9597a5 feat: wip
+- a631a9b feat: wip
+- 0334a48 feat: wip
+- 4f79c28 feat: wip
+- 89e46f7 feat: wip
+- 1af8696 feat: wip
+- 847a950 feat: add fingerprinting tables
+- bf95721 feat: wip
+- 736712a feat: fix scripts
+- 98f19d5 feat: wip
+- fdc2879 feat: sql scripts and create user
+- 017a359 feat: use function to add auth-user
+- e50a2c0 feat: fix sps
+- ed054a7 feat: fix ajv build
+- 1ed968e feat: undo package.json
+- 86f026a feat: fix shared build
+- 089e71e feat: shared types utils fix
+- e3a9969 feat: cr comments
+- 96295c4 feat: zod - ajv
+- cd4b755 feat: shared types and utils
+- 871718f feat: shared types and utils
+- baac553 feat: shared types and utils
+- 16a8c46 feat: centrifuge
+- b4a1bd8 feat: centrifuge
+- 7756065 feat: centrifuge
+- 6fca410 feat: centrifuge
+- 1591acc feat: scaffold centrifuge
+- b02ca08 feat: cr comments, and curl test
+- 262d3c1 feat: cr comments, and curl test
+- 16b5aaf feat: tests
+- 13ca313 feat: run lint fix
+- 535237b feat: wip
+- 8e929b0 feat: wip
+- fb456ff feat: wip
+- aa45664 feat: wip
+- 03ff1e8 feat: wip
+- cc2a23c feat: wip
+- 187488d feat: wip
+- 3b2edee feat: routeTreegen
+- a623d1c feat: wip
+- a645ab8 feat: nh
+- 3c91735 feat: wip
+- 0789c21 feat: cr comments
+- 9926a75 feat: cr comments fixed
+- 49bbad8 feat: fix cr comments
+- 1454287 feat: autoform
+- 8258fac feat: remove permissions
+- 3f5a5cd feat: toggle to switch api proxy
+- bdcfb1b feat: auto form
+- cc80173 feat: auto form
+- ea195e7 feat: cr comments
+- 78b9add feat: collapse, scroll and dead space resolved
+- d909636 feat: fixed scroll and space
+- 5b62ef4 feat: scroll spill over prevent
+- c8e3d77 feat: scroll
+- 228803a feat: remove dead space in filter
+- 064cadc feat: split table
+- f1a6aed feat: split table
+- b64d4a5 feat: wip
+- eacc3b8 feat: nested tree data and cell renderer and column resize
+- 1df13d9 feat: wip
+- 2a93d59 feat: wip
+- 97ab35f feat: remove default - renamed to data-table
+- 1b3bcac feat: mobile sidebar
+- b6f5e91 feat: clean-layout-architecture
+- 8a949de feat: clean layout arch
+- e52d2d7 feat: wip
+- daae900 feat: toggle sidebar and filter
+- 132ecfc feat: toggle sidebar and filter
+- d2c9997 feat: wip
+- 463767e feat: users page
+- d2eab51 feat: wip
+- bab7834 feat: wip
+- 5d4da7e feat: wip
+- c20088c feat: wip
+- 9bb0176 feat: wip
+- 30e23f5 feat: wip
+- e387d44 feat: added proxy serter using fastify
+- 5f4063b feat: wip
+- eea156f feat: wip
+- 659ce24 feat: wip
+- 4bdd35a feat: wip
+- 9676d82 feat: wip
+- 2b14529 feat: fix build
+- 60165f4 feat: move mock to shared
+- 92803ca feat: cr comments
+- af4cb66 feat: cr comments fix
+- 408840a feat: wip
+- be8cf70 feat: logs and users
+- 88c2ab9 feat: data-filters
+- 882759b feat: posthog
+- f94dd43 feat: lock file
+- 9d687b1 feat: move to use tanstack router
+- 6a61eee feat: use-media-query
+- 9010179 feat: format
+- ce53004 feat: fix import
+- 82297d4 feat: wip
+- 2af992f feat: fix-main
+- 66e016f feat: math minor alias changes
+- b0dadd0 feat: cr comments fix
+- 46d7e1f feat: shorten-names
+- 583277e feat: fix cr
+- 95edce3 feat: cr comments
+- 213e9bf feat: cr wip
+- eb981ee feat: fix cr comments
+- 6635e3a feat: fix cr comments
+- e402626 feat: genfunction
+- 2392324 feat: cr comments
+- 922a18a feat: wip
+- 45f921f feat: expanded-math-functions
+- 11e3fa9 feat: added linearAlgebra and stats
+- c0a577c feat: added more functions
+- 7b325bc feat: wip
+- f9c6c74 feat: wip
+- e311936 feat: update cr comments
+- 26ada9e feat: expanded math function
+- 58f1acb feat: expanded math function
+- aedb372 feat: fix scripts
+- 791a9d1 feat: wip
+- 1601f8f feat: move prepare to top, to avoid preparing each time
+- cc70d3b feat: wip
+- e9261a2 feat: wip
+- 39294ed feat: fix sql scripts
+- 0c4adf5 feat: wip
+- 3d8dfe1 feat: wip
+- c082f27 feat: wip
+- ae938f2 feat: sql script
+- 7bc339d feat: wip
+- 783b853 feat: fix scripts
+- b87a181 feat: lint
+- 903ad0b feat: wip
+- b97ebfc feat: add README.md
+- 1817194 feat: fix scripts
+- 22751b7 feat: wip
+- 6498fcd feat: wip
+- 84b74b7 feat: wip
+- 09bd7e6 feat: wip
+- 453f02f feat: wip
+- 92260ca feat: signoz integration in frontend
+- d3eafe7 feat: wip
+- fbc302a feat: CR comments
+- 1bc8333 feat: tbd test and org migrate
+- 191e09a feat: wip
+- 47e3c5c feat: wip
+- 9306315 feat: added groups
+- b7109af feat: wip
+- ffa07c4 feat: wip
+- 9b0cae6 feat: sql scripts-wip
+- 7222125 feat: wip
+- 7b8c145 feat: wip
+- 676ce55 feat: scripts wip
+- 1ae1d7c feat: cr comments
+- fe9476d feat: sql scripts
+- 64b76e3 feat: format sql scripts
+- 173e5a8 feat: sql scripts
+- 0bc8d40 feat: sql-scripts
+- cff4fa3 feat: openziti access in frontend
+- 1871fac feat: golang proxy server
+- c790c8f feat: reorged openziti
+- 9ccc1e4 feat: golang proxy server
+- 8b00204 feat: wip
+- 68b703b feat: wip
+- 49d8a89 feat: reorged openziti
+- 6f93cdb feat: cr comments
+- d515513 feat: cr comments
+- 7035b12 feat: server
+- 3b3ee5f feat: fix cr comments
+- d6d3b86 feat: fix cr comments
+- bad5544 feat: cr comments
+- fc317df feat: cr comments
+- a273979 feat: sql scripts
+- 051ec7d feat: audit
+- 2de368a feat: threads-sms-email
+- 517ab57 feat: DEPLOY - wip
+- 9313c3a feat: testflight
+- cb4b08f feat: fixed cr comments
+- 0ab11b4 feat: remove stores/endpoints
+- 1335cfd feat: server combined with endpoints store - wip
+- 9dcd408 feat: pnpm-lock
+- 752a60e feat: fix build ios
+- bcfc942 feat: cr comments
+- 9de6a76 feat: CR comments
+- 04dd76e feat: endpoint-connect
+- b051c10 feat: endpoint-connect
+- 3a33fdc feat: endpoints store
+- d66628e feat: pnpm audit
+- 91d36df feat: add server to listen
+- 184a148 feat: TODO.md
+- 9d1f762 feat: lint-packages
+- 83108b2 feat: wip
+- ee8cd0b feat: wip
+- feb783b feat: reorged openziti
+- 5055a86 feat: rename-admin-portal-portal
+- 6235de0 feat: wip
+- 937ad79 feat: pnpm audit fix
+- 6647cce feat: lint-packages
+- b8a8523 feat: upgrade biome
+- 9cda87b feat: reorg
+- dfb262a feat: reorg - dirs - example in separate folder
+- 20b5809 feat: signoz integration
+- 8a41c64 feat: wip
+- d1a534d feat: add readme_keys
+- d99924c feat: remove keys
+- 77b24e9 feat: wip
+- 0d8dc0a feat: hook overview page with real data
+- 97b3ef4 feat: server github login
+- 5f4e63f feat: add shared types
+- 39178bb feat: removed tab
+- 884437a feat: mono-repo
+- 5382149 feat: fetch products data from salesforce
+- 5dfe817 feat: products table
+- 685750b feat: fixes 2 logo and remove debug in index.html
+- e755d61 feat: minor fixes 2
+- f4c1197 feat: mobile-fixes
+- c032d94 feat: mobile-fixes
+- e00c973 feat: tauri
+- 4957245 feat: mobile
+- d6c273f feat: wip
+
+### 🐛 Bug Fixes
+- 20a9724 fix: coderabbit issues
+- 8a47dd4 fix: coderabbit issues
+- 9aeb24b fix: salesforce dashboard
+- a229e7a fix: envoy config yaml
+- 66d472f fix: envoy proxy issues
+- e41fa17 fix: frontend redirect after login
+- 9d6051e fix: update postgres image
+- e2ff91c fix: pr issues
+- 12da3c6 fix: frontend build issue
+- 9934fcd fix: cookie issues
+- 6230455 fix: volume paths
+- 91377aa fix: docker compose volume mount
+- 6b3c32b fix: docker compose
+- 9474794 fix: golang proxy dockerfile
+- 5ac2eb1 fix: coderabbit issues
+- 3f2cfb9 fix: coderabbit issues
+- 3706c56 fix: pr issues
+- d9c2119 fix: build issues
+- ed44231 fix: coderabbit issues
+- 318ff7a fix: add console log
+- 5af740d fix: build issues
+- f807352 fix: coderabbit issues
+- 2c5dee0 fix: add console log
+- b06725f fix: logout issue
+- 5ce6572 fix: cors issue
+- 7509b9a fix: last 30 days data
+- ace63d3 fix: button style
+- 96a2f8a fix: sql query
+- b2def2d fix: soql query
+- a7762ad fix: show records for last 30 days
+- 6a9d9e9 fix: fetch soql query
+- 6bcf81b fix: products table types
+
+### 📝 Other Changes
+- f01bea5 feat wip
+- ad97171 Merge pull request #84 from bwalkt/mobile-faq-terms-verify
+- 4ad39af add redis to prod sfdc server
+- 5c7ff88 Merge pull request #83 from bwalkt/header-validation
+- 28e9af9 Merge pull request #82 from bwalkt/face-id-and-email-phone-verification
+- 392e08f Merge pull request #70 from bwalkt/verifier-mobile-server-comm
+- c388ef9 Merge pull request #81 from bwalkt/more-functions
+- 5e85e48 Merge pull request #79 from bwalkt/simplify-function
+- 7d2cdfa Merge pull request #80 from bwalkt/fix-salesforce-dashboard
+- 5173155 restore test file
+- 88706a0 revert sql file
+- 6c66c46 Merge branch 'main' of github.com:bwalkt/dashboard into fix-salesforce-dashboard
+- 822a3ea Merge pull request #78 from bwalkt/complete-registration
+- d00a5d0 Merge pull request #75 from bwalkt/fix-sql-scripts-v2
+- 7061d1f Merge branch 'fix-envoy-issues'
+- afa6cd7 Merge pull request #73 from bwalkt/fix-envoy-issues
+- 1b101db Merge pull request #72 from bwalkt/shared-types-utils-fix
+- 9997a36 Merge pull request #71 from bwalkt/shared-types-utils-fix
+- 0066785 Merge pull request #69 from bwalkt/shared-types-utils
+- 0484545 Merge pull request #68 from bwalkt/centrifuge
+- 6456247 Merge pull request #66 from bwalkt/create-server-tests
+- 0403d64 Merge pull request #65 from bwalkt/header-middleware
+- a5bb960 Merge pull request #63 from bwalkt/some-changes
+- 6c6d2d9 Merge pull request #58 from bwalkt/auto-form
+- 835865a Merge pull request #61 from bwalkt/proxy-toggle
+- 81261b8 fis: added error handling
+- e837827 Merge pull request #57 from bwalkt/dead-space-collapse-scroll
+- 84f0097 Merge pull request #55 from bwalkt/nested-tree-data
+- 70f6656 Merge pull request #54 from bwalkt/clean-layout-architecture
+- bd7c88d Update packages/portal/src/app/default/data-table.tsx
+- ce817f4 Update packages/portal/src/routes/dashboard/logs.tsx
+- 0b825eb Update packages/portal/src/app/infinite/data-table-infinite.tsx
+- 680b1a8 Update packages/portal/src/components/data-table/data-table-reset-button-with-url.tsx
+- c39c2a2 ci: add postgres to cicd
+- b934fa9 Merge pull request #53 from bwalkt/proxy-server
+- 885aace chore: update docker compose
+- 02d426b chore: lint fix
+- 3076698 Merge pull request #51 from bwalkt/fix-shared-mock-data
+- 82099d8 Merge pull request #50 from bwalkt/data-filters
+- e81e14a Merge pull request #49 from bwalkt/posthog
+- ff43d29 Update packages/portal/src/lib/table/filterfns.ts
+- fbbb016 Update packages/portal/src/lib/table/filterfns.ts
+- b82999e Update packages/portal/src/lib/request/timing.ts
+- e030d91 Update packages/portal/src/hooks/use-local-storage.ts
+- 618bf8c Update packages/portal/src/hooks/use-local-storage.ts
+- b67f801 Update packages/portal/src/hooks/use-hot-key.ts
+- e4a8033 Merge pull request #48 from bwalkt/fix-main
+- 546de9c fix build script
+- 21a1006 remove @pzero/shared from sfdc-example
+- f67d912 Merge pull request #46 from bwalkt/expanded-math-minor-changes
+- 2ed9720 Merge pull request #45 from bwalkt/shorten-names
+- b683209 added sfdc certificate volume
+- f99c84e remove proxy public ports
+- 5c6bf88 Merge branch 'main' of github.com:bwalkt/dashboard
+- 5140b60 Merge pull request #44 from bwalkt/expanded-math-functions
+- 3656983 Update packages/shared/src/grid/grid.ts
+- 6f6b882 Update packages/shared/src/grid/grid.ts
+- 5b05b38 Merge pull request #43 from bwalkt/expanded-math-functions
+- 81f41b8 fix file localtion
+- 6257bc6 Merge pull request #41 from bwalkt/deployment
+- bc64d19 ci: setup deployment
+- dffed42 Merge pull request #40 from bwalkt/expanded-math-functions
+- 7dbd056 Merge pull request #38 from bwalkt/fix-sql-scripts
+- 7651e96 make cno as optional if del
+- ed3ad15 Merge pull request #37 from bwalkt/signoz-integration
+- f4ff9d8 Merge branch 'main' of github.com:bwalkt/dashboard into signoz-integration
+- f0f39ba Merge pull request #31 from bwalkt/sql-script
+- c170136 Update packages/server/Dockerfile.postgres
+- 87b7bc3 Merge pull request #32 from bwalkt/openziti-frontend-setup
+- 8740514 refactor: Fix double-encoding for proxy requests
+- a6b1b17 Update examples/b2b/packages/sfdc-example/src/lib/api.ts
+- 1b6b52c Update examples/b2b/packages/sfdc-example/src/lib/api.ts
+- d108be7 Update PROXY.md
+- fad48bc docs: update readme
+- 2840940 refactor: use localstorage when using proxy server
+- f29b1a3 Merge pull request #29 from bwalkt/shared-server
+- 22f4ff9 fix coderabbit issues
+- 74a1710 fix coderabbit issues
+- 7495bd9 remove nodejs sfdc ziti server
+- 8404e87 Merge pull request #28 from bwalkt/threads-sms-email
+- 8e4dce4 Merge pull request #27 from bwalkt/testflight
+- 1ee3603 Merge pull request #26 from bwalkt/endpoint-connect
+- deaa690 Merge pull request #23 from bwalkt/reorg-golang-openziti
+- d2c5168 fix coderabbit issues
+- ea7e5b6 fix coderabbit issues
+- e45b013 remove nodejs sfdc ziti server
+- a363e72 Merge pull request #25 from bwalkt/rename-admin-portal-portal
+- 487b84c Merge pull request #24 from bwalkt/lint-packages
+- 745a46b Merge pull request #22 from bwalkt/reorg-dirs
+- 67a34e3 Merge pull request #16 from bwalkt/rename-prefix
+- f86ec43 load env at runtime
+- 66140c4 prefix pzero in services
+- e6da04b add clickhouse config to git
+- 912b0fa Merge pull request #12 from bwalkt/signoz-telemetry
+- e3f023b refactor: change package name
+- f16ae32 docs: signoz documentation
+- ce8d6fc refactor: remove zookeeper data from github
+- 416c81f Merge pull request #11 from bwalkt/envoy
+- e11c661 envoy integration
+- 7a330b4 Merge pull request #10 from bwalkt/get_last_30_instead_of_next_30
+- 23b5916 refactor: separate query for last 30 day orders
+- fcbce78 refactor: randomly update order status
+- 6e93bb3 color labels
+- 883fd88 remove .env
+- cee4eee Merge pull request #9 from bwalkt/add_keys_readme
+- b9332d8 Merge pull request #8 from bwalkt/fix-theme-dashboard
+- e2405af remove unused env
+- b94ed73 frontend order connected to sales force
+- eb5c257 Merge pull request #7 from bwalkt/new-mono-repo
+- 3995a46 Merge pull request #5 from bwalkt/salesforce-data
+- bd5f21c docs: add troubleshooting guide
+- 2559879 Merge pull request #4 from bwalkt/supabase-auth
+- e80312b tauri supabase working
+- 349ceb3 supa base auth
+- e3c3082 remove clerk
+- 78c3417 Merge pull request #3 from bwalkt/minor-fixes-2
+- b0acc2c Merge pull request #2 from bwalkt/mobile-fixes
+- acd21b0 Merge pull request #1 from bwalkt/mobile
+- 15ff94a remove claude
+- d4bd4f1 initial
+

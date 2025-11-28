@@ -1,6 +1,6 @@
 {
   "name": "@pzero/mobile",
-  "version": "0.0.1",
+  "version": "0.22.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -10,9 +10,14 @@
     "testflight": "cd ios && bundle exec fastlane beta",
     "testflight:build": "cd ios && bundle exec fastlane build_only",
     "copy-icons": "node scripts/copy-icons.js",
-    "lint:fix": "biome check --write .",
+    "check-types": "tsc --noEmit",
     "start": "REACT_NATIVE_NO_WATCHMAN=1 react-native start --reset-cache && pnpm run ios",
-    "test": "jest"
+    "test": "jest",
+    "changelog": "node scripts/generate-changelog.js",
+    "release:patch": "node scripts/release.js patch",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major",
+    "version:sync": "node scripts/sync-version.js"
   },
   "dependencies": {
     "@babel/runtime": "catalog:",
@@ -70,7 +75,7 @@
     "@types/react-test-renderer": "catalog:",
     "jest": "catalog:",
     "metro-config": "0.83.3",
-    "react-test-renderer": "19.2.0",
+    "react-test-renderer": "catalog:",
     "typescript": "catalog:"
   },
   "engines": {

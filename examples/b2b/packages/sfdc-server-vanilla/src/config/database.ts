@@ -90,6 +90,11 @@ class DatabaseManager {
   }
 
   public upsertUser(userData: CreateUserData): User {
+    // github_id is required for lookups, throw error if null
+    if (!userData.github_id) {
+      throw new Error('github_id is required for upsertUser')
+    }
+
     const existingUser = this.getUserByGithubId(userData.github_id)
 
     if (existingUser) {
