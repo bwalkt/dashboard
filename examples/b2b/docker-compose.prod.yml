@@ -30,4 +30,4 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:1420}
     restart: "no"
     volumes:
-      - "../files/keys:/app/examples/b2b/packages/sfdc-server-vanilla/dist/keys"
+      - "../../../files/keys:/app/examples/b2b/packages/sfdc-server-vanilla/src/keys"
