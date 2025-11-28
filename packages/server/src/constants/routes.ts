@@ -41,6 +41,9 @@ export const PUBLIC_ROUTES = [
 
   // Terms and conditions endpoint (public access)
   "/terms",
+  
+  // Privacy policy endpoint (public access)
+  "/privacy",
 ] as const;
 
 /**

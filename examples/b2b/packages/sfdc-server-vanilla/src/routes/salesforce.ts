@@ -3,7 +3,11 @@ import type { FastifyInstance, FastifyPluginOptions, FastifyReply, FastifyReques
 import { salesforceConfig } from '../config/salesforce.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { SalesforceClient } from '../services/salesforce-client.service.js'
-import type { SalesforcePaginatedResponse, SalesforceQueryParams, SalesforceRecordRequest } from '../types/salesforce.js'
+import type {
+  SalesforcePaginatedResponse,
+  SalesforceQueryParams,
+  SalesforceRecordRequest,
+} from '../types/salesforce.js'
 
 /**
  * Salesforce API Routes

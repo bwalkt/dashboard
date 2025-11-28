@@ -1,5 +1,6 @@
 import { api } from '@pzero/shared/api'
 import { DEFAULT_COUNTRY, getAllowedCountryCodes, isValidPhoneNumber, validatePhoneNumber } from '@pzero/shared/phone'
+import type { Section } from '@pzero/shared/pzero'
 import { isBusinessEmail } from '@pzero/shared/validator'
 import type { NavigationProp } from '@react-navigation/native'
 import Ajv from 'ajv'
@@ -23,9 +24,10 @@ import Button from '../components/Button'
 import DrawerOverlay from '../components/DrawerOverlay'
 import Header from '../components/Header'
 import PhoneNumberInput from '../components/PhoneNumberInput'
+import PolicyDrawer from '../components/PolicyDrawer'
 import { labels } from '../constants/labels'
 import { PencilIcon } from '../icons'
-import { fetchTermsAndConditions, type TermsSection } from '../services/terms'
+import { fetchPrivacyPolicy, fetchTermsAndConditions } from '../services/content'
 import { stores } from '../stores'
 import {
   type ClassificationType,
@@ -54,7 +56,7 @@ interface FormData {
   phoneNumber: string
   classificationType: ClassificationType
   isPrimary: boolean
-  termsAccepted: boolean
+  policiesAccepted: boolean
 }
 
 interface FormErrors {
@@ -86,7 +88,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     phoneNumber: '',
     classificationType: '' as ClassificationType,
     isPrimary: false,
-    termsAccepted: false,
+    policiesAccepted: false,
   })
   const [previousData, setPreviousData] = useState<FormData>(formData)
   const [errors, setErrors] = useState<FormErrors>({})
@@ -123,10 +125,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
   // Terms and conditions state
   const [showTermsDrawer, setShowTermsDrawer] = useState(false)
-  const [termsData, setTermsData] = useState<TermsSection[]>([])
+  const [termsData, setTermsData] = useState<Section[]>([])
   const [isLoadingTerms, setIsLoadingTerms] = useState(false)
   const [readTerms, setReadTerms] = useState(false)
-  const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false)
+
+  // Privacy policy state
+  const [showPrivacyDrawer, setShowPrivacyDrawer] = useState(false)
+  const [privacyData, setPrivacyData] = useState<Section[]>([])
+  const [isLoadingPrivacy, setIsLoadingPrivacy] = useState(false)
+  const [readPrivacy, setReadPrivacy] = useState(false)
 
   // Verification drawer state
   const [showVerificationDrawer, setShowVerificationDrawer] = useState(false)
@@ -203,20 +210,41 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
       const phoneVerified = SettingsStore.getItem(settingsKeys.phoneVerified) || false
       const emailVerified = SettingsStore.getItem(settingsKeys.emailVerified) || false
-      const termsAccepted = SettingsStore.getItem(settingsKeys.termsAccepted) || false
+      // Migrate from old 'termsAccepted' to new 'policiesAccepted' key
+      let policiesAccepted = SettingsStore.getItem(settingsKeys.policiesAccepted)
+      if (policiesAccepted === null || policiesAccepted === undefined) {
+        // Try to migrate from old key name
+        const oldTermsAccepted = SettingsStore.getItem('termsAccepted')
+        if (oldTermsAccepted !== null && oldTermsAccepted !== undefined) {
+          policiesAccepted = oldTermsAccepted
+          // Migrate the value to new key
+          SettingsStore.setItem({ key: settingsKeys.policiesAccepted, data: oldTermsAccepted })
+          // Remove old key (optional cleanup)
+          // SettingsStore.removeItem('termsAccepted')
+        } else {
+          policiesAccepted = false
+        }
+      }
       // Auto-set classification based on email if classification is empty or unknown
       if (email && (!classificationType || classificationType === 'unknown')) {
         const isBusiness = isBusinessEmail(email)
         classificationType = isBusiness ? 'corp' : 'personal'
       }
-      setPreviousData({ nickName, email, phoneNumber, classificationType, isPrimary, termsAccepted })
+      setPreviousData({
+        nickName,
+        email,
+        phoneNumber,
+        classificationType,
+        isPrimary,
+        policiesAccepted: Boolean(policiesAccepted),
+      })
       setFormData({
         nickName,
         email,
         phoneNumber,
         classificationType: (classificationType || 'unknown') as ClassificationType,
         isPrimary: isPrimary as boolean,
-        termsAccepted: termsAccepted as boolean,
+        policiesAccepted: Boolean(policiesAccepted),
       })
       setIsPhoneVerified(phoneVerified as boolean)
       setIsEmailVerified(emailVerified as boolean)
@@ -317,7 +345,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         { key: settingsKeys.email, data: formData.email },
         { key: settingsKeys.phone, data: formData.phoneNumber },
         { key: settingsKeys.classificationType, data: formData.classificationType },
-        { key: settingsKeys.termsAccepted, data: formData.termsAccepted },
+        { key: settingsKeys.policiesAccepted, data: formData.policiesAccepted },
       ]
 
       for (const operation of saveOperations) {
@@ -510,7 +538,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       formData.phoneNumber !== previousData.phoneNumber ||
       formData.classificationType !== previousData.classificationType ||
       formData.isPrimary !== previousData.isPrimary ||
-      formData.termsAccepted !== previousData.termsAccepted
+      formData.policiesAccepted !== previousData.policiesAccepted
     )
   }
 
@@ -621,7 +649,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       setVerificationAttempts(0)
 
       // Check if terms need to be accepted
-      if (!formData.termsAccepted) {
+      if (!formData.policiesAccepted) {
         setShowVerificationDrawer(false)
         handleTermsPress()
       } else {
@@ -830,7 +858,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             setVerificationAttempts(0)
             setIsVerificationLocked(false)
             setVerificationStep('phone')
-          } else if (!formData.termsAccepted) {
+          } else if (!formData.policiesAccepted) {
             // If phone doesn't need verification but terms not accepted, show terms
             setShowVerificationDrawer(false)
             handleTermsPress()
@@ -912,9 +940,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   }
 
   const handleTermsPress = async () => {
-    // Reset scroll state when opening
-    setHasScrolledToEnd(false)
-
     if (termsData.length === 0) {
       setIsLoadingTerms(true)
       try {
@@ -930,6 +955,26 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       }
     }
     setShowTermsDrawer(true)
+  }
+
+  const handlePrivacyPress = async () => {
+    if (privacyData.length === 0) {
+      setIsLoadingPrivacy(true)
+      try {
+        const privacy = await fetchPrivacyPolicy()
+        setPrivacyData(privacy.sections)
+      } catch (error) {
+        console.error('Failed to load privacy policy:', error)
+        Alert.alert(
+          'Privacy Policy Unavailable',
+          'The privacy policy could not be loaded from the server. Please try again later or contact support.',
+        )
+        return
+      } finally {
+        setIsLoadingPrivacy(false)
+      }
+    }
+    setShowPrivacyDrawer(true)
   }
 
   const handleEdit = () => {
@@ -1168,15 +1213,35 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                     {isLoadingTerms ? 'Loading...' : 'terms and conditions'}
                   </Text>
                 </TouchableOpacity>
+                <Text text70 color={colors.textLightColor} style={styles.termsText}>
+                  {' '}
+                  and{' '}
+                </Text>
+                <TouchableOpacity onPress={handlePrivacyPress} disabled={isLoadingPrivacy} style={styles.inlineLink}>
+                  <Text style={[styles.linkText, isLoadingPrivacy && { opacity: 0.5 }]}>
+                    {isLoadingPrivacy ? 'Loading...' : 'privacy policy'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
             <Switch
-              value={formData.termsAccepted}
+              value={formData.policiesAccepted && readTerms && readPrivacy}
               onValueChange={value => {
-                if (value && !readTerms) {
-                  handleTermsPress()
+                if (value) {
+                  // User is checking the box - show terms first, then privacy
+                  if (!readTerms) {
+                    handleTermsPress()
+                  } else if (!readPrivacy) {
+                    handlePrivacyPress()
+                  } else {
+                    // Both already read, just update the field
+                    updateField('policiesAccepted', true)
+                  }
                 } else {
-                  updateField('termsAccepted', value)
+                  // User is unchecking - reset both
+                  updateField('policiesAccepted', false)
+                  setReadTerms(false)
+                  setReadPrivacy(false)
                 }
               }}
               onColor={colors.primaryColor}
@@ -1187,47 +1252,73 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         </View>
 
         {/* Terms and Conditions Drawer */}
-        <DrawerOverlay
+        <PolicyDrawer
           visible={showTermsDrawer}
-          onClose={() => setShowTermsDrawer(false)}
+          onClose={() => {
+            // Note: The PolicyDrawer component handles the close logic internally
+            // This just updates the local state after the drawer decides to close
+            setShowTermsDrawer(false)
+          }}
           title="Terms and Conditions"
-          width="100%"
-        >
-          <ScrollView
-            style={styles.termsScrollView}
-            contentContainerStyle={{ paddingBottom: 20 }}
-            showsVerticalScrollIndicator={true}
-          >
-            <View style={styles.termsContent}>
-              {termsData.map((section, index) => (
-                <View key={index} style={styles.termsSection}>
-                  <Text style={styles.termsSectionTitle}>{section.title}</Text>
-                  <Text style={styles.termsSectionContent}>{section.content}</Text>
-                </View>
-              ))}
+          sections={termsData}
+          acceptButtonLabel="Accept Terms and Conditions"
+          hasBeenAccepted={readTerms}
+          onAccept={async () => {
+            setReadTerms(true)
+            setShowTermsDrawer(false)
 
-              {/* Accept Terms Button at the end of content */}
-              <View style={styles.termsButtonContainer}>
-                <Button
-                  label="Accept Terms"
-                  onPress={async () => {
-                    setReadTerms(true)
-                    updateField('termsAccepted', true)
-                    setShowTermsDrawer(false)
+            // Check if privacy needs to be read next
+            if (!readPrivacy) {
+              handlePrivacyPress()
+            } else {
+              // Both terms and privacy read, update the field and save if ready
+              updateField('policiesAccepted', true)
 
-                    // If both email and phone are verified, complete the save
-                    if (isEmailVerified && isPhoneVerified) {
-                      await performSave()
-                    }
-                  }}
-                  variant="primary"
-                  size="medium"
-                  style={styles.acceptTermsButton}
-                />
-              </View>
-            </View>
-          </ScrollView>
-        </DrawerOverlay>
+              // If both email and phone are verified, complete the save
+              if (isEmailVerified && isPhoneVerified) {
+                try {
+                  await performSave()
+                } catch (error) {
+                  console.error('Failed to save after accepting terms:', error)
+                  // performSave already shows an Alert on failure
+                }
+              }
+            }
+          }}
+          requireScrollToEnd={true}
+        />
+
+        {/* Privacy Policy Drawer */}
+        <PolicyDrawer
+          visible={showPrivacyDrawer}
+          onClose={() => {
+            // Note: The PolicyDrawer component handles the close logic internally
+            // This just updates the local state after the drawer decides to close
+            setShowPrivacyDrawer(false)
+          }}
+          title="Privacy Policy"
+          sections={privacyData}
+          acceptButtonLabel="Accept Privacy Policy"
+          hasBeenAccepted={readPrivacy}
+          onAccept={async () => {
+            setReadPrivacy(true)
+            setShowPrivacyDrawer(false)
+
+            // Now both terms and privacy are read, update the field and save if ready
+            updateField('policiesAccepted', true)
+
+            // If both email and phone are verified, complete the save
+            if (isEmailVerified && isPhoneVerified) {
+              try {
+                await performSave()
+              } catch (error) {
+                console.error('Failed to save after accepting privacy:', error)
+                // performSave already shows an Alert on failure
+              }
+            }
+          }}
+          requireScrollToEnd={true}
+        />
 
         {/* Verification Drawer */}
         <DrawerOverlay
@@ -1687,36 +1778,6 @@ const styles = StyleSheet.create({
   },
   inlineLink: {
     alignSelf: 'flex-start',
-  },
-  termsContent: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm + 2,
-    flexGrow: 1,
-  },
-  termsSection: {
-    marginBottom: spacing.xl + 5,
-  },
-  termsSectionTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: text.primary,
-    marginBottom: spacing.sm + 2,
-  },
-  termsSectionContent: {
-    fontSize: fontSize.sm,
-    lineHeight: 20,
-    color: text.primary,
-  },
-  termsScrollView: {
-    flex: 1,
-  },
-  termsButtonContainer: {
-    marginTop: spacing.xl,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  acceptTermsButton: {
-    marginBottom: 0,
   },
   verificationContent: {
     paddingHorizontal: spacing.xl,
