@@ -26,6 +26,8 @@ import PhoneNumberInput from '../components/PhoneNumberInput'
 import { labels } from '../constants/labels'
 import { PencilIcon } from '../icons'
 import { fetchTermsAndConditions, type TermsSection } from '../services/terms'
+import { fetchPrivacyPolicy, type PrivacySection } from '../services/privacy'
+import PolicyDrawer from '../components/PolicyDrawer'
 import { stores } from '../stores'
 import {
   type ClassificationType,
@@ -127,6 +129,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const [isLoadingTerms, setIsLoadingTerms] = useState(false)
   const [readTerms, setReadTerms] = useState(false)
   const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false)
+
+  // Privacy policy state
+  const [showPrivacyDrawer, setShowPrivacyDrawer] = useState(false)
+  const [privacyData, setPrivacyData] = useState<PrivacySection[]>([])
+  const [isLoadingPrivacy, setIsLoadingPrivacy] = useState(false)
 
   // Verification drawer state
   const [showVerificationDrawer, setShowVerificationDrawer] = useState(false)
@@ -932,6 +939,23 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     setShowTermsDrawer(true)
   }
 
+  const handlePrivacyPress = async () => {
+    if (privacyData.length === 0) {
+      setIsLoadingPrivacy(true)
+      try {
+        const privacy = await fetchPrivacyPolicy()
+        setPrivacyData(privacy.sections)
+      } catch (error) {
+        console.error('Failed to load privacy policy:', error)
+        Alert.alert('Privacy Policy Unavailable', 'The privacy policy could not be loaded from the server. Please try again later or contact support.')
+        return
+      } finally {
+        setIsLoadingPrivacy(false)
+      }
+    }
+    setShowPrivacyDrawer(true)
+  }
+
   const handleEdit = () => {
     setTempName(formData.nickName)
     setTempEmail(formData.email)
@@ -1168,6 +1192,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                     {isLoadingTerms ? 'Loading...' : 'terms and conditions'}
                   </Text>
                 </TouchableOpacity>
+                <Text text70 color={colors.textLightColor} style={styles.termsText}>
+                  {' '}and{' '}
+                </Text>
+                <TouchableOpacity onPress={handlePrivacyPress} disabled={isLoadingPrivacy} style={styles.inlineLink}>
+                  <Text style={[styles.linkText, isLoadingPrivacy && { opacity: 0.5 }]}>
+                    {isLoadingPrivacy ? 'Loading...' : 'privacy policy'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
             <Switch
@@ -1187,47 +1219,38 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         </View>
 
         {/* Terms and Conditions Drawer */}
-        <DrawerOverlay
+        <PolicyDrawer
           visible={showTermsDrawer}
           onClose={() => setShowTermsDrawer(false)}
           title="Terms and Conditions"
-          width="100%"
-        >
-          <ScrollView
-            style={styles.termsScrollView}
-            contentContainerStyle={{ paddingBottom: 20 }}
-            showsVerticalScrollIndicator={true}
-          >
-            <View style={styles.termsContent}>
-              {termsData.map((section, index) => (
-                <View key={index} style={styles.termsSection}>
-                  <Text style={styles.termsSectionTitle}>{section.title}</Text>
-                  <Text style={styles.termsSectionContent}>{section.content}</Text>
-                </View>
-              ))}
+          sections={termsData}
+          acceptButtonLabel="Accept Terms and Conditions"
+          onAccept={async () => {
+            setReadTerms(true)
+            updateField('termsAccepted', true)
+            setShowTermsDrawer(false)
 
-              {/* Accept Terms Button at the end of content */}
-              <View style={styles.termsButtonContainer}>
-                <Button
-                  label="Accept Terms"
-                  onPress={async () => {
-                    setReadTerms(true)
-                    updateField('termsAccepted', true)
-                    setShowTermsDrawer(false)
+            // If both email and phone are verified, complete the save
+            if (isEmailVerified && isPhoneVerified) {
+              await performSave()
+            }
+          }}
+          requireScrollToEnd={true}
+        />
 
-                    // If both email and phone are verified, complete the save
-                    if (isEmailVerified && isPhoneVerified) {
-                      await performSave()
-                    }
-                  }}
-                  variant="primary"
-                  size="medium"
-                  style={styles.acceptTermsButton}
-                />
-              </View>
-            </View>
-          </ScrollView>
-        </DrawerOverlay>
+        {/* Privacy Policy Drawer */}
+        <PolicyDrawer
+          visible={showPrivacyDrawer}
+          onClose={() => setShowPrivacyDrawer(false)}
+          title="Privacy Policy"
+          sections={privacyData}
+          acceptButtonLabel="Accept Privacy Policy"
+          onAccept={() => {
+            setShowPrivacyDrawer(false)
+            // Privacy policy is informational, no need to save acceptance
+          }}
+          requireScrollToEnd={true}
+        />
 
         {/* Verification Drawer */}
         <DrawerOverlay
@@ -1687,36 +1710,6 @@ const styles = StyleSheet.create({
   },
   inlineLink: {
     alignSelf: 'flex-start',
-  },
-  termsContent: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm + 2,
-    flexGrow: 1,
-  },
-  termsSection: {
-    marginBottom: spacing.xl + 5,
-  },
-  termsSectionTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: text.primary,
-    marginBottom: spacing.sm + 2,
-  },
-  termsSectionContent: {
-    fontSize: fontSize.sm,
-    lineHeight: 20,
-    color: text.primary,
-  },
-  termsScrollView: {
-    flex: 1,
-  },
-  termsButtonContainer: {
-    marginTop: spacing.xl,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  acceptTermsButton: {
-    marginBottom: 0,
   },
   verificationContent: {
     paddingHorizontal: spacing.xl,

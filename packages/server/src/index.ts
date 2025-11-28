@@ -18,6 +18,7 @@ import { proxyRoutes } from "./routes/proxy.js";
 import { smsRoutes } from "./routes/sms.js";
 import { termsRoutes } from "./routes/terms.js";
 
+import { policyRoutes } from "./routes/policy";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -86,7 +87,7 @@ export default async function (
   await fastify.register(proxyRoutes);
   await fastify.register(smsRoutes);
   await fastify.register(termsRoutes);
-
+  await fastify.register(policyRoutes);
   // Console log when server starts
   fastify.addHook("onReady", async () => {});
   await db.initialize();
