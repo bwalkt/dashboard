@@ -1,5 +1,4 @@
 import type { FastifyRequest } from "fastify";
-import { config } from "../config/env";
 
 const PROXY_TARGET_ID_HEADER = 'x-proxy-target-id';
 

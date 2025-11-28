@@ -41,8 +41,8 @@ services:
 
   authz-service:
     build:
-      context: ../authz-service
-      dockerfile: Dockerfile
+      context: ../../
+      dockerfile: packages/authz-service/Dockerfile
     container_name: pzero-authz-service
     restart: unless-stopped
     networks:

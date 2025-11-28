@@ -13,9 +13,6 @@ export const PUBLIC_ROUTES = [
   "/auth/callback/github",
   "/auth/refresh",
 
-  // Proxy routes
-  "/proxy/*",
-
   // Centrifugo proxy routes (must be public for Centrifugo server to call)
   "/centrifugo/connect",
   "/centrifugo/refresh",

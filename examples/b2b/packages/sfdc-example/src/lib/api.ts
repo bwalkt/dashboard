@@ -25,9 +25,39 @@ const CHALLENGE_ANSWER_STORAGE_KEY = 'challenge_answer'
 /**
  * Get the challenge secret from environment variables
  * This should match the CHALLENGE_SECRET on the server
+ * @throws Error if VITE_CHALLENGE_SECRET is not set in non-development environments
  */
 function getChallengeSecret(): string {
-  return import.meta.env.VITE_CHALLENGE_SECRET || 'default-secret-change-in-production'
+  const secret = import.meta.env.VITE_CHALLENGE_SECRET
+
+  if (!secret) {
+    // In development, allow missing secret with a warning
+    if (import.meta.env.DEV || import.meta.env.MODE === 'development') {
+      console.warn(
+        '⚠️ VITE_CHALLENGE_SECRET is not set. Using default secret for development only. ' +
+          'This should be set in production environments.',
+      )
+      return 'default-secret-change-in-production'
+    }
+
+    // In non-development environments, fail fast
+    throw new Error(
+      'VITE_CHALLENGE_SECRET is required but not set. ' +
+        'Please set VITE_CHALLENGE_SECRET in your environment variables.',
+    )
+  }
+
+  return secret
+}
+
+/**
+ * Validate that VITE_CHALLENGE_SECRET is set at startup
+ * This should be called before any API requests are made
+ * @throws Error if VITE_CHALLENGE_SECRET is not set in non-development environments
+ */
+export function validateChallengeSecret(): void {
+  // Call getChallengeSecret() which will throw if missing in non-dev environments
+  getChallengeSecret()
 }
 
 /**

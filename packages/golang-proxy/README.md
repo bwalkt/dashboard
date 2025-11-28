@@ -94,7 +94,7 @@ The SQLite database contains a `users` table with the following fields:
 Before running docker-compose, create the required external Docker network:
 
 ```bash
-docker network create pzero
+docker network create pzero-network
 ```
 
 Then start the services:
