@@ -1,43 +1,74 @@
-FROM node:22-alpine
+# =============================================================================
+# Build Stage
+# =============================================================================
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm (needs root)
+# Install PostgreSQL client for debugging (optional, can be removed in production)
+RUN apk add --no-cache postgresql-client
+
+# Install pnpm globally
 RUN npm install -g pnpm@10.18.3
 
-# Create a non-root user with a safe UID/GID
-# Using UID/GID 1000:1000 which is standard for non-root users
-RUN addgroup -g 1000 appuser && \
-    adduser -D -u 1000 -G appuser appuser
-
-# Copy workspace files (as root)
+# Copy workspace configuration files
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
+
+# Copy authz-service package.json
 COPY packages/authz-service/package.json ./packages/authz-service/
 COPY packages/authz-service/tsconfig.json ./packages/authz-service/
 
-# Install dependencies with workspace support (as root)
+# Install all dependencies (including dev dependencies for building)
 RUN pnpm install --no-frozen-lockfile
 
-# Copy source code (as root)
+# Copy authz-service source code
 COPY packages/authz-service/src ./packages/authz-service/src
 
-# Build TypeScript (as root)
+# Build TypeScript to JavaScript
 WORKDIR /app/packages/authz-service
 RUN pnpm run build
 
-# Change ownership of application files to non-root user
-# This includes the working directory and all files
-RUN chown -R appuser:appuser /app
+# =============================================================================
+# Production Stage
+# =============================================================================
+FROM node:22-alpine AS production
 
-# Switch to non-root user
-USER appuser
+WORKDIR /app
 
-# Set working directory to the package
+# Install PostgreSQL client for debugging (optional)
+RUN apk add --no-cache postgresql-client
+
+# Install pnpm globally (no tsx needed since we're running compiled JS)
+RUN npm install -g pnpm@10.18.3
+
+# Copy workspace configuration files
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
+
+# Copy authz-service package.json and built dist directory (not source files)
+COPY --from=builder /app/packages/authz-service/package.json ./packages/authz-service/
+COPY --from=builder /app/packages/authz-service/dist ./packages/authz-service/dist
+
+# Copy the .pnpm store from builder (contains all built packages)
+# This allows pnpm to reuse the built packages without rebuilding
+COPY --from=builder /app/node_modules/.pnpm ./node_modules/.pnpm
+
+# Install production dependencies
+# pnpm will link to packages already in .pnpm store
+RUN pnpm install --prod --no-frozen-lockfile
+
+# Clean up unnecessary files to further reduce image size
+RUN rm -rf /tmp/* /var/cache/apk/* && \
+    find /app/node_modules -type f -name "*.map" -delete 2>/dev/null || true && \
+    find /app/node_modules -type f -name "*.ts" ! -path "*/node_modules/@types/*" -delete 2>/dev/null || true && \
+    find /app/node_modules -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "docs" \) -prune -exec rm -rf {} + 2>/dev/null || true && \
+    find /app/node_modules -type f \( -name "README.md" -o -name "CHANGELOG.md" -o -name "LICENSE*" -o -name "*.md" \) -delete 2>/dev/null || true
+
 WORKDIR /app/packages/authz-service
 
 # Expose port
 EXPOSE 3000
 
-# Run the server as non-root user
+# Start the server using the compiled JavaScript
+# Environment variables will be provided at runtime via docker-compose
 CMD ["node", "dist/server.js"]
 

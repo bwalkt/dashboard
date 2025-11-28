@@ -1,8 +1,5 @@
-import { lookup } from "dns/promises";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { parse as parseQuery } from "querystring";
-import { config } from "../config/env";
-import { constructProxyURL } from "../services/proxy.service";
+import { constructProxyURL } from "../services/proxy.service.js";
 export async function proxyRoutes(fastify: FastifyInstance): Promise<void> {
   /**
    * ALL /proxy?url=<target_url>&[other_params...]
