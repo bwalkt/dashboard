@@ -6,9 +6,8 @@
   "scripts": {
     "dev": "pnpx vite",
     "build": "pnpx vite build",
+    "check-types": "tsc --noEmit",
     "preview": "pnpx vite preview",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
@@ -82,7 +81,7 @@
     "nuqs": "catalog:",
     "postcss": "catalog:",
     "posthog-js": "catalog:",
-    "react": "19.2.0",
+    "react": "catalog:",
     "react-circle-flags": "^0.0.24",
     "react-day-picker": "catalog:",
     "react-dom": "catalog:",
@@ -113,7 +112,7 @@
     "@types/uuid": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "tw-animate-css": "catalog:",
-    "vite": "^7.2.4"
+    "vite": "catalog:"
   },
   "overrides": {
     "@types/react": "catalog:",

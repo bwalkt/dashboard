@@ -57,21 +57,22 @@ catalog:
   '@sentry/react': 9.19.0
   '@tabler/icons-react': 3.31.0
   '@tailwindcss/postcss': 4.1.13
-  '@tanstack/react-query': 5.90.2
-  '@tanstack/react-query-devtools': 5.90.2
+  '@tanstack/react-query': 5.90.11
+  '@tanstack/react-query-devtools': 5.91.1
   '@tanstack/react-router': 1.135.2
   '@tanstack/react-table': 8.21.3
   '@tanstack/virtual': 3.13.12
   '@tauri-apps/api': 2.8.0
   '@tauri-apps/cli': 2.8.4
   '@types/jest': 29.5.12
-  '@types/node': 22.10.2
+  '@types/node': 22.12.0
   '@types/react': 19.2.6
   '@types/react-dom': 19.2.3
   '@types/react-test-renderer': 19.1.0
   '@types/uuid': 10.0.0
   '@typescript-eslint/eslint-plugin': 8.45.0
   '@vitejs/plugin-react': 5.0.4
+  '@vitest/ui': 4.0.13
   ajv: 8.17.1
   ajv-formats: 3.0.1
   axios: 1.12.2
@@ -108,7 +109,7 @@ catalog:
   react-day-picker: 9.11.2
   react-dom: 19.2.0
   react-dropzone: 14.3.5
-  react-hook-form: 7.54.1
+  react-hook-form: 7.55.0
   react-native: 0.82.1
   react-native-biometrics: 3.0.1
   react-native-ble-nitro: 1.5.0
@@ -147,5 +148,5 @@ catalog:
   uuid: 11.0.3
   vaul: 1.1.2
   vite: 7.1.11
-  vitest: 3.2.4
+  vitest: 4.0.13
   zustand: 5.0.8

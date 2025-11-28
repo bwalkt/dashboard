@@ -1,5 +1,5 @@
 import Redis from 'ioredis'
-import { config } from './env'
+import { config } from './env.js'
 
 class RedisManager {
   private client: Redis

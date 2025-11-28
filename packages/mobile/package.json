@@ -10,7 +10,7 @@
     "testflight": "cd ios && bundle exec fastlane beta",
     "testflight:build": "cd ios && bundle exec fastlane build_only",
     "copy-icons": "node scripts/copy-icons.js",
-    "lint:fix": "biome check --write .",
+    "check-types": "tsc --noEmit",
     "start": "REACT_NATIVE_NO_WATCHMAN=1 react-native start --reset-cache && pnpm run ios",
     "test": "jest",
     "changelog": "node scripts/generate-changelog.js",
@@ -75,7 +75,7 @@
     "@types/react-test-renderer": "catalog:",
     "jest": "catalog:",
     "metro-config": "0.83.3",
-    "react-test-renderer": "19.2.0",
+    "react-test-renderer": "catalog:",
     "typescript": "catalog:"
   },
   "engines": {

@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "node",
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "allowJs": true,
@@ -23,11 +23,19 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "removeComments": false,
+    "removeComments": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "scripts", "**/*.test.ts", "**/*.spec.ts"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "scripts",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
 }

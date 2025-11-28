@@ -32,3 +32,4 @@ clickhouse
 sqlite
 common/zookeeper-1/data
 !common/clickhouse
+.turbo
