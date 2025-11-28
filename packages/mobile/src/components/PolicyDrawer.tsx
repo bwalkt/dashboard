@@ -39,6 +39,8 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
   const scrollViewRef = useRef<ScrollView>(null)
   const [viewHeight, setViewHeight] = useState(0)
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const contentSizeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isShowingAlertRef = useRef(false)
   const [showScrollReminder, setShowScrollReminder] = useState(false)
 
   const handleLayout = (event: LayoutChangeEvent) => {
@@ -75,6 +77,10 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
         clearTimeout(scrollTimeoutRef.current)
         scrollTimeoutRef.current = null
       }
+      if (contentSizeTimeoutRef.current) {
+        clearTimeout(contentSizeTimeoutRef.current)
+        contentSizeTimeoutRef.current = null
+      }
     }
   }, [visible, sections.length, requireScrollToEnd])
 
@@ -110,8 +116,13 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
   const handleContentSizeChange = (contentWidth: number, contentHeight: number) => {
     if (!requireScrollToEnd) return
 
+    // Clear any existing timeout
+    if (contentSizeTimeoutRef.current) {
+      clearTimeout(contentSizeTimeoutRef.current)
+    }
+
     // Use a timeout to check dimensions after layout is complete
-    setTimeout(() => {
+    contentSizeTimeoutRef.current = setTimeout(() => {
       if (scrollViewRef.current) {
         scrollViewRef.current.measure((x, y, width, height, pageX, pageY) => {
           if (contentHeight <= height + 50) {
@@ -151,11 +162,15 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
 
   // Show scroll reminder alert
   useEffect(() => {
-    if (showScrollReminder) {
+    if (showScrollReminder && !isShowingAlertRef.current) {
+      isShowingAlertRef.current = true
       Alert.alert('Reminder', `Please scroll to the end of the ${title.toLowerCase()} to enable the accept button.`, [
         {
           text: 'OK',
-          onPress: () => setShowScrollReminder(false),
+          onPress: () => {
+            setShowScrollReminder(false)
+            isShowingAlertRef.current = false
+          },
         },
       ])
     }

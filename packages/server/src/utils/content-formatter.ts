@@ -2,25 +2,28 @@
  * Utility functions for formatting content data into standardized sections
  */
 
-interface Section {
-  title: string
-  content: string
-}
-
-interface SectionResponse {
-  sections: Section[]
-}
+import type { Section, SectionResponse } from '@pzero/shared/pzero'
 
 /**
  * Converts any nested object structure into formatted sections
  * Uses Object.keys to dynamically navigate the structure
  */
-export function formatDataToSections(data: any, titleMapping?: Record<string, string>): SectionResponse {
+export function formatDataToSections(data: unknown, titleMapping?: Record<string, string>): SectionResponse {
+  // Input validation
+  if (data === null || data === undefined) {
+    return { sections: [] }
+  }
+  
+  if (typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('formatDataToSections expects a non-array object as input')
+  }
+
   const sections: Section[] = []
+  const dataObj = data as Record<string, unknown>
 
   // Process each key in the data object
-  Object.keys(data).forEach(key => {
-    const value = data[key]
+  Object.keys(dataObj).forEach(key => {
+    const value = dataObj[key]
     const title = titleMapping?.[key] || formatTitle(key)
 
     if (typeof value === 'string') {
@@ -29,11 +32,20 @@ export function formatDataToSections(data: any, titleMapping?: Record<string, st
         title,
         content: value
       })
-    } else if (Array.isArray(value)) {
-      // Array value - convert to bullet points
+    } else if (typeof value === 'number' || typeof value === 'boolean') {
+      // Convert primitives to strings
       sections.push({
         title,
-        content: `• ${value.join('\n• ')}`
+        content: String(value)
+      })
+    } else if (Array.isArray(value)) {
+      // Array value - convert to bullet points, handling mixed types
+      const stringItems = value.map(item => 
+        typeof item === 'string' ? item : String(item)
+      )
+      sections.push({
+        title,
+        content: `• ${stringItems.join('\n• ')}`
       })
     } else if (typeof value === 'object' && value !== null) {
       // Nested object - format recursively
@@ -43,6 +55,7 @@ export function formatDataToSections(data: any, titleMapping?: Record<string, st
         content
       })
     }
+    // Skip undefined, null, and function values
   })
 
   return { sections }
@@ -51,25 +64,38 @@ export function formatDataToSections(data: any, titleMapping?: Record<string, st
 /**
  * Format nested objects into readable content
  */
-function formatNestedObject(obj: any, indent = 0): string {
+function formatNestedObject(obj: unknown, indent = 0): string {
+  if (obj === null || obj === undefined) {
+    return ''
+  }
+  
+  if (typeof obj !== 'object' || Array.isArray(obj)) {
+    return String(obj)
+  }
+
   const lines: string[] = []
   const prefix = '  '.repeat(indent)
+  const objRecord = obj as Record<string, unknown>
 
-  Object.keys(obj).forEach(key => {
-    const value = obj[key]
+  Object.keys(objRecord).forEach(key => {
+    const value = objRecord[key]
     const formattedKey = formatTitle(key)
 
     if (typeof value === 'string') {
       lines.push(`${prefix}${formattedKey}: ${value}`)
+    } else if (typeof value === 'number' || typeof value === 'boolean') {
+      lines.push(`${prefix}${formattedKey}: ${String(value)}`)
     } else if (Array.isArray(value)) {
       lines.push(`${prefix}${formattedKey}:`)
       value.forEach(item => {
-        lines.push(`${prefix}• ${item}`)
+        const stringItem = typeof item === 'string' ? item : String(item)
+        lines.push(`${prefix}• ${stringItem}`)
       })
     } else if (typeof value === 'object' && value !== null) {
       lines.push(`${prefix}${formattedKey}:`)
       lines.push(formatNestedObject(value, indent + 1))
     }
+    // Skip undefined, null, and function values
   })
 
   return lines.join('\n')

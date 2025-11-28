@@ -2,9 +2,9 @@ import type { FastifyInstance } from 'fastify'
 import { privacyPolicyData } from '../data/policy.js'
 import { formatDataToSections, PRIVACY_TITLE_MAPPING } from '../utils/content-formatter.js'
 
-export async function policyRoutes(fastify: FastifyInstance) {
+export function policyRoutes(fastify: FastifyInstance) {
   // Privacy Policy endpoint
-  fastify.get('/privacy', async (request, reply) => {
+  fastify.get('/privacy', (request, reply) => {
     try {
       // Format the privacy data into sections using the common utility
       const formattedPrivacy = formatDataToSections(privacyPolicyData, PRIVACY_TITLE_MAPPING)

@@ -56,7 +56,7 @@ interface FormData {
   phoneNumber: string
   classificationType: ClassificationType
   isPrimary: boolean
-  termsAccepted: boolean
+  policiesAccepted: boolean
 }
 
 interface FormErrors {
@@ -88,7 +88,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     phoneNumber: '',
     classificationType: '' as ClassificationType,
     isPrimary: false,
-    termsAccepted: false,
+    policiesAccepted: false,
   })
   const [previousData, setPreviousData] = useState<FormData>(formData)
   const [errors, setErrors] = useState<FormErrors>({})
@@ -211,20 +211,41 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
       const phoneVerified = SettingsStore.getItem(settingsKeys.phoneVerified) || false
       const emailVerified = SettingsStore.getItem(settingsKeys.emailVerified) || false
-      const termsAccepted = SettingsStore.getItem(settingsKeys.termsAccepted) || false
+      // Migrate from old 'termsAccepted' to new 'policiesAccepted' key
+      let policiesAccepted = SettingsStore.getItem(settingsKeys.policiesAccepted)
+      if (policiesAccepted === null || policiesAccepted === undefined) {
+        // Try to migrate from old key name
+        const oldTermsAccepted = SettingsStore.getItem('termsAccepted')
+        if (oldTermsAccepted !== null && oldTermsAccepted !== undefined) {
+          policiesAccepted = oldTermsAccepted
+          // Migrate the value to new key
+          SettingsStore.setItem({ key: settingsKeys.policiesAccepted, data: oldTermsAccepted })
+          // Remove old key (optional cleanup)
+          // SettingsStore.removeItem('termsAccepted')
+        } else {
+          policiesAccepted = false
+        }
+      }
       // Auto-set classification based on email if classification is empty or unknown
       if (email && (!classificationType || classificationType === 'unknown')) {
         const isBusiness = isBusinessEmail(email)
         classificationType = isBusiness ? 'corp' : 'personal'
       }
-      setPreviousData({ nickName, email, phoneNumber, classificationType, isPrimary, termsAccepted })
+      setPreviousData({
+        nickName,
+        email,
+        phoneNumber,
+        classificationType,
+        isPrimary,
+        policiesAccepted: Boolean(policiesAccepted),
+      })
       setFormData({
         nickName,
         email,
         phoneNumber,
         classificationType: (classificationType || 'unknown') as ClassificationType,
         isPrimary: isPrimary as boolean,
-        termsAccepted: termsAccepted as boolean,
+        policiesAccepted: Boolean(policiesAccepted),
       })
       setIsPhoneVerified(phoneVerified as boolean)
       setIsEmailVerified(emailVerified as boolean)
@@ -325,7 +346,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         { key: settingsKeys.email, data: formData.email },
         { key: settingsKeys.phone, data: formData.phoneNumber },
         { key: settingsKeys.classificationType, data: formData.classificationType },
-        { key: settingsKeys.termsAccepted, data: formData.termsAccepted },
+        { key: settingsKeys.policiesAccepted, data: formData.policiesAccepted },
       ]
 
       for (const operation of saveOperations) {
@@ -518,7 +539,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       formData.phoneNumber !== previousData.phoneNumber ||
       formData.classificationType !== previousData.classificationType ||
       formData.isPrimary !== previousData.isPrimary ||
-      formData.termsAccepted !== previousData.termsAccepted
+      formData.policiesAccepted !== previousData.policiesAccepted
     )
   }
 
@@ -629,7 +650,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       setVerificationAttempts(0)
 
       // Check if terms need to be accepted
-      if (!formData.termsAccepted) {
+      if (!formData.policiesAccepted) {
         setShowVerificationDrawer(false)
         handleTermsPress()
       } else {
@@ -838,7 +859,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             setVerificationAttempts(0)
             setIsVerificationLocked(false)
             setVerificationStep('phone')
-          } else if (!formData.termsAccepted) {
+          } else if (!formData.policiesAccepted) {
             // If phone doesn't need verification but terms not accepted, show terms
             setShowVerificationDrawer(false)
             handleTermsPress()
@@ -1208,7 +1229,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
               </View>
             </View>
             <Switch
-              value={formData.termsAccepted && readTerms && readPrivacy}
+              value={formData.policiesAccepted && readTerms && readPrivacy}
               onValueChange={value => {
                 if (value) {
                   // User is checking the box - show terms first, then privacy
@@ -1218,11 +1239,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                     handlePrivacyPress()
                   } else {
                     // Both already read, just update the field
-                    updateField('termsAccepted', true)
+                    updateField('policiesAccepted', true)
                   }
                 } else {
                   // User is unchecking - reset both
-                  updateField('termsAccepted', false)
+                  updateField('policiesAccepted', false)
                   setReadTerms(false)
                   setReadPrivacy(false)
                 }
@@ -1255,7 +1276,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
               handlePrivacyPress()
             } else {
               // Both terms and privacy read, update the field and save if ready
-              updateField('termsAccepted', true)
+              updateField('policiesAccepted', true)
 
               // If both email and phone are verified, complete the save
               if (isEmailVerified && isPhoneVerified) {
@@ -1288,7 +1309,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             setShowPrivacyDrawer(false)
 
             // Now both terms and privacy are read, update the field and save if ready
-            updateField('termsAccepted', true)
+            updateField('policiesAccepted', true)
 
             // If both email and phone are verified, complete the save
             if (isEmailVerified && isPhoneVerified) {
