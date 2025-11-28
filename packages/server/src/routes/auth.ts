@@ -5,12 +5,12 @@ import type {
   UserResponse,
 } from "@pzero/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { config } from "../config/env";
-import { redis } from "../config/redis";
-import { authenticateToken } from "../middleware/auth";
-import { authService } from "../services/auth.service";
-import { emailService } from "../services/email.service";
-import { userService } from "../services/user.service";
+import { config } from "../config/env.js";
+import { redis } from "../config/redis.js";
+import { authenticateToken } from "../middleware/auth.js";
+import { authService } from "../services/auth.service.js";
+import { emailService } from "../services/email.service.js";
+import { userService } from "../services/user.service.js";
 
 declare module "fastify" {
   interface FastifyInstance {

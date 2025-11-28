@@ -10,7 +10,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import { config } from "../config/env";
+import { config } from "../config/env.js";
 
 interface SlackStyleConfirmEmailProps {
   confirmationCode?: string;

@@ -11,8 +11,8 @@ import {
 import { addDays } from "date-fns";
 import type { FastifyInstance } from "fastify";
 import SuperJSON from "superjson";
-import { authenticateToken } from "../middleware/auth";
-import { calculateSpecificPercentile } from "../utils/percentile";
+import { authenticateToken } from "../middleware/auth.js";
+import { calculateSpecificPercentile } from "../utils/percentile.js";
 
 // Define types from the portal package - we'll need to move these to shared
 interface SearchParams {

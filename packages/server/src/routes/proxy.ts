@@ -1,7 +1,7 @@
 import { lookup } from "dns/promises";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { parse as parseQuery } from "querystring";
-import { config } from "../config/env";
+import { config } from "../config/env.js";
 
 // Security constants
 const MaxResponseSize = 10 * 1024 * 1024; // 10MB

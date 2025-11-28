@@ -1,4 +1,4 @@
-import { PUBLIC_ROUTE_PATTERNS, PUBLIC_ROUTES } from "../constants/routes";
+import { PUBLIC_ROUTE_PATTERNS, PUBLIC_ROUTES } from "../constants/routes.js";
 
 export interface RouteInfo {
   path: string;

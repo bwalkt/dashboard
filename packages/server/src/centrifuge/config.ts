@@ -1,5 +1,5 @@
-import { config as envConfig } from "../config/env";
-import { parseRedisUrl } from "../config/redis-url";
+import { config as envConfig } from "../config/env.js";
+import { parseRedisUrl } from "../config/redis-url.js";
 
 // Parse Redis URL to extract components for Centrifuge
 const parsedRedis = parseRedisUrl(envConfig.REDIS_URL);

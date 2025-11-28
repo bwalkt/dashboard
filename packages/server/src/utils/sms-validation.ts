@@ -2,9 +2,9 @@ import type { ErrorResponse } from "@pzero/shared";
 import { formatPhoneE164, validateUSPhoneNumber } from "@pzero/shared/phone";
 import { randomInt } from "crypto";
 import type { FastifyReply } from "fastify";
-import { config } from "../config/env";
-import { redis } from "../config/redis";
-import { twilioService } from "../services/twilio.service";
+import { config } from "../config/env.js";
+import { redis } from "../config/redis.js";
+import { twilioService } from "../services/twilio.service.js";
 
 /**
  * Generate and store a verification code in Redis (for custom SMS)

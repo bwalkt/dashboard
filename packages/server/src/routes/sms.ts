@@ -1,15 +1,15 @@
 import type { ErrorResponse } from "@pzero/shared";
 import { formatPhoneE164 } from "@pzero/shared/phone";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { config } from "../config/env";
-import { redis } from "../config/redis";
-import { twilioService } from "../services/twilio.service";
+import { config } from "../config/env.js";
+import { redis } from "../config/redis.js";
+import { twilioService } from "../services/twilio.service.js";
 import {
   checkSmsRateLimit,
   resendSmsVerification,
   sendSmsVerification,
   validatePhoneNumber,
-} from "../utils/sms-validation";
+} from "../utils/sms-validation.js";
 
 export async function smsRoutes(fastify: FastifyInstance): Promise<void> {
   /**
@@ -91,7 +91,7 @@ export async function smsRoutes(fastify: FastifyInstance): Promise<void> {
 
           if (isValid) {
             // Delete the verification code after successful verification
-            await redis.del(verificationKey);
+            await redis.delete(verificationKey);
           }
         } else {
           // Twilio Verify API verification

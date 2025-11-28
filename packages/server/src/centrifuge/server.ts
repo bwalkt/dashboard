@@ -3,9 +3,9 @@ import * as protoLoader from "@grpc/proto-loader";
 import axios from "axios";
 import path from "path";
 import { fileURLToPath } from "url";
-import { createAuthProxy } from "./auth-proxy";
-import { centrifugeConfig } from "./config";
-import { createExtProcService } from "./grpc/services/ext-proc";
+import { createAuthProxy } from "./auth-proxy.js";
+import { centrifugeConfig } from "./config.js";
+import { createExtProcService } from "./grpc/services/ext-proc.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

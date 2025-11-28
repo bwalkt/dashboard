@@ -1,10 +1,10 @@
 import { createHash } from "crypto";
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import fp from "fastify-plugin";
-import { config } from "../config/env";
-import { redis } from "../config/redis";
-import { JWTService } from "../services/jwt.service";
-import { isPublicPath } from "./route-registry";
+import { config } from "../config/env.js";
+import { redis } from "../config/redis.js";
+import { JWTService } from "../services/jwt.service.js";
+import { isPublicPath } from "./route-registry.js";
 
 // Route registry now uses declarative approach - no need to cache paths
 

@@ -12,7 +12,7 @@ import {
   isPublicPath,
   ProcessingStatus,
 } from "@pzero/shared/grpc";
-import { AuthProxy } from "../../auth-proxy";
+import { AuthProxy } from "../../auth-proxy.js";
 
 export function createExtProcService(authProxy: AuthProxy) {
   return {
@@ -71,7 +71,7 @@ export function createExtProcService(authProxy: AuthProxy) {
                       status: ProcessingStatus.CONTINUE_AND_REPLACE,
                       header_mutation: {
                         set_headers: createAuthHeaders(
-                          authResult.user.id,
+                          String(authResult.user.id),
                           authResult.user.email,
                         ),
                         remove_headers: ["x-custom-auth"], // Remove original token for security
