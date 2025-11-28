@@ -40,6 +40,10 @@ export function formatDataToSections(data: unknown, titleMapping?: Record<string
       })
     } else if (Array.isArray(value)) {
       // Array value - convert to bullet points, handling mixed types
+      if (value.length === 0) {
+        // Skip empty arrays to avoid lone bullet character
+        return
+      }
       const stringItems = value.map(item => 
         typeof item === 'string' ? item : String(item)
       )

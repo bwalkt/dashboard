@@ -128,7 +128,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const [termsData, setTermsData] = useState<Section[]>([])
   const [isLoadingTerms, setIsLoadingTerms] = useState(false)
   const [readTerms, setReadTerms] = useState(false)
-  const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false)
 
   // Privacy policy state
   const [showPrivacyDrawer, setShowPrivacyDrawer] = useState(false)
@@ -941,9 +940,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   }
 
   const handleTermsPress = async () => {
-    // Reset scroll state when opening
-    setHasScrolledToEnd(false)
-
     if (termsData.length === 0) {
       setIsLoadingTerms(true)
       try {
