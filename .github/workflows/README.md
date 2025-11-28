@@ -36,6 +36,12 @@ Each service has an independent workflow file:
 - **Example**: `dokploy.example.com`
 - **How to obtain**: Your Dokploy instance URL
 
+#### `DOKPLOY_TOKEN`
+- **Type**: Manual
+- **Description**: API token for authenticating with Dokploy API
+- **Used by**: All deployment jobs in all workflows
+- **How to obtain**: Generate from your Dokploy instance's API settings
+
 ### Compose IDs
 
 Compose IDs are hardcoded in the workflow files. Each service maps to a Dokploy compose deployment:
@@ -84,7 +90,7 @@ These secrets are used as build arguments for the Portal Docker image. They are 
 
 ## Workflow Summary
 
-**Base Required Secrets** (all workflows): `DOKPLOY_DOMAIN`
+**Base Required Secrets** (all workflows): `DOKPLOY_DOMAIN`, `DOKPLOY_TOKEN`
 
 | Workflow | Additional Required Secrets | Optional Secrets | Compose ID |
 |----------|---------------------------|------------------|------------|

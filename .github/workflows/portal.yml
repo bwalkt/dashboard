@@ -56,6 +56,7 @@ jobs:
           curl https://${{ secrets.DOKPLOY_DOMAIN }}/api/compose.deploy \
             --request POST \
             --header 'Content-Type: application/json' \
+            --header 'x-api-key: ${{ secrets.DOKPLOY_TOKEN }}' \
             --data '{
             "composeId": "CxPNwWpzxuNCU-FSQby1E"
           }'

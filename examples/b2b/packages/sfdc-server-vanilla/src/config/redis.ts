@@ -6,7 +6,9 @@ class RedisManager {
   private initialized: boolean = false
 
   constructor() {
-    this.client = new Redis(config.REDIS_URL, {
+    // ioredis supports connection via URL directly
+    // We can pass the URL string or parse it for additional options
+    const redisOptions: RedisOptions = {
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         const delay = Math.min(times * 50, 2000)
@@ -20,14 +22,17 @@ class RedisManager {
         }
         return false
       },
-    })
+    }
+
+    // ioredis can accept a URL string directly
+    this.client = new Redis(config.REDIS_URL, redisOptions)
 
     // Handle connection events
     this.client.on('connect', () => {
       console.log('✅ Redis client connected')
     })
 
-    this.client.on('error', (err: Error) => {
+    this.client.on('error', err => {
       console.error('❌ Redis client error:', err)
     })
 
