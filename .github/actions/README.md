@@ -4,28 +4,7 @@ This directory contains reusable composite actions that simplify the main workfl
 
 ## Available Actions
 
-### 1. `detect-changes/`
-**Purpose**: Detects which services have changed and need to be built.
-
-**Inputs**:
-- `force_build_all`: Boolean to force build all services (default: false)
-- `event_name`: GitHub event name (pull_request, push, workflow_dispatch)
-- `target_branch`: Target branch for comparison (default: main)
-
-**Outputs**:
-- `services`: JSON array of service names that need to be built
-
-**Usage**:
-```yaml
-- name: Detect service changes
-  uses: ./.github/actions/detect-changes
-  with:
-    force_build_all: ${{ github.event.inputs.force_build_all || 'false' }}
-    event_name: ${{ github.event_name }}
-    target_branch: ${{ github.event.inputs.target_branch || 'main' }}
-```
-
-### 2. `build-summary/`
+### 1. `build-summary/`
 **Purpose**: Generates build summaries for GitHub step summary.
 
 **Inputs**:
@@ -52,44 +31,32 @@ This directory contains reusable composite actions that simplify the main workfl
 ```
 
 ### 3. `docker-build-push/`
-**Purpose**: Builds and optionally pushes Docker images (existing action).
+**Purpose**: Builds and optionally pushes Docker images.
 
-## Service Configuration
+### 4. `trigger-dokploy-deployment/`
+**Purpose**: Triggers a Dokploy deployment via webhook.
 
-The `service-config/services.json` file contains all service definitions:
+## Workflow Structure
 
-```json
-{
-  "services": [
-    {
-      "name": "auth",
-      "dockerfile": "api/auth/Dockerfile",
-      "context": "api/auth",
-      "image_name": "auth-service"
-    }
-  ]
-}
-```
+Each service has its own workflow file in `.github/workflows/` that:
+- Uses the `paths` property to trigger only when relevant files change
+- Contains its own build and deploy steps
+- Is independent of other service workflows
 
 ### Adding a New Service
 
-1. Add the service definition to `service-config/services.json`
-2. The workflow will automatically pick it up
-3. No changes needed to the main workflow file
-
-### Modifying Service Configuration
-
-- Update the JSON file
-- All workflows using this configuration will automatically reflect changes
-- No need to modify multiple workflow files
+1. Create a new workflow file in `.github/workflows/` (e.g., `my-service.yml`)
+2. Configure the `paths` property to watch the service's directory
+3. Add build and deploy steps as needed
+4. Reference the appropriate composite actions
 
 ## Benefits of This Approach
 
-1. **Maintainability**: Service configurations are centralized in one JSON file
-2. **Reusability**: Actions can be used across multiple workflows
-3. **Readability**: Main workflow files are much cleaner and easier to understand
-4. **Testing**: Actions can be tested independently
-5. **Versioning**: Actions can be versioned and reused across repositories
+1. **Isolation**: Each service workflow is independent
+2. **Efficiency**: Workflows only run when relevant files change
+3. **Reusability**: Actions can be used across multiple workflows
+4. **Readability**: Each workflow file is focused on a single service
+5. **Testing**: Actions can be tested independently
 
 ## Best Practices
 
