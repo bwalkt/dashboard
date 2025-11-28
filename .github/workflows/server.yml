@@ -45,9 +45,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Trigger Dokploy deployment
-        uses: ./.github/actions/trigger-dokploy-deployment
-        with:
-          webhook_url: ${{ secrets.DOKPLOY_WEBHOOK_URL_SERVER }}
-          dokploy_token: ${{ secrets.DOKPLOY_TOKEN }}
+      - name: Trigger Dokploy Deployment
+        run: |
+          curl -X 'POST' \
+          'https://${{ secrets.DOKPLOY_DOMAIN }}/api/trpc/application.deploy' \
+          -H 'accept: application/json' \
+          -H 'x-api-key: ${{ secrets.DOKPLOY_API_KEY }}' \
+          -H 'Content-Type: application/json' \
+          -d '{
+            "json":{
+              "applicationId": "FVP2k-L1wjdtK8w_pzUjq"
+            }
+          }'
 

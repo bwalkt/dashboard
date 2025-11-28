@@ -33,8 +33,6 @@ This directory contains reusable composite actions that simplify the main workfl
 ### 3. `docker-build-push/`
 **Purpose**: Builds and optionally pushes Docker images.
 
-### 4. `trigger-dokploy-deployment/`
-**Purpose**: Triggers a Dokploy deployment via webhook.
 
 ## Workflow Structure
 
