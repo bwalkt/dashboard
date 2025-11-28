@@ -22,26 +22,9 @@ export const fetchContent = async (type: ContentType): Promise<SectionResponse> 
       return parseContent(content, type)
     }
 
-    // If response is an object, try to structure it
+    // If response is an object but not in the expected format, throw error
     if (typeof content === 'object' && content !== null) {
-      // If it's an array, treat each item as a section
-      if (Array.isArray(content)) {
-        const sections = content.map((item, index) => ({
-          title: item.title || `Section ${index + 1}`,
-          content: item.content || JSON.stringify(item, null, 2),
-        }))
-        return { sections }
-      }
-
-      // If it's a single object, create one section
-      return {
-        sections: [
-          {
-            title: type === 'terms' ? 'Terms and Conditions' : 'Privacy Policy',
-            content: JSON.stringify(content, null, 2),
-          },
-        ],
-      }
+      throw new Error(`Server returned unexpected format for ${type}`)
     }
 
     // Fallback to default content
