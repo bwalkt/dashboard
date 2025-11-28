@@ -59,9 +59,7 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
       } else if (requireScrollToEnd) {
         // Start timeout to remind user to scroll after 10 seconds
         scrollTimeoutRef.current = setTimeout(() => {
-          if (!hasScrolledToEnd) {
-            setShowScrollReminder(true)
-          }
+          setShowScrollReminder(true)
         }, 10000) // 10 seconds
       }
     } else {
