@@ -50,7 +50,7 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
     if (visible) {
       setHasScrolledToEnd(false)
       setShowScrollReminder(false)
-      
+
       // If no sections, enable button immediately
       if (sections.length === 0) {
         setHasScrolledToEnd(true)
@@ -124,17 +124,17 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
 
   const handleClose = () => {
     if (!hasBeenAccepted && sections.length > 0) {
-      Alert.alert(
-        'Please Accept the Document',
-        `Please read and accept the ${title.toLowerCase()} to continue.`,
-        [
-          { text: 'Continue Reading', style: 'default' },
-          { text: 'Close Anyway', style: 'destructive', onPress: () => {
+      Alert.alert('Please Accept the Document', `Please read and accept the ${title.toLowerCase()} to continue.`, [
+        { text: 'Continue Reading', style: 'default' },
+        {
+          text: 'Close Anyway',
+          style: 'destructive',
+          onPress: () => {
             // Force close without validation
             onClose()
-          }}
-        ]
-      )
+          },
+        },
+      ])
       return // Don't close automatically - wait for user choice
     }
     // Only close if validation passes or no validation needed
@@ -152,16 +152,12 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
   // Show scroll reminder alert
   useEffect(() => {
     if (showScrollReminder) {
-      Alert.alert(
-        'Reminder',
-        `Please scroll to the end of the ${title.toLowerCase()} to enable the accept button.`,
-        [
-          { 
-            text: 'OK', 
-            onPress: () => setShowScrollReminder(false)
-          }
-        ]
-      )
+      Alert.alert('Reminder', `Please scroll to the end of the ${title.toLowerCase()} to enable the accept button.`, [
+        {
+          text: 'OK',
+          onPress: () => setShowScrollReminder(false),
+        },
+      ])
     }
   }, [showScrollReminder, title])
 

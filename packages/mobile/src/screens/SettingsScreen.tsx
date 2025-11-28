@@ -1256,7 +1256,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             } else {
               // Both terms and privacy read, update the field and save if ready
               updateField('termsAccepted', true)
-              
+
               // If both email and phone are verified, complete the save
               if (isEmailVerified && isPhoneVerified) {
                 try {
@@ -1286,10 +1286,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
           onAccept={async () => {
             setReadPrivacy(true)
             setShowPrivacyDrawer(false)
-            
+
             // Now both terms and privacy are read, update the field and save if ready
             updateField('termsAccepted', true)
-            
+
             // If both email and phone are verified, complete the save
             if (isEmailVerified && isPhoneVerified) {
               try {
