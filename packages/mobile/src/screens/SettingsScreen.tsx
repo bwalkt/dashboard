@@ -1,5 +1,6 @@
 import { api } from '@pzero/shared/api'
 import { DEFAULT_COUNTRY, getAllowedCountryCodes, isValidPhoneNumber, validatePhoneNumber } from '@pzero/shared/phone'
+import type { Section } from '@pzero/shared/pzero'
 import { isBusinessEmail } from '@pzero/shared/validator'
 import type { NavigationProp } from '@react-navigation/native'
 import Ajv from 'ajv'
@@ -26,8 +27,7 @@ import PhoneNumberInput from '../components/PhoneNumberInput'
 import PolicyDrawer from '../components/PolicyDrawer'
 import { labels } from '../constants/labels'
 import { PencilIcon } from '../icons'
-import { fetchPrivacyPolicy, type PrivacySection } from '../services/privacy'
-import { fetchTermsAndConditions, type TermsSection } from '../services/terms'
+import { fetchPrivacyPolicy, fetchTermsAndConditions } from '../services/content'
 import { stores } from '../stores'
 import {
   type ClassificationType,
@@ -125,14 +125,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
   // Terms and conditions state
   const [showTermsDrawer, setShowTermsDrawer] = useState(false)
-  const [termsData, setTermsData] = useState<TermsSection[]>([])
+  const [termsData, setTermsData] = useState<Section[]>([])
   const [isLoadingTerms, setIsLoadingTerms] = useState(false)
   const [readTerms, setReadTerms] = useState(false)
   const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false)
 
   // Privacy policy state
   const [showPrivacyDrawer, setShowPrivacyDrawer] = useState(false)
-  const [privacyData, setPrivacyData] = useState<PrivacySection[]>([])
+  const [privacyData, setPrivacyData] = useState<Section[]>([])
   const [isLoadingPrivacy, setIsLoadingPrivacy] = useState(false)
 
   // Verification drawer state

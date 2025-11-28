@@ -1,23 +1,7 @@
 import type { FastifyInstance } from "fastify";
+import type { Section, SectionResponse } from "../types/index.js";
 
-export interface TermsSection {
-  title: string;
-  content: string;
-}
-
-export interface TermsResponse {
-  sections: TermsSection[];
-}
-
-export async function termsRoutes(fastify: FastifyInstance): Promise<void> {
-  // GET /terms - Get terms and conditions
-  fastify.get<{
-    Reply: TermsResponse | { error: string };
-  }>("/terms", async (request, reply) => {
-    try {
-      // In production, this would come from a database or CMS
-      // For now, returning static terms data
-      const termsData: TermsResponse = {
+   const termsData: SectionResponse = {
         sections: [
           {
             title: "User & Customer Responsibilities",
@@ -41,6 +25,15 @@ export async function termsRoutes(fastify: FastifyInstance): Promise<void> {
           },
         ],
       };
+export async function termsRoutes(fastify: FastifyInstance): Promise<void> {
+  // GET /terms - Get terms and conditions
+  fastify.get<{
+    Reply: SectionResponse | { error: string };
+  }>("/terms", async (request, reply) => {
+    try {
+      // In production, this would come from a database or CMS
+      // For now, returning static terms data
+   
 
       return reply.code(200).send(termsData);
     } catch (error) {

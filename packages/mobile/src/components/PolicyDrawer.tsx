@@ -1,9 +1,8 @@
+import type { Section } from '@pzero/shared/pzero'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, ScrollView, StyleSheet } from 'react-native'
 import { Text, View } from 'react-native-ui-lib'
-import type { PrivacySection } from '../services/privacy'
-import type { TermsSection } from '../services/terms'
 import { borderRadius, fontSize, fontWeight, spacing, text } from '../theme'
 import Button from './Button'
 import DrawerOverlay from './DrawerOverlay'
@@ -13,7 +12,7 @@ interface PolicyDrawerProps {
   onClose: () => void
   onAccept: () => void
   title: string
-  sections: TermsSection[] | PrivacySection[]
+  sections: Section[]
   acceptButtonLabel?: string
   requireScrollToEnd?: boolean
 }

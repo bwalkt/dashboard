@@ -14,10 +14,10 @@ import { centrifugoRoutes } from "./routes/centrifugo.js";
 import { emailRoutes } from "./routes/email.js";
 import { faqRoutes } from "./routes/faq.js";
 import { gatewayRoutes } from "./routes/gateway.js";
+import { policyRoutes } from "./routes/policy.js";
 import { proxyRoutes } from "./routes/proxy.js";
 import { smsRoutes } from "./routes/sms.js";
 import { termsRoutes } from "./routes/terms.js";
-import { policyRoutes } from "./routes/policy";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

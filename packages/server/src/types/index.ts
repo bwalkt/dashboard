@@ -17,3 +17,10 @@ export interface GitHubTokenResponse {
   token_type: string;
   scope: string;
 }
+export interface Section {
+  title: string;
+  content: string;
+}
+export interface SectionResponse {
+  sections: Section[];
+}
