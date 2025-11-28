@@ -134,6 +134,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const [showPrivacyDrawer, setShowPrivacyDrawer] = useState(false)
   const [privacyData, setPrivacyData] = useState<Section[]>([])
   const [isLoadingPrivacy, setIsLoadingPrivacy] = useState(false)
+  const [readPrivacy, setReadPrivacy] = useState(false)
 
   // Verification drawer state
   const [showVerificationDrawer, setShowVerificationDrawer] = useState(false)
@@ -1207,12 +1208,23 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
               </View>
             </View>
             <Switch
-              value={formData.termsAccepted}
+              value={formData.termsAccepted && readTerms && readPrivacy}
               onValueChange={value => {
-                if (value && !readTerms) {
-                  handleTermsPress()
+                if (value) {
+                  // User is checking the box - show terms first, then privacy
+                  if (!readTerms) {
+                    handleTermsPress()
+                  } else if (!readPrivacy) {
+                    handlePrivacyPress()
+                  } else {
+                    // Both already read, just update the field
+                    updateField('termsAccepted', true)
+                  }
                 } else {
-                  updateField('termsAccepted', value)
+                  // User is unchecking - reset both
+                  updateField('termsAccepted', false)
+                  setReadTerms(false)
+                  setReadPrivacy(false)
                 }
               }}
               onColor={colors.primaryColor}
@@ -1225,22 +1237,34 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         {/* Terms and Conditions Drawer */}
         <PolicyDrawer
           visible={showTermsDrawer}
-          onClose={() => setShowTermsDrawer(false)}
+          onClose={() => {
+            // Note: The PolicyDrawer component handles the close logic internally
+            // This just updates the local state after the drawer decides to close
+            setShowTermsDrawer(false)
+          }}
           title="Terms and Conditions"
           sections={termsData}
           acceptButtonLabel="Accept Terms and Conditions"
+          hasBeenAccepted={readTerms}
           onAccept={async () => {
             setReadTerms(true)
-            updateField('termsAccepted', true)
             setShowTermsDrawer(false)
 
-            // If both email and phone are verified, complete the save
-            if (isEmailVerified && isPhoneVerified) {
-              try {
-                await performSave()
-              } catch (error) {
-                console.error('Failed to save after accepting terms:', error)
-                // performSave already shows an Alert on failure
+            // Check if privacy needs to be read next
+            if (!readPrivacy) {
+              handlePrivacyPress()
+            } else {
+              // Both terms and privacy read, update the field and save if ready
+              updateField('termsAccepted', true)
+              
+              // If both email and phone are verified, complete the save
+              if (isEmailVerified && isPhoneVerified) {
+                try {
+                  await performSave()
+                } catch (error) {
+                  console.error('Failed to save after accepting terms:', error)
+                  // performSave already shows an Alert on failure
+                }
               }
             }
           }}
@@ -1250,13 +1274,31 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         {/* Privacy Policy Drawer */}
         <PolicyDrawer
           visible={showPrivacyDrawer}
-          onClose={() => setShowPrivacyDrawer(false)}
+          onClose={() => {
+            // Note: The PolicyDrawer component handles the close logic internally
+            // This just updates the local state after the drawer decides to close
+            setShowPrivacyDrawer(false)
+          }}
           title="Privacy Policy"
           sections={privacyData}
           acceptButtonLabel="Accept Privacy Policy"
-          onAccept={() => {
+          hasBeenAccepted={readPrivacy}
+          onAccept={async () => {
+            setReadPrivacy(true)
             setShowPrivacyDrawer(false)
-            // Privacy policy is informational, no need to save acceptance
+            
+            // Now both terms and privacy are read, update the field and save if ready
+            updateField('termsAccepted', true)
+            
+            // If both email and phone are verified, complete the save
+            if (isEmailVerified && isPhoneVerified) {
+              try {
+                await performSave()
+              } catch (error) {
+                console.error('Failed to save after accepting privacy:', error)
+                // performSave already shows an Alert on failure
+              }
+            }
           }}
           requireScrollToEnd={true}
         />

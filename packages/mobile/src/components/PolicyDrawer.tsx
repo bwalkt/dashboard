@@ -22,6 +22,7 @@ interface PolicyDrawerProps {
   sections: Section[]
   acceptButtonLabel?: string
   requireScrollToEnd?: boolean
+  hasBeenAccepted?: boolean
 }
 
 const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
@@ -32,10 +33,13 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
   sections,
   acceptButtonLabel = 'Accept',
   requireScrollToEnd = true,
+  hasBeenAccepted = false,
 }) => {
   const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false)
   const scrollViewRef = useRef<ScrollView>(null)
   const [viewHeight, setViewHeight] = useState(0)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [showScrollReminder, setShowScrollReminder] = useState(false)
 
   const handleLayout = (event: LayoutChangeEvent) => {
     setViewHeight(event.nativeEvent.layout.height)
@@ -45,15 +49,51 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
   useEffect(() => {
     if (visible) {
       setHasScrolledToEnd(false)
+      setShowScrollReminder(false)
+      
       // If no sections, enable button immediately
       if (sections.length === 0) {
         setHasScrolledToEnd(true)
+      } else if (requireScrollToEnd) {
+        // Start timeout to remind user to scroll after 10 seconds
+        scrollTimeoutRef.current = setTimeout(() => {
+          if (!hasScrolledToEnd) {
+            setShowScrollReminder(true)
+          }
+        }, 10000) // 10 seconds
+      }
+    } else {
+      // Clear timeout when drawer closes
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+        scrollTimeoutRef.current = null
       }
     }
-  }, [visible, sections.length])
+
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+        scrollTimeoutRef.current = null
+      }
+    }
+  }, [visible, sections.length, requireScrollToEnd])
+
+  // Clear timeout when user scrolls to end
+  useEffect(() => {
+    if (hasScrolledToEnd && scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current)
+      scrollTimeoutRef.current = null
+      setShowScrollReminder(false)
+    }
+  }, [hasScrolledToEnd])
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (!requireScrollToEnd) return
+
+    // Reset reminder modal if user starts scrolling
+    if (showScrollReminder) {
+      setShowScrollReminder(false)
+    }
 
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent
     const paddingToBottom = 50 // Increased threshold
@@ -70,10 +110,35 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
   const handleContentSizeChange = (contentWidth: number, contentHeight: number) => {
     if (!requireScrollToEnd) return
 
-    // If content fits in the scroll view, enable the button immediately
-    if (viewHeight > 0 && contentHeight <= viewHeight + 50) {
-      setHasScrolledToEnd(true)
+    // Use a timeout to check dimensions after layout is complete
+    setTimeout(() => {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.measure((x, y, width, height, pageX, pageY) => {
+          if (contentHeight <= height + 50) {
+            setHasScrolledToEnd(true)
+          }
+        })
+      }
+    }, 100)
+  }
+
+  const handleClose = () => {
+    if (!hasBeenAccepted && sections.length > 0) {
+      Alert.alert(
+        'Please Accept the Document',
+        `Please read and accept the ${title.toLowerCase()} to continue.`,
+        [
+          { text: 'Continue Reading', style: 'default' },
+          { text: 'Close Anyway', style: 'destructive', onPress: () => {
+            // Force close without validation
+            onClose()
+          }}
+        ]
+      )
+      return // Don't close automatically - wait for user choice
     }
+    // Only close if validation passes or no validation needed
+    onClose()
   }
 
   const handleAccept = () => {
@@ -84,8 +149,24 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
     onAccept()
   }
 
+  // Show scroll reminder alert
+  useEffect(() => {
+    if (showScrollReminder) {
+      Alert.alert(
+        'Reminder',
+        `Please scroll to the end of the ${title.toLowerCase()} to enable the accept button.`,
+        [
+          { 
+            text: 'OK', 
+            onPress: () => setShowScrollReminder(false)
+          }
+        ]
+      )
+    }
+  }, [showScrollReminder, title])
+
   return (
-    <DrawerOverlay visible={visible} onClose={onClose} title={title} width="100%">
+    <DrawerOverlay visible={visible} onClose={handleClose} title={title} width="100%">
       <ScrollView
         ref={scrollViewRef}
         style={styles.scrollView}
