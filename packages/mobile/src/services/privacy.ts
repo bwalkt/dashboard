@@ -57,7 +57,6 @@ export interface PrivacyPolicyData {
   }
 }
 
-
 export interface PrivacySection {
   title: string
   content: string
@@ -126,7 +125,7 @@ const formatPrivacyPolicyToSections = (data: PrivacyPolicyData): PrivacySection[
   })
 
   sections.push({
-    title: '10. Children\'s Privacy',
+    title: "10. Children's Privacy",
     content: data.children_privacy.statement,
   })
 

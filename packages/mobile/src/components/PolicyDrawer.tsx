@@ -1,12 +1,12 @@
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { ScrollView, StyleSheet, Alert } from 'react-native'
+import { Alert, ScrollView, StyleSheet } from 'react-native'
 import { Text, View } from 'react-native-ui-lib'
+import type { PrivacySection } from '../services/privacy'
+import type { TermsSection } from '../services/terms'
+import { borderRadius, fontSize, fontWeight, spacing, text } from '../theme'
 import Button from './Button'
 import DrawerOverlay from './DrawerOverlay'
-import { borderRadius, fontSize, fontWeight, spacing, text } from '../theme'
-import type { TermsSection } from '../services/terms'
-import type { PrivacySection } from '../services/privacy'
 
 interface PolicyDrawerProps {
   visible: boolean

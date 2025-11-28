@@ -17,8 +17,8 @@ import { gatewayRoutes } from "./routes/gateway.js";
 import { proxyRoutes } from "./routes/proxy.js";
 import { smsRoutes } from "./routes/sms.js";
 import { termsRoutes } from "./routes/terms.js";
-
 import { policyRoutes } from "./routes/policy";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 

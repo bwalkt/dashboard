@@ -23,11 +23,11 @@ import Button from '../components/Button'
 import DrawerOverlay from '../components/DrawerOverlay'
 import Header from '../components/Header'
 import PhoneNumberInput from '../components/PhoneNumberInput'
+import PolicyDrawer from '../components/PolicyDrawer'
 import { labels } from '../constants/labels'
 import { PencilIcon } from '../icons'
-import { fetchTermsAndConditions, type TermsSection } from '../services/terms'
 import { fetchPrivacyPolicy, type PrivacySection } from '../services/privacy'
-import PolicyDrawer from '../components/PolicyDrawer'
+import { fetchTermsAndConditions, type TermsSection } from '../services/terms'
 import { stores } from '../stores'
 import {
   type ClassificationType,
@@ -947,7 +947,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         setPrivacyData(privacy.sections)
       } catch (error) {
         console.error('Failed to load privacy policy:', error)
-        Alert.alert('Privacy Policy Unavailable', 'The privacy policy could not be loaded from the server. Please try again later or contact support.')
+        Alert.alert(
+          'Privacy Policy Unavailable',
+          'The privacy policy could not be loaded from the server. Please try again later or contact support.',
+        )
         return
       } finally {
         setIsLoadingPrivacy(false)
@@ -1193,7 +1196,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                   </Text>
                 </TouchableOpacity>
                 <Text text70 color={colors.textLightColor} style={styles.termsText}>
-                  {' '}and{' '}
+                  {' '}
+                  and{' '}
                 </Text>
                 <TouchableOpacity onPress={handlePrivacyPress} disabled={isLoadingPrivacy} style={styles.inlineLink}>
                   <Text style={[styles.linkText, isLoadingPrivacy && { opacity: 0.5 }]}>
