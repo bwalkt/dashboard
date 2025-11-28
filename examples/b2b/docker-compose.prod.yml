@@ -30,15 +30,4 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:1420}
     restart: "no"
     volumes:
-      - type: bind
-        source: ./private.key
-        target: /app/examples/b2b/packages/sfdc-server-vanilla/src/keys/private.key
-        is_directory: false # required by coolify
-        content: | # required by coolify
-          private key content
-      - type: bind
-        source: ./certificate.crt
-        target: /app/examples/b2b/packages/sfdc-server-vanilla/src/keys/certificate.crt
-        is_directory: false # required by coolify
-        content: | # required by coolify
-          certificate content
+      - "../files/keys:/app/examples/b2b/packages/sfdc-server-vanilla/dist/keys"

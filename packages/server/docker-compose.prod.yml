@@ -76,10 +76,6 @@ services:
     ports:
       - "8181:8080" # External port for client requests
       - "9901:9901" # Admin interface
-    volumes:
-      - type: bind
-        source: ./envoy.yaml
-        target: /etc/envoy/envoy.yaml
     command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
     restart: "no"
     environment:
@@ -87,6 +83,8 @@ services:
     depends_on:
       pzero-server:
         condition: service_started
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml
 
 volumes:
   postgres_data:

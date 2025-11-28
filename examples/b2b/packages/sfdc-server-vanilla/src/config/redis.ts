@@ -1,4 +1,4 @@
-import Redis from 'ioredis'
+import Redis, { type RedisOptions } from 'ioredis'
 import { config } from './env.js'
 
 class RedisManager {

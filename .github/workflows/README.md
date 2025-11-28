@@ -36,18 +36,12 @@ Each service has an independent workflow file:
 - **Example**: `dokploy.example.com`
 - **How to obtain**: Your Dokploy instance URL
 
-#### `DOKPLOY_API_KEY`
-- **Type**: Manual
-- **Description**: API key for authenticating with Dokploy API
-- **Used by**: All deployment jobs in all workflows
-- **How to obtain**: Generate from your Dokploy instance's API settings
+### Compose IDs
 
-### Application IDs
+Compose IDs are hardcoded in the workflow files. Each service maps to a Dokploy compose deployment:
 
-Application IDs are hardcoded in the workflow files. Each service maps to a Dokploy application:
-
-| Service | Application ID | Workflow File |
-|---------|---------------|---------------|
+| Service | Compose ID | Workflow File |
+|---------|-----------|---------------|
 | sfdc-example | `uSiEe3hyQaI60cdYKzcD_` | `sfdc-example.yml` |
 | portal (pzero-portal) | `CxPNwWpzxuNCU-FSQby1E` | `portal.yml` |
 | sfdc-server-vanilla | `KV9PMu-zDGF87ouVN9RQM` | `sfdc-server-vanilla.yml` |
@@ -90,14 +84,14 @@ These secrets are used as build arguments for the Portal Docker image. They are 
 
 ## Workflow Summary
 
-**Base Required Secrets** (all workflows): `DOKPLOY_DOMAIN`, `DOKPLOY_API_KEY`
+**Base Required Secrets** (all workflows): `DOKPLOY_DOMAIN`
 
-| Workflow | Additional Required Secrets | Optional Secrets | Application ID |
-|----------|---------------------------|------------------|----------------|
+| Workflow | Additional Required Secrets | Optional Secrets | Compose ID |
+|----------|---------------------------|------------------|------------|
 | `sfdc-example.yml` | None | None | `uSiEe3hyQaI60cdYKzcD_` |
 | `portal.yml` | None | `VITE_BACKEND_URL`, `VITE_USE_PROXY`, `VITE_PROXY_URL`, `VITE_PROXY_TARGET`, `VITE_OTEL_EXPORTER_URL` | `CxPNwWpzxuNCU-FSQby1E` |
 | `sfdc-server-vanilla.yml` | None | None | `KV9PMu-zDGF87ouVN9RQM` |
-| `golang-proxy.yml` | `DOKPLOY_APPLICATION_ID_GOLANG_PROXY` | None | Uses secret |
+| `golang-proxy.yml` | `DOKPLOY_COMPOSE_ID_GOLANG_PROXY` | None | Uses secret |
 | `server.yml` | None | None | `FVP2k-L1wjdtK8w_pzUjq` |
 | `server-postgres.yml` | None | None | `FVP2k-L1wjdtK8w_pzUjq` |
 
@@ -124,8 +118,8 @@ Each workflow follows this process:
 
 2. **Deploy Job** (only on pushes to `main`, not on pull requests):
    - Triggers Dokploy deployment via API call
-   - Uses the hardcoded application ID for the service
-   - Sends POST request to `/api/trpc/application.deploy` endpoint
+   - Uses the hardcoded compose ID for the service
+   - Sends POST request to `/api/compose.deploy` endpoint with `composeId` in the request body
 
 ## Path-Based Triggering
 
@@ -144,7 +138,7 @@ This ensures workflows only run when their respective services are modified, imp
 - All workflows use `GITHUB_TOKEN` which is automatically provided by GitHub Actions
 - Secrets are case-sensitive - ensure exact matches with the names listed above
 - Optional secrets will default to empty strings if not provided, which may cause build issues if the application requires them
-- Application IDs are hardcoded in workflow files (except golang-proxy which uses a secret)
+- Compose IDs are hardcoded in workflow files (except golang-proxy which uses a secret)
 - Keep secrets secure and never commit them to the repository
 - Deployments only occur on pushes to `main` branch, not on pull requests
 
@@ -154,8 +148,7 @@ If workflows are failing:
 
 1. **Check secret names**: Ensure all secret names match exactly (case-sensitive)
 2. **Verify Dokploy domain**: Ensure `DOKPLOY_DOMAIN` is set correctly (without protocol)
-3. **Check Dokploy API key**: Verify the API key has the necessary permissions
-4. **Verify application IDs**: Ensure the hardcoded application IDs match your Dokploy instance
-5. **Review workflow logs**: Check the workflow logs for specific error messages related to missing or invalid secrets
-6. **Test API endpoint**: Verify the Dokploy API endpoint is accessible: `https://<your-domain>/api/trpc/application.deploy`
+3. **Verify compose IDs**: Ensure the hardcoded compose IDs match your Dokploy instance
+4. **Review workflow logs**: Check the workflow logs for specific error messages related to missing or invalid secrets
+5. **Test API endpoint**: Verify the Dokploy API endpoint is accessible: `https://<your-domain>/api/compose.deploy`
 
