@@ -1,7 +1,14 @@
 import type { Section } from '@pzero/shared/pzero'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { Alert, ScrollView, StyleSheet } from 'react-native'
+import {
+  Alert,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  ScrollView,
+  StyleSheet,
+} from 'react-native'
 import { Text, View } from 'react-native-ui-lib'
 import { borderRadius, fontSize, fontWeight, spacing, text } from '../theme'
 import Button from './Button'
@@ -28,26 +35,24 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
 }) => {
   const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false)
   const scrollViewRef = useRef<ScrollView>(null)
+  const [viewHeight, setViewHeight] = useState(0)
+
+  const handleLayout = (event: LayoutChangeEvent) => {
+    setViewHeight(event.nativeEvent.layout.height)
+  }
 
   // Reset scroll state when drawer opens
   useEffect(() => {
     if (visible) {
       setHasScrolledToEnd(false)
-      // Check content size after a delay to see if scrolling is needed
-      setTimeout(() => {
-        if (scrollViewRef.current) {
-          scrollViewRef.current.measure((x, y, width, height, pageX, pageY) => {
-            // If content is very short or there are no sections, enable button
-            if (sections.length === 0 || height < 200) {
-              setHasScrolledToEnd(true)
-            }
-          })
-        }
-      }, 100)
+      // If no sections, enable button immediately
+      if (sections.length === 0) {
+        setHasScrolledToEnd(true)
+      }
     }
   }, [visible, sections.length])
 
-  const handleScroll = (event: any) => {
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (!requireScrollToEnd) return
 
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent
@@ -66,15 +71,9 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
     if (!requireScrollToEnd) return
 
     // If content fits in the scroll view, enable the button immediately
-    setTimeout(() => {
-      if (scrollViewRef.current) {
-        scrollViewRef.current.measure((x, y, width, height, pageX, pageY) => {
-          if (contentHeight <= height + 50) {
-            setHasScrolledToEnd(true)
-          }
-        })
-      }
-    }, 100)
+    if (viewHeight > 0 && contentHeight <= viewHeight + 50) {
+      setHasScrolledToEnd(true)
+    }
   }
 
   const handleAccept = () => {
@@ -92,6 +91,7 @@ const PolicyDrawer: React.FC<PolicyDrawerProps> = ({
         style={styles.scrollView}
         contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={true}
+        onLayout={handleLayout}
         onScroll={handleScroll}
         onContentSizeChange={handleContentSizeChange}
         scrollEventThrottle={16}

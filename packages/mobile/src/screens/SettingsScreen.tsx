@@ -1236,7 +1236,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
             // If both email and phone are verified, complete the save
             if (isEmailVerified && isPhoneVerified) {
-              await performSave()
+              try {
+                await performSave()
+              } catch (error) {
+                console.error('Failed to save after accepting terms:', error)
+                // performSave already shows an Alert on failure
+              }
             }
           }}
           requireScrollToEnd={true}

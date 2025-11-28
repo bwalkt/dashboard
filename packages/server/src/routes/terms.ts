@@ -1,5 +1,5 @@
+import type { Section, SectionResponse } from "@pzero/shared/pzero";
 import type { FastifyInstance } from "fastify";
-import type { Section, SectionResponse } from "../types/index.js";
 
    const termsData: SectionResponse = {
         sections: [

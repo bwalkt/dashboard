@@ -173,11 +173,16 @@ function formatPrivacyPolicyToSections(data: typeof privacyPolicyData) {
   return sections
 }
 
-export  async function policyRoutes(fastify: FastifyInstance) {
+export async function policyRoutes(fastify: FastifyInstance) {
   // Privacy Policy endpoint
   fastify.get('/privacy', async (request, reply) => {
-    return {
-      sections: formatPrivacyPolicyToSections(privacyPolicyData)
+    try {
+      return reply.code(200).send({
+        sections: formatPrivacyPolicyToSections(privacyPolicyData)
+      })
+    } catch (error) {
+      fastify.log.error({ err: error }, "Error fetching privacy policy:")
+      return reply.code(500).send({ error: "Failed to fetch privacy policy" })
     }
   })
 }

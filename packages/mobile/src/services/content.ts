@@ -5,9 +5,13 @@ export type ContentType = 'terms' | 'privacy'
 
 export const fetchContent = async (type: ContentType): Promise<SectionResponse> => {
   try {
-    console.log(`Attempting to fetch ${type} from /${type} endpoint...`)
+    if (__DEV__) {
+      console.log(`Attempting to fetch ${type} from /${type} endpoint...`)
+    }
     const response = await api.get(`/${type}`)
-    console.log(`${type} API response:`, response)
+    if (__DEV__) {
+      console.log(`${type} API response:`, response)
+    }
 
     // Parse the response content into structured sections
     const content = response
@@ -30,7 +34,9 @@ export const fetchContent = async (type: ContentType): Promise<SectionResponse> 
     // Fallback to default content
     throw new Error(`Invalid response format from ${type} API`)
   } catch (error) {
-    console.error(`Failed to fetch ${type} from API:`, error)
+    if (__DEV__) {
+      console.error(`Failed to fetch ${type} from API:`, error)
+    }
 
     // In development, throw the error instead of using fallback
     if (__DEV__) {
