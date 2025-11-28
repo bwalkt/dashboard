@@ -27,6 +27,7 @@ services:
     environment:
       - PORT=3000
       - REDIS_URL=redis://dragonfly:6379
+      # DEV ONLY — override in .env or runtime; do not use in production, use a cryptographically random value
       - CHALLENGE_SECRET=${CHALLENGE_SECRET:-default-secret-change-in-production}
       - CHALLENGE_TTL=${CHALLENGE_TTL:-300}
     depends_on:
@@ -83,6 +84,10 @@ services:
 volumes:
   dragonfly_data:
 
+# NOTE: pzero-network is external and must be created manually before bringing up the stack:
+#   docker network create pzero-network
+# See ../../packages/authz-service/README.md for instructions on generating strong secrets
+# for CHALLENGE_SECRET and other sensitive environment variables.
 networks:
   pzero-network:
     external: true

@@ -2,16 +2,24 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { constructProxyURL } from "../services/proxy.service.js";
 export async function proxyRoutes(fastify: FastifyInstance): Promise<void> {
   /**
-   * ALL /proxy?url=<target_url>&[other_params...]
-   * Proxy HTTP requests to allowed domains
-   * Supports all HTTP methods (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)
-   * Target URL is provided as query parameter 'url'
-   * Additional query parameters are forwarded to the target URL (e.g., pagination params)
-   * Headers and body are forwarded from the incoming request
+   * ALL /proxy/*
+   * Proxy HTTP requests to preconfigured targets
+   * 
+   * The proxy reads the x-proxy-target-id header to select a configured target.
+   * The path after /proxy/ is forwarded to the selected target, and any query
+   * parameters from the incoming request are appended to the target URL.
+   * 
+   * Supports all HTTP methods: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+   * 
+   * The incoming request method, headers, and body are forwarded to the target.
+   * Additional query parameters are appended/forwarded to the target URL
+   * (e.g., pagination params).
    *
    * Example:
-   *   GET /proxy?url=https://api.example.com/users&page=1&limit=10
-   *   Will forward: GET https://api.example.com/users?page=1&limit=10
+   *   GET /proxy/api/users?page=1&limit=10
+   *   Headers: x-proxy-target-id: 1
+   *   Will forward: GET http://target-url:port/api/users?page=1&limit=10
+   *   (where target-url and port are determined by the configured target with id "1")
    */
   fastify.all(
     "/proxy/*",
@@ -45,7 +53,32 @@ export async function proxyRoutes(fastify: FastifyInstance): Promise<void> {
         };
 
         if (request.body) {
-          fetchOptions.body = request.body as BodyInit | null;
+          // Check if body needs stringification (plain objects/parsed JSON)
+          const contentType = request.headers['content-type'] || '';
+          const isJsonContentType = contentType.includes('application/json');
+          
+          // Detect if body is already a string, Buffer, or other non-object type
+          const isString = typeof request.body === 'string';
+          const isBuffer = request.body instanceof Buffer;
+          
+          // Check if body is a plain object (parsed JSON) that needs stringification
+          // Avoid double-stringifying strings, Buffers, Streams, FormData, etc.
+          const isPlainObject = 
+            typeof request.body === 'object' &&
+            request.body !== null &&
+            !isBuffer &&
+            !(request.body instanceof FormData) &&
+            Object.prototype.toString.call(request.body) === '[object Object]';
+
+          if (isPlainObject || (isJsonContentType && typeof request.body === 'object' && request.body !== null && !isBuffer)) {
+            // Stringify plain objects/parsed JSON
+            fetchOptions.body = JSON.stringify(request.body);
+            // Ensure Content-Type is set to application/json
+            headers.set('Content-Type', 'application/json');
+          } else {
+            // Body is already a string, Buffer, Stream, FormData, etc. - use as-is
+            fetchOptions.body = request.body as BodyInit;
+          }
         }
 
         // Fetch can throw network errors, DNS errors, or timeout (AbortError)

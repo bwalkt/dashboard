@@ -19,7 +19,7 @@ COPY packages/authz-service/package.json ./packages/authz-service/
 COPY packages/authz-service/tsconfig.json ./packages/authz-service/
 
 # Install all dependencies (including dev dependencies for building)
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Copy authz-service source code
 COPY packages/authz-service/src ./packages/authz-service/src
@@ -54,7 +54,7 @@ COPY --from=builder /app/node_modules/.pnpm ./node_modules/.pnpm
 
 # Install production dependencies
 # pnpm will link to packages already in .pnpm store
-RUN pnpm install --prod --no-frozen-lockfile
+RUN pnpm install --prod --frozen-lockfile
 
 # Clean up unnecessary files to further reduce image size
 RUN rm -rf /tmp/* /var/cache/apk/* && \
