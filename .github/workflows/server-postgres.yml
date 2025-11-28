@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/server/**'
+      - 'packages/server/Dockerfile.postgres'
+      - 'packages/server/docker-compose.prod.yml'
       - '.github/workflows/server-postgres.yml'
   workflow_dispatch:
 
