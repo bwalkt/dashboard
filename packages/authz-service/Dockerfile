@@ -68,6 +68,15 @@ WORKDIR /app/packages/authz-service
 # Expose port
 EXPOSE 3000
 
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+
+# Change ownership to application directory
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
 # Start the server using the compiled JavaScript
 # Environment variables will be provided at runtime via docker-compose
 CMD ["node", "dist/server.js"]
