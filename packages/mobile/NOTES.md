@@ -56,3 +56,4 @@ Data Session: A unique data session is created on the user's device.
 Real-time Check: IDlayr matches the phone number provided by the user with the phone number the MNO identifies as being connected to the data session.
 Binary Response: This process results in a simple "Yes" or "No" answer, confirming that the right mobile number is on a real SIM card at that moment.
 Verification: If the numbers match, the user is authenticated. This confirms they have possession of the SIM card associated with the number, even if they are on WiFi (IDlayr handles this by routing the check over the mobile data connection). 
+https://www.google.com/search?q=how+does+whatsapp+verify+that+the+phone+number+is+associated+with+the+device&oq=how+does+whatsapp+verify+that+the+phone+number+is+associated+with+the+device&gs_lcrp=EgZjaHJvbWUyBggAEEUYOdIBCTIwNDA4ajBqNKgCAbACAfEFQ4IGMEUxD-PxBUOCBjBFMQ_j&sourceid=chrome&ie=UTF-8

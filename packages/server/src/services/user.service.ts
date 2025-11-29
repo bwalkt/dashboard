@@ -91,6 +91,7 @@ export class UserService {
           handle: handle,
           avatar: userData.avatar || null,
           email_verified: userData.email_verified ?? false,
+          device: JSON.stringify(userData.device || {})
         }),
       ],
     );

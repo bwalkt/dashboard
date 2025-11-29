@@ -352,6 +352,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         const { email, name } = request.body as {
           email: string;
           name?: string;
+          device?: any
         };
 
         // Validate required fields

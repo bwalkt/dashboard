@@ -200,7 +200,7 @@ function App() {
           screenOptions={{
             headerShown: false,
             drawerStyle: {
-              backgroundColor: colors.backgroundDarkColor,
+              backgroundColor: colors.backgroundColor,
             },
           }}
           initialRouteName={initialRoute}

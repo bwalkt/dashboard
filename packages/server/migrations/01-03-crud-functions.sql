@@ -260,7 +260,10 @@ avatar = user_input.get('avatar', '').strip() if user_input.get('avatar') else N
 email_verified = user_input.get('email_verified', False)
 c_by = user_input.get('c_by', '').strip() if user_input.get('c_by') else None
 user_data = user_input.get('data', {}) if isinstance(user_input.get('data'), dict) else {}
-
+device_data = user_input.get('device', {}) if isinstance(user_input.get('device'), dict) else {}
+# remove device_data from user_data if present
+if 'device' in user_data:
+    del user_data['device']
 # Extract c_by from data.meta.c_by if provided
 
 if not c_by and isinstance(user_data.get('meta'), dict):
@@ -268,10 +271,13 @@ if not c_by and isinstance(user_data.get('meta'), dict):
 
 # Get default org_id if not provided
 if not org_id:
-    default_org_query = "SELECT id::text FROM pzero.all_orgs WHERE handle = 'pzero'"
+    default_org_query = "SELECT id::text, part_by::text FROM pzero.all_orgs WHERE handle = 'pzero'"
     default_org_result = plpy.execute(default_org_query)
     if default_org_result and len(default_org_result) > 0:
         org_id = default_org_result[0]['id']
+        part = default_org_result[0]['part_by']
+        if not part:
+            part = 'pzero'
     else:
         plpy.error('org_id is required (no default org found)')
 
@@ -337,6 +343,40 @@ except plpy.SPIError as e:
 except Exception as e:
     plpy.error(f'Unexpected error creating user record: {e}')
     raise
+
+# Step 4: (Optional) Log device info if provided
+if device_data and isinstance(device_data, dict) and len(device_data) > 0:
+    try:
+        data = device_data.get('data', {}) if isinstance(device_data.get('data'), dict) else {}
+        if 'meta' not in data:
+            data['meta'] = {}
+        data['meta']['c_by'] = c_by if c_by else auth_id
+        id = device_data.get('id', '').strip() if device_data.get('id') else None
+        type = device_data.get('type', '').strip() if device_data.get('type') else None
+        status = device_data.get('status', '').strip() if device_data.get('status') else 'ACTIVE' 
+        del device_data['type']
+        del device_data['id']
+        del device_data['status']
+        data = {**device_data, **data}
+        uid = auth_id  # Use provided id or auth_id
+        device_sql = """
+            INSERT INTO pzero.all_devices (id, uid, type, status, data)
+            VALUES ($1::uuid, $2::uuid, $3::text, $4::text, $5::jsonb)
+        """
+        device_stmt = plpy.prepare(device_sql, ["text", "text", "text", "text", "text"])
+        device_result = plpy.execute(device_stmt, [
+            id,
+            uid,
+            type,
+            status,
+            json.dumps(data)
+        ])
+    except plpy.SPIError as e:
+        plpy.error(f'Database error logging device info: {e}')
+        raise
+    except Exception as e:
+        plpy.error(f'Unexpected error logging device info: {e}')
+        raise
 
 # Return result
 result = {

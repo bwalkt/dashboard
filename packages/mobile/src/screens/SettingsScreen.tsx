@@ -743,11 +743,24 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         name: finalName.trim(),
       })
 
+      // Get current device information
+      let currentDeviceInfo
+      try {
+        currentDeviceInfo = await DevicesStore.getCurrentDeviceInfo()
+        console.log('Device info for registration:', currentDeviceInfo)
+      } catch (deviceError) {
+        console.warn('Failed to get device info, proceeding without it:', deviceError)
+        // Continue registration without device info if device detection fails
+      }
+
       // Send verification code via email using /auth/register endpoint
-      const response = await api.post('/auth/register', {
+      const registrationPayload = {
         email: finalEmail.trim().toLowerCase(),
         name: finalName.trim(),
-      })
+        device: { ...currentDeviceInfo, type: 'MOBILE' },
+      }
+
+      const response = await api.post('/auth/register', registrationPayload)
 
       console.log('Registration response:', response)
 
@@ -903,10 +916,26 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const handleResendEmailCode = async () => {
     setIsSendingEmailCode(true)
     try {
-      await api.post('/auth/register', {
+      // Get current device information
+      let currentDeviceInfo
+      try {
+        currentDeviceInfo = await DevicesStore.getCurrentDeviceInfo()
+        console.log('Device info for email resend:', currentDeviceInfo)
+      } catch (deviceError) {
+        console.warn('Failed to get device info for resend, proceeding without it:', deviceError)
+        // Continue resend without device info if device detection fails
+      }
+
+      const resendPayload = {
         email: emailBeingVerified,
         name: formData.nickName?.trim() || emailBeingVerified.split('@')[0],
-      })
+      }
+
+      if (currentDeviceInfo) {
+        resendPayload.device = currentDeviceInfo
+      }
+
+      await api.post('/auth/register', resendPayload)
 
       // Reset attempts when resending
       setEmailVerificationCode('')

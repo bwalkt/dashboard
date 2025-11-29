@@ -1210,3 +1210,19 @@
     - Monitor for abuse
   3. Display warning: "VoIP number detected. For security, please also verify your email."
   4. Track metrics: If VoIP users cause problems, tighten policy later
+
+
+  WhatsApp may also use device-based security tokens and a new Device Verification feature that sends an "invisible ping" from the server to the device to confirm it is the legitimate device
+
+
+
+WhatsApp verifies a phone number is associated with a device primarily through a one-time six-digit code sent via SMS or voice call, which must be entered to register the account. In some cases, particularly when switching to a new phone, the process can be automated by receiving a push notification with the code on the old device. For added security during account registration and transfer, WhatsApp may also use device-based security tokens and a new Device Verification feature that sends an "invisible ping" from the server to the device to confirm it is the legitimate device. 
+Standard verification process
+SMS or call: You register your number and WhatsApp sends a 6-digit code via SMS or a voice call.
+Enter the code: You must enter this code into the app to verify the phone number belongs to the device you are using. 
+Automatic verification
+Using an old device: When you switch to a new phone, if the phone number is eligible, you may receive a push notification on your old device with the code. You can then use this code to verify your new device without an SMS.
+Using end-to-end encrypted backups: If you have enabled this feature, WhatsApp can automatically verify your account from Google Cloud without an SMS code upon reinstalling the app. 
+Device verification feature
+How it works: This is an additional security layer that uses a token stored on your device, a nonce, and an authentication challenge from the server to verify the device's identity.
+Purpose: It helps prevent attackers from impersonating you or using malware to connect to the WhatsApp server from outside of your device. 

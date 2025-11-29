@@ -3,10 +3,10 @@ import DeviceInfo from 'react-native-device-info'
 import { ZStorage } from './store'
 
 export type DeviceInfoType = {
-  uuid?: string
+  id?: string
   nickname?: string
   isPrimaryDevice?: boolean
-  dateAdded?: number
+  c_at?: number
   deviceId: string
   deviceName: string
   systemName: string
@@ -89,8 +89,7 @@ export class DevicesStoreClass extends ZStorage {
     if (!deviceInfo) {
       try {
         deviceInfo = (await getDeviceInfo()) as unknown as DeviceInfoType
-        deviceInfo.dateAdded = Date.now()
-        deviceInfo.uuid = uuid()
+        deviceInfo.id = uuid()
         const saved = this.setItem({ key: deviceAssignmentTypes.current, data: deviceInfo, isTransit: false })
         if (!saved) {
           throw new Error('Failed to save current device info to storage')
@@ -169,7 +168,7 @@ export class DevicesStoreClass extends ZStorage {
         return this.currentDevice
       }
 
-      device.dateAdded = Date.now()
+      device.c_at = Date.now()
       const saved = this.setItem({ key: deviceAssignmentTypes.primary, data: device, isTransit: false })
       if (!saved) {
         throw new Error('Failed to save primary device data')

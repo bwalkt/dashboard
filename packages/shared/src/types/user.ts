@@ -29,6 +29,7 @@ export const CreateUserDataSchema = {
     email: { type: 'string', format: 'email' },
     avatar: { type: ['string', 'null'], format: 'url' },
     email_verified: { type: 'boolean', default: false },
+    device: { type: 'object' },
   },
   required: ['name', 'email'],
   additionalProperties: false,
