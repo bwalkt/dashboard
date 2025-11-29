@@ -671,3 +671,209 @@ except Exception as e:
     raise
 
 $$ language plpython3u;
+
+-- ============================================
+-- Create Device Function
+-- ============================================
+-- Creates a device record for an existing user
+--
+-- Parameter: p_device (JSONB) - Device data
+--
+-- Required fields:
+--   uid: User ID who owns the device
+--   c_by: Creator user ID (can be different from uid for admin creation)
+--
+-- Optional fields:
+--   id: Device UUID (if not provided, generates a new one)
+--   name: Device name (defaults to "Device" if not provided)
+--   handle: Device handle (auto-generated if not provided)
+--   type: Device type enum value (MOBILE, TABLET, DESKTOP, LAPTOP, OTHER - defaults to OTHER)
+--   status: Device status enum value (ACTIVE, INACTIVE, LOST, UNKNOWN - defaults to ACTIVE)
+--   is_primary: Whether this is the user's primary device (defaults to false)
+--   is_verifier: Whether this device can verify other devices (defaults to false)
+--   duration_used: Total duration device has been used in milliseconds (defaults to 0)
+--   data: Additional device data (JSONB)
+--
+-- Returns: Device ID
+--
+-- Example usage:
+--   SELECT pzero.create_device(jsonb_build_object(
+--     'uid', '019ad123-4567-7890-abcd-123456789012',
+--     'c_by', '019ad123-4567-7890-abcd-123456789012',
+--     'name', 'iPhone 15 Pro',
+--     'type', 'MOBILE',
+--     'is_primary', true,
+--     'data', jsonb_build_object('deviceModel', 'iPhone15,2', 'osVersion', '17.1')
+--   ));
+CREATE OR REPLACE FUNCTION pzero.create_device (p_device jsonb) returns text AS $$
+import plpy
+import json
+
+# Helper function to print notices only in development mode
+def dev_notice(msg):
+    try:
+        env_result = plpy.execute("SHOW app.environment")
+        environment = env_result[0]['app.environment'] if env_result else 'production'
+        if environment == 'development':
+            plpy.notice(msg)
+    except:
+        pass  # Silently ignore if environment check fails
+
+# Parse input
+try:
+    device_input = json.loads(p_device) if isinstance(p_device, str) else p_device
+except Exception as e:
+    raise
+
+if not isinstance(device_input, dict):
+    plpy.error('Input must be a JSON object')
+
+# Extract required fields
+uid = device_input.get('uid', '').strip() if device_input.get('uid') else None
+c_by = device_input.get('c_by', '').strip() if device_input.get('c_by') else None
+
+if not uid:
+    plpy.error('uid (user ID) is required')
+if not c_by:
+    plpy.error('c_by (creator ID) is required')
+
+# Verify that uid exists in all_auth
+try:
+    user_check_sql = "SELECT is_act FROM pzero.all_auth WHERE id = $1::uuid LIMIT 1"
+    user_check_stmt = plpy.prepare(user_check_sql, ["text"])
+    user_result = plpy.execute(user_check_stmt, [uid])
+    
+    if not user_result or len(user_result) == 0:
+        plpy.error('User with uid {} does not exist'.format(uid))
+    
+    if not user_result[0]['is_act']:
+        plpy.error('User with uid {} is not active'.format(uid))
+        
+except plpy.SPIError as e:
+    raise
+except Exception as e:
+    raise
+
+# Extract optional fields with defaults
+device_id = device_input.get('id', '').strip() if device_input.get('id') else None
+name = device_input.get('name', '').strip() if device_input.get('name') else 'Device'
+handle = device_input.get('handle', '').strip() if device_input.get('handle') else None
+is_primary = device_input.get('is_primary', False)
+is_verifier = device_input.get('is_verifier', False)
+duration_used = device_input.get('duration_used', 0)
+device_data = device_input.get('data', {}) if isinstance(device_input.get('data'), dict) else {}
+
+# Validate and normalize device type
+device_type_raw = device_input.get('type', 'OTHER').strip().upper()
+type_mapping = {
+    'MOBILE': 'MOBILE',
+    'TABLET': 'TABLET',
+    'DESKTOP': 'DESKTOP',
+    'LAPTOP': 'LAPTOP',
+    'OTHER': 'OTHER'
+}
+device_type = type_mapping.get(device_type_raw, 'OTHER')
+
+# Validate and normalize device status
+device_status_raw = device_input.get('status', 'ACTIVE').strip().upper()
+status_mapping = {
+    'ACTIVE': 'ACTIVE',
+    'INACTIVE': 'INACTIVE',
+    'LOST': 'LOST',
+    'UNKNOWN': 'UNKNOWN'
+}
+device_status = status_mapping.get(device_status_raw, 'ACTIVE')
+
+# Generate device ID if not provided
+if not device_id:
+    try:
+        id_result = plpy.execute("SELECT pzero.gen_id()::text as device_id")
+        device_id = id_result[0]['device_id']
+    except:
+        # Fallback to gen_random_uuid if gen_id fails
+        id_result = plpy.execute("SELECT gen_random_uuid()::text as device_id")
+        device_id = id_result[0]['device_id']
+
+# Generate unique handle if not provided
+if not handle:
+    try:
+        handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
+        handle_result = plpy.execute(handle_stmt, [name])
+        handle = handle_result[0]['handle']
+    except:
+        # Fallback to a simple handle if generation fails
+        handle = 'device'
+
+dev_notice("Creating device: {} for user {}".format(name, uid))
+
+# Prepare device data with metadata
+if 'meta' not in device_data:
+    device_data['meta'] = {}
+if not isinstance(device_data['meta'], dict):
+    device_data['meta'] = {}
+device_data['meta']['c_by'] = c_by
+
+# Build fields for device creation
+try:
+    device_sql = """
+        INSERT INTO pzero.all_devices (
+            id, name, handle, uid, type, status, 
+            is_primary, is_verifier, duration_used, data
+        ) VALUES (
+            $1::uuid, $2, $3, $4::uuid, $5::pzero.device_type, $6::pzero.device_status,
+            $7::boolean, $8::boolean, $9::bigint, $10::jsonb
+        ) RETURNING id
+    """
+    device_stmt = plpy.prepare(device_sql, [
+        "text", "text", "text", "text", "text", "text",
+        "boolean", "boolean", "bigint", "text"
+    ])
+    
+    dev_notice("Device creation parameters:")
+    dev_notice("device_id: {}".format(device_id))
+    dev_notice("name: {}".format(name))
+    dev_notice("handle: {}".format(handle))
+    dev_notice("uid: {}".format(uid))
+    dev_notice("type: {}".format(device_type))
+    dev_notice("status: {}".format(device_status))
+    dev_notice("is_primary: {}".format(is_primary))
+    dev_notice("is_verifier: {}".format(is_verifier))
+    dev_notice("duration_used: {}".format(duration_used))
+    dev_notice("data: {}".format(json.dumps(device_data)))
+    
+    device_result = plpy.execute(device_stmt, [
+        device_id,
+        name,
+        handle,
+        uid,
+        device_type,
+        device_status,
+        is_primary,
+        is_verifier,
+        duration_used,
+        json.dumps(device_data)
+    ])
+
+    if not device_result or len(device_result) == 0:
+        plpy.error('Failed to create device record')
+
+    created_device_id = str(device_result[0]['id'])
+    dev_notice("Device record created: {}".format(created_device_id))
+    
+    return created_device_id
+
+except plpy.SPIError as e:
+    # Check for unique constraint violations
+    if hasattr(e, 'sqlstate') and e.sqlstate == '23505':
+        if 'handle' in str(e):
+            plpy.error('Device handle {} already exists'.format(handle))
+        elif 'id' in str(e):
+            plpy.error('Device ID {} already exists'.format(device_id))
+        else:
+            plpy.error('Unique constraint violation: {}'.format(str(e)))
+    else:
+        raise
+except Exception as e:
+    raise
+
+$$ language plpython3u;
