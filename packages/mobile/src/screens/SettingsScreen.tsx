@@ -1465,10 +1465,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
                     <View style={styles.verificationButtonContainer}>
                       <Button
-                        label="Resend Code"
-                        onPress={handleResendEmailCode}
-                        disabled={isSendingEmailCode || isVerifyingEmailCode}
-                        loading={isSendingEmailCode}
+                        label={emailVerificationCode.length === CELL_COUNT ? 'Verify' : 'Resend Code'}
+                        onPress={
+                          emailVerificationCode.length === CELL_COUNT ? handleVerifyEmailCode : handleResendEmailCode
+                        }
+                        disabled={
+                          isSendingEmailCode ||
+                          isVerifyingEmailCode ||
+                          (emailVerificationCode.length > 0 && emailVerificationCode.length < CELL_COUNT)
+                        }
+                        loading={
+                          emailVerificationCode.length === CELL_COUNT ? isVerifyingEmailCode : isSendingEmailCode
+                        }
                         variant="secondary"
                         size="small"
                         style={styles.verificationButtonHalf}
@@ -1478,6 +1486,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                         onPress={() => {
                           setShowEmailVerificationCode(false)
                           setEmailVerificationCode('')
+                          setEmailVerificationAttempts(0)
+                          setIsEmailVerificationLocked(false)
                           setShowVerificationDrawer(false)
                         }}
                         disabled={isSendingEmailCode || isVerifyingEmailCode}
@@ -1582,10 +1592,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
                     <View style={styles.verificationButtonContainer}>
                       <Button
-                        label="Resend Code"
-                        onPress={handleResendCode}
-                        disabled={isSendingCode || isVerifyingCode}
-                        loading={isSendingCode}
+                        label={verificationCode.length === CELL_COUNT ? 'Verify' : 'Resend Code'}
+                        onPress={verificationCode.length === CELL_COUNT ? handleVerifyCode : handleResendCode}
+                        disabled={
+                          isSendingCode ||
+                          isVerifyingCode ||
+                          (verificationCode.length > 0 && verificationCode.length < CELL_COUNT)
+                        }
+                        loading={verificationCode.length === CELL_COUNT ? isVerifyingCode : isSendingCode}
                         variant="secondary"
                         size="small"
                         style={styles.verificationButtonHalf}
@@ -1595,6 +1609,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                         onPress={() => {
                           setShowVerificationCode(false)
                           setVerificationCode('')
+                          setVerificationAttempts(0)
+                          setIsVerificationLocked(false)
                           setShowVerificationDrawer(false)
                         }}
                         disabled={isSendingCode || isVerifyingCode}

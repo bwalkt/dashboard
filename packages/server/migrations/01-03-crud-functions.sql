@@ -1,3 +1,62 @@
+-- Helper function to generate unique handles
+CREATE OR REPLACE FUNCTION pzero.generate_unique_handle(p_name text) RETURNS text AS $$
+import plpy
+import re
+import time
+
+def generate_unique_handle(name):
+    # --Clean the name: remove special characters, keep only alphanumeric
+    clean_name = re.sub(r'[^a-zA-Z0-9\s]', '', name)
+    
+    # --Split into words and take first 8 characters total
+    words = clean_name.split()
+    if not words:
+        base_handle = 'user'
+    elif len(words) == 1:
+        # Single word: take first 8 characters
+        base_handle = words[0][:8]
+    else:
+        # Multiple words: take first 4 chars from first word + first 4 from second
+        first_word = words[0][:4] if len(words[0]) >= 4 else words[0]
+        second_word = words[1][:8-len(first_word)] if len(words) > 1 else ''
+        base_handle = first_word + second_word
+    
+    # --Convert to lowercase for consistency
+    base_handle = base_handle.lower()
+    
+    # --Ensure its not empty and has valid characters
+    if not base_handle or not re.match(r'^[a-z]', base_handle):
+        base_handle = 'user'
+    
+    # --Check if base handle exists, if not return it
+    check_sql = "SELECT COUNT(*) as count FROM pzero.all_users WHERE handle = $1"
+    check_stmt = plpy.prepare(check_sql, ["text"])
+    
+    # Try base handle first
+    result = plpy.execute(check_stmt, [base_handle])
+    if result[0]['count'] == 0:
+        return base_handle
+    
+    # --If base exists, try with numbers
+    counter = 1
+    while counter <= 9999:  # Reasonable limit
+        test_handle = base_handle + str(counter)
+        result = plpy.execute(check_stmt, [test_handle])
+        if result[0]['count'] == 0:
+            return test_handle
+        counter += 1
+    
+    # If all else fails, use timestamp-based handle
+    return base_handle + str(int(time.time()) % 10000)
+
+# --Main function execution
+if not p_name or not p_name.strip():
+    return 'user'
+
+return generate_unique_handle(p_name.strip())
+
+$$ LANGUAGE plpython3u;
+
 -- CRUD Functions for pzero schema
 -- Insert function that automatically handles meta.c_by injection
 -- Parameters:
@@ -39,7 +98,8 @@ try:
     fields = json.loads(p_fields) if isinstance(p_fields, str) else p_fields
     data = json.loads(p_data) if isinstance(p_data, str) else p_data
 except Exception as e:
-    plpy.error(f'Invalid JSON input: {e}')
+    # plpy.error('Invalid JSON input')
+    raise
 
 # Ensure data is a dict
 if not isinstance(data, dict):
@@ -75,7 +135,7 @@ try:
     column_types = {row['column_name']: (row['data_type'], row['udt_name'])
                     for row in plpy.execute(type_query, [table_name])}
 except Exception as e:
-    plpy.warning(f'Could not fetch column types: {e}')
+    plpy.warning('Could not fetch column types: {}'.format(str(e)))
     column_types = {}
 
 # Add fields from p_fields with immediate escaping
@@ -83,7 +143,7 @@ if fields and isinstance(fields, dict):
     for key, value in fields.items():
         # Validate column name
         if not key or not isinstance(key, str):
-            plpy.warning(f'Skipping invalid field key: {key}')
+            plpy.warning('Skipping invalid field key: {}'.format(key))
             continue
 
         # Escape column name immediately to prevent SQL injection
@@ -124,24 +184,24 @@ col_str = ', '.join(columns)
 placeholders = []
 for i, (col_key, ptype) in enumerate(zip(column_keys, param_types), 1):
     if ptype == 'jsonb':
-        placeholders.append(f'${i}::jsonb')
+        placeholders.append('${}::jsonb'.format(i))
     elif ptype in ('id', 'uuid'):
         # Get the full type name from column_types using original key
         col_info = column_types.get(col_key, ('text', 'text'))
         if col_info[1] == 'id':
-            placeholders.append(f'${i}::uuid')
+            placeholders.append('${}::uuid'.format(i))
         elif col_info[1] == 'uuid':
-            placeholders.append(f'${i}::uuid')
+            placeholders.append('${}::uuid'.format(i))
         else:
-            placeholders.append(f'${i}')
+            placeholders.append('${}'.format(i))
     else:
-        placeholders.append(f'${i}')
+        placeholders.append('${}'.format(i))
 
-sql = f"INSERT INTO pzero.{safe_table} ({col_str}) VALUES ({', '.join(placeholders)}) RETURNING id"
+sql = "INSERT INTO pzero.{} ({}) VALUES ({}) RETURNING id".format(safe_table, col_str, ', '.join(placeholders))
 
-dev_notice(f"Executing INSERT on pzero.{table_name}")
-dev_notice(f"Columns: {columns}")
-dev_notice(f"SQL: {sql}")
+dev_notice("Executing INSERT on pzero.{}".format(table_name))
+dev_notice("Columns: {}".format(columns))
+dev_notice("SQL: {}".format(sql))
 
 # Prepare and execute statement
 try:
@@ -150,15 +210,17 @@ try:
 
     if result and len(result) > 0:
         inserted_id = result[0]['id']
-        dev_notice(f"Successfully inserted record with id: {inserted_id}")
+        dev_notice("Successfully inserted record with id: {}".format(inserted_id))
         return str(inserted_id)
     else:
         plpy.error('Insert did not return an id')
 except plpy.SPIError as e:
-    plpy.error(f'Database error during insert: {e}')
+    # plpy.error('Database error during insert')
+    raise
     raise
 except Exception as e:
-    plpy.error(f'Unexpected error during insert: {e}')
+    # plpy.error('Unexpected error during insert')
+    raise
     raise
 
 $$ language plpython3u;
@@ -235,11 +297,13 @@ def dev_notice(msg):
     except:
         pass  # Silently ignore if environment check fails
 
+
 # Parse input
 try:
     user_input = json.loads(p_user) if isinstance(p_user, str) else p_user
 except Exception as e:
-    plpy.error(f'Invalid JSON input: {e}')
+    # plpy.error('Invalid JSON input')
+    raise
 
 if not isinstance(user_input, dict):
     plpy.error('Input must be a JSON object')
@@ -281,7 +345,7 @@ if not org_id:
     else:
         plpy.error('org_id is required (no default org found)')
 
-dev_notice(f"Creating user: {name} ({email})")
+dev_notice("Creating user: {} ({})".format(name, email))
 
 # Step 1: Create auth record with email
 try:
@@ -293,17 +357,19 @@ try:
         plpy.error('Failed to create auth record')
 
     auth_id = str(auth_result[0]['id'])
-    dev_notice(f"Auth record created: {auth_id}")
+    dev_notice("Auth record created: {}".format(auth_id))
 
 except plpy.SPIError as e:
     # Check SQLSTATE for unique_violation (23505)
     if hasattr(e, 'sqlstate') and e.sqlstate == '23505':
-        plpy.error(f'Email {email} already exists')
+        plpy.error('Email {} already exists'.format(email))
     else:
-        plpy.error(f'Database error creating auth record: {e}')
+        # plpy.error('Database error creating auth record')
+        raise
     raise
 except Exception as e:
-    plpy.error(f'Unexpected error creating auth record: {e}')
+    # plpy.error('Unexpected error creating auth record')
+    raise
     raise
 
 # Step 2: Set c_by in data.meta
@@ -314,17 +380,35 @@ if not isinstance(user_data['meta'], dict):
     user_data['meta'] = {}
 user_data['meta']['c_by'] = c_by if c_by else auth_id
 
-# Step 3: Create user record with name
+# Step 3: Generate unique handle and create user record
 try:
+    # Generate unique handle from name using standalone function
+    handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
+    handle_result = plpy.execute(handle_stmt, [name])
+    user_handle = handle_result[0]['handle']
+    dev_notice("Generated handle: {}".format(user_handle))
+    
     user_sql = """
-        INSERT INTO pzero.all_users (id, name, org_id, part, avatar, data)
-        VALUES ($1::uuid, $2, $3::uuid, $4, $5, $6::jsonb)
+        INSERT INTO pzero.all_users (id, name, handle, org_id, part, avatar, data)
+        VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7::jsonb)
         RETURNING id
     """
-    user_stmt = plpy.prepare(user_sql, ["text", "text", "text", "text", "text", "text"])
+    user_stmt = plpy.prepare(user_sql, ["text", "text", "text", "text", "text", "text", "text"])
+    
+    # Debug the parameters being passed
+    dev_notice("User creation parameters:")
+    dev_notice("auth_id: {}".format(auth_id))
+    dev_notice("name: {}".format(name))
+    dev_notice("handle: {}".format(user_handle))
+    dev_notice("org_id: {}".format(org_id))
+    dev_notice("part: {}".format(part))
+    dev_notice("avatar: {}".format(avatar))
+    dev_notice("user_data: {}".format(json.dumps(user_data)))
+    
     user_result = plpy.execute(user_stmt, [
         auth_id,
         name,
+        user_handle,
         org_id,
         part,
         avatar,
@@ -335,48 +419,101 @@ try:
         plpy.error('Failed to create user record')
 
     user_id = str(user_result[0]['id'])
-    dev_notice(f"User record created: {user_id}")
+    dev_notice("User record created: {}".format(user_id))
 
 except plpy.SPIError as e:
-    plpy.error(f'Database error creating user record: {e}')
+    # Just re-raise the exception without calling plpy.error
     raise
 except Exception as e:
-    plpy.error(f'Unexpected error creating user record: {e}')
+    # Just re-raise the exception without calling plpy.error
     raise
 
 # Step 4: (Optional) Log device info if provided
 if device_data and isinstance(device_data, dict) and len(device_data) > 0:
     try:
-        data = device_data.get('data', {}) if isinstance(device_data.get('data'), dict) else {}
-        if 'meta' not in data:
-            data['meta'] = {}
-        data['meta']['c_by'] = c_by if c_by else auth_id
-        id = device_data.get('id', '').strip() if device_data.get('id') else None
-        type = device_data.get('type', '').strip() if device_data.get('type') else None
-        status = device_data.get('status', '').strip() if device_data.get('status') else 'ACTIVE' 
-        del device_data['type']
-        del device_data['id']
-        del device_data['status']
-        data = {**device_data, **data}
-        uid = auth_id  # Use provided id or auth_id
+        dev_notice("Logging device info to pzero.all_devices")
+        
+        # Extract device fields and validate type
+        device_type_raw = device_data.get('type', 'OTHER').strip().upper()
+        # Map common values to enum values
+        type_mapping = {
+            'MOBILE': 'MOBILE',
+            'TABLET': 'TABLET', 
+            'DESKTOP': 'DESKTOP',
+            'LAPTOP': 'LAPTOP',
+            'CURL_TEST': 'OTHER',
+            'UNKNOWN': 'OTHER'
+        }
+        device_type = type_mapping.get(device_type_raw, 'OTHER')
+        
+        # Validate device status
+        device_status_raw = device_data.get('status', 'ACTIVE').strip().upper()
+        status_mapping = {
+            'ACTIVE': 'ACTIVE',
+            'INACTIVE': 'INACTIVE',
+            'LOST': 'LOST',
+            'UNKNOWN': 'UNKNOWN'
+        }
+        device_status = status_mapping.get(device_status_raw, 'ACTIVE')
+        
+        # Get device name (use deviceName or default to "Device")
+        device_name = device_data.get('deviceName', 'Device').strip()
+        if not device_name:
+            device_name = 'Device'
+            
+        # Generate unique handle for device
+        device_handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
+        device_handle_result = plpy.execute(device_handle_stmt, [device_name])
+        device_handle = device_handle_result[0]['handle']
+        
+        # Prepare device data (copy the device_data and add metadata)
+        device_record_data = dict(device_data)  # Make a copy
+        
+        # Remove type and status from data since they have explicit columns
+        if 'type' in device_record_data:
+            del device_record_data['type']
+        if 'status' in device_record_data:
+            del device_record_data['status']
+            
+        if 'meta' not in device_record_data:
+            device_record_data['meta'] = {}
+        device_record_data['meta']['c_by'] = c_by if c_by else auth_id
+        
+        # --Generate a new UUID for the device record (don't use device.id which is internal)
+        device_uuid_result = plpy.execute("SELECT gen_random_uuid()::text as device_uuid")
+        device_uuid = device_uuid_result[0]['device_uuid']
+        
+        dev_notice("Device UUID: {}, User UUID: {}, Type: {}".format(device_uuid, auth_id, device_type))
+        
         device_sql = """
-            INSERT INTO pzero.all_devices (id, uid, type, status, data)
-            VALUES ($1::uuid, $2::uuid, $3::text, $4::text, $5::jsonb)
+            INSERT INTO pzero.all_devices (id, name, handle, uid, type, status, data)
+            VALUES ($1::uuid, $2, $3, $4::uuid, $5::pzero.device_type, $6::pzero.device_status, $7::jsonb)
+            RETURNING id
         """
-        device_stmt = plpy.prepare(device_sql, ["text", "text", "text", "text", "text"])
+        device_stmt = plpy.prepare(device_sql, ["text", "text", "text", "text", "text", "text", "text"])
         device_result = plpy.execute(device_stmt, [
-            id,
-            uid,
-            type,
-            status,
-            json.dumps(data)
+            device_uuid,
+            device_name,
+            device_handle,
+            auth_id,
+            device_type,
+            device_status,
+            json.dumps(device_record_data)
         ])
+        
+        if device_result and len(device_result) > 0:
+            device_record_id = device_result[0]['id']
+            dev_notice("Device record created: {}".format(device_record_id))
+        else:
+            dev_notice("Warning: Device record creation returned no result")
     except plpy.SPIError as e:
-        plpy.error(f'Database error logging device info: {e}')
-        raise
+        dev_notice("Database error logging device info: {}".format(str(e)))
+        # --Dont raise - just log the error, device logging is optional
+        pass
     except Exception as e:
-        plpy.error(f'Unexpected error logging device info: {e}')
-        raise
+        dev_notice("Unexpected error logging device info: {}".format(str(e)))
+        # --Don't raise - just log the error, device logging is optional
+        pass
 
 # Return result
 result = {
@@ -464,7 +601,8 @@ def dev_notice(msg):
 try:
     org_input = json.loads(p_org) if isinstance(p_org, str) else p_org
 except Exception as e:
-    plpy.error(f'Invalid JSON input: {e}')
+    # plpy.error('Invalid JSON input')
+    raise
 
 if not isinstance(org_input, dict):
     plpy.error('Input must be a JSON object')
@@ -485,7 +623,7 @@ if not c_by:
 website = org_input.get('website', '').strip() if org_input.get('website') else None
 org_data = org_input.get('data', {}) if isinstance(org_input.get('data'), dict) else {}
 
-dev_notice(f"Creating organization: {name} ({handle})")
+dev_notice("Creating organization: {} ({})".format(name, handle))
 
 # Build fields object
 fields = {
@@ -514,7 +652,7 @@ try:
 
     if result and len(result) > 0:
         org_id = result[0]['insert_into_table']
-        dev_notice(f"Organization created: {org_id}")
+        dev_notice("Organization created: {}".format(org_id))
         return org_id
     else:
         plpy.error('Failed to create organization')
@@ -522,12 +660,14 @@ try:
 except plpy.SPIError as e:
     # Check SQLSTATE for unique_violation (23505)
     if hasattr(e, 'sqlstate') and e.sqlstate == '23505':
-        plpy.error(f'Organization handle {handle} already exists')
+        plpy.error('Organization handle {} already exists'.format(handle))
     else:
-        plpy.error(f'Database error creating organization: {e}')
+        # plpy.error('Database error creating organization')
+        raise
     raise
 except Exception as e:
-    plpy.error(f'Unexpected error creating organization: {e}')
+    # plpy.error('Unexpected error creating organization')
+    raise
     raise
 
 $$ language plpython3u;

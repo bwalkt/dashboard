@@ -349,11 +349,24 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     "/auth/register",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { email, name } = request.body as {
+        const { email, name, device } = request.body as {
           email: string;
           name?: string;
           device?: any
         };
+
+        console.log('Registration request received:', {
+          email,
+          name,
+          deviceInfo: device ? {
+            id: device.id,
+            deviceId: device.deviceId,
+            deviceName: device.deviceName,
+            model: device.model,
+            os: device.os || device.systemName,
+            type: device.type
+          } : 'No device info provided'
+        });
 
         // Validate required fields
         if (!email || !name) {
@@ -398,13 +411,24 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         const expirySeconds = config.EMAIL_EXPIRY_MINUTES * 60;
         // Store verification data in Redis with 10 minute expiration
         const redisKey = `email_registration:${email}`;
+        const registrationData = {
+          code: verificationCode,
+          name,
+          device,
+          createdAt: new Date().toISOString(),
+        };
+        
+        console.log('Storing registration data in Redis:', {
+          key: redisKey,
+          name,
+          hasDevice: !!device,
+          deviceType: device?.type,
+          expirySeconds
+        });
+        
         await redis.set(
           redisKey,
-          JSON.stringify({
-            code: verificationCode,
-            name,
-            createdAt: new Date().toISOString(),
-          }),
+          JSON.stringify(registrationData),
           expirySeconds,
         );
 
@@ -473,7 +497,21 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
-        const { code: storedCode, name } = JSON.parse(registrationData);
+        const { code: storedCode, name, device } = JSON.parse(registrationData);
+
+        console.log('Registration verification attempt:', {
+          email,
+          name,
+          hasDevice: !!device,
+          deviceDetails: device ? {
+            id: device.id,
+            deviceId: device.deviceId,
+            deviceName: device.deviceName,
+            model: device.model,
+            os: device.os || device.systemName,
+            type: device.type
+          } : 'No device info'
+        });
 
         // Verify code
         if (code !== storedCode) {
