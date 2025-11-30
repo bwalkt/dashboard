@@ -51,7 +51,8 @@ const classificationOptions = Object.values(classificationTypes).map((type: stri
 const validate = ajv.compile(userSettingsSchema)
 
 interface FormData {
-  nickName: string
+  name: string
+  deviceNickName: string
   email: string
   phoneNumber: string
   classificationType: ClassificationType
@@ -60,7 +61,8 @@ interface FormData {
 }
 
 interface FormErrors {
-  nickName?: string
+  name?: string
+  deviceNickName?: string
   email?: string
   phoneNumber?: string
   classificationType?: string
@@ -83,7 +85,8 @@ interface SettingsScreenProps {
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsComplete, onFAQPress }) => {
   const safeAreaInsets = useSafeAreaInsets()
   const [formData, setFormData] = useState<FormData>({
-    nickName: '',
+    name: '',
+    deviceNickName: '',
     email: '',
     phoneNumber: '',
     classificationType: '' as ClassificationType,
@@ -122,6 +125,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
   // Cleanup ref for timeouts
   const successTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const switchToggleRef = useRef<boolean>(false)
 
   // Terms and conditions state
   const [showTermsDrawer, setShowTermsDrawer] = useState(false)
@@ -192,10 +196,20 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
   const loadCurrentSettings = async () => {
     try {
-      const nickName = SettingsStore.getItem(settingsKeys.nickName) || ''
+      const name = SettingsStore.getItem('name') || ''
       const email = SettingsStore.getItem(settingsKeys.email) || ''
       const phoneNumber = SettingsStore.getItem(settingsKeys.phone) || ''
       let classificationType = SettingsStore.getItem(settingsKeys.classificationType) || ''
+
+      // Load device nickname from DevicesStore
+      let deviceNickName = ''
+      try {
+        await DevicesStore.init()
+        const currentDevice = await DevicesStore.getCurrentDeviceInfo()
+        deviceNickName = currentDevice?.nickname || ''
+      } catch (error) {
+        console.error('Failed to load device nickname:', error)
+      }
 
       // Load isPrimary from DevicesStore (source of truth)
       let isPrimary = false
@@ -231,7 +245,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         classificationType = isBusiness ? 'corp' : 'personal'
       }
       setPreviousData({
-        nickName,
+        name,
+        deviceNickName,
         email,
         phoneNumber,
         classificationType,
@@ -239,7 +254,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         policiesAccepted: Boolean(policiesAccepted),
       })
       setFormData({
-        nickName,
+        name,
+        deviceNickName,
         email,
         phoneNumber,
         classificationType: (classificationType || 'unknown') as ClassificationType,
@@ -341,12 +357,27 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     try {
       // Save to SettingsStore with error checking (except isPrimary which is handled by DevicesStore)
       const saveOperations = [
-        { key: settingsKeys.nickName, data: formData.nickName },
+        { key: 'name', data: formData.name },
         { key: settingsKeys.email, data: formData.email },
         { key: settingsKeys.phone, data: formData.phoneNumber },
         { key: settingsKeys.classificationType, data: formData.classificationType },
         { key: settingsKeys.policiesAccepted, data: formData.policiesAccepted },
       ]
+
+      // Update device nickname in DevicesStore
+      try {
+        const currentDevice = await DevicesStore.getCurrentDeviceInfo()
+        if (currentDevice) {
+          currentDevice.nickname = formData.deviceNickName
+          DevicesStore.setItem({
+            key: 'current',
+            data: currentDevice,
+            isTransit: false,
+          })
+        }
+      } catch (error) {
+        console.error('Error saving device nickname:', error)
+      }
 
       for (const operation of saveOperations) {
         const success = SettingsStore.setItem(operation)
@@ -439,27 +470,37 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       })
     }
 
-    // Auto-set device classification based on email type when user changes email
+    // Auto-set device classification and name based on email type when user changes email
     if (field === 'email' && typeof value === 'string') {
       const email = value.trim()
 
-      // Auto-set classification whenever user changes email
+      // Auto-set classification and name whenever user changes email
       if (email && email.includes('@')) {
         const isBusiness = isBusinessEmail(email)
         const autoClassification = isBusiness ? 'corp' : 'personal'
 
+        // Auto-generate name from email if name is empty
+        let autoName = formData.name
+        if (!formData.name || formData.name.trim() === '') {
+          autoName = generateNameFromEmail(email)
+        }
+
         setFormData(prev => ({
           ...prev,
           [field]: value,
+          name: autoName,
           classificationType: autoClassification as ClassificationType,
         }))
 
-        // Clear errors for both fields
+        // Clear errors for relevant fields
         if (errors[field]) {
           setErrors(prev => ({ ...prev, [field]: undefined }))
         }
         if (errors.classificationType) {
           setErrors(prev => ({ ...prev, classificationType: undefined }))
+        }
+        if (errors.name) {
+          setErrors(prev => ({ ...prev, name: undefined }))
         }
         return
       }
@@ -520,7 +561,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     return option ? option.label : labels.classificationPlaceholder
   }
 
-  const generateNicknameFromEmail = (email: string) => {
+  const generateNameFromEmail = (email: string) => {
     if (!email || !email.includes('@')) return ''
 
     const localPart = email.split('@')[0]
@@ -531,9 +572,34 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       .join(' ')
   }
 
+  const generateDeviceNicknameFromName = (name: string) => {
+    if (!name) return ''
+
+    // Take the first name
+    const firstName = name.split(' ')[0]
+
+    // Try to get actual device name from DevicesStore
+    let deviceType = 'Device'
+    try {
+      const currentDevice = DevicesStore.currentDevice
+      if (currentDevice?.deviceName) {
+        // Use the actual device name (e.g., "iPhone", "iPad", "Samsung Galaxy")
+        deviceType = currentDevice.deviceName
+      } else if (currentDevice?.model) {
+        // Fallback to model if deviceName not available
+        deviceType = currentDevice.model
+      }
+    } catch (error) {
+      // Fallback to generic "Device" if can't get device info
+    }
+
+    return `${firstName}'s ${deviceType}`
+  }
+
   const hasFormChanges = () => {
     return (
-      formData.nickName !== previousData.nickName ||
+      formData.name !== previousData.name ||
+      formData.deviceNickName !== previousData.deviceNickName ||
       formData.email !== previousData.email ||
       formData.phoneNumber !== previousData.phoneNumber ||
       formData.classificationType !== previousData.classificationType ||
@@ -548,24 +614,38 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       return false
     }
 
-    // Check each required field individually using validation functions
-    const nicknameValid = !validateNickName(formData.nickName)
-    const emailValid = !validateEmail(formData.email)
-
-    // Auto-generate nickname from email if nickname is empty
-    if (!formData.nickName || formData.nickName.trim() === '') {
+    // Auto-generate name from email if name is empty
+    if (!formData.name || formData.name.trim() === '') {
       if (formData.email && formData.email.trim() !== '') {
-        const autoNickname = generateNicknameFromEmail(formData.email.trim())
-        if (autoNickname) {
-          updateField('nickName', autoNickname)
+        const autoName = generateNameFromEmail(formData.email.trim())
+        if (autoName) {
+          updateField('name', autoName)
         }
       }
     }
 
+    // Auto-generate device nickname from name if device nickname is empty
+    if (!formData.deviceNickName || formData.deviceNickName.trim() === '') {
+      if (formData.name && formData.name.trim() !== '') {
+        const autoDeviceNickname = generateDeviceNicknameFromName(formData.name.trim())
+        if (autoDeviceNickname) {
+          updateField('deviceNickName', autoDeviceNickname)
+        }
+      }
+    }
+
+    // Check each required field individually using validation functions
+    const nameValid = !validateName(formData.name)
+    const deviceNicknameValid = !validateDeviceNickName(formData.deviceNickName)
+    const emailValid = !validateEmail(formData.email)
+
     // Validate phone number using libphonenumber-js
     const phoneValid = !validatePhone(formData.phoneNumber)
 
-    return nicknameValid && emailValid && phoneValid
+    // Check if terms and conditions are accepted
+    const termsAccepted = formData.policiesAccepted
+
+    return nameValid && deviceNicknameValid && emailValid && phoneValid && termsAccepted
   }
 
   const handleVerifyPhone = async () => {
@@ -708,7 +788,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
   const handleVerifyEmail = async () => {
     // Apply changes if editing
-    const finalName = isEditing && tempName ? tempName.trim() : formData.nickName
+    const finalName = isEditing && tempName ? tempName.trim() : formData.name
     const finalEmail = isEditing && tempEmail ? tempEmail.trim() : formData.email
 
     // Validate email first
@@ -717,16 +797,16 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       return
     }
 
-    // Validate nickname for registration
+    // Validate name for registration
     if (!finalName || finalName.trim() === '') {
-      Alert.alert(labels.error, 'Please enter a nickname first before verifying your email')
+      Alert.alert(labels.error, 'Please enter your name first before verifying your email')
       return
     }
 
     // Update the form data with the edited values
     if (isEditing) {
-      if (tempName && tempName.trim() !== formData.nickName) {
-        updateField('nickName', tempName.trim())
+      if (tempName && tempName.trim() !== formData.name) {
+        updateField('name', tempName.trim())
       }
       if (tempEmail && tempEmail.trim() !== formData.email) {
         updateField('email', tempEmail.trim())
@@ -743,11 +823,30 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         name: finalName.trim(),
       })
 
+      // Get current device information
+      let currentDeviceInfo
+      try {
+        currentDeviceInfo = await DevicesStore.getCurrentDeviceInfo()
+        console.log('Device info for registration:', currentDeviceInfo)
+      } catch (deviceError) {
+        console.warn('Failed to get device info, proceeding without it:', deviceError)
+        // Continue registration without device info if device detection fails
+      }
+
       // Send verification code via email using /auth/register endpoint
-      const response = await api.post('/auth/register', {
+      const registrationPayload = {
         email: finalEmail.trim().toLowerCase(),
         name: finalName.trim(),
-      })
+        device: {
+          ...currentDeviceInfo,
+          type: 'MOBILE',
+          nickname: formData.deviceNickName || `${finalName.split(' ')[0]}'s Device`,
+        },
+      }
+
+      console.log('Registration payload being sent:', JSON.stringify(registrationPayload, null, 2))
+
+      const response = await api.post('/auth/register', registrationPayload)
 
       console.log('Registration response:', response)
 
@@ -903,10 +1002,26 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const handleResendEmailCode = async () => {
     setIsSendingEmailCode(true)
     try {
-      await api.post('/auth/register', {
+      // Get current device information
+      let currentDeviceInfo
+      try {
+        currentDeviceInfo = await DevicesStore.getCurrentDeviceInfo()
+        console.log('Device info for email resend:', currentDeviceInfo)
+      } catch (deviceError) {
+        console.warn('Failed to get device info for resend, proceeding without it:', deviceError)
+        // Continue resend without device info if device detection fails
+      }
+
+      const resendPayload = {
         email: emailBeingVerified,
-        name: formData.nickName?.trim() || emailBeingVerified.split('@')[0],
-      })
+        name: formData.name?.trim() || emailBeingVerified.split('@')[0],
+      }
+
+      if (currentDeviceInfo) {
+        resendPayload.device = currentDeviceInfo
+      }
+
+      await api.post('/auth/register', resendPayload)
 
       // Reset attempts when resending
       setEmailVerificationCode('')
@@ -978,7 +1093,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   }
 
   const handleEdit = () => {
-    setTempName(formData.nickName)
+    setTempName(formData.name)
     setTempEmail(formData.email)
     setTempPhone(formData.phoneNumber)
     setIsEditing(true)
@@ -992,12 +1107,22 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   }
 
   // Field validation functions
-  const validateNickName = (value: string): string | undefined => {
+  const validateName = (value: string): string | undefined => {
     if (!value || value.trim() === '') {
-      return 'Nickname is required'
+      return 'Name is required'
     }
     if (value.trim().length < 2) {
-      return 'Nickname must be at least 2 characters'
+      return 'Name must be at least 2 characters'
+    }
+    return undefined
+  }
+
+  const validateDeviceNickName = (value: string): string | undefined => {
+    if (!value || value.trim() === '') {
+      return 'Device nickname is required'
+    }
+    if (value.trim().length < 2) {
+      return 'Device nickname must be at least 2 characters'
     }
     return undefined
   }
@@ -1033,8 +1158,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     let error: string | undefined
 
     switch (field) {
-      case 'nickName':
-        error = validateNickName(value)
+      case 'name':
+        error = validateName(value)
+        break
+      case 'deviceNickName':
+        error = validateDeviceNickName(value)
         break
       case 'email':
         error = validateEmail(value)
@@ -1056,31 +1184,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
       <View style={styles.content}>
         <View marginB-20>
-          <Text text70 color={colors.textLightColor} marginB-10>
-            {labels.nicknameRequired}
-          </Text>
-          <TextField
-            placeholder={labels.nicknamePlaceholder}
-            value={formData.nickName}
-            onChangeText={value => updateField('nickName', value)}
-            onBlur={() => handleFieldBlur('nickName', formData.nickName)}
-            style={styles.input}
-            placeholderTextColor={colors.textDarkColor}
-            color={colors.textLightColor}
-            validationMessage={
-              touchedFields.has('nickName') && fieldsWithInput.has('nickName') ? errors.nickName : undefined
-            }
-            validationMessageStyle={styles.errorText}
-            enableErrors={!!(touchedFields.has('nickName') && fieldsWithInput.has('nickName') && errors.nickName)}
-          />
-        </View>
-
-        <View marginB-20>
           <View
             style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}
           >
             <Text text70 color={colors.textLightColor}>
-              {labels.emailRequired}
+              Email *
             </Text>
             {isEmailVerified && (
               <Text text80 style={{ color: status.success }}>
@@ -1111,7 +1219,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}
           >
             <Text text70 color={colors.textLightColor}>
-              {labels.phoneNumberRequired}
+              Phone Number *
             </Text>
             {isPhoneVerified && (
               <Text text80 style={{ color: status.success }}>
@@ -1133,9 +1241,51 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
           )}
         </View>
 
+        <View marginB-20>
+          <Text text70 color={colors.textLightColor} marginB-10>
+            Full Name *
+          </Text>
+          <TextField
+            placeholder="Enter your full name"
+            value={formData.name}
+            onChangeText={value => updateField('name', value)}
+            onBlur={() => handleFieldBlur('name', formData.name)}
+            style={styles.input}
+            placeholderTextColor={colors.textDarkColor}
+            color={colors.textLightColor}
+            validationMessage={touchedFields.has('name') && fieldsWithInput.has('name') ? errors.name : undefined}
+            validationMessageStyle={styles.errorText}
+            enableErrors={!!(touchedFields.has('name') && fieldsWithInput.has('name') && errors.name)}
+          />
+        </View>
+
+        <View marginB-20>
+          <Text text70 color={colors.textLightColor} marginB-10>
+            Device Nickname *
+          </Text>
+          <TextField
+            placeholder="Enter device nickname"
+            value={formData.deviceNickName}
+            onChangeText={value => updateField('deviceNickName', value)}
+            onBlur={() => handleFieldBlur('deviceNickName', formData.deviceNickName)}
+            style={styles.input}
+            placeholderTextColor={colors.textDarkColor}
+            color={colors.textLightColor}
+            validationMessage={
+              touchedFields.has('deviceNickName') && fieldsWithInput.has('deviceNickName')
+                ? errors.deviceNickName
+                : undefined
+            }
+            validationMessageStyle={styles.errorText}
+            enableErrors={
+              !!(touchedFields.has('deviceNickName') && fieldsWithInput.has('deviceNickName') && errors.deviceNickName)
+            }
+          />
+        </View>
+
         <View marginB-30>
           <Text text70 color={colors.textLightColor} marginB-10>
-            {labels.deviceClassificationRequired}
+            Device Classification *
           </Text>
           <TouchableOpacity
             style={[styles.picker, errors.classificationType && styles.pickerError]}
@@ -1227,6 +1377,13 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
             <Switch
               value={formData.policiesAccepted && readTerms && readPrivacy}
               onValueChange={value => {
+                // Prevent multiple rapid calls
+                if (switchToggleRef.current) return
+                switchToggleRef.current = true
+                setTimeout(() => {
+                  switchToggleRef.current = false
+                }, 100)
+
                 if (value) {
                   // User is checking the box - show terms first, then privacy
                   if (!readTerms) {
@@ -1355,7 +1512,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                     <View style={styles.fieldContainer}>
                       <Text style={styles.fieldLabel}>Name:</Text>
                       {!isEditing ? (
-                        <Text style={styles.fieldDisplayText}>{formData.nickName}</Text>
+                        <Text style={styles.fieldDisplayText}>{formData.name}</Text>
                       ) : (
                         <TextField
                           value={tempName}
@@ -1394,7 +1551,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                       onPress={handleVerifyEmail}
                       disabled={
                         isSendingEmailCode ||
-                        (!isEditing && (!formData.email || !formData.nickName)) ||
+                        (!isEditing && (!formData.email || !formData.name)) ||
                         (isEditing && (!tempEmail || !tempName))
                       }
                       loading={isSendingEmailCode}
@@ -1436,10 +1593,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
                     <View style={styles.verificationButtonContainer}>
                       <Button
-                        label="Resend Code"
-                        onPress={handleResendEmailCode}
-                        disabled={isSendingEmailCode || isVerifyingEmailCode}
-                        loading={isSendingEmailCode}
+                        label={emailVerificationCode.length === CELL_COUNT ? 'Verify' : 'Resend Code'}
+                        onPress={
+                          emailVerificationCode.length === CELL_COUNT ? handleVerifyEmailCode : handleResendEmailCode
+                        }
+                        disabled={
+                          isSendingEmailCode ||
+                          isVerifyingEmailCode ||
+                          (emailVerificationCode.length > 0 && emailVerificationCode.length < CELL_COUNT)
+                        }
+                        loading={
+                          emailVerificationCode.length === CELL_COUNT ? isVerifyingEmailCode : isSendingEmailCode
+                        }
                         variant="secondary"
                         size="small"
                         style={styles.verificationButtonHalf}
@@ -1449,6 +1614,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                         onPress={() => {
                           setShowEmailVerificationCode(false)
                           setEmailVerificationCode('')
+                          setEmailVerificationAttempts(0)
+                          setIsEmailVerificationLocked(false)
                           setShowVerificationDrawer(false)
                         }}
                         disabled={isSendingEmailCode || isVerifyingEmailCode}
@@ -1553,10 +1720,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
 
                     <View style={styles.verificationButtonContainer}>
                       <Button
-                        label="Resend Code"
-                        onPress={handleResendCode}
-                        disabled={isSendingCode || isVerifyingCode}
-                        loading={isSendingCode}
+                        label={verificationCode.length === CELL_COUNT ? 'Verify' : 'Resend Code'}
+                        onPress={verificationCode.length === CELL_COUNT ? handleVerifyCode : handleResendCode}
+                        disabled={
+                          isSendingCode ||
+                          isVerifyingCode ||
+                          (verificationCode.length > 0 && verificationCode.length < CELL_COUNT)
+                        }
+                        loading={verificationCode.length === CELL_COUNT ? isVerifyingCode : isSendingCode}
                         variant="secondary"
                         size="small"
                         style={styles.verificationButtonHalf}
@@ -1566,6 +1737,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
                         onPress={() => {
                           setShowVerificationCode(false)
                           setVerificationCode('')
+                          setVerificationAttempts(0)
+                          setIsVerificationLocked(false)
                           setShowVerificationDrawer(false)
                         }}
                         disabled={isSendingCode || isVerifyingCode}

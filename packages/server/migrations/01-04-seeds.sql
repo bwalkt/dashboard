@@ -19,6 +19,18 @@ FROM
 WHERE
   email = 'uma.krishnan@boardwalktech.com';
 
+INSERT INTO
+  pzero.all_orgs (name, handle, website,  near_verification, data)
+SELECT
+  'Boardwalk Technologies',
+  'bwalkt',
+  'https://boardwalktech.com',
+  true,
+  jsonb_build_object('meta', jsonb_build_object('c_by', id::text))
+FROM
+  pzero.all_auth
+WHERE
+  email = 'uma.krishnan@boardwalktech.com';
 -- Seed user profile
 INSERT INTO
   pzero.all_users (id, name, handle, part, org_id, data)

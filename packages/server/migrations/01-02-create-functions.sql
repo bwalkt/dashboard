@@ -395,7 +395,14 @@ if not c_by:
         auth_insert = True
         dev_notice(f'Setting c_by to new id {c_by} for table {table_only_name}')
     else:
-        raise Exception('Missing Audit field - c_by ' + str(full_table_name) + '  ' + str(table_only_name))
+        user_check = plpy.prepare("SELECT id FROM pzero.all_auth where is_act = true order by uuid desc limit 1", [])
+        user_exists = plpy.execute(user_check, [])
+        if user_exists and len(user_exists) > 0:
+            c_by = user_exists[0]['id']
+            dev_notice(f'No c_by provided, defaulting to latest active user {c_by}')
+        else:
+            plpy.error(f'No c_by provided and no active users found to default to')
+            raise Exception('Missing Audit field - c_by ' + str(full_table_name) + '  ' + str(table_only_name))
 # Validate user with prepared statement
 try:
     # Skip user validation for auth table inserts; c_by is the newly generated entity ID (bootstrapping case)

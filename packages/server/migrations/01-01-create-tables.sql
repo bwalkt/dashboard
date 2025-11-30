@@ -525,6 +525,7 @@ CREATE TABLE pzero.all_orgs (
   subscriber_tier_expiry timestamptz,
   multi_tenant boolean DEFAULT TRUE,
   part_by pzero.valid_part,
+  near_verification boolean DEFAULT FALSE,
   PRIMARY KEY (id, is_act),
   UNIQUE (name, is_act),
   UNIQUE (website, is_act),
@@ -644,9 +645,9 @@ PARTITION BY
 CREATE TABLE pzero.all_devices (
   LIKE uuid_base_loc_table including ALL,
   is_primary boolean DEFAULT FALSE,
-  device_type pzero.device_type DEFAULT 'OTHER',
+  type pzero.device_type DEFAULT 'OTHER',
   is_verifier boolean DEFAULT FALSE,
-  device_status pzero.device_status DEFAULT 'UNKNOWN',
+  status pzero.device_status DEFAULT 'UNKNOWN',
   duration_used bigint DEFAULT 0, -- total duration used in microseconds
   uid uuid NOT NULL,
   UNIQUE (is_primary, uid, is_act),

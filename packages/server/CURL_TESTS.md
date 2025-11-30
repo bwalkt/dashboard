@@ -40,7 +40,27 @@ USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 ### Registration Workflow
 
 ```bash
-# 1. Register user
+# 1. Register user (with device info)
+curl -X POST http://localhost:8090/auth/register \
+  -H "Content-Type: application/json" \
+  -H "User-Agent: $USER_AGENT" \
+  -d '{
+    "name": "Test User",
+    "email": "test@example.com",
+    "device": {
+      "id": "device-001",
+      "deviceId": "test-device",
+      "deviceName": "Test Device",
+      "systemName": "macOS",
+      "systemVersion": "14.0",
+      "model": "MacBook Pro",
+      "type": "DESKTOP",
+      "os": "macOS",
+      "osVersion": "14.0"
+    }
+  }'
+
+# 1a. Register user (without device info - backward compatible)
 curl -X POST http://localhost:8090/auth/register \
   -H "Content-Type: application/json" \
   -H "User-Agent: $USER_AGENT" \
