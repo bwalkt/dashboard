@@ -837,8 +837,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       const registrationPayload = {
         email: finalEmail.trim().toLowerCase(),
         name: finalName.trim(),
-        device: { ...currentDeviceInfo, type: 'MOBILE' },
+        device: {
+          ...currentDeviceInfo,
+          type: 'MOBILE',
+          nickname: formData.deviceNickName || `${finalName.split(' ')[0]}'s Device`,
+        },
       }
+
+      console.log('Registration payload being sent:', JSON.stringify(registrationPayload, null, 2))
 
       const response = await api.post('/auth/register', registrationPayload)
 

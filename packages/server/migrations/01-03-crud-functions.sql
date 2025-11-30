@@ -302,8 +302,7 @@ def dev_notice(msg):
 try:
     user_input = json.loads(p_user) if isinstance(p_user, str) else p_user
 except Exception as e:
-    # plpy.error('Invalid JSON input')
-    raise
+    plpy.error('Invalid JSON input for user creation: {}'.format(str(e)))
 
 if not isinstance(user_input, dict):
     plpy.error('Input must be a JSON object')
@@ -725,7 +724,7 @@ def dev_notice(msg):
 try:
     device_input = json.loads(p_device) if isinstance(p_device, str) else p_device
 except Exception as e:
-    raise
+    plpy.error('Invalid JSON input for device creation: {}'.format(str(e)))
 
 if not isinstance(device_input, dict):
     plpy.error('Input must be a JSON object')
@@ -801,21 +800,26 @@ if not device_id:
 if not handle:
     # First try to use nickname if provided and unique
     if nickname:
+        dev_notice("Processing nickname: {}".format(nickname))
         try:
             # Check if nickname is unique as a handle
+            import re
+            # Convert to lowercase, replace spaces with underscores, remove invalid characters, truncate
+            nickname_handle = re.sub(r'[^a-z0-9_]', '', nickname.lower().replace(' ', '_'))[:10]
+            dev_notice("Converted nickname to handle: {}".format(nickname_handle))
             check_stmt = plpy.prepare("SELECT COUNT(*) as count FROM pzero.all_devices WHERE handle = $1", ["text"])
-            result = plpy.execute(check_stmt, [nickname.lower().replace(' ', '_')])
+            result = plpy.execute(check_stmt, [nickname_handle])
             
             if result[0]['count'] == 0:
                 # Nickname is unique, use it as handle
-                handle = nickname.lower().replace(' ', '_')
-                dev_notice(f"Using nickname as handle: {handle}")
+                handle = nickname_handle
+                dev_notice("Using nickname as handle: {}".format(handle))
             else:
                 # Nickname is not unique, generate from name with nickname prefix
                 handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
-                handle_result = plpy.execute(handle_stmt, [f"{nickname}_{name}"])
+                handle_result = plpy.execute(handle_stmt, ["{}_{}".format(nickname, name)])
                 handle = handle_result[0]['handle']
-                dev_notice(f"Generated unique handle from nickname: {handle}")
+                dev_notice("Generated unique handle from nickname: {}".format(handle))
         except:
             # Fallback to generate from name
             try:
