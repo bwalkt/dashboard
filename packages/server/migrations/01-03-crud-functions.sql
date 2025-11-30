@@ -686,7 +686,8 @@ $$ language plpython3u;
 -- Optional fields:
 --   id: Device UUID (if not provided, generates a new one)
 --   name: Device name (defaults to "Device" if not provided)
---   handle: Device handle (auto-generated if not provided)
+--   handle: Device handle (auto-generated from nickname or name if not provided)
+--   nickname: Device nickname (if provided and unique, used as handle)
 --   type: Device type enum value (MOBILE, TABLET, DESKTOP, LAPTOP, OTHER - defaults to OTHER)
 --   status: Device status enum value (ACTIVE, INACTIVE, LOST, UNKNOWN - defaults to ACTIVE)
 --   is_primary: Whether this is the user's primary device (defaults to false)
@@ -701,6 +702,7 @@ $$ language plpython3u;
 --     'uid', '019ad123-4567-7890-abcd-123456789012',
 --     'c_by', '019ad123-4567-7890-abcd-123456789012',
 --     'name', 'iPhone 15 Pro',
+--     'nickname', 'John''s iPhone',
 --     'type', 'MOBILE',
 --     'is_primary', true,
 --     'data', jsonb_build_object('deviceModel', 'iPhone15,2', 'osVersion', '17.1')
@@ -758,6 +760,7 @@ except Exception as e:
 device_id = device_input.get('id', '').strip() if device_input.get('id') else None
 name = device_input.get('name', '').strip() if device_input.get('name') else 'Device'
 handle = device_input.get('handle', '').strip() if device_input.get('handle') else None
+nickname = device_input.get('nickname', '').strip() if device_input.get('nickname') else None
 is_primary = device_input.get('is_primary', False)
 is_verifier = device_input.get('is_verifier', False)
 duration_used = device_input.get('duration_used', 0)
@@ -796,13 +799,40 @@ if not device_id:
 
 # Generate unique handle if not provided
 if not handle:
-    try:
-        handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
-        handle_result = plpy.execute(handle_stmt, [name])
-        handle = handle_result[0]['handle']
-    except:
-        # Fallback to a simple handle if generation fails
-        handle = 'device'
+    # First try to use nickname if provided and unique
+    if nickname:
+        try:
+            # Check if nickname is unique as a handle
+            check_stmt = plpy.prepare("SELECT COUNT(*) as count FROM pzero.all_devices WHERE handle = $1", ["text"])
+            result = plpy.execute(check_stmt, [nickname.lower().replace(' ', '_')])
+            
+            if result[0]['count'] == 0:
+                # Nickname is unique, use it as handle
+                handle = nickname.lower().replace(' ', '_')
+                dev_notice(f"Using nickname as handle: {handle}")
+            else:
+                # Nickname is not unique, generate from name with nickname prefix
+                handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
+                handle_result = plpy.execute(handle_stmt, [f"{nickname}_{name}"])
+                handle = handle_result[0]['handle']
+                dev_notice(f"Generated unique handle from nickname: {handle}")
+        except:
+            # Fallback to generate from name
+            try:
+                handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
+                handle_result = plpy.execute(handle_stmt, [name])
+                handle = handle_result[0]['handle']
+            except:
+                handle = 'device'
+    else:
+        # No nickname provided, generate from name
+        try:
+            handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
+            handle_result = plpy.execute(handle_stmt, [name])
+            handle = handle_result[0]['handle']
+        except:
+            # Fallback to a simple handle if generation fails
+            handle = 'device'
 
 dev_notice("Creating device: {} for user {}".format(name, uid))
 
@@ -812,6 +842,10 @@ if 'meta' not in device_data:
 if not isinstance(device_data['meta'], dict):
     device_data['meta'] = {}
 device_data['meta']['c_by'] = c_by
+
+# Store nickname in device data if provided
+if nickname:
+    device_data['nickname'] = nickname
 
 # Build fields for device creation
 try:

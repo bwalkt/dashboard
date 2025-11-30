@@ -4,7 +4,7 @@ import { ZStorage } from './store'
 
 export type DeviceInfoType = {
   id?: string
-  nickname?: string
+  nickname?: string // Device nickname
   isPrimaryDevice?: boolean
   c_at?: number
   deviceId: string
