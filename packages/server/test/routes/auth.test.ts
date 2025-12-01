@@ -109,7 +109,7 @@ describe("Auth Routes", () => {
       expect(secondResponse.status).toBe(429);
       expect(secondResponse.body).toHaveProperty("error", "Too Many Requests");
       expect(secondResponse.body.message).toBe(
-        "Please wait before requesting another verification email",
+        "Please wait 60 seconds before requesting another verification email",
       );
     });
   });
@@ -240,7 +240,7 @@ describe("Auth Routes", () => {
       expect(secondResponse.status).toBe(429);
       expect(secondResponse.body).toHaveProperty("error", "Too Many Requests");
       expect(secondResponse.body.message).toBe(
-        "Please wait before attempting verification again",
+        "Please wait 60 seconds before attempting verification again",
       );
     });
   });
@@ -311,7 +311,7 @@ describe("Auth Routes", () => {
       expect(secondResponse.status).toBe(429);
       expect(secondResponse.body).toHaveProperty("error", "Too Many Requests");
       expect(secondResponse.body.message).toBe(
-        "Please wait before attempting verification again",
+        "Please wait 60 seconds before attempting verification again",
       );
     });
   });
