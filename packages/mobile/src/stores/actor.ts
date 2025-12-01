@@ -1,4 +1,4 @@
-import { type Actor, ContactStatuses, defaultActor, Relations, type RelationType } from '@pzero/shared/pzero'
+import { type Actor, actorStatuses, defaultActor, Relations, type RelationType } from '@pzero/shared/pzero'
 import { uuid } from '@pzero/shared/uuid'
 import { HistoryStore, Keys } from './history'
 import { ZStorage } from './store'
@@ -52,7 +52,7 @@ export class ActorStore extends ZStorage {
   async getRelations(type?: RelationType): Promise<Actor[]> {
     const relations: Actor[] = []
     this.relations.forEach((actor, _key) => {
-      if (actor.status === ContactStatuses.deleted || actor.relation === Relations.me) {
+      if (actor.status === actorStatuses.inactive || actor.relation === Relations.me) {
         return
       }
       if (type) {
@@ -77,7 +77,7 @@ export class ActorStore extends ZStorage {
       throw 'Actor name cannot be empty'
     }
     next.dateUpdated = Date.now()
-    next.status = actor.status ?? ContactStatuses.pending
+    next.status = actor.status ?? actorStatuses.pending
     const nickName: string = actor.nickName ?? (actor.name as string)
     if (!nickName) {
       throw 'Actor name cannot be empty'
@@ -98,18 +98,18 @@ export class ActorStore extends ZStorage {
     if (!actor) {
       throw new Error(`Actor with id ${id} does not exist`)
     }
-    if (actor.status === ContactStatuses.deleted) {
+    if (actor.status === actorStatuses.inactive) {
       throw new Error(`Actor with id ${id} is already deleted`)
     }
     if (actor.relation === Relations.me) {
       throw new Error(`You cannot delete me`)
     }
-    actor.status = ContactStatuses.deleted
+    actor.status = actorStatuses.inactive
     HistoryStore.putHistory({
       id: id,
       key: 'actor',
       original: Keys.actor,
-      updates: { status: ContactStatuses.deleted },
+      updates: { status: actorStatuses.inactive },
     })
     this.relations.delete(id)
     return true

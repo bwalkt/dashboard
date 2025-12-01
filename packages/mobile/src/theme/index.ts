@@ -15,6 +15,7 @@ export const spacing = {
 }
 
 export const borderRadius = {
+  xs: 2,
   sm: 4,
   md: 6,
   lg: 8,
@@ -35,7 +36,7 @@ export const fontWeight = {
   medium: '500',
   semibold: '600',
   bold: '700',
-}
+} as const
 
 export const buttons = {
   primary: {
@@ -78,6 +79,9 @@ export const status = {
   success: '#4CAF50',
   verified: colors.statusVerified,
 }
+
+// Add successColor to colors for compatibility
+;(colors as any).successColor = status.success
 
 export const surfaces = {
   primary: colors.backgroundColor,

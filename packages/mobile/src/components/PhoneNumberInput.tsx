@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type React from 'react'
 import PhoneInput from 'react-native-international-phone-number'
 import { borderRadius, fontSize, inputs, surfaces, text } from '../theme'

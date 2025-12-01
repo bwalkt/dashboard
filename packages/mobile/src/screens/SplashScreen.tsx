@@ -1,5 +1,4 @@
 import { colors } from '@pzero/shared/theme'
-import type React from 'react'
 import { useEffect } from 'react'
 import { Image, StyleSheet, View } from 'react-native'
 

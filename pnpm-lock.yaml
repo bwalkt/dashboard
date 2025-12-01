@@ -760,6 +760,8 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/envoy-wasm-filter: {}
+
   packages/mobile:
     dependencies:
       '@babel/runtime':
@@ -810,6 +812,9 @@ importers:
       react-native-ble-plx:
         specifier: 3.5.0
         version: 3.5.0(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1)
+      react-native-config:
+        specifier: ^1.6.1
+        version: 1.6.1(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1)
       react-native-confirmation-code-field:
         specifier: 'catalog:'
         version: 8.0.1(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1)
@@ -7580,6 +7585,16 @@ packages:
     peerDependencies:
       react: 19.1.1
       react-native: '*'
+
+  react-native-config@1.6.1:
+    resolution: {integrity: sha512-HvKtxr6/Tq3iMdFx5REYZsjCtPi0RxQOMCs15+DqrUPTNFtWHuEuh+zw7fJp+dmuO79YMfdtlsPWIGTHtaXwjg==}
+    peerDependencies:
+      react: 19.1.1
+      react-native: '*'
+      react-native-windows: '>=0.61'
+    peerDependenciesMeta:
+      react-native-windows:
+        optional: true
 
   react-native-confirmation-code-field@8.0.1:
     resolution: {integrity: sha512-pwrhQtspFEp0y/gxZRp8hrra+UjAYfwAsW5Sn3yYtdUZVyRjAZPBnUb3rOc+z5L5o2ml03z5P3uvTK0yQwXsmA==}
@@ -16375,6 +16390,11 @@ snapshots:
       react-native: 0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1)
 
   react-native-ble-plx@3.5.0(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1):
+    dependencies:
+      react: 19.1.1
+      react-native: 0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1)
+
+  react-native-config@1.6.1(react-native@0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1))(react@19.1.1):
     dependencies:
       react: 19.1.1
       react-native: 0.82.1(@babel/core@7.25.2)(@react-native-community/cli@20.0.2(typescript@5.8.3))(@react-native/metro-config@0.82.1(@babel/core@7.25.2))(@types/react@19.2.6)(react@19.1.1)

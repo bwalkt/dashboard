@@ -71,7 +71,7 @@ export class DevicesStoreClass extends ZStorage {
   primaryDevice?: DeviceInfoType
   currentDevice?: DeviceInfoType
   devices: Map<string, DeviceInfoType> = new Map()
-  isPrimaryDevice: boolean = false
+  isPrimaryDevice: boolean = true
   constructor() {
     super(STORE)
   }
@@ -90,7 +90,7 @@ export class DevicesStoreClass extends ZStorage {
       try {
         deviceInfo = (await getDeviceInfo()) as unknown as DeviceInfoType
         deviceInfo.id = uuid()
-        const saved = this.setItem({ key: deviceAssignmentTypes.current, data: deviceInfo, isTransit: false })
+        const saved = this.setItem({ key: deviceAssignmentTypes.current, data: deviceInfo })
         if (!saved) {
           throw new Error('Failed to save current device info to storage')
         }
@@ -150,7 +150,6 @@ export class DevicesStoreClass extends ZStorage {
         const primarySaved = this.setItem({
           key: deviceAssignmentTypes.primary,
           data: this.currentDevice,
-          isTransit: false,
         })
         if (!primarySaved) {
           throw new Error('Failed to save primary device data')
@@ -159,7 +158,6 @@ export class DevicesStoreClass extends ZStorage {
         const currentSaved = this.setItem({
           key: deviceAssignmentTypes.current,
           data: this.currentDevice,
-          isTransit: false,
         })
         if (!currentSaved) {
           throw new Error('Failed to save current device data')
@@ -169,10 +167,11 @@ export class DevicesStoreClass extends ZStorage {
       }
 
       device.c_at = Date.now()
-      const saved = this.setItem({ key: deviceAssignmentTypes.primary, data: device, isTransit: false })
+      const saved = this.setItem({ key: deviceAssignmentTypes.primary, data: device })
       if (!saved) {
         throw new Error('Failed to save primary device data')
       }
+      return device
     } catch (error) {
       console.error('Failed to set primary device:', error)
       throw error
@@ -185,7 +184,7 @@ export class DevicesStoreClass extends ZStorage {
     // Store original state for rollback
     const originalIsPrimary = this.isPrimaryDevice
     const originalPrimaryDevice = this.primaryDevice
-    const originalCurrentDevice = { ...this.currentDevice }
+    const originalCurrentDevice = this.currentDevice ? { ...this.currentDevice } : undefined
 
     try {
       currentDevice.isPrimaryDevice = isPrimary
@@ -230,7 +229,7 @@ export class DevicesStoreClass extends ZStorage {
       // Rollback in-memory state on failure
       this.isPrimaryDevice = originalIsPrimary
       this.primaryDevice = originalPrimaryDevice
-      this.currentDevice = originalCurrentDevice
+      this.currentDevice = originalCurrentDevice as DeviceInfoType | undefined
 
       console.error('Failed to toggle device primary status:', error)
       throw error
@@ -243,7 +242,7 @@ export class DevicesStoreClass extends ZStorage {
     // Store original state for rollback
     const originalIsPrimary = this.isPrimaryDevice
     const originalPrimaryDevice = this.primaryDevice
-    const originalCurrentDevice = { ...this.currentDevice }
+    const originalCurrentDevice = this.currentDevice ? { ...this.currentDevice } : undefined
 
     try {
       // Update the current device's primary status
@@ -297,7 +296,7 @@ export class DevicesStoreClass extends ZStorage {
       // Rollback in-memory state on failure
       this.isPrimaryDevice = originalIsPrimary
       this.primaryDevice = originalPrimaryDevice
-      this.currentDevice = originalCurrentDevice
+      this.currentDevice = originalCurrentDevice as DeviceInfoType | undefined
 
       console.error('Failed to set primary device status:', error)
       throw error
