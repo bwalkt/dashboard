@@ -145,6 +145,7 @@ export interface CreateUserData {
   email: string
   avatar: string | null
   email_verified?: boolean
+  device?: unknown
 }
 
 export interface GitHubUser {
