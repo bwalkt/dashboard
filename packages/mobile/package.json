@@ -39,7 +39,6 @@
     "react-native-config": "^1.6.1",
     "react-native-confirmation-code-field": "catalog:",
     "react-native-device-info": "catalog:",
-    "react-native-dotenv": "catalog:",
     "react-native-geolocation-service": "catalog:",
     "react-native-gesture-handler": "catalog:",
     "react-native-get-random-values": "^2.0.0",
