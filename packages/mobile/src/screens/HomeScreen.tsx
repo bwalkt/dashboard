@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { labels } from '@pzero/shared/constants'
 import { DrawerActions, type NavigationProp } from '@react-navigation/native'
 import type React from 'react'

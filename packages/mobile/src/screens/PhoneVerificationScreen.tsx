@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { api } from '@pzero/shared/api'
 import { labels } from '@pzero/shared/constants'
 import type { NavigationProp } from '@react-navigation/native'

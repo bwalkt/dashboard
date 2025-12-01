@@ -108,14 +108,14 @@ export class ServiceClass {
     } catch (error: unknown) {
       clearTimeout(timeoutId)
 
-      if (error.name === 'AbortError') {
+      if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
         throw new ServiceTimeoutError()
-      } else if (error.message === 'Network request failed' || error.name === 'NetworkError') {
-        throw new ServiceNetworkError(error.message)
+      } else if (error && typeof error === 'object' && 'message' in error && (error.message === 'Network request failed' || ('name' in error && error.name === 'NetworkError'))) {
+        throw new ServiceNetworkError(typeof error === 'object' && 'message' in error ? String(error.message) : 'Network error')
       } else if (error instanceof ServiceError) {
         throw error
       } else {
-        throw new ServiceError(error.message || 'Unknown error occurred', 500)
+        throw new ServiceError(error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Unknown error occurred', 500)
       }
     }
   }

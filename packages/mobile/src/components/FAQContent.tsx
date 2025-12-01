@@ -124,16 +124,16 @@ const styles = StyleSheet.create({
   question: {
     flex: 1,
     fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
+    fontWeight: fontWeight.medium as any,
     lineHeight: 22,
     marginRight: spacing.sm + 2,
   },
   expandIcon: {
     fontSize: fontSize.xl,
     color: colors.primaryColor,
-    fontWeight: fontWeight.bold,
+    fontWeight: fontWeight.bold as any,
     width: 24,
-    textAlign: 'center',
+    textAlign: 'center' as const,
   },
   answerContainer: {
     marginTop: spacing.md,

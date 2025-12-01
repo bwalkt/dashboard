@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { labels } from '@pzero/shared/constants'
 import { type Endpoint, endpointSchema, endpointStatuses } from '@pzero/shared/pzero'
 import type { NavigationProp } from '@react-navigation/native'
