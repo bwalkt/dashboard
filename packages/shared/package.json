@@ -47,6 +47,10 @@
       "import": "./dist/types/index.js",
       "require": "./dist/types/index.js"
     },
+    "./constants": {
+      "import": "./dist/constants/index.js",
+      "types": "./dist/constants/index.d.ts"
+    },
     "./grid": {
       "import": "./dist/grid/index.js",
       "types": "./dist/grid/index.d.ts"

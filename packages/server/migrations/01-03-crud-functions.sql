@@ -98,8 +98,7 @@ try:
     fields = json.loads(p_fields) if isinstance(p_fields, str) else p_fields
     data = json.loads(p_data) if isinstance(p_data, str) else p_data
 except Exception as e:
-    # plpy.error('Invalid JSON input')
-    raise
+    plpy.error('Invalid JSON input for table insert: {}'.format(str(e)))
 
 # Ensure data is a dict
 if not isinstance(data, dict):
@@ -600,8 +599,7 @@ def dev_notice(msg):
 try:
     org_input = json.loads(p_org) if isinstance(p_org, str) else p_org
 except Exception as e:
-    # plpy.error('Invalid JSON input')
-    raise
+    plpy.error('Invalid JSON input for organization creation: {}'.format(str(e)))
 
 if not isinstance(org_input, dict):
     plpy.error('Input must be a JSON object')

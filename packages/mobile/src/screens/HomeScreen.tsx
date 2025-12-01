@@ -1,10 +1,11 @@
+import { labels } from '@pzero/shared/constants'
 import { DrawerActions, type NavigationProp } from '@react-navigation/native'
 import type React from 'react'
 import { StyleSheet, TouchableOpacity } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Text, View } from 'react-native-ui-lib'
+
 import Button from '../components/Button'
-import { labels } from '../constants/labels'
 import { SettingsStore } from '../stores/settings'
 import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
 
