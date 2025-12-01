@@ -127,7 +127,7 @@ describe("SMS Routes", () => {
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("error");
       expect(response.body.message).toBe(
-        "Invalid or expired verification code",
+        "Verification code has expired or does not exist",
       );
     });
   });
