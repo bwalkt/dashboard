@@ -8,6 +8,7 @@ import {
   getLatestVerificationCode,
 } from "../mocks/email-capture";
 import { mockRedis } from "../mocks/redis";
+import "../mocks/external-services";
 
 describe("Auth Routes", () => {
   let app: FastifyInstance;

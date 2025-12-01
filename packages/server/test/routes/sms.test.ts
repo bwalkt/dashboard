@@ -3,6 +3,7 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestApp } from "../helpers/app";
 import { mockRedis } from "../mocks/redis";
+import "../mocks/external-services";
 
 describe("SMS Routes", () => {
   let app: FastifyInstance;
