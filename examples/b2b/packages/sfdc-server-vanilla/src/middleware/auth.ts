@@ -52,27 +52,26 @@ export async function authenticateToken(request: FastifyRequest, reply: FastifyR
         message: 'User not found',
       })
     }
+    // // Validate challenge headers via authz-service
+    // const challengeId = request.headers['x-challenge-id'] as string | undefined
+    // const challengeAnswer = request.headers['x-challenge-answer'] as string | undefined
 
-    // Validate challenge headers via authz-service
-    const challengeId = request.headers['x-challenge-id'] as string | undefined
-    const challengeAnswer = request.headers['x-challenge-answer'] as string | undefined
+    // if (!challengeId || !challengeAnswer) {
+    //   return reply.status(401).send({
+    //     error: 'Unauthorized',
+    //     message: 'Missing required challenge headers: x-challenge-id and x-challenge-answer',
+    //   } as ErrorResponse)
+    // }
 
-    if (!challengeId || !challengeAnswer) {
-      return reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'Missing required challenge headers: x-challenge-id and x-challenge-answer',
-      } as ErrorResponse)
-    }
+    // // Call authz-service to validate the challenge
+    // const isValid = await authzService.validateChallenge(challengeId, challengeAnswer)
 
-    // Call authz-service to validate the challenge
-    const isValid = await authzService.validateChallenge(challengeId, challengeAnswer)
-
-    if (!isValid) {
-      return reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'Invalid challenge validation',
-      } as ErrorResponse)
-    }
+    // if (!isValid) {
+    //   return reply.status(401).send({
+    //     error: 'Unauthorized',
+    //     message: 'Invalid challenge validation',
+    //   } as ErrorResponse)
+    // }
     // Attach user to request
     ;(request as unknown as AuthenticatedRequest).user = user
   } catch (error) {

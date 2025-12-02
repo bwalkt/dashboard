@@ -80,7 +80,7 @@ export class AuthzService {
     maxRetries: number = 2,
     timeoutMs: number = 5000,
   ): Promise<boolean> {
-    const url = `${this.authzServiceUrl}/authz`
+    const url = `${this.authzServiceUrl}`
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {

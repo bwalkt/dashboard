@@ -14,26 +14,6 @@ services:
       timeout: 3s
       retries: 5
 
-  authz-service:
-    build:
-      context: ../../../
-      dockerfile: packages/authz-service/Dockerfile
-    container_name: pzero-b2b-authz-service
-    restart: unless-stopped
-    networks:
-      - pzero-network
-    ports:
-      - "3002:3000"
-    environment:
-      - PORT=3000
-      - REDIS_URL=redis://dragonfly:6379
-      # DEV ONLY — override in .env or runtime; do not use in production, use a cryptographically random value
-      - CHALLENGE_SECRET=${CHALLENGE_SECRET:-default-secret-change-in-production}
-      - CHALLENGE_TTL=${CHALLENGE_TTL:-300}
-    depends_on:
-      dragonfly:
-        condition: service_healthy
-
   pzero-sfdc-server-vanilla:
     # Image from GitHub Container Registry
     # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
@@ -78,8 +58,6 @@ services:
     depends_on:
       dragonfly:
         condition: service_healthy
-      authz-service:
-        condition: service_started
 
 volumes:
   dragonfly_data:

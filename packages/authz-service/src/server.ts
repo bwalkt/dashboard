@@ -2,8 +2,8 @@ import cors from '@fastify/cors'
 import { createHash } from 'crypto'
 import Fastify from 'fastify'
 import { nanoid } from 'nanoid'
-import { refreshChallengeTTL, storeChallenge } from './redis.js'
-import type { AuthzResponse, ChallengeResponse, RefreshChallengeResponse } from './types.js'
+import { getExpectedAnswer, refreshChallengeTTL, storeChallenge } from './redis.js'
+import type { AuthzResponse, ChallengeResponse, RefreshChallengeResponse, ValidateRequest, ValidateResponse } from './types.js'
 import { verifyChallenge } from './verifyChallenge.js'
 
 const PORT = parseInt(process.env.PORT || '3000', 10)
@@ -104,6 +104,62 @@ const start = async (): Promise<void> => {
 
         if (result.ok) {
           return reply.code(200).send({ ok: true })
+        }
+
+        return reply.code(403).send({
+          ok: false,
+          message: result.reason || 'invalid challenge',
+        })
+      },
+    )
+
+    /**
+     * POST /validate
+     * Lightweight endpoint for WASM filter to validate challenges
+     * Accepts challengeId and challengeAnswer in request body or headers
+     * Returns expectedAnswer if valid for WASM to cache in shared data
+     */
+    fastify.post<{ Body?: ValidateRequest; Headers: Record<string, string | undefined> }>(
+      '/validate',
+      async (request, reply): Promise<ValidateResponse> => {
+        // Extract challenge from body or headers
+        let challengeId: string | undefined
+        let challengeAnswer: string | undefined
+
+        if (request.body && typeof request.body === 'object') {
+          const body = request.body as ValidateRequest
+          challengeId = body.challengeId
+          challengeAnswer = body.challengeAnswer
+        }
+
+        // Fallback to headers if not in body
+        if (!challengeId || !challengeAnswer) {
+          challengeId = request.headers['x-challenge-id'] as string | undefined
+          challengeAnswer = request.headers['x-challenge-answer'] as string | undefined
+        }
+
+        // Validate format
+        if (!challengeId || !challengeAnswer || !challengeId.length || !challengeAnswer.length) {
+          return reply.code(400).send({
+            ok: false,
+            message: 'Missing required fields: challengeId and challengeAnswer',
+          })
+        }
+
+        // Verify challenge
+        const headers: Record<string, string> = {
+          'x-challenge-id': challengeId,
+          'x-challenge-answer': challengeAnswer,
+        }
+        const result = await verifyChallenge(headers)
+
+        if (result.ok) {
+          // Get expected answer from Redis to return for caching
+          const expectedAnswer = await getExpectedAnswer(challengeId)
+          return reply.code(200).send({
+            ok: true,
+            expectedAnswer: expectedAnswer || undefined,
+          })
         }
 
         return reply.code(403).send({

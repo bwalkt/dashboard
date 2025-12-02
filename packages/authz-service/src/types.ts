@@ -17,3 +17,14 @@ export interface RefreshChallengeResponse {
   challengeId: string
   challenge: string
 }
+
+export interface ValidateRequest {
+  challengeId: string
+  challengeAnswer: string
+}
+
+export interface ValidateResponse {
+  ok: boolean
+  expectedAnswer?: string
+  message?: string
+}
