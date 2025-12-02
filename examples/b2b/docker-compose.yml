@@ -4,6 +4,8 @@ services:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
     container_name: pzero-b2b-dragonfly
     restart: unless-stopped
+    networks:
+      - pzero-network
     volumes:
       - dragonfly_data:/data
     healthcheck:
@@ -11,6 +13,26 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+  authz-service:
+    build:
+      context: ../../../
+      dockerfile: packages/authz-service/Dockerfile
+    container_name: pzero-b2b-authz-service
+    restart: unless-stopped
+    networks:
+      - pzero-network
+    ports:
+      - "3002:3000"
+    environment:
+      - PORT=3000
+      - REDIS_URL=redis://dragonfly:6379
+      # DEV ONLY — override in .env or runtime; do not use in production, use a cryptographically random value
+      - CHALLENGE_SECRET=${CHALLENGE_SECRET:-default-secret-change-in-production}
+      - CHALLENGE_TTL=${CHALLENGE_TTL:-300}
+    depends_on:
+      dragonfly:
+        condition: service_healthy
 
   pzero-sfdc-server-vanilla:
     # Image from GitHub Container Registry
@@ -20,6 +42,8 @@ services:
       context: ../../
       dockerfile: examples/b2b/packages/sfdc-server-vanilla/Dockerfile
     container_name: pzero-sfdc-server-vanilla
+    networks:
+      - pzero-network
     ports:
       - "3000:3000" # Internal port for direct access (optional)
     environment:
@@ -41,6 +65,8 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://dragonfly:6379}
       # OAuth Callback URL
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:1420}
+      # Authz Service Configuration
+      - AUTHZ_SERVICE_URL=${AUTHZ_SERVICE_URL:-http://authz-service:3000}
     restart: unless-stopped
     volumes:
       - type: bind
@@ -52,6 +78,16 @@ services:
     depends_on:
       dragonfly:
         condition: service_healthy
+      authz-service:
+        condition: service_started
 
 volumes:
   dragonfly_data:
+
+# NOTE: pzero-network is external and must be created manually before bringing up the stack:
+#   docker network create pzero-network
+# See ../../packages/authz-service/README.md for instructions on generating strong secrets
+# for CHALLENGE_SECRET and other sensitive environment variables.
+networks:
+  pzero-network:
+    external: true

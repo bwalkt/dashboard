@@ -39,11 +39,21 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
       'Accept',
       'x-client-type',
       VALIDATION_HEADER_NAME,
+      // Challenge headers for authz-service
+      'x-challenge-id',
+      'x-challenge-answer',
       // OpenTelemetry trace context headers for distributed tracing
       'traceparent',
       'tracestate',
     ],
-    exposedHeaders: ['Content-Range', 'X-Content-Range', VALIDATION_HEADER_NAME],
+    exposedHeaders: [
+      'Content-Range',
+      'X-Content-Range',
+      VALIDATION_HEADER_NAME,
+      // Challenge headers sent in responses
+      'x-challenge-id',
+      'x-challenge',
+    ],
     maxAge: 86400, // Cache preflight response for 1 day
     preflightContinue: false,
     optionsSuccessStatus: 204,

@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile.postgres
     container_name: pzero-postgres
     restart: unless-stopped
+    networks:
+      - pzero-network
     command: ["postgres", "-c", "shared_preload_libraries=pgx_ulid"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -27,6 +29,8 @@ services:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
     container_name: pzero-dragonfly
     restart: unless-stopped
+    networks:
+      - pzero-network
     volumes:
       - dragonfly_data:/data
     healthcheck:
@@ -35,12 +39,33 @@ services:
       timeout: 3s
       retries: 5
 
+  authz-service:
+    build:
+      context: ../../
+      dockerfile: packages/authz-service/Dockerfile
+    container_name: pzero-authz-service
+    restart: unless-stopped
+    networks:
+      - pzero-network
+    ports:
+      - "3002:3000"
+    environment:
+      - PORT=3000
+      - REDIS_URL=redis://dragonfly:6379
+      - CHALLENGE_SECRET=${CHALLENGE_SECRET:-default-secret-change-in-production}
+      - CHALLENGE_TTL=${CHALLENGE_TTL:-300}
+    depends_on:
+      dragonfly:
+        condition: service_healthy
+
   pzero-server:
     build:
       context: ../../
       dockerfile: packages/server/Dockerfile
     container_name: pzero-server
     restart: unless-stopped
+    networks:
+      - pzero-network
     ports:
       - "${PORT:-8090}:${PORT:-8090}"
     environment:
@@ -92,6 +117,8 @@ services:
   pzero-envoy:
     image: envoyproxy/envoy:v1.30-latest
     container_name: pzero-envoy-proxy
+    networks:
+      - pzero-network
     ports:
       - "8181:8080" # External port for client requests
       - "9901:9901" # Admin interface
@@ -104,7 +131,14 @@ services:
     depends_on:
       pzero-server:
         condition: service_started
+      authz-service:
+        condition: service_started
 
 volumes:
   postgres_data:
   dragonfly_data:
+  redis_data:
+
+networks:
+  pzero-network:
+    external: true

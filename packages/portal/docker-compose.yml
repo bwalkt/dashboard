@@ -14,7 +14,12 @@ services:
         - VITE_SENTRY_DSN=${VITE_SENTRY_DSN:-}
         - VITE_SENTRY_DISABLED=${VITE_SENTRY_DISABLED:-}
     container_name: portal
+    networks:
+      - pzero-network
     ports:
       - "1430:80"
     restart: unless-stopped
 
+networks:
+  pzero-network:
+    external: true

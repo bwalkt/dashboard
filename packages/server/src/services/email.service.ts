@@ -1,8 +1,10 @@
 import * as brevo from "@getbrevo/brevo";
+
 import { render } from "@react-email/render";
 import { config } from "../config/env.js";
 import { SlackStyleConfirmEmail } from "../emails/slack-style-confirm.js";
 import { VerificationEmail } from "../emails/verification-email.js";
+
 
 interface SendEmailOptions {
   to: string;
@@ -89,6 +91,7 @@ class EmailService {
         pretty: true,
       },
     );
+    
 
     // Render plain text version
     const textContent = await render(

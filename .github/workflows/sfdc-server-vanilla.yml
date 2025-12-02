@@ -52,6 +52,6 @@ jobs:
             --header 'Content-Type: application/json' \
             --header 'x-api-key: ${{ secrets.DOKPLOY_TOKEN }}' \
             --data '{
-            "composeId": "KV9PMu-zDGF87ouVN9RQM"
+            "composeId": "${{ secrets.DOKPLOY_COMPOSE_ID_SFDC_SERVER_VANILLA }}"
           }'
 

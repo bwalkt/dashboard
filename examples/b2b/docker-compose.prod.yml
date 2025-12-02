@@ -1,6 +1,23 @@
 name: pzero-b2b
 version: "3.9"
 services:
+  authz-service:
+    # Image from GitHub Container Registry
+    # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
+    # Or set AUTHZ_SERVICE_IMAGE to override the full image path
+    image: ${AUTHZ_SERVICE_IMAGE:-ghcr.io/${GITHUB_OWNER}/authz-service:latest}
+    container_name: pzero-b2b-authz-service
+    ports:
+      - "3002:3000"
+    environment:
+      - PORT=3000
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      # REQUIRED: Must be set via environment variable or .env file. Use a cryptographically random value.
+      # See ../../packages/authz-service/README.md for details.
+      - CHALLENGE_SECRET=${CHALLENGE_SECRET}
+      - CHALLENGE_TTL=${CHALLENGE_TTL:-300}
+    restart: "no"
+
   pzero-sfdc-server:
     # Image from GitHub Container Registry
     # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
@@ -28,6 +45,8 @@ services:
       - DATABASE_PATH=${DATABASE_PATH:-./database.db}
       # OAuth Callback URL
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:1420}
+      # Authz Service Configuration
+      - AUTHZ_SERVICE_URL=${AUTHZ_SERVICE_URL:-http://authz-service:3000}
     restart: "no"
     volumes:
       - "../../../files/keys:/app/examples/b2b/packages/sfdc-server-vanilla/dist/keys"

@@ -81,6 +81,70 @@ pnpm start
 
 The server will start on `http://localhost:8080`
 
+### Docker Deployment
+
+The server can be deployed using Docker Compose, which includes the authz-service for challenge header validation.
+
+#### Prerequisites
+
+1. **Create Docker Network** (if not already created):
+   ```bash
+   docker network create pzero-network
+   ```
+
+2. **Environment Variables**: Ensure all required environment variables are set (see Environment Variables section below).
+
+#### Development Deployment
+
+From the `examples/b2b` directory:
+
+```bash
+docker compose up -d
+```
+
+This will start:
+- `dragonfly` - Redis-compatible database for challenge storage
+- `authz-service` - Authorization service for challenge validation (port 3002)
+- `pzero-sfdc-server-vanilla` - The SFDC server (port 3000)
+
+#### Production Deployment
+
+For production, use `docker-compose.prod.yml`:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+**Important Production Notes:**
+
+1. **Authz Service**: The authz-service must be deployed and accessible. Set `AUTHZ_SERVICE_URL` environment variable to point to the authz-service endpoint (default: `http://authz-service:3000`).
+
+2. **Challenge Secret**: Set `CHALLENGE_SECRET` environment variable to match the secret used by the authz-service. This must be the same value in both services.
+
+3. **Network Configuration**: Ensure all services are on the same Docker network (`pzero-network`) for internal communication.
+
+4. **Service Dependencies**: The SFDC server depends on the authz-service being available. Authentication will fail if the authz-service is unreachable.
+
+#### Challenge Header Validation
+
+The server enforces challenge header validation for all authenticated requests:
+
+- **Required Headers**: `x-challenge-id` and `x-challenge-answer`
+- **Validation**: Headers are validated via the authz-service before authentication succeeds
+- **Retry Logic**: The server includes automatic retry logic (2 retries) with 5-second timeout for authz-service calls
+- **Failure Handling**: If the authz-service is unreachable or returns a negative response, authentication fails with a 401 Unauthorized error
+
+#### Environment Variables for Docker
+
+Additional environment variables for Docker deployment:
+
+| Variable              | Description                                    | Required | Default                    |
+| --------------------- | ---------------------------------------------- | -------- | -------------------------- |
+| `AUTHZ_SERVICE_URL`   | URL of the authz-service endpoint             | No       | `http://authz-service:3000` |
+| `REDIS_URL`            | Redis connection URL                           | No       | `redis://dragonfly:6379`   |
+| `CHALLENGE_SECRET`     | Secret for challenge validation (must match authz-service) | Yes (production) | - |
+| `DOCKER_CONTAINER`     | Set to `true` when running in Docker           | No       | -                          |
+
 ## 📚 API Endpoints
 
 ### Authentication (GitHub OAuth)
@@ -134,6 +198,9 @@ The server will start on `http://localhost:8080`
 | `JWT_SECRET`              | JWT signing secret         | Yes                            |
 | `DATABASE_PATH`           | SQLite database path       | No (defaults to ./database.db) |
 | `OAUTH_REDIRECT_URL`      | OAuth callback URL         | Yes                            |
+| `AUTHZ_SERVICE_URL`       | Authz service URL           | No (defaults to http://authz-service:3000) |
+| `REDIS_URL`               | Redis connection URL        | No (defaults to redis://dragonfly:6379) |
+| `CHALLENGE_SECRET`        | Challenge validation secret | Yes (production) |
 
 ## 📁 Project Structure
 

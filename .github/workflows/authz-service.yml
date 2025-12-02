@@ -1,11 +1,11 @@
-name: CI - SFDC Example
+name: CI - Authz Service
 
 on:
   push:
     branches: [main]
     paths:
-      - 'examples/b2b/packages/sfdc-example/**'
-      - '.github/workflows/sfdc-example.yml'
+      - 'packages/authz-service/**'
+      - '.github/workflows/authz-service.yml'
   workflow_dispatch:
 
 permissions:
@@ -27,21 +27,16 @@ jobs:
         id: build
         uses: ./.github/actions/docker-build-push
         with:
-          dockerfile: examples/b2b/packages/sfdc-example/Dockerfile
+          dockerfile: packages/authz-service/Dockerfile
           context: .
-          image-name: ${{ env.GITHUB_OWNER }}/sfdc-example
+          image-name: ${{ env.GITHUB_OWNER }}/authz-service
           image-tags: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || (github.ref_name == 'main' && format('{0},latest', github.ref_name)) || github.ref_name }}
           registry: ${{ env.REGISTRY_URL }}
           registry-username: ${{ github.actor }}
           registry-password: ${{ secrets.GITHUB_TOKEN }}
           push: ${{ github.event_name != 'pull_request' }}
-          cache-from: ${{ env.REGISTRY_URL }}/${{ env.GITHUB_OWNER }}/sfdc-example:cache
-          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}/sfdc-example:cache,mode=max', env.REGISTRY_URL, env.GITHUB_OWNER) || '' }}
-          build-args: |
-            VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL }}
-            VITE_PROXY_URL=${{ secrets.VITE_PROXY_URL }}
-            VITE_OTEL_EXPORTER_URL=${{ secrets.VITE_OTEL_EXPORTER_URL }}
-            VITE_CHALLENGE_SECRET=${{ secrets.VITE_CHALLENGE_SECRET }}
+          cache-from: ${{ env.REGISTRY_URL }}/${{ env.GITHUB_OWNER }}/authz-service:cache
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}/authz-service:cache,mode=max', env.REGISTRY_URL, env.GITHUB_OWNER) || '' }}
 
   deploy:
     needs: build
@@ -57,6 +52,6 @@ jobs:
             --header 'Content-Type: application/json' \
             --header 'x-api-key: ${{ secrets.DOKPLOY_TOKEN }}' \
             --data '{
-            "composeId": "${{ secrets.DOKPLOY_COMPOSE_ID_SFDC_EXAMPLE }}"
+            "composeId": "${{ secrets.DOKPLOY_COMPOSE_ID_SERVER }}"
           }'
 

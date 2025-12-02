@@ -22,7 +22,7 @@ COPY packages/shared ./packages/shared
 COPY examples/b2b/packages/sfdc-server-vanilla/package.json ./examples/b2b/packages/sfdc-server-vanilla/
 
 # Install all dependencies (including dev dependencies for building)
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Build shared package
 RUN pnpm --filter @pzero/shared build
@@ -74,7 +74,7 @@ COPY --from=builder /app/node_modules/.pnpm ./node_modules/.pnpm
 
 # Install production dependencies
 # pnpm will link to packages already in .pnpm store, including built better-sqlite3
-RUN pnpm install --prod --no-frozen-lockfile
+RUN pnpm install --prod --frozen-lockfile
 
 # Clean up unnecessary files to further reduce image size
 RUN rm -rf /tmp/* /var/cache/apk/* && \
