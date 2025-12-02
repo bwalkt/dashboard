@@ -90,6 +90,7 @@ catalog:
   frisbee: 3.1.4
   got: 14.4.9
   husky: 9.1.7
+  idb-keyval: 6.2.2
   input-otp: 1.4.2
   jest: 29.7.0
   json-2-csv: 5.5.9

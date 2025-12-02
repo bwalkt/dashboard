@@ -70,6 +70,7 @@
     "cmdk": "catalog:",
     "country-data-list": "^1.5.5",
     "date-fns": "catalog:",
+    "idb-keyval": "catalog:",
     "input-otp": "catalog:",
     "json-2-csv": "catalog:",
     "kbar": "catalog:",
