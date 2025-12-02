@@ -1,6 +1,7 @@
 //TODO 1. add threads for each endpoint, 2. keep track of thread status. 3. add
+const SERVER_HOST = process.env.SERVER_HOST
+const SERVER_PORT = process.env.SERVER_PORT
 
-import { SERVER_HOST, SERVER_PORT } from '@env'
 import { type Endpoint, type EndpointStatus, endpointStatuses } from '@pzero/shared/pzero'
 import { uuid } from '@pzero/shared/uuid'
 import { Buffer } from 'buffer'
