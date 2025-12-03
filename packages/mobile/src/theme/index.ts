@@ -2,6 +2,7 @@ import { colors as sharedColors } from '@pzero/shared/theme'
 
 export const colors = {
   ...sharedColors,
+  successColor: '#4CAF50',
 }
 
 export const spacing = {
@@ -76,12 +77,9 @@ export const inputs = {
 }
 
 export const status = {
-  success: '#4CAF50',
+  success: colors.successColor,
   verified: colors.statusVerified,
 }
-
-// Add successColor to colors for compatibility
-;(colors as any).successColor = status.success
 
 export const surfaces = {
   primary: colors.backgroundColor,
