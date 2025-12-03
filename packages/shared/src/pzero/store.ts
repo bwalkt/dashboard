@@ -110,15 +110,15 @@ export class ZStorage {
     if (oldData === undefined || !Array.isArray(oldData)) {
       return false
     }
-  
-   // Validate that all elements have the sortField property
-   const allData = [...(data as unknown[]), ...oldData]
-   if (!allData.every(item => item && typeof item === 'object' && sortField in item)) {
-    return false
-  }
-  // sort descending on sortField
-  const newData = allData.sort((a, b) => b[sortField] - a[sortField])
- 
+
+    // Validate that all elements have the sortField property
+    const allData = [...(data as unknown[]), ...oldData]
+    if (!allData.every(item => item && typeof item === 'object' && sortField in item)) {
+      return false
+    }
+    // sort descending on sortField
+    const newData = allData.sort((a, b) => b[sortField] - a[sortField])
+
     await this.zustandStorage.setItem(key, JSON.stringify(newData))
     return newData
   }
