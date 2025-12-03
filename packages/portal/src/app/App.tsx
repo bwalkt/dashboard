@@ -8,6 +8,7 @@ import { fontVariables } from '@/lib/font'
 import { cn } from '@/lib/utils'
 import 'nprogress/nprogress.css'
 import { NuqsAdapter } from 'nuqs/adapters/react'
+import { AppWrapper } from '@/components/AppWrapper'
 import { TauriAuthListener } from '@/components/TauriAuthListener'
 import { AppRouter } from '@/router'
 import { PostHogProviderWrapper } from './posthog-provider'
@@ -42,7 +43,9 @@ function ThemedAppContent() {
     >
       <Toaster />
       <TauriAuthListener />
-      <AppRouter />
+      <AppWrapper>
+        <AppRouter />
+      </AppWrapper>
     </div>
   )
 }
