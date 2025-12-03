@@ -36,7 +36,7 @@ export const fontWeight = {
   medium: '500',
   semibold: '600',
   bold: '700',
-} as const
+}
 
 export const buttons = {
   primary: {

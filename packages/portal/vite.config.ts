@@ -6,7 +6,7 @@ import { defineConfig } from 'vite'
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST
 // @ts-expect-error process is a nodejs global
-const backendHost = process.env.VITE_BACKEND_HOST || 'http://localhost:8090'
+const backendHost = process.env.VITE_API_BASE_URL || 'http://localhost:8090'
 
 // https://vitejs.dev/config/
 export default defineConfig({

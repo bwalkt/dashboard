@@ -1,4 +1,4 @@
-export function getEnvs(CONFIG: any, prefix = '') {
+export function getEnvs(CONFIG: any, prefix = 'REACT_APP') {
   const BASE_API_URL = CONFIG[`${prefix}_API_BASE_URL`] ?? 'http://localhost:8090'
   const env = CONFIG[`${prefix}_NODE_ENV`] ?? 'dev'
   const isDevelopment = env === 'dev'
