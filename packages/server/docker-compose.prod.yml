@@ -108,7 +108,7 @@ services:
 
   pzero-envoy-wasm:
     image: ${SERVER_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/server:latest}
-    container_name: pzero-envoy-proxy
+    container_name: pzero-envoy-wasm-proxy
     ports:
       - "8182:8081" # External port for client requests
       - "9902:9902" # Admin interface
