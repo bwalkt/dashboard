@@ -15,17 +15,47 @@ export function DevicePairingLanding({}: DevicePairingLandingProps) {
   const [connectionData, setConnectionData] = useState<PairingData | null>(null)
   const [connectedDevice, setConnectedDevice] = useState<MobilePairingResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [deviceNickname, setDeviceNickname] = useState<string>('')
+  const [defaultNickname, setDefaultNickname] = useState<string>('')
 
   const devicePairing = useDevicePairing()
   const connectionPromiseRef = useRef<Promise<MobilePairingResponse> | null>(null)
 
   useEffect(() => {
-    // Initialize devices store
-    DevicesStore.init()
+    // Initialize devices store and generate default nickname
+    const initializeComponent = async () => {
+      await DevicesStore.init()
 
-    // Check if already connected to primary device
-    checkConnectionStatus()
+      // Generate default nickname
+      await generateDefaultNickname()
+
+      // Check if already connected to primary device
+      await checkConnectionStatus()
+    }
+
+    initializeComponent()
   }, [])
+
+  const generateDefaultNickname = async () => {
+    try {
+      // Get system info to generate default nickname
+      const [platformValue, archValue] = await Promise.all([
+        import('@tauri-apps/plugin-os').then(({ platform }) => platform()).catch(() => navigator.platform || 'web'),
+        import('@tauri-apps/plugin-os').then(({ arch }) => arch()).catch(() => 'x64'),
+      ])
+
+      const screenInfo = { width: screen.width, height: screen.height }
+      const screenSize = `${screenInfo.width}x${screenInfo.height}`
+      const defaultNick = `${platformValue} ${archValue} ${screenSize}`
+
+      setDefaultNickname(defaultNick)
+      setDeviceNickname(defaultNick) // Pre-fill the input with default
+    } catch (error) {
+      console.error('Error generating default nickname:', error)
+      setDefaultNickname('Unknown Device')
+      setDeviceNickname('Unknown Device')
+    }
+  }
 
   const checkConnectionStatus = async () => {
     try {
@@ -53,8 +83,8 @@ export function DevicePairingLanding({}: DevicePairingLandingProps) {
     setError(null)
 
     try {
-      // Generate pairing data
-      const pairingData = await devicePairing.generatePairingData()
+      // Generate pairing data with nickname
+      const pairingData = await devicePairing.generatePairingData(deviceNickname.trim() || undefined)
       setConnectionData(pairingData)
 
       // Generate QR code
@@ -279,6 +309,50 @@ export function DevicePairingLanding({}: DevicePairingLandingProps) {
             gap: spacing.xxl,
           }}
         >
+          {/* Nickname Input */}
+          <div
+            style={{
+              width: '100%',
+              textAlign: 'left',
+            }}
+          >
+            <label
+              style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                color: colors.textLightColor,
+                marginBottom: spacing.xs,
+              }}
+            >
+              Device Nickname (Optional)
+            </label>
+            <input
+              type="text"
+              value={deviceNickname}
+              onChange={e => setDeviceNickname(e.target.value)}
+              placeholder={defaultNickname || 'Enter a nickname for this device'}
+              style={{
+                width: '100%',
+                padding: `${spacing.sm}px ${spacing.md}px`,
+                fontSize: '1rem',
+                border: `1px solid ${colors.borderColor}`,
+                borderRadius: `${borderRadius.md}px`,
+                backgroundColor: colors.cardBackgroundColor,
+                color: colors.textLightColor,
+                outline: 'none',
+                transition: 'border-color 0.2s ease',
+                boxSizing: 'border-box',
+              }}
+              onFocus={e => {
+                e.target.style.borderColor = colors.primaryColor
+              }}
+              onBlur={e => {
+                e.target.style.borderColor = colors.borderColor
+              }}
+            />
+          </div>
+
           {/* Header */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
             <Smartphone style={{ width: '3rem', height: '3rem', color: colors.primaryColor, margin: '0 auto' }} />

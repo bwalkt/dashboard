@@ -3,7 +3,13 @@ import { createHash } from 'crypto'
 import Fastify from 'fastify'
 import { nanoid } from 'nanoid'
 import { getExpectedAnswer, refreshChallengeTTL, storeChallenge } from './redis.js'
-import type { AuthzResponse, ChallengeResponse, RefreshChallengeResponse, ValidateRequest, ValidateResponse } from './types.js'
+import type {
+  AuthzResponse,
+  ChallengeResponse,
+  RefreshChallengeResponse,
+  ValidateRequest,
+  ValidateResponse,
+} from './types.js'
 import { verifyChallenge } from './verifyChallenge.js'
 
 const PORT = parseInt(process.env.PORT || '3000', 10)

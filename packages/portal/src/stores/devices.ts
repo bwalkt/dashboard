@@ -80,28 +80,181 @@ async function hostname(): Promise<string> {
   return 'web-browser'
 }
 
-export const STORE = 'devices'
+export const STORE = 'portal-devices'
 
 /**
- * Generate a unique device identifier
+ * Get CPU information
  */
-async function generateDeviceId(hostname: string, platform: string): Promise<string> {
-  const identifier = `${hostname}-${platform}`
-
-  // Use SubtleCrypto to generate a consistent hash
-  if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
-    const encoder = new TextEncoder()
-    const data = encoder.encode(identifier)
-    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-    return hashHex.substring(0, 32) // Take first 32 characters
+async function getCPUInfo(): Promise<{ model: string; cores: number }> {
+  if (isTauriAvailable()) {
+    try {
+      // Try to get CPU info from Tauri
+      const { invoke } = await import('@tauri-apps/api/core')
+      const cpuInfo = await invoke('get_cpu_info').catch(() => null)
+      if (cpuInfo) return cpuInfo
+    } catch (error) {
+      console.warn('Tauri CPU info failed, using browser fallback')
+    }
   }
 
-  // Fallback for environments without SubtleCrypto
-  return btoa(identifier)
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .substring(0, 32)
+  // Browser fallback
+  return {
+    model: navigator.hardwareConcurrency ? `Generic-${navigator.hardwareConcurrency}core` : 'unknown',
+    cores: navigator.hardwareConcurrency || 1,
+  }
+}
+
+/**
+ * Get memory information
+ */
+async function getMemoryInfo(): Promise<{ total: number }> {
+  if (isTauriAvailable()) {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      const memInfo = await invoke('get_memory_info').catch(() => null)
+      if (memInfo) return memInfo
+    } catch (error) {
+      console.warn('Tauri memory info failed, using browser fallback')
+    }
+  }
+
+  // Browser fallback using available APIs
+  const memoryGB =
+    (navigator as any).deviceMemory ||
+    (navigator as any).hardwareConcurrency * 2 || // Rough estimate
+    4 // Default fallback
+
+  return { total: memoryGB * 1024 * 1024 * 1024 }
+}
+
+/**
+ * Get screen information
+ */
+function getScreenInfo(): { width: number; height: number; colorDepth: number } {
+  return {
+    width: screen.width,
+    height: screen.height,
+    colorDepth: screen.colorDepth,
+  }
+}
+
+/**
+ * Get network interfaces (MAC addresses)
+ */
+async function getNetworkInfo(): Promise<string[]> {
+  if (isTauriAvailable()) {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      const networkInfo = await invoke('get_network_info').catch(() => [])
+      return networkInfo || []
+    } catch (error) {
+      console.warn('Tauri network info failed')
+    }
+  }
+
+  // Browser can't access MAC addresses for security reasons
+  return []
+}
+
+/**
+ * Get hardware UUID/serial if available
+ */
+async function getHardwareUUID(): Promise<string | null> {
+  if (isTauriAvailable()) {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      const uuid = await invoke('get_hardware_uuid').catch(() => null)
+      return uuid
+    } catch (error) {
+      console.warn('Tauri hardware UUID failed')
+    }
+  }
+
+  return null
+}
+
+/**
+ * Generate a comprehensive hardware fingerprint
+ */
+async function generateHardwareFingerprint(): Promise<string> {
+  const [hostnameValue, platformValue, archValue, cpuInfo, memoryInfo, screenInfo, networkInfo, hardwareUUID] =
+    await Promise.all([
+      hostname(),
+      platform(),
+      arch(),
+      getCPUInfo(),
+      getMemoryInfo(),
+      getScreenInfo(),
+      getNetworkInfo(),
+      getHardwareUUID(),
+    ])
+
+  // Create a comprehensive fingerprint
+  const fingerprint = {
+    hostname: hostnameValue,
+    platform: platformValue,
+    arch: archValue,
+    cpu: {
+      model: cpuInfo.model,
+      cores: cpuInfo.cores,
+    },
+    memory: {
+      total: Math.floor(memoryInfo.total / (1024 * 1024 * 1024)), // Convert to GB
+    },
+    screen: {
+      resolution: `${screenInfo.width}x${screenInfo.height}`,
+      colorDepth: screenInfo.colorDepth,
+    },
+    network: networkInfo.length > 0 ? networkInfo.sort() : [], // Sort for consistency
+    hardwareUUID,
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    language: typeof navigator !== 'undefined' ? navigator.language : 'en-US',
+  }
+
+  return JSON.stringify(fingerprint)
+}
+
+/**
+ * Generate a unique device identifier based on hardware fingerprint
+ */
+async function generateDeviceId(): Promise<string> {
+  console.log('Generating comprehensive device fingerprint...')
+
+  try {
+    const fingerprint = await generateHardwareFingerprint()
+    console.log('Hardware fingerprint:', JSON.parse(fingerprint))
+
+    // Use SubtleCrypto to generate a consistent hash
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+      const encoder = new TextEncoder()
+      const data = encoder.encode(fingerprint)
+      const hashBuffer = await window.crypto.subtle.digest('SHA-256', data)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+      const deviceId = hashHex.substring(0, 32) // Take first 32 characters
+      console.log('Generated device ID:', deviceId)
+      return deviceId
+    }
+
+    // Fallback for environments without SubtleCrypto
+    const simpleHash = btoa(fingerprint)
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .substring(0, 32)
+    console.log('Generated device ID (fallback):', simpleHash)
+    return simpleHash
+  } catch (error) {
+    console.error('Failed to generate device fingerprint:', error)
+
+    // Ultimate fallback - use basic info
+    const hostnameValue = await hostname()
+    const platformValue = await platform()
+    const fallbackId = btoa(`${hostnameValue}-${platformValue}-${Date.now()}`)
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .substring(0, 32)
+    console.log('Generated device ID (ultimate fallback):', fallbackId)
+    return fallbackId
+  }
 }
 
 /**
@@ -181,7 +334,7 @@ function getIsTablet(): boolean {
 /**
  * Get device info for Tauri applications
  */
-export async function getDeviceInfo(): Promise<DeviceInfoType> {
+export async function getDeviceInfo(nickname?: string): Promise<DeviceInfoType> {
   const [devicePlatform, osVersion, osFamily, deviceArch, deviceLocale, deviceHostname] = await Promise.all([
     platform(),
     version(),
@@ -191,8 +344,12 @@ export async function getDeviceInfo(): Promise<DeviceInfoType> {
     hostname(),
   ])
 
+  // Get screen dimensions
+  const screenInfo = getScreenInfo()
+  const screenSize = `${screenInfo.width}x${screenInfo.height}`
+
   // Generate a consistent device ID
-  const deviceId = await generateDeviceId(deviceHostname || '', devicePlatform)
+  const deviceId = await generateDeviceId()
   const uniqueId = uuid()
 
   const deviceInfo: DeviceInfoType = {
@@ -201,12 +358,12 @@ export async function getDeviceInfo(): Promise<DeviceInfoType> {
     deviceId,
     uniqueId,
 
-    // Device naming and branding
-    deviceName: deviceHostname ?? 'Unknown Device',
+    // Device naming and branding - use nickname if provided, otherwise hostname
+    deviceName: nickname || deviceHostname || 'Unknown Device',
     appName: await getAppName(),
     brand: devicePlatform.charAt(0).toUpperCase() + devicePlatform.slice(1),
     manufacturer: devicePlatform.charAt(0).toUpperCase() + devicePlatform.slice(1),
-    model: `${devicePlatform} ${deviceArch}`,
+    model: `${devicePlatform} ${deviceArch} ${screenSize}`,
 
     // System information
     systemName: devicePlatform,
@@ -227,7 +384,7 @@ export async function getDeviceInfo(): Promise<DeviceInfoType> {
     carrier: null,
     ipAddress: null,
     macAddress: null,
-
+    nickname: nickname ? nickname : `${devicePlatform} ${deviceArch} ${screenSize}`,
     // Browser/user agent info
     ua: typeof navigator !== 'undefined' ? navigator.userAgent : null,
 
@@ -246,7 +403,8 @@ export async function getDeviceInfo(): Promise<DeviceInfoType> {
     // Timestamps
     c_at: Date.now(),
   }
-
+  console.log('Generated device info:', deviceInfo)
+  //  alert('Generated device info: ' + JSON.stringify(deviceInfo, null, 2))
   return deviceInfo
 }
 
@@ -269,45 +427,65 @@ export class DevicesStoreClass extends ZStorage {
   }
 
   async init() {
-    await this.getCurrentDeviceInfo()
-    await this.getPrimaryDevice()
+    try {
+      console.log('DevicesStore.init() starting...')
+      await this.getCurrentDeviceInfo()
+      console.log('getCurrentDeviceInfo() completed')
+      await this.getPrimaryDevice()
+      console.log('getPrimaryDevice() completed')
+      console.log('DevicesStore.init() completed successfully')
+    } catch (error) {
+      console.error('DevicesStore.init() failed:', error)
+      throw error
+    }
   }
 
-  async getCurrentDeviceInfo(): Promise<DeviceInfoType> {
+  async getCurrentDeviceInfo(nickname?: string): Promise<DeviceInfoType> {
+    console.log('getCurrentDeviceInfo() called, currentDevice:', this.currentDevice ? 'exists' : 'null')
+
     if (this.currentDevice) {
+      console.log('Returning existing currentDevice')
       return this.currentDevice as DeviceInfoType
     }
+
+    console.log('Getting device info from storage...')
     let deviceInfo = await this.getItem(deviceAssignmentTypes.current)
+
     if (!deviceInfo) {
       try {
-        deviceInfo = await getDeviceInfo()
+        console.log('No stored device info, generating new device info...')
+        deviceInfo = await getDeviceInfo(nickname)
         deviceInfo.id = uuid()
+
+        console.log('Saving device info to storage...')
         const saved = await this.setItem({ key: deviceAssignmentTypes.current, data: deviceInfo })
         if (!saved) {
           throw new Error('Failed to save current device info to storage')
         }
+        console.log('Device info saved successfully')
       } catch (error) {
         console.error('Failed to get current device info:', error)
         throw error
       }
     } else {
+      console.log('Found existing device info in storage')
       if (deviceInfo.isPrimaryDevice) {
         this.isPrimaryDevice = true
         this.primaryDevice = deviceInfo
+        console.log('Device is marked as primary')
       }
     }
+
     this.currentDevice = deviceInfo
+    console.log('Setting currentDevice, final result:', deviceInfo?.deviceName || 'unnamed device')
     return deviceInfo as DeviceInfoType
   }
 
-  async transferPrimaryDeviceToCurrent() {
-    const primaryDevice = await this.getPrimaryDevice()
-    if (primaryDevice) {
-      const currentDevice = await this.getCurrentDeviceInfo()
-      this.isPrimaryDevice = true
-      this.primaryDevice = currentDevice
-    }
-    return this.primaryDevice
+  async forceRegenerateDeviceInfo(nickname?: string): Promise<DeviceInfoType> {
+    console.log('Forcing regeneration of device info...')
+    this.currentDevice = undefined
+    await this.removeItem(deviceAssignmentTypes.current)
+    return await this.getCurrentDeviceInfo(nickname)
   }
 
   async getPrimaryDevice() {
@@ -325,175 +503,6 @@ export class DevicesStoreClass extends ZStorage {
       }
     }
     return this.primaryDevice
-  }
-
-  async setPrimaryDevice(device: DeviceInfoType) {
-    const primaryDevice = await this.getPrimaryDevice()
-    if (primaryDevice && primaryDevice.deviceId === device.deviceId) {
-      return primaryDevice
-    }
-
-    try {
-      device.isPrimaryDevice = true
-      if (this.currentDevice && this.currentDevice.deviceId === device.deviceId) {
-        this.isPrimaryDevice = true
-        this.currentDevice.isPrimaryDevice = true
-
-        const primarySaved = await this.setItem({
-          key: deviceAssignmentTypes.primary,
-          data: this.currentDevice,
-        })
-        if (!primarySaved) {
-          throw new Error('Failed to save primary device data')
-        }
-
-        const currentSaved = await this.setItem({
-          key: deviceAssignmentTypes.current,
-          data: this.currentDevice,
-        })
-        if (!currentSaved) {
-          throw new Error('Failed to save current device data')
-        }
-
-        return this.currentDevice
-      }
-
-      device.c_at = Date.now()
-      const saved = await this.setItem({ key: deviceAssignmentTypes.primary, data: device })
-      if (!saved) {
-        throw new Error('Failed to save primary device data')
-      }
-      return device
-    } catch (error) {
-      console.error('Failed to set primary device:', error)
-      throw error
-    }
-  }
-
-  async setToggleThisDeviceAsPrimary() {
-    const isPrimary = !this.isPrimaryDevice
-    const currentDevice = await this.getCurrentDeviceInfo()
-
-    // Store original state for rollback
-    const originalIsPrimary = this.isPrimaryDevice
-    const originalPrimaryDevice = this.primaryDevice
-    const originalCurrentDevice = this.currentDevice ? { ...this.currentDevice } : undefined
-
-    try {
-      currentDevice.isPrimaryDevice = isPrimary
-      this.isPrimaryDevice = isPrimary
-
-      const currentSaved = await this.setItem({ key: deviceAssignmentTypes.current, data: currentDevice })
-      if (!currentSaved) {
-        throw new Error('Failed to save current device data')
-      }
-
-      if (!isPrimary) {
-        const primaryCleared = await this.setItem({ key: deviceAssignmentTypes.primary, data: null })
-        if (!primaryCleared) {
-          throw new Error('Failed to clear primary device data')
-        }
-        this.primaryDevice = undefined
-
-        const connections = await this.getItem(deviceAssignmentTypes.connected)
-        if (connections && Array.isArray(connections) && connections.length) {
-          const backupSaved = await this.setItem({ key: deviceAssignmentTypes.backedup_connections, data: connections })
-          if (!backupSaved) {
-            throw new Error('Failed to backup connected devices')
-          }
-          const connectionsCleared = await this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
-          if (!connectionsCleared) {
-            throw new Error('Failed to clear connected devices')
-          }
-        }
-      } else {
-        const primarySaved = await this.setItem({ key: deviceAssignmentTypes.primary, data: currentDevice })
-        if (!primarySaved) {
-          throw new Error('Failed to save primary device data')
-        }
-        this.primaryDevice = currentDevice
-      }
-
-      const connectionsCleared = await this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
-      if (!connectionsCleared) {
-        throw new Error('Failed to clear connected devices list')
-      }
-    } catch (error) {
-      // Rollback in-memory state on failure
-      this.isPrimaryDevice = originalIsPrimary
-      this.primaryDevice = originalPrimaryDevice
-      this.currentDevice = originalCurrentDevice as DeviceInfoType | undefined
-
-      console.error('Failed to toggle device primary status:', error)
-      throw error
-    }
-  }
-
-  async setIsPrimaryDevice(value: boolean) {
-    const currentDevice = await this.getCurrentDeviceInfo()
-
-    // Store original state for rollback
-    const originalIsPrimary = this.isPrimaryDevice
-    const originalPrimaryDevice = this.primaryDevice
-    const originalCurrentDevice = this.currentDevice ? { ...this.currentDevice } : undefined
-
-    try {
-      // Update the current device's primary status
-      currentDevice.isPrimaryDevice = value
-      this.isPrimaryDevice = value
-      this.currentDevice = currentDevice
-
-      // Save to storage
-      const currentDeviceSaved = await this.setItem({ key: deviceAssignmentTypes.current, data: currentDevice })
-      if (!currentDeviceSaved) {
-        throw new Error('Failed to save current device data')
-      }
-
-      if (!value) {
-        // If removing primary status, clear primary device reference
-        const primaryCleared = await this.setItem({ key: deviceAssignmentTypes.primary, data: null })
-        if (!primaryCleared) {
-          throw new Error('Failed to clear primary device data')
-        }
-        this.primaryDevice = undefined
-
-        // Backup connected devices if any exist
-        const connections = await this.getItem(deviceAssignmentTypes.connected)
-        if (connections && Array.isArray(connections) && connections.length) {
-          const backupSaved = await this.setItem({ key: deviceAssignmentTypes.backedup_connections, data: connections })
-          if (!backupSaved) {
-            throw new Error('Failed to backup connected devices')
-          }
-          const connectionsCleared = await this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
-          if (!connectionsCleared) {
-            throw new Error('Failed to clear connected devices')
-          }
-        }
-      } else {
-        // If setting as primary, save current device as primary
-        const primarySaved = await this.setItem({ key: deviceAssignmentTypes.primary, data: currentDevice })
-        if (!primarySaved) {
-          throw new Error('Failed to save primary device data')
-        }
-        this.primaryDevice = currentDevice
-      }
-
-      // Clear connected devices list when changing primary status
-      const connectionsCleared = await this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
-      if (!connectionsCleared) {
-        throw new Error('Failed to clear connected devices list')
-      }
-
-      return currentDevice
-    } catch (error) {
-      // Rollback in-memory state on failure
-      this.isPrimaryDevice = originalIsPrimary
-      this.primaryDevice = originalPrimaryDevice
-      this.currentDevice = originalCurrentDevice as DeviceInfoType | undefined
-
-      console.error('Failed to set primary device status:', error)
-      throw error
-    }
   }
 
   async getConnectedDevices() {
@@ -547,13 +556,65 @@ export class DevicesStoreClass extends ZStorage {
       throw error
     }
   }
+
+  async setPrimaryDevice(device: DeviceInfoType) {
+    try {
+      this.primaryDevice = device
+      const saved = await this.setItem({ key: deviceAssignmentTypes.primary, data: device })
+      if (!saved) {
+        throw new Error('Failed to save primary device data')
+      }
+    } catch (error) {
+      console.error('Failed to set primary device:', error)
+      throw error
+    }
+  }
+
+  async setIsPrimaryDevice(isPrimary: boolean) {
+    try {
+      this.isPrimaryDevice = isPrimary
+      if (this.currentDevice) {
+        this.currentDevice.isPrimaryDevice = isPrimary
+        const saved = await this.setItem({ key: deviceAssignmentTypes.current, data: this.currentDevice })
+        if (!saved) {
+          throw new Error('Failed to update current device primary status')
+        }
+      }
+    } catch (error) {
+      console.error('Failed to set primary device status:', error)
+      throw error
+    }
+  }
 }
 
-export const DevicesStore = new DevicesStoreClass()
+// Create the store instance with proper singleton pattern
+let _devicesStore: DevicesStoreClass | null = null
+
+function getDevicesStore(): DevicesStoreClass {
+  if (!_devicesStore) {
+    try {
+      _devicesStore = new DevicesStoreClass()
+      console.log('Initialized DevicesStore:', _devicesStore.currentDevice || 'Not initialized yet')
+    } catch (error) {
+      // If store already exists, try to get existing instance
+      if (error instanceof Error && error.message.includes('already exists')) {
+        console.log('DevicesStore already exists, reusing existing instance')
+        // Create a new instance but don't initialize storage again
+        _devicesStore = Object.create(DevicesStoreClass.prototype)
+        _devicesStore.storeName = STORE
+      } else {
+        throw error
+      }
+    }
+  }
+  return _devicesStore
+}
+
+export const DevicesStore = getDevicesStore()
 
 // React hook for using DevicesStore in components
 export function useDevicesStore() {
-  return DevicesStore
+  return getDevicesStore()
 }
 
 // Standalone functions for backward compatibility with react-native-device-info API
@@ -566,9 +627,7 @@ export const getSystemVersion = async () => {
 }
 
 export const getDeviceId = async () => {
-  const hostnameValue = await hostname()
-  const platformValue = await platform()
-  return await generateDeviceId(hostnameValue || '', platformValue)
+  return await generateDeviceId()
 }
 
 export const getModel = async () => {

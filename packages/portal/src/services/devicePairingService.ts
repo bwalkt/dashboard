@@ -8,6 +8,7 @@ export interface PairingData {
   systemName: string
   timestamp: number
   connectionId: string
+  deviceInfo: DeviceInfoType // Include complete device info
 }
 
 export interface MobilePairingResponse {
@@ -38,8 +39,13 @@ export class DevicePairingService {
   /**
    * Generate pairing data for QR code
    */
-  async generatePairingData(): Promise<PairingData> {
-    const currentDevice = await DevicesStore.getCurrentDeviceInfo()
+  async generatePairingData(nickname?: string): Promise<PairingData> {
+    // Ensure store is initialized before use
+    if (!DevicesStore.currentDevice) {
+      await DevicesStore.init()
+    }
+
+    const currentDevice = await DevicesStore.getCurrentDeviceInfo(nickname)
 
     const pairingData: PairingData = {
       type: 'device_pairing',
@@ -48,10 +54,29 @@ export class DevicePairingService {
       systemName: currentDevice.systemName,
       timestamp: Date.now(),
       connectionId: crypto.randomUUID(),
+      deviceInfo: currentDevice, // Include complete device info
     }
 
     // Store this connection as active
     this.activeConnections.add(pairingData.connectionId)
+
+    // Log what's being transmitted in the QR code
+    console.log('QR Code Pairing Data:', {
+      type: pairingData.type,
+      deviceId: pairingData.desktopDeviceId,
+      deviceName: pairingData.deviceName,
+      connectionId: pairingData.connectionId,
+      deviceInfo: {
+        id: currentDevice.id,
+        deviceName: currentDevice.deviceName,
+        model: currentDevice.model,
+        brand: currentDevice.brand,
+        systemName: currentDevice.systemName,
+        deviceType: currentDevice.deviceType,
+        nickname: currentDevice.nickname,
+        // ... other device fields included
+      },
+    })
 
     return pairingData
   }
@@ -103,6 +128,11 @@ export class DevicePairingService {
 
         // For now, we'll simulate a connection after some time for demo
         // This should be replaced with actual mobile app integration
+
+        // Ensure store is initialized before use
+        if (!DevicesStore.currentDevice) {
+          await DevicesStore.init()
+        }
 
         const primaryDevice = await DevicesStore.getPrimaryDevice()
 
@@ -161,6 +191,11 @@ export class DevicePairingService {
     primaryDevice?: DeviceInfoType
     currentDevice: DeviceInfoType
   }> {
+    // Ensure store is initialized before use
+    if (!DevicesStore.currentDevice) {
+      await DevicesStore.init()
+    }
+
     const currentDevice = await DevicesStore.getCurrentDeviceInfo()
     const primaryDevice = await DevicesStore.getPrimaryDevice()
 
@@ -204,7 +239,7 @@ export const devicePairingService = DevicePairingService.getInstance()
 // React hook for device pairing
 export function useDevicePairing() {
   return {
-    generatePairingData: () => devicePairingService.generatePairingData(),
+    generatePairingData: (nickname?: string) => devicePairingService.generatePairingData(nickname),
     waitForConnection: (connectionId: string, timeout?: number) =>
       devicePairingService.waitForConnection(connectionId, timeout),
     getConnectionStatus: () => devicePairingService.getConnectionStatus(),
