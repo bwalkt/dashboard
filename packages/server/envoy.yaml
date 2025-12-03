@@ -65,6 +65,13 @@ static_resources:
                             envoy.filters.http.ext_authz:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
                               disabled: true
+                        - match: { prefix: "/proxy/auth/refresh" }
+                          route: 
+                            cluster: server_cluster
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
                         - match: { path: "/faq" }
                           route: 
                             cluster: server_cluster
