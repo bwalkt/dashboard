@@ -183,7 +183,11 @@ export class ZStorage {
     if (!Array.isArray(recs)) {
       return false
     }
-    // sort descending
+    // Validate all records have the sort Field
+    if (!recs.every(item => item && typeof item === 'object' && sortField in item)) {
+      return false
+    }
+    // sort descendin
     recs = recs.sort((a, b) => b[sortField] - a[sortField])
     while (recs.length) {
       const lastEl = recs[recs.length - 1]
