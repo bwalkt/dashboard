@@ -3,5 +3,4 @@ node_modules/
 *.wasm
 *.wat
 *.map
-go.sum
 

@@ -32,14 +32,18 @@ The WASM filter runs in a separate Envoy container (`pzero-envoy-wasm`) on port 
 ## Filter Behavior
 
 1. **Public Routes**: Bypasses validation for public routes:
-   - `/health`
-   - `/auth/*`
-   - `/centrifugo/*`
-   - `/sms/*`
-   - `/email/*`
-   - `/proxy/auth/login`
-   - `/proxy/auth/callback`
-   - `/assets/*`
+   - `/health` (exact match)
+   - `/auth/*` (prefix)
+   - `/centrifugo/*` (prefix)
+   - `/sms/*` (prefix)
+   - `/email/*` (prefix)
+   - `/proxy/auth/login` (prefix)
+   - `/proxy/auth/callback` (prefix)
+   - `/faq` (exact match)
+   - `/terms` (exact match)
+   - `/public/*` (prefix)
+   - `/docs/*` (prefix)
+   - `/assets/*` (prefix)
    - OPTIONS requests (CORS preflight)
 
 2. **Protected Routes**: Requires `x-challenge-id` and `x-challenge-answer` headers:

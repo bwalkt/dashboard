@@ -135,7 +135,9 @@ services:
         condition: service_started
 
   pzero-envoy-wasm:
-    image: envoyproxy/envoy:v1.30-latest
+    build:
+      context: ../../
+      dockerfile: packages/envoy-wasm-filter/Dockerfile
     container_name: pzero-envoy-wasm-proxy
     networks:
       - pzero-network
@@ -144,7 +146,6 @@ services:
       - "9902:9902" # Admin interface
     volumes:
       - ./envoy-wasm.yaml:/etc/envoy/envoy.yaml:ro
-      - ../envoy-wasm-filter/build/filter.wasm:/etc/envoy/wasm/challenge-authz.wasm:ro
     command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
     restart: unless-stopped
     environment:

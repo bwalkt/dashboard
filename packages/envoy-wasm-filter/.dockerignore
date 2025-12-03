@@ -1,0 +1,12 @@
+build/
+node_modules/
+*.wasm
+*.wat
+*.map
+*.sh
+*.md
+package.json
+Makefile
+.git/
+.gitignore
+
