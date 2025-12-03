@@ -13,6 +13,7 @@ var PublicRoutes = []PublicRoute{
 	{Prefix: "/email/"},
 	{Prefix: "/proxy/auth/login"},
 	{Prefix: "/proxy/auth/callback"},
+	{Prefix: "/proxy/auth/refresh"},
 	{Path: "/faq", Exact: true},
 	{Path: "/terms", Exact: true},
 	{Prefix: "/public"},
@@ -53,5 +54,3 @@ func IsPublicRoute(path, method string) bool {
 
 	return false
 }
-
-
