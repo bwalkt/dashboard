@@ -1,5 +1,5 @@
 // Import tracing first to initialize OpenTelemetry instrumentation
-// import './tracing'
+import './tracing'
 
 // Validate challenge secret before any API requests are made
 import { validateChallengeSecret } from './lib/api'
