@@ -138,7 +138,7 @@ export class ZStorage {
 
   async setItem({ key, data }: SetItem): Promise<boolean> {
     if (data === undefined || data === null) {
-      throw 'Cannot set empty item'
+      throw new Error('Cannot set empty item')
     }
     data = typeof data === 'object' ? JSON.stringify(data) : data
     await this.zustandStorage.setItem(key, data as string)
