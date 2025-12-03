@@ -106,5 +106,21 @@ services:
     volumes:
       - ./envoy.yaml:/etc/envoy/envoy.yaml
 
+  pzero-envoy-wasm:
+    image: ${SERVER_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/server:latest}
+    container_name: pzero-envoy-wasm-proxy
+    ports:
+      - "8182:8081" # External port for client requests
+      - "9902:9902" # Admin interface
+    command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
+    restart: "no"
+    environment:
+      - ENVOY_LOG_LEVEL=info
+    depends_on:
+      pzero-server:
+        condition: service_started
+    volumes:
+      - ./envoy-wasm.yaml:/etc/envoy/envoy.yaml
+
 volumes:
   postgres_data:

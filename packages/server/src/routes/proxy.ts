@@ -30,10 +30,9 @@ export async function proxyRoutes(fastify: FastifyInstance): Promise<void> {
       try {
         // Construct proxy URL - can throw validation errors
         const url = constructProxyURL(request);
-        
         // Build headers: filter undefined values and convert arrays to comma-separated strings
         const reqHeaders = Object.entries(request.headers)
-          .filter(([, v]) => v !== undefined)
+          .filter(([k, v]) => v !== undefined&& k.toLowerCase() !== 'transfer-encoding')
           .map(([k, v]) => [k, Array.isArray(v) ? v.join(',') : v]);
         const headers = new Headers(reqHeaders as [string, string][]);
         const cookies = request.headers.cookie;
@@ -83,7 +82,7 @@ export async function proxyRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Fetch can throw network errors, DNS errors, or timeout (AbortError)
         response = await fetch(url, fetchOptions);
-
+        console.log('response', response.status);
         // Handle response body based on content type
         const contentType = response.headers.get('content-type');
         if (contentType?.includes('application/json')) {
