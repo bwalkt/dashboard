@@ -193,6 +193,58 @@ export class DevicePairingService {
    * Enhanced connection polling with BLE proximity verification
    */
   private async startEnhancedConnectionPolling(connectionId: string) {
+    // Check if BLE proximity verification is enabled
+    const isNearVerifyEnabled = import.meta.env.VITE_NEAR_VERIFY === 'true'
+
+    if (!isNearVerifyEnabled) {
+      console.log('DevicePairing: BLE proximity verification disabled, using fallback polling only')
+      const pollInterval = setInterval(async () => {
+        try {
+          // Check if connection is still active
+          if (!this.activeConnections.has(connectionId)) {
+            clearInterval(pollInterval)
+            return
+          }
+
+          // Only use fallback polling when BLE is disabled
+          await this.fallbackConnectionPolling(connectionId)
+        } catch (error) {
+          console.error('Error in fallback connection polling:', error)
+        }
+      }, 3000)
+
+      // Clean up after timeout
+      setTimeout(() => {
+        clearInterval(pollInterval)
+      }, 300000)
+      return
+    }
+
+    // Initialize BLE once before starting the polling loop
+    try {
+      await this.initializeBLEProximityVerification()
+      console.log('DevicePairing: BLE initialized successfully for proximity verification')
+    } catch (initError) {
+      console.log('DevicePairing: BLE initialization failed, falling back to traditional polling:', initError)
+      // Fall back to traditional polling if BLE initialization fails
+      const fallbackPollInterval = setInterval(async () => {
+        try {
+          if (!this.activeConnections.has(connectionId)) {
+            clearInterval(fallbackPollInterval)
+            return
+          }
+          await this.fallbackConnectionPolling(connectionId)
+        } catch (error) {
+          console.error('Error in fallback connection polling:', error)
+        }
+      }, 3000)
+
+      setTimeout(() => {
+        clearInterval(fallbackPollInterval)
+      }, 300000)
+      return
+    }
+
     const pollInterval = setInterval(async () => {
       try {
         // Check if connection is still active
@@ -201,10 +253,8 @@ export class DevicePairingService {
           return
         }
 
-        // Try to verify proximity via BLE
+        // Try to verify proximity via BLE (initialization already done)
         try {
-          await this.initializeBLEProximityVerification()
-
           // Attempt BLE proximity verification
           const uid = await this.verifyProximityViaBLE()
 

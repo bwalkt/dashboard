@@ -1,3 +1,4 @@
+import type { AuthenticatedRequest } from "@pzero/shared";
 import type { DeviceInfoType } from "@pzero/shared/pzero";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../config/database.js";
@@ -91,7 +92,7 @@ export async function deviceRoutes(fastify: FastifyInstance): Promise<void> {
               name = $2,
               handle = $3,
               u_at = NOW()
-            WHERE id = $4 AND is_act = true
+            WHERE id = $4 AND uid = $5 AND is_act = true
             RETURNING *
           `;
 
@@ -99,7 +100,8 @@ export async function deviceRoutes(fastify: FastifyInstance): Promise<void> {
             JSON.stringify(deviceInfo),
             deviceInfo.nickname || deviceInfo.deviceName,
             `${deviceInfo.deviceName}_${deviceInfo.deviceId}`.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
-            existingDevice.id
+            existingDevice.id,
+            uid
           ]);
 
         } else {
@@ -189,7 +191,7 @@ export async function deviceRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.code(500).send({
           error: "Internal server error",
           message: "Failed to connect device",
-          details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+          details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
         });
       }
     }
@@ -208,13 +210,22 @@ export async function deviceRoutes(fastify: FastifyInstance): Promise<void> {
       reply: FastifyReply
     ) => {
       try {
-        const { uid } = request.query;
-
-        if (!uid) {
-          return reply.code(400).send({
-            error: "Missing uid parameter"
+        const { uid: queryUid } = request.query;
+        
+        // Get the authenticated user's ID
+        const authenticatedUser = (request as unknown as AuthenticatedRequest).user;
+        const authenticatedUid = authenticatedUser.id;
+        
+        // If uid is provided in query, verify it matches the authenticated user
+        if (queryUid && queryUid !== authenticatedUid) {
+          return reply.code(403).send({
+            error: "Forbidden",
+            message: "Cannot access devices for other users"
           });
         }
+        
+        // Use the authenticated user's ID regardless of query parameter
+        const uid = authenticatedUid;
 
         const devicesQuery = `
           SELECT 

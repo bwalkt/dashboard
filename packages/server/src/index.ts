@@ -76,7 +76,67 @@ export default async function (
 
   // Health check route
   fastify.get("/health", async (request, reply) => {
-    return { status: "ok", timestamp: new Date().toISOString() };
+    const timestamp = new Date().toISOString();
+    const healthCheck = {
+      status: "ok",
+      timestamp,
+      uptime: process.uptime(),
+      services: {
+        database: "unknown",
+        redis: "unknown",
+      },
+      version: process.env.npm_package_version || "unknown",
+      environment: process.env.NODE_ENV || "development",
+      memory: {
+        nodejs: {
+          used: process.memoryUsage().heapUsed,
+          total: process.memoryUsage().heapTotal,
+          external: process.memoryUsage().external,
+        },
+        database: null as any,
+        redis: null as any,
+      },
+    };
+
+    // Check database connection and get memory info
+    try {
+      await db.healthCheck();
+      healthCheck.services.database = "healthy";
+      
+      try {
+        healthCheck.memory.database = await db.getMemoryInfo();
+      } catch (memError) {
+        console.warn("Failed to get database memory info:", memError);
+        healthCheck.memory.database = { error: "Unable to retrieve memory info" };
+      }
+    } catch (error) {
+      healthCheck.services.database = "unhealthy";
+      healthCheck.status = "degraded";
+      healthCheck.memory.database = { error: "Database unavailable" };
+    }
+
+    // Check Redis connection and get memory info
+    try {
+      await redis.ping();
+      healthCheck.services.redis = "healthy";
+      
+      try {
+        healthCheck.memory.redis = await redis.getMemoryInfo();
+      } catch (memError) {
+        console.warn("Failed to get Redis memory info:", memError);
+        healthCheck.memory.redis = { error: "Unable to retrieve memory info" };
+      }
+    } catch (error) {
+      healthCheck.services.redis = "unhealthy";
+      healthCheck.status = "degraded";
+      healthCheck.memory.redis = { error: "Redis unavailable" };
+    }
+
+    // Set appropriate HTTP status code
+    const statusCode = healthCheck.status === "ok" ? 200 : 503;
+    reply.code(statusCode);
+
+    return healthCheck;
   });
 
   // Register routes

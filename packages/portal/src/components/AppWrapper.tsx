@@ -32,6 +32,20 @@ export function AppWrapper({ children }: AppWrapperProps) {
 
   const checkDeviceStatus = async () => {
     try {
+      // Check if BLE proximity verification is enabled
+      const nearVerifyValue = import.meta.env.VITE_NEAR_VERIFY
+      const isNearVerifyEnabled = nearVerifyValue === 'true'
+
+      console.log('AppWrapper: VITE_NEAR_VERIFY =', nearVerifyValue)
+      console.log('AppWrapper: isNearVerifyEnabled =', isNearVerifyEnabled)
+
+      if (!isNearVerifyEnabled) {
+        console.log('AppWrapper: BLE proximity verification disabled, skipping device pairing')
+        setNeedsPairing(false)
+        setIsLoading(false)
+        return
+      }
+
       // Initialize devices store
       await devicesStore.init()
 
