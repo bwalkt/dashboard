@@ -9,15 +9,22 @@ interface AppWrapperProps {
 }
 
 export function AppWrapper({ children }: AppWrapperProps) {
+  // Routes that should bypass the pairing check - use window.location to avoid router dependency
+  const publicRoutes = ['/terms', '/privacy']
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : ''
+  const isPublicRoute = publicRoutes.includes(currentPath)
+
+  // Always call hooks to avoid conditional hook usage
   const [isLoading, setIsLoading] = useState(true)
   const [needsPairing, setNeedsPairing] = useState(false)
   const devicesStore = useDevicesStore()
   const devicePairing = useDevicePairing()
 
-  // Routes that should bypass the pairing check - use window.location to avoid router dependency
-  const publicRoutes = ['/terms', '/privacy']
-  const currentPath = typeof window !== 'undefined' ? window.location.pathname : ''
-  const isPublicRoute = publicRoutes.includes(currentPath)
+  // Allow public routes to bypass pairing check immediately
+  if (isPublicRoute) {
+    console.log('AppWrapper: Allowing public route:', currentPath)
+    return <>{children}</>
+  }
 
   useEffect(() => {
     checkDeviceStatus()
@@ -51,12 +58,6 @@ export function AppWrapper({ children }: AppWrapperProps) {
         </div>
       </div>
     )
-  }
-
-  // Allow public routes to bypass pairing check
-  if (isPublicRoute) {
-    console.log('AppWrapper: Allowing public route:', currentPath)
-    return <>{children}</>
   }
 
   if (needsPairing) {
