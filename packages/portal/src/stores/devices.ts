@@ -420,7 +420,7 @@ export class DevicesStoreClass extends ZStorage {
   primaryDevice?: DeviceInfoType
   currentDevice?: DeviceInfoType
   devices: Map<string, DeviceInfoType> = new Map()
-  isPrimaryDevice: boolean = true
+  isPrimaryDevice: boolean = false
 
   constructor() {
     super(STORE)
@@ -467,13 +467,6 @@ export class DevicesStoreClass extends ZStorage {
         console.error('Failed to get current device info:', error)
         throw error
       }
-    } else {
-      console.log('Found existing device info in storage')
-      if (deviceInfo.isPrimaryDevice) {
-        this.isPrimaryDevice = true
-        this.primaryDevice = deviceInfo
-        console.log('Device is marked as primary')
-      }
     }
 
     this.currentDevice = deviceInfo
@@ -513,28 +506,6 @@ export class DevicesStoreClass extends ZStorage {
     return []
   }
 
-  async addConnectedDevice(device: DeviceInfoType) {
-    if (!this.isPrimaryDevice || device.isPrimaryDevice) {
-      throw new Error('Only primary device can add connected devices')
-    }
-
-    try {
-      let devices = await this.getItem(deviceAssignmentTypes.connected)
-      if (!devices) {
-        devices = []
-      }
-      devices.push(device)
-
-      const saved = await this.setItem({ key: deviceAssignmentTypes.connected, data: devices })
-      if (!saved) {
-        throw new Error('Failed to save connected device data')
-      }
-    } catch (error) {
-      console.error('Failed to add connected device:', error)
-      throw error
-    }
-  }
-
   async removeConnectedDevice(deviceId: string) {
     if (!this.isPrimaryDevice) {
       throw new Error('Only primary device can remove connected devices')
@@ -553,35 +524,6 @@ export class DevicesStoreClass extends ZStorage {
       }
     } catch (error) {
       console.error('Failed to remove connected device:', error)
-      throw error
-    }
-  }
-
-  async setPrimaryDevice(device: DeviceInfoType) {
-    try {
-      this.primaryDevice = device
-      const saved = await this.setItem({ key: deviceAssignmentTypes.primary, data: device })
-      if (!saved) {
-        throw new Error('Failed to save primary device data')
-      }
-    } catch (error) {
-      console.error('Failed to set primary device:', error)
-      throw error
-    }
-  }
-
-  async setIsPrimaryDevice(isPrimary: boolean) {
-    try {
-      this.isPrimaryDevice = isPrimary
-      if (this.currentDevice) {
-        this.currentDevice.isPrimaryDevice = isPrimary
-        const saved = await this.setItem({ key: deviceAssignmentTypes.current, data: this.currentDevice })
-        if (!saved) {
-          throw new Error('Failed to update current device primary status')
-        }
-      }
-    } catch (error) {
-      console.error('Failed to set primary device status:', error)
       throw error
     }
   }

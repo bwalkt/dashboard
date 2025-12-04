@@ -63,7 +63,7 @@ export class DevicesStoreClass extends ZStorage {
       try {
         deviceInfo = await getDeviceInfo()
         deviceInfo.id = uuid()
-        const saved = await await this.setItem({ key: deviceAssignmentTypes.current, data: deviceInfo })
+        const saved = await this.setItem({ key: deviceAssignmentTypes.current, data: deviceInfo })
         if (!saved) {
           throw new Error('Failed to save current device info to storage')
         }
