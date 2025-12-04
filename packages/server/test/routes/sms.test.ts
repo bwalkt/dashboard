@@ -3,6 +3,7 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestApp } from "../helpers/app";
 import { mockRedis } from "../mocks/redis";
+import "../mocks/external-services";
 
 describe("SMS Routes", () => {
   let app: FastifyInstance;
@@ -126,7 +127,7 @@ describe("SMS Routes", () => {
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("error");
       expect(response.body.message).toBe(
-        "Invalid or expired verification code",
+        "Verification code has expired or does not exist",
       );
     });
   });

@@ -21,7 +21,7 @@
     "test": "pnpm -r test"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.7",
+    "@biomejs/biome": "2.3.8",
     "@types/node": "catalog:",
     "turbo": "^2.6.1",
     "typescript": "catalog:"

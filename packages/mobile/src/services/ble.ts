@@ -86,18 +86,10 @@ export class BLEService {
           granted['android.permission.BLUETOOTH_ADVERTISE'] === PermissionsAndroid.RESULTS.GRANTED
         )
       } else {
-        // Android 11 and below
-        const granted = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH,
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_ADMIN,
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-        ])
+        // Android 11 and below - only request location permission as BLUETOOTH permissions are granted automatically
+        const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION)
 
-        return (
-          granted['android.permission.BLUETOOTH'] === PermissionsAndroid.RESULTS.GRANTED &&
-          granted['android.permission.BLUETOOTH_ADMIN'] === PermissionsAndroid.RESULTS.GRANTED &&
-          granted['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED
-        )
+        return granted === PermissionsAndroid.RESULTS.GRANTED
       }
     }
     return true

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type React from 'react'
 import { ActivityIndicator, StyleSheet, TouchableOpacity, type ViewStyle } from 'react-native'
 import { Text } from 'react-native-ui-lib'

@@ -2,6 +2,7 @@ import { colors as sharedColors } from '@pzero/shared/theme'
 
 export const colors = {
   ...sharedColors,
+  successColor: '#4CAF50',
 }
 
 export const spacing = {
@@ -15,6 +16,7 @@ export const spacing = {
 }
 
 export const borderRadius = {
+  xs: 2,
   sm: 4,
   md: 6,
   lg: 8,
@@ -75,7 +77,7 @@ export const inputs = {
 }
 
 export const status = {
-  success: '#4CAF50',
+  success: colors.successColor,
   verified: colors.statusVerified,
 }
 

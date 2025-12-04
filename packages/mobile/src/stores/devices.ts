@@ -1,37 +1,10 @@
+import type { DeviceInfoType } from '@pzero/shared/pzero'
 import { uuid } from '@pzero/shared/uuid'
 import DeviceInfo from 'react-native-device-info'
 import { ZStorage } from './store'
 
-export type DeviceInfoType = {
-  id?: string
-  nickname?: string // Device nickname
-  isPrimaryDevice?: boolean
-  c_at?: number
-  deviceId: string
-  deviceName: string
-  systemName: string
-  systemVersion: string
-  brand: string
-  model: string
-  buildNumber: string
-  appVersion: string
-  appName: string
-  uniqueId: string
-  carrier: string | null
-  ipAddress: string | null
-  macAddress: string | null
-  deviceType: string
-  isEmulator: boolean
-  isTablet: boolean
-  ua: string | null
-  manufacturer: string | null
-  os: string
-  osVersion: string
-  other: unknown[]
-}
-
-export async function getDeviceInfo() {
-  const deviceInfo = {
+export async function getDeviceInfo(): Promise<DeviceInfoType> {
+  const deviceInfo: DeviceInfoType = {
     deviceId: DeviceInfo.getDeviceId(),
     deviceName: await DeviceInfo.getDeviceName(),
     systemName: DeviceInfo.getSystemName(),
@@ -48,7 +21,7 @@ export async function getDeviceInfo() {
     deviceType: DeviceInfo.getDeviceType(),
     isEmulator: await DeviceInfo.isEmulator(),
     isTablet: DeviceInfo.isTablet(),
-    ua: DeviceInfo.getUserAgent(),
+    ua: await DeviceInfo.getUserAgent(),
     manufacturer: await DeviceInfo.getManufacturer(),
     os: DeviceInfo.getSystemName(),
     osVersion: DeviceInfo.getSystemVersion(),
@@ -71,7 +44,7 @@ export class DevicesStoreClass extends ZStorage {
   primaryDevice?: DeviceInfoType
   currentDevice?: DeviceInfoType
   devices: Map<string, DeviceInfoType> = new Map()
-  isPrimaryDevice: boolean = false
+  isPrimaryDevice: boolean = true
   constructor() {
     super(STORE)
   }
@@ -85,12 +58,12 @@ export class DevicesStoreClass extends ZStorage {
     if (this.currentDevice) {
       return this.currentDevice as DeviceInfoType
     }
-    let deviceInfo = this.getItem(deviceAssignmentTypes.current)
+    let deviceInfo = await this.getItem(deviceAssignmentTypes.current)
     if (!deviceInfo) {
       try {
-        deviceInfo = (await getDeviceInfo()) as unknown as DeviceInfoType
+        deviceInfo = await getDeviceInfo()
         deviceInfo.id = uuid()
-        const saved = this.setItem({ key: deviceAssignmentTypes.current, data: deviceInfo, isTransit: false })
+        const saved = await await this.setItem({ key: deviceAssignmentTypes.current, data: deviceInfo })
         if (!saved) {
           throw new Error('Failed to save current device info to storage')
         }
@@ -123,9 +96,9 @@ export class DevicesStoreClass extends ZStorage {
       return this.primaryDevice
     }
     if (this.isPrimaryDevice) {
-      return this.currentDevice ?? this.getCurrentDeviceInfo()
+      return this.currentDevice ?? (await this.getCurrentDeviceInfo())
     }
-    const device = this.getItem(deviceAssignmentTypes.primary)
+    const device = await this.getItem(deviceAssignmentTypes.primary)
     if (device) {
       this.primaryDevice = device
       if (this.currentDevice && this.currentDevice.deviceId === device.deviceId) {
@@ -147,19 +120,17 @@ export class DevicesStoreClass extends ZStorage {
         this.isPrimaryDevice = true
         this.currentDevice.isPrimaryDevice = true
 
-        const primarySaved = this.setItem({
+        const primarySaved = await await this.setItem({
           key: deviceAssignmentTypes.primary,
           data: this.currentDevice,
-          isTransit: false,
         })
         if (!primarySaved) {
           throw new Error('Failed to save primary device data')
         }
 
-        const currentSaved = this.setItem({
+        const currentSaved = await await this.setItem({
           key: deviceAssignmentTypes.current,
           data: this.currentDevice,
-          isTransit: false,
         })
         if (!currentSaved) {
           throw new Error('Failed to save current device data')
@@ -169,10 +140,11 @@ export class DevicesStoreClass extends ZStorage {
       }
 
       device.c_at = Date.now()
-      const saved = this.setItem({ key: deviceAssignmentTypes.primary, data: device, isTransit: false })
+      const saved = await await this.setItem({ key: deviceAssignmentTypes.primary, data: device })
       if (!saved) {
         throw new Error('Failed to save primary device data')
       }
+      return device
     } catch (error) {
       console.error('Failed to set primary device:', error)
       throw error
@@ -185,44 +157,47 @@ export class DevicesStoreClass extends ZStorage {
     // Store original state for rollback
     const originalIsPrimary = this.isPrimaryDevice
     const originalPrimaryDevice = this.primaryDevice
-    const originalCurrentDevice = { ...this.currentDevice }
+    const originalCurrentDevice = this.currentDevice ? { ...this.currentDevice } : undefined
 
     try {
       currentDevice.isPrimaryDevice = isPrimary
       this.isPrimaryDevice = isPrimary
 
-      const currentSaved = this.setItem({ key: deviceAssignmentTypes.current, data: currentDevice })
+      const currentSaved = await this.setItem({ key: deviceAssignmentTypes.current, data: currentDevice })
       if (!currentSaved) {
         throw new Error('Failed to save current device data')
       }
 
       if (!isPrimary) {
-        const primaryCleared = this.setItem({ key: deviceAssignmentTypes.primary, data: null })
+        const primaryCleared = await this.setItem({ key: deviceAssignmentTypes.primary, data: null })
         if (!primaryCleared) {
           throw new Error('Failed to clear primary device data')
         }
         this.primaryDevice = undefined
 
-        const connections = this.getItem(deviceAssignmentTypes.connected)
+        const connections = await this.getItem(deviceAssignmentTypes.connected)
         if (connections && Array.isArray(connections) && connections.length) {
-          const backupSaved = this.setItem({ key: deviceAssignmentTypes.backedup_connections, data: connections })
+          const backupSaved = await await this.setItem({
+            key: deviceAssignmentTypes.backedup_connections,
+            data: connections,
+          })
           if (!backupSaved) {
             throw new Error('Failed to backup connected devices')
           }
-          const connectionsCleared = this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+          const connectionsCleared = await await this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
           if (!connectionsCleared) {
             throw new Error('Failed to clear connected devices')
           }
         }
       } else {
-        const primarySaved = this.setItem({ key: deviceAssignmentTypes.primary, data: currentDevice })
+        const primarySaved = await this.setItem({ key: deviceAssignmentTypes.primary, data: currentDevice })
         if (!primarySaved) {
           throw new Error('Failed to save primary device data')
         }
         this.primaryDevice = currentDevice
       }
 
-      const connectionsCleared = this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+      const connectionsCleared = await this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
       if (!connectionsCleared) {
         throw new Error('Failed to clear connected devices list')
       }
@@ -230,7 +205,7 @@ export class DevicesStoreClass extends ZStorage {
       // Rollback in-memory state on failure
       this.isPrimaryDevice = originalIsPrimary
       this.primaryDevice = originalPrimaryDevice
-      this.currentDevice = originalCurrentDevice
+      this.currentDevice = originalCurrentDevice as DeviceInfoType | undefined
 
       console.error('Failed to toggle device primary status:', error)
       throw error
@@ -243,7 +218,7 @@ export class DevicesStoreClass extends ZStorage {
     // Store original state for rollback
     const originalIsPrimary = this.isPrimaryDevice
     const originalPrimaryDevice = this.primaryDevice
-    const originalCurrentDevice = { ...this.currentDevice }
+    const originalCurrentDevice = this.currentDevice ? { ...this.currentDevice } : undefined
 
     try {
       // Update the current device's primary status
@@ -252,34 +227,37 @@ export class DevicesStoreClass extends ZStorage {
       this.currentDevice = currentDevice
 
       // Save to storage
-      const currentDeviceSaved = this.setItem({ key: deviceAssignmentTypes.current, data: currentDevice })
+      const currentDeviceSaved = await this.setItem({ key: deviceAssignmentTypes.current, data: currentDevice })
       if (!currentDeviceSaved) {
         throw new Error('Failed to save current device data')
       }
 
       if (!value) {
         // If removing primary status, clear primary device reference
-        const primaryCleared = this.setItem({ key: deviceAssignmentTypes.primary, data: null })
+        const primaryCleared = await this.setItem({ key: deviceAssignmentTypes.primary, data: null })
         if (!primaryCleared) {
           throw new Error('Failed to clear primary device data')
         }
         this.primaryDevice = undefined
 
         // Backup connected devices if any exist
-        const connections = this.getItem(deviceAssignmentTypes.connected)
+        const connections = await this.getItem(deviceAssignmentTypes.connected)
         if (connections && Array.isArray(connections) && connections.length) {
-          const backupSaved = this.setItem({ key: deviceAssignmentTypes.backedup_connections, data: connections })
+          const backupSaved = await await this.setItem({
+            key: deviceAssignmentTypes.backedup_connections,
+            data: connections,
+          })
           if (!backupSaved) {
             throw new Error('Failed to backup connected devices')
           }
-          const connectionsCleared = this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+          const connectionsCleared = await await this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
           if (!connectionsCleared) {
             throw new Error('Failed to clear connected devices')
           }
         }
       } else {
         // If setting as primary, save current device as primary
-        const primarySaved = this.setItem({ key: deviceAssignmentTypes.primary, data: currentDevice })
+        const primarySaved = await this.setItem({ key: deviceAssignmentTypes.primary, data: currentDevice })
         if (!primarySaved) {
           throw new Error('Failed to save primary device data')
         }
@@ -287,7 +265,7 @@ export class DevicesStoreClass extends ZStorage {
       }
 
       // Clear connected devices list when changing primary status
-      const connectionsCleared = this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
+      const connectionsCleared = await this.setItem({ key: deviceAssignmentTypes.connected, data: [] })
       if (!connectionsCleared) {
         throw new Error('Failed to clear connected devices list')
       }
@@ -297,7 +275,7 @@ export class DevicesStoreClass extends ZStorage {
       // Rollback in-memory state on failure
       this.isPrimaryDevice = originalIsPrimary
       this.primaryDevice = originalPrimaryDevice
-      this.currentDevice = originalCurrentDevice
+      this.currentDevice = originalCurrentDevice as DeviceInfoType | undefined
 
       console.error('Failed to set primary device status:', error)
       throw error
@@ -316,13 +294,13 @@ export class DevicesStoreClass extends ZStorage {
     }
 
     try {
-      let devices = this.getItem(deviceAssignmentTypes.connected)
+      let devices = await this.getItem(deviceAssignmentTypes.connected)
       if (!devices) {
         devices = []
       }
       devices.push(device)
 
-      const saved = this.setItem({ key: deviceAssignmentTypes.connected, data: devices })
+      const saved = await this.setItem({ key: deviceAssignmentTypes.connected, data: devices })
       if (!saved) {
         throw new Error('Failed to save connected device data')
       }
@@ -337,13 +315,13 @@ export class DevicesStoreClass extends ZStorage {
     }
 
     try {
-      const devices = this.getItem(deviceAssignmentTypes.connected)
+      const devices = await this.getItem(deviceAssignmentTypes.connected)
       if (!devices || !Array.isArray(devices)) {
         return
       }
 
       const updatedDevices = devices.filter(device => device.deviceId !== deviceId)
-      const saved = this.setItem({ key: deviceAssignmentTypes.connected, data: updatedDevices })
+      const saved = await this.setItem({ key: deviceAssignmentTypes.connected, data: updatedDevices })
       if (!saved) {
         throw new Error('Failed to save updated connected devices list')
       }

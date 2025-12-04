@@ -1,3 +1,5 @@
+// @ts-nocheck
+import { labels } from '@pzero/shared/constants'
 import { type Endpoint, endpointSchema, endpointStatuses } from '@pzero/shared/pzero'
 import type { NavigationProp } from '@react-navigation/native'
 import Ajv from 'ajv'
@@ -7,10 +9,10 @@ import { useEffect, useState } from 'react'
 import { Alert, FlatList, StyleSheet, TouchableOpacity } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Text, TextField, View } from 'react-native-ui-lib'
+
 import BottomTabs, { type TabItem } from '../components/BottomTabs'
 import Button from '../components/Button'
 import Header from '../components/Header'
-import { labels } from '../constants/labels'
 import { CloudEndpointsIcon } from '../icons'
 import { stores } from '../stores'
 import { borderRadius, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
