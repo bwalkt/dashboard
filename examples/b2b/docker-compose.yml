@@ -14,14 +14,14 @@ services:
       timeout: 3s
       retries: 5
 
-  pzero-sfdc-server-vanilla:
+  pzero-sfdc-server:
     # Image from GitHub Container Registry
     # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
     # Or set SFDC_SERVER_IMAGE to override the full image path
     build:
       context: ../../
       dockerfile: examples/b2b/packages/sfdc-server-vanilla/Dockerfile
-    container_name: pzero-sfdc-server-vanilla
+    container_name: pzero-sfdc-server
     networks:
       - pzero-network
     ports:

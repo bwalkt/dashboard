@@ -5,7 +5,7 @@ const PROXY_TARGET_ID_HEADER = 'x-proxy-target-id';
 const proxyTargets = [{
 id: "1",
 name: "Salesforce",
-url: "pzero-sfdc-server-vanilla",
+url: "pzero-sfdc-server",
 port: 3000,
 }]
 
