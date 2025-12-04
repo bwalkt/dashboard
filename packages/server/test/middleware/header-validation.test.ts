@@ -94,10 +94,11 @@ describe("Header Validation Middleware", () => {
       // We should have processed all requests
       expect(responses.length).toBe(105);
 
-      // The global rate limiter should have kicked in eventually
-      // Note: This might not always trigger depending on rate limiter configuration
-      // With aggressive rate limiting, all requests might be blocked, which is acceptable
-      expect(successResponses.length + rateLimitedResponses.length).toBeGreaterThan(0);
+      // All responses should be either successful or rate-limited (no errors)
+      expect(successResponses.length + rateLimitedResponses.length).toBe(105);
+      
+      // Since we sent 105 requests (above the 100/min limit), rate limiting should occur
+      expect(rateLimitedResponses.length).toBeGreaterThan(0);
 
       // If rate limiting occurred, verify the response format
       if (rateLimitedResponses.length > 0) {

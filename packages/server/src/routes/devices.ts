@@ -25,6 +25,15 @@ export async function deviceRoutes(fastify: FastifyInstance): Promise<void> {
       try {
         const { uid, deviceInfo } = request.body;
 
+        // Verify the uid matches the authenticated user
+        const authenticatedUser = (request as unknown as AuthenticatedRequest).user;
+        if (uid !== authenticatedUser.id) {
+          return reply.code(403).send({
+            error: "Forbidden",
+            message: "Cannot connect devices for other users"
+          });
+        }
+
         console.log("Device connection request:", {
           uid,
           deviceInfo: {
@@ -157,6 +166,13 @@ export async function deviceRoutes(fastify: FastifyInstance): Promise<void> {
         }
 
         const connectedDevice = deviceResult.rows[0];
+        
+        if (!connectedDevice) {
+          return reply.code(500).send({
+            error: "Internal server error",
+            message: "Device operation did not return expected result"
+          });
+        }
 
         console.log("Device connected successfully:", {
           deviceId: connectedDevice.id,
