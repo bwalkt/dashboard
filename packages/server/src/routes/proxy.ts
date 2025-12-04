@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { config } from "../config/env.js";
 import { constructProxyURL } from "../services/proxy.service.js";
 export async function proxyRoutes(fastify: FastifyInstance): Promise<void> {
   /**
@@ -151,6 +152,9 @@ export async function proxyRoutes(fastify: FastifyInstance): Promise<void> {
           }
         }
       } catch (error) {
+        if(config.NODE_ENV !== 'production') {
+          console.error('Proxy request failed:', error);
+        }
         // Note: AbortSignal.timeout() automatically aborts on timeout
         // No manual abort needed - the signal is already handled by fetch
 
