@@ -74,6 +74,8 @@ RUN rm -rf /tmp/* /var/cache/apk/* && \
 
 WORKDIR /app/packages/server
 
+COPY packages/server/migrations ./migrations
+
 # Expose port
 EXPOSE 8080
 
