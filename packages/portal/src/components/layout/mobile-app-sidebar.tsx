@@ -36,8 +36,8 @@ import {
 } from '@/components/ui/sidebar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { mobileNavItems } from '@/constants/mobile-nav'
-import { useAuth } from '@/contexts/AuthContext'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { useAuthStore } from '@/stores/auth'
 import { DataTableFilterControls } from '../data-table/data-table-filter-controls'
 import { useDataTable } from '../data-table/data-table-provider'
 import { Icons } from '../icons'
@@ -95,7 +95,7 @@ export default function MobileAppSidebar() {
     // Side effects based on sidebar state changes
   }, [isOpen])
 
-  const { user } = useAuth()
+  const { user } = useAuthStore()
 
   // Safely get filter fields from context
   let filterFields: any[] = []

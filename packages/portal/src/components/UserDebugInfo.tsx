@@ -1,4 +1,4 @@
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/stores/auth'
 
 /**
  * Displays the authenticated user's debug information: email, id, selected `user_metadata` fields (full_name, name, avatar_url, picture) and a preformatted JSON dump of the raw `user_metadata`; renders "No user data" when no user is present.
@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
  * @returns The React element containing the user debug panel or a fallback message when no user is available.
  */
 export function UserDebugInfo() {
-  const { user } = useAuth()
+  const { user } = useAuthStore()
 
   if (!user) {
     return <div>No user data</div>

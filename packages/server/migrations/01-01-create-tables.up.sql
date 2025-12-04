@@ -406,11 +406,6 @@ SET
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
-  ('all_auth', 'P');
-
-INSERT INTO
-  pzero.mmn (table_name, mmn)
-VALUES
   ('all_auth', 'A');
 
 INSERT INTO
@@ -543,10 +538,7 @@ CREATE TABLE pzero.base_part (
   org_id uuid
 );
 
-INSERT INTO
-  pzero.all_auth (email, email_verified)
-VALUES
-  ('uma.krishnan@boardwalktech.com', TRUE);
+-- Seed data moved to 01-04-seeds.sql
 
 -- Children of org are
 -- nhs,
@@ -730,69 +722,3 @@ CREATE TABLE pzero.all_threads (
 PARTITION BY
   list (is_act);
 
--- Drop main tables
-DROP TABLE IF EXISTS pzero.all_threads;
-
-DROP TABLE IF EXISTS pzero.all_thread_heads;
-
-DROP TABLE IF EXISTS pzero.all_files;
-
-DROP TABLE IF EXISTS pzero.all_dirs;
-
-DROP TABLE IF EXISTS pzero.all_endpoints;
-
-DROP TABLE IF EXISTS pzero.all_devices;
-
-DROP TABLE IF EXISTS pzero.all_nhs;
-
-DROP TABLE IF EXISTS pzero.all_sessions;
-
-DROP TABLE IF EXISTS pzero.all_users;
-
-DROP TABLE IF EXISTS pzero.all_orgs;
-
-DROP TABLE IF EXISTS pzero.all_relations;
-
-DROP TABLE IF EXISTS pzero.all_audits;
-
-DROP TABLE IF EXISTS pzero.all_txns;
-
-DROP TABLE IF EXISTS pzero.all_auth;
-
-DROP TABLE IF EXISTS pzero.mmn;
-
--- Drop fingerprinting types
--- Drop main types
-DROP TYPE if EXISTS pzero.file_unit;
-
-DROP TYPE if EXISTS pzero.file_type;
-
-DROP TYPE if EXISTS pzero.relation_type;
-
-DROP TYPE if EXISTS pzero.device_type;
-
-DROP TYPE if EXISTS pzero.session_type;
-
-DROP TYPE if EXISTS pzero.session_status;
-
-DROP TYPE if EXISTS pzero.device_status;
-
-DROP TYPE if EXISTS pzero.user_status;
-
-DROP TYPE if EXISTS pzero.method;
-
-DROP TYPE if EXISTS pzero.location;
-
-DROP TYPE if EXISTS pzero.address;
-
-DROP TYPE if EXISTS pzero.org_status;
-
-DROP TYPE if EXISTS pzero.endpoint_status;
-
-DROP DOMAIN if EXISTS pzero.key_values;
-
-DROP DOMAIN if EXISTS pzero.iid;
-
-DROP DOMAIN if EXISTS pzero.mmn_type;
-
-DROP SCHEMA if EXISTS pzero cascade;

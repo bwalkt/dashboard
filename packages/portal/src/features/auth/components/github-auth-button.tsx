@@ -1,7 +1,7 @@
+import { api } from '@pzero/shared/api'
 import { toast } from 'sonner'
 import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/AuthContext'
 import { useTauriAuth } from '@/hooks/use-tauri-auth'
 
 /**
@@ -12,11 +12,16 @@ import { useTauriAuth } from '@/hooks/use-tauri-auth'
  * @returns A JSX element: a button that triggers GitHub sign-in and reflects the current loading state.
  */
 export default function GithubSignInButton() {
-  const { signInWithGitHub: webSignIn, loading: webLoading } = useAuth()
   const { signInWithGitHub: tauriSignIn, isLoading: tauriLoading, error: tauriError } = useTauriAuth()
 
   const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__
-  const loading = isTauri ? tauriLoading : webLoading
+  const loading = tauriLoading
+
+  const webSignIn = async () => {
+    const { authUrl } = await api.get<{ authUrl: string }>('/auth/login')
+    window.location.href = authUrl
+    return { error: null }
+  }
 
   const handleGitHubSignIn = async () => {
     try {

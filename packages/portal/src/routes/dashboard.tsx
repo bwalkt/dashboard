@@ -1,13 +1,13 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useAuth } from '@/contexts/AuthContext'
 import DashboardLayout from '@/pages/dashboard/Layout'
+import { useAuthStore } from '@/stores/auth'
 
 export const Route = createFileRoute('/dashboard')({
   component: DashboardLayoutComponent,
 })
 
 function DashboardLayoutComponent() {
-  const { user, loading } = useAuth()
+  const { user, loading } = useAuthStore()
 
   if (loading) {
     return (

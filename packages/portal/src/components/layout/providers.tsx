@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import type React from 'react'
 import { useState } from 'react'
-import { AuthProvider } from '@/contexts/AuthContext'
 import { ActiveThemeProvider } from '../active-theme'
 
 export default function Providers({
@@ -28,9 +27,7 @@ export default function Providers({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ActiveThemeProvider initialTheme={activeThemeValue}>{children}</ActiveThemeProvider>
-      </AuthProvider>
+      <ActiveThemeProvider initialTheme={activeThemeValue}>{children}</ActiveThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   )

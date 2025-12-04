@@ -8,14 +8,14 @@ import { treeData } from '@/app/data-table/tree-data'
 import KBar from '@/components/kbar'
 import AppSidebar from '@/components/layout/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/stores/auth'
 
 export const Route = createFileRoute('/data-table/tree')({
   component: TreeTablePage,
 })
 
 function TreeTablePage() {
-  const { user, loading } = useAuth()
+  const { user, loading } = useAuthStore()
   const navigate = useNavigate({ from: Route.fullPath })
 
   useEffect(() => {

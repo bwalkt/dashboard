@@ -8,14 +8,14 @@ import { avatarGroupByOptions } from '@/app/data-table/avatar-group-options'
 import KBar from '@/components/kbar'
 import AppSidebar from '@/components/layout/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/stores/auth'
 
 export const Route = createFileRoute('/table')({
   component: TablePage,
 })
 
 function TablePage() {
-  const { user, loading } = useAuth()
+  const { user, loading } = useAuthStore()
   const navigate = useNavigate({ from: Route.fullPath })
 
   useEffect(() => {

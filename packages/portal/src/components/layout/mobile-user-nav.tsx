@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { UserAvatarProfile } from '@/components/user-avatar-profile'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/stores/auth'
 
 /**
  * Render a mobile-friendly user avatar button that opens a dropdown menu with account and navigation actions.
@@ -22,7 +22,7 @@ import { useAuth } from '@/contexts/AuthContext'
  */
 export function MobileUserNav() {
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
+  const { user, signOut } = useAuthStore()
 
   const handleSignOut = async () => {
     try {

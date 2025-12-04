@@ -40,8 +40,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UserAvatarProfile } from '@/components/user-avatar-profile'
 import { navItems } from '@/constants/data'
-import { useAuth } from '@/contexts/AuthContext'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { useAuthStore } from '@/stores/auth'
 import { DataTableContext } from '../data-table/data-table-provider'
 import { SafeDataTableFilterControls } from '../data-table/safe-data-table-filter-controls'
 import { Icons } from '../icons'
@@ -74,7 +74,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
   const location = useLocation()
   const pathname = location.pathname
   const isMobile = useMediaQuery('(max-width: 768px)')
-  const { user: authUser, signOut } = useAuth()
+  const { user: authUser, signOut } = useAuthStore()
   const { setOpenMobile } = useSidebar()
   const navigate = useNavigate()
 
