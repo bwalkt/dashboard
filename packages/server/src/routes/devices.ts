@@ -1,6 +1,6 @@
 import type { DeviceInfoType } from "@pzero/shared/pzero";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { db } from "../config/db.js";
+import { db } from "../config/database.js";
 import { authenticateToken } from "../middleware/auth.js";
 
 interface ConnectDeviceRequest {
