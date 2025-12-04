@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useDevicePairing } from '@/services/devicePairingService'
 import { useDevicesStore } from '@/stores/devices'
 import { DevicePairingLanding } from './DevicePairingLanding'
@@ -20,17 +20,7 @@ export function AppWrapper({ children }: AppWrapperProps) {
   const devicesStore = useDevicesStore()
   const devicePairing = useDevicePairing()
 
-  // Allow public routes to bypass pairing check immediately
-  if (isPublicRoute) {
-    console.log('AppWrapper: Allowing public route:', currentPath)
-    return <>{children}</>
-  }
-
-  useEffect(() => {
-    checkDeviceStatus()
-  }, [])
-
-  const checkDeviceStatus = async () => {
+  const checkDeviceStatus = useCallback(async () => {
     try {
       // Check if BLE proximity verification is enabled
       const nearVerifyValue = import.meta.env.VITE_NEAR_VERIFY
@@ -61,6 +51,18 @@ export function AppWrapper({ children }: AppWrapperProps) {
     } finally {
       setIsLoading(false)
     }
+  }, [devicesStore, devicePairing])
+
+  useEffect(() => {
+    if (!isPublicRoute) {
+      checkDeviceStatus()
+    }
+  }, [isPublicRoute, checkDeviceStatus])
+
+  // Allow public routes to bypass pairing check immediately
+  if (isPublicRoute) {
+    console.log('AppWrapper: Allowing public route:', currentPath)
+    return <>{children}</>
   }
 
   if (isLoading) {

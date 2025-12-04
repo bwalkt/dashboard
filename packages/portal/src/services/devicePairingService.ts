@@ -207,7 +207,12 @@ export class DevicePairingService {
           }
 
           // Only use fallback polling when BLE is disabled
-          await this.fallbackConnectionPolling(connectionId)
+          const connectionActive = await this.fallbackConnectionPolling(connectionId)
+          if (!connectionActive) {
+            // Connection was established, clear interval
+            clearInterval(pollInterval)
+            return
+          }
         } catch (error) {
           console.error('Error in fallback connection polling:', error)
         }
@@ -233,7 +238,12 @@ export class DevicePairingService {
             clearInterval(fallbackPollInterval)
             return
           }
-          await this.fallbackConnectionPolling(connectionId)
+          const connectionActive = await this.fallbackConnectionPolling(connectionId)
+          if (!connectionActive) {
+            // Connection was established, clear interval
+            clearInterval(fallbackPollInterval)
+            return
+          }
         } catch (error) {
           console.error('Error in fallback connection polling:', error)
         }
@@ -287,7 +297,12 @@ export class DevicePairingService {
         }
 
         // Fallback to traditional polling method
-        await this.fallbackConnectionPolling(connectionId)
+        const connectionActive = await this.fallbackConnectionPolling(connectionId)
+        if (!connectionActive) {
+          // Connection was established via fallback, clear interval
+          clearInterval(pollInterval)
+          return
+        }
       } catch (error) {
         console.error('Error in enhanced connection polling:', error)
       }
@@ -302,8 +317,9 @@ export class DevicePairingService {
 
   /**
    * Fallback connection polling (original method)
+   * @returns true if connection is still active (polling should continue), false if connection was established
    */
-  private async fallbackConnectionPolling(connectionId: string) {
+  private async fallbackConnectionPolling(connectionId: string): Promise<boolean> {
     // Ensure store is initialized before use
     if (!DevicesStore.currentDevice) {
       await DevicesStore.init()
@@ -325,8 +341,10 @@ export class DevicePairingService {
           timestamp: Date.now(),
         }
         callback(response)
+        return false // Connection established, polling should stop
       }
     }
+    return true // Connection still active, polling should continue
   }
 
   /**
