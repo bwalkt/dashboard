@@ -38,7 +38,7 @@ jobs:
           cache-from: ${{ env.REGISTRY_URL }}/${{ env.GITHUB_OWNER }}/portal:cache
           cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}/portal:cache,mode=max', env.REGISTRY_URL, env.GITHUB_OWNER) || '' }}
           build-args: |
-            VITE_BACKEND_URL=${{ secrets.VITE_BACKEND_URL || '' }}
+            VITE_BACKEND_URL=${{ secrets.VITE_PORTAL_BACKEND_URL || 'https://pzero-api.incmix.com' }}
             VITE_USE_PROXY=${{ secrets.VITE_USE_PROXY || '' }}
             VITE_PROXY_URL=${{ secrets.VITE_PROXY_URL || '' }}
             VITE_PROXY_TARGET=${{ secrets.VITE_PROXY_TARGET || '' }}
