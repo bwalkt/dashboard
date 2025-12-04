@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useDevicePairing } from '@/services/devicePairingService'
 import { useDevicesStore } from '@/stores/devices'
 import { DevicePairingLanding } from './DevicePairingLanding'
@@ -9,17 +9,33 @@ interface AppWrapperProps {
 }
 
 export function AppWrapper({ children }: AppWrapperProps) {
+  // Routes that should bypass the pairing check - use window.location to avoid router dependency
+  const publicRoutes = ['/terms', '/privacy']
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : ''
+  const isPublicRoute = publicRoutes.includes(currentPath)
+
+  // Always call hooks to avoid conditional hook usage
   const [isLoading, setIsLoading] = useState(true)
   const [needsPairing, setNeedsPairing] = useState(false)
   const devicesStore = useDevicesStore()
   const devicePairing = useDevicePairing()
 
-  useEffect(() => {
-    checkDeviceStatus()
-  }, [])
-
-  const checkDeviceStatus = async () => {
+  const checkDeviceStatus = useCallback(async () => {
     try {
+      // Check if BLE proximity verification is enabled
+      const nearVerifyValue = import.meta.env.VITE_NEAR_VERIFY
+      const isNearVerifyEnabled = nearVerifyValue === 'true'
+
+      console.log('AppWrapper: VITE_NEAR_VERIFY =', nearVerifyValue)
+      console.log('AppWrapper: isNearVerifyEnabled =', isNearVerifyEnabled)
+
+      if (!isNearVerifyEnabled) {
+        console.log('AppWrapper: BLE proximity verification disabled, skipping device pairing')
+        setNeedsPairing(false)
+        setIsLoading(false)
+        return
+      }
+
       // Initialize devices store
       await devicesStore.init()
 
@@ -35,6 +51,18 @@ export function AppWrapper({ children }: AppWrapperProps) {
     } finally {
       setIsLoading(false)
     }
+  }, [devicesStore, devicePairing])
+
+  useEffect(() => {
+    if (!isPublicRoute) {
+      checkDeviceStatus()
+    }
+  }, [isPublicRoute, checkDeviceStatus])
+
+  // Allow public routes to bypass pairing check immediately
+  if (isPublicRoute) {
+    console.log('AppWrapper: Allowing public route:', currentPath)
+    return <>{children}</>
   }
 
   if (isLoading) {

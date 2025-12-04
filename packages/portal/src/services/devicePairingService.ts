@@ -1,5 +1,15 @@
 import { DeviceInfoType } from '@pzero/shared/pzero'
+import { invoke } from '@tauri-apps/api/core'
 import { DevicesStore } from '@/stores/devices'
+
+// Tauri BLE command types
+interface BLECommands {
+  ble_initialize: () => Promise<void>
+  ble_connect: () => Promise<void>
+  ble_disconnect: () => Promise<void>
+  ble_is_connected: () => Promise<boolean>
+  ble_verify_device_proximity: () => Promise<string>
+}
 
 export interface PairingData {
   type: 'device_pairing'
@@ -82,7 +92,71 @@ export class DevicePairingService {
   }
 
   /**
-   * Wait for mobile device to connect
+   * Initialize BLE proximity verification
+   */
+  async initializeBLEProximityVerification(): Promise<void> {
+    try {
+      console.log('DevicePairing: Initializing BLE proximity verification...')
+      await invoke('ble_initialize')
+      console.log('DevicePairing: BLE initialized successfully')
+    } catch (error) {
+      console.error('DevicePairing: Failed to initialize BLE:', error)
+      throw new Error(`Failed to initialize BLE: ${error}`)
+    }
+  }
+
+  /**
+   * Connect to mobile device via BLE for proximity verification
+   */
+  async connectToBLEDevice(): Promise<void> {
+    try {
+      console.log('DevicePairing: Connecting to BLE device...')
+      await invoke('ble_connect')
+      console.log('DevicePairing: Connected to BLE device successfully')
+    } catch (error) {
+      console.error('DevicePairing: Failed to connect to BLE device:', error)
+      throw new Error(`Failed to connect to BLE device: ${error}`)
+    }
+  }
+
+  /**
+   * Verify device proximity by retrieving UID via BLE
+   */
+  async verifyProximityViaBLE(): Promise<string> {
+    try {
+      console.log('DevicePairing: Verifying device proximity via BLE...')
+
+      // Check if already connected to BLE device
+      const isConnected = (await invoke('ble_is_connected')) as boolean
+      if (!isConnected) {
+        await this.connectToBLEDevice()
+      }
+
+      // Verify proximity and get UID
+      const uid = (await invoke('ble_verify_device_proximity')) as string
+      console.log('DevicePairing: Device proximity verified via BLE, UID:', uid)
+
+      return uid
+    } catch (error) {
+      console.error('DevicePairing: Failed to verify proximity via BLE:', error)
+      throw new Error(`Failed to verify proximity via BLE: ${error}`)
+    }
+  }
+
+  /**
+   * Disconnect from BLE device
+   */
+  async disconnectBLEDevice(): Promise<void> {
+    try {
+      await invoke('ble_disconnect')
+      console.log('DevicePairing: Disconnected from BLE device')
+    } catch (error) {
+      console.error('DevicePairing: Failed to disconnect from BLE device:', error)
+    }
+  }
+
+  /**
+   * Wait for mobile device to connect (enhanced with BLE proximity verification)
    */
   async waitForConnection(
     connectionId: string,
@@ -110,15 +184,77 @@ export class DevicePairingService {
         resolve(response)
       })
 
-      // Start polling for connection (simulate mobile app connecting)
-      this.startConnectionPolling(connectionId)
+      // Start enhanced connection polling with BLE proximity verification
+      this.startEnhancedConnectionPolling(connectionId)
     })
   }
 
   /**
-   * Simulate connection polling (in real implementation, this would be WebSocket/SSE)
+   * Enhanced connection polling with BLE proximity verification
    */
-  private async startConnectionPolling(connectionId: string) {
+  private async startEnhancedConnectionPolling(connectionId: string) {
+    // Check if BLE proximity verification is enabled
+    const isNearVerifyEnabled = import.meta.env.VITE_NEAR_VERIFY === 'true'
+
+    if (!isNearVerifyEnabled) {
+      console.log('DevicePairing: BLE proximity verification disabled, using fallback polling only')
+      const pollInterval = setInterval(async () => {
+        try {
+          // Check if connection is still active
+          if (!this.activeConnections.has(connectionId)) {
+            clearInterval(pollInterval)
+            return
+          }
+
+          // Only use fallback polling when BLE is disabled
+          const connectionActive = await this.fallbackConnectionPolling(connectionId)
+          if (!connectionActive) {
+            // Connection was established, clear interval
+            clearInterval(pollInterval)
+            return
+          }
+        } catch (error) {
+          console.error('Error in fallback connection polling:', error)
+        }
+      }, 3000)
+
+      // Clean up after timeout
+      setTimeout(() => {
+        clearInterval(pollInterval)
+      }, 300000)
+      return
+    }
+
+    // Initialize BLE once before starting the polling loop
+    try {
+      await this.initializeBLEProximityVerification()
+      console.log('DevicePairing: BLE initialized successfully for proximity verification')
+    } catch (initError) {
+      console.log('DevicePairing: BLE initialization failed, falling back to traditional polling:', initError)
+      // Fall back to traditional polling if BLE initialization fails
+      const fallbackPollInterval = setInterval(async () => {
+        try {
+          if (!this.activeConnections.has(connectionId)) {
+            clearInterval(fallbackPollInterval)
+            return
+          }
+          const connectionActive = await this.fallbackConnectionPolling(connectionId)
+          if (!connectionActive) {
+            // Connection was established, clear interval
+            clearInterval(fallbackPollInterval)
+            return
+          }
+        } catch (error) {
+          console.error('Error in fallback connection polling:', error)
+        }
+      }, 3000)
+
+      setTimeout(() => {
+        clearInterval(fallbackPollInterval)
+      }, 300000)
+      return
+    }
+
     const pollInterval = setInterval(async () => {
       try {
         // Check if connection is still active
@@ -127,47 +263,88 @@ export class DevicePairingService {
           return
         }
 
-        // In a real implementation, this would:
-        // 1. Check backend API for mobile connection
-        // 2. Listen to WebSocket messages
-        // 3. Process mobile app pairing requests
+        // Try to verify proximity via BLE (initialization already done)
+        try {
+          // Attempt BLE proximity verification
+          const uid = await this.verifyProximityViaBLE()
 
-        // For now, we'll simulate a connection after some time for demo
-        // This should be replaced with actual mobile app integration
+          console.log('DevicePairing: BLE proximity verification successful, UID:', uid)
 
-        // Ensure store is initialized before use
-        if (!DevicesStore.currentDevice) {
-          await DevicesStore.init()
-        }
+          // Get device info for the verified UID
+          const currentDevice = await DevicesStore.getCurrentDeviceInfo()
 
-        const primaryDevice = await DevicesStore.getPrimaryDevice()
-
-        // Check if we have a new primary device (mobile connected)
-        const currentDevice = await DevicesStore.getCurrentDeviceInfo()
-        if (primaryDevice && primaryDevice.deviceId !== currentDevice.deviceId) {
-          // Mobile device connected
+          // Create successful pairing response
           const callback = this.connectionCallbacks.get(connectionId)
           if (callback) {
             const response: MobilePairingResponse = {
               type: 'mobile_pairing_response',
               connectionId,
-              mobileDeviceInfo: primaryDevice,
+              mobileDeviceInfo: {
+                ...currentDevice,
+                uid: uid, // Include the verified UID
+                isPrimaryDevice: true,
+              },
               status: 'connected',
               timestamp: Date.now(),
             }
             callback(response)
+            clearInterval(pollInterval)
+            return
           }
+        } catch (bleError) {
+          // BLE verification failed - continue polling
+          console.log('DevicePairing: BLE verification attempt failed, will retry:', bleError.message)
+        }
+
+        // Fallback to traditional polling method
+        const connectionActive = await this.fallbackConnectionPolling(connectionId)
+        if (!connectionActive) {
+          // Connection was established via fallback, clear interval
           clearInterval(pollInterval)
+          return
         }
       } catch (error) {
-        console.error('Error polling for connection:', error)
+        console.error('Error in enhanced connection polling:', error)
       }
-    }, 2000)
+    }, 3000) // Poll every 3 seconds for BLE
 
-    // Clean up after 5 minutes
+    // Clean up after timeout
     setTimeout(() => {
       clearInterval(pollInterval)
+      this.disconnectBLEDevice() // Clean up BLE connection
     }, 300000)
+  }
+
+  /**
+   * Fallback connection polling (original method)
+   * @returns true if connection is still active (polling should continue), false if connection was established
+   */
+  private async fallbackConnectionPolling(connectionId: string): Promise<boolean> {
+    // Ensure store is initialized before use
+    if (!DevicesStore.currentDevice) {
+      await DevicesStore.init()
+    }
+
+    const primaryDevice = await DevicesStore.getPrimaryDevice()
+
+    // Check if we have a new primary device (mobile connected)
+    const currentDevice = await DevicesStore.getCurrentDeviceInfo()
+    if (primaryDevice && primaryDevice.deviceId !== currentDevice.deviceId) {
+      // Mobile device connected via traditional method
+      const callback = this.connectionCallbacks.get(connectionId)
+      if (callback) {
+        const response: MobilePairingResponse = {
+          type: 'mobile_pairing_response',
+          connectionId,
+          mobileDeviceInfo: primaryDevice,
+          status: 'connected',
+          timestamp: Date.now(),
+        }
+        callback(response)
+        return false // Connection established, polling should stop
+      }
+    }
+    return true // Connection still active, polling should continue
   }
 
   /**
@@ -250,5 +427,10 @@ export function useDevicePairing() {
       devicePairingService.waitForConnection(connectionId, timeout),
     getConnectionStatus: () => devicePairingService.getConnectionStatus(),
     disconnect: () => devicePairingService.disconnect(),
+
+    // BLE proximity verification methods
+    initializeBLEProximityVerification: () => devicePairingService.initializeBLEProximityVerification(),
+    verifyProximityViaBLE: () => devicePairingService.verifyProximityViaBLE(),
+    disconnectBLEDevice: () => devicePairingService.disconnectBLEDevice(),
   }
 }

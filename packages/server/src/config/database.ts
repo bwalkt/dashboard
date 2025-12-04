@@ -49,6 +49,66 @@ class DatabaseManager {
   public getPool(): pg.Pool {
     return this.pool;
   }
+
+  public async query(text: string, params?: any[]): Promise<pg.QueryResult> {
+    return this.pool.query(text, params);
+  }
+
+  public async healthCheck(): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('SELECT 1');
+    } finally {
+      client.release();
+    }
+  }
+
+  public async getMemoryInfo(): Promise<{ 
+    shared_buffers: number; 
+    effective_cache_size: number; 
+    work_mem: number;
+    maintenance_work_mem: number;
+    database_size: number;
+  }> {
+    const client = await this.pool.connect();
+    try {
+      // Get PostgreSQL memory configuration and database size
+      const memoryQuery = `
+        SELECT 
+          name,
+          CASE 
+            WHEN name IN ('shared_buffers', 'effective_cache_size') THEN (setting::bigint * 8192)
+            WHEN name IN ('work_mem', 'maintenance_work_mem') THEN (setting::bigint * 1024)
+            ELSE 0
+          END AS bytes
+        FROM pg_settings 
+        WHERE name IN ('shared_buffers', 'effective_cache_size', 'work_mem', 'maintenance_work_mem')
+      `;
+      
+      const sizeQuery = `
+        SELECT pg_database_size(current_database()) AS database_size;
+      `;
+
+      const [memoryResult, sizeResult] = await Promise.all([
+        client.query(memoryQuery),
+        client.query(sizeQuery)
+      ]);
+
+      // Parse memory settings by name instead of position
+      const memoryMap = new Map(memoryResult.rows.map(r => [r.name, parseInt(r.bytes || '0', 10)]));
+      const databaseSize = parseInt(sizeResult.rows[0].database_size, 10);
+
+      return {
+        shared_buffers: memoryMap.get('shared_buffers') || 0,
+        effective_cache_size: memoryMap.get('effective_cache_size') || 0,
+        work_mem: memoryMap.get('work_mem') || 0,
+        maintenance_work_mem: memoryMap.get('maintenance_work_mem') || 0,
+        database_size: databaseSize,
+      };
+    } finally {
+      client.release();
+    }
+  }
 }
 
 // Export singleton instance

@@ -92,6 +92,34 @@ class RedisManager {
   public async ttl(key: string): Promise<number> {
     return this.client.ttl(key);
   }
+
+  public async ping(): Promise<string> {
+    return this.client.ping();
+  }
+
+  public async getMemoryInfo(): Promise<{ used: number; maxmemory: number }> {
+    const info = await this.client.info('memory');
+    const lines = info.split('\r\n');
+    
+    let usedMemory = 0;
+    let maxMemory = 0;
+    
+    for (const line of lines) {
+      if (line.startsWith('used_memory:')) {
+        const value = line.split(':')[1];
+        if (value) {
+          usedMemory = parseInt(value, 10);
+        }
+      } else if (line.startsWith('maxmemory:')) {
+        const value = line.split(':')[1];
+        if (value) {
+          maxMemory = parseInt(value, 10);
+        }
+      }
+    }
+    
+    return { used: usedMemory, maxmemory: maxMemory };
+  }
 }
 
 // Export singleton instance

@@ -24,6 +24,7 @@ class BLEPeripheralModule(reactContext: ReactApplicationContext) :
         private val SERVICE_UUID = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
         private val GET_ENDPOINTS_UUID = UUID.fromString("550e8400-e29b-41d4-a716-446655440001")
         private val GET_TOKEN_UUID = UUID.fromString("550e8400-e29b-41d4-a716-446655440002")
+        private val DEVICE_PAIRING_UUID = UUID.fromString("550e8400-e29b-41d4-a716-446655440003")
     }
 
     private var bluetoothManager: BluetoothManager? = null
@@ -39,6 +40,7 @@ class BLEPeripheralModule(reactContext: ReactApplicationContext) :
     private val tokensByEndpoint = mutableMapOf<String, ByteArray>()
     private val validEndpointIds = mutableSetOf<String>()
     private var requestedEndpointId: String? = null
+    private var currentUid: String? = null
 
     override fun getName(): String = "BLEPeripheralModule"
 
@@ -181,6 +183,7 @@ class BLEPeripheralModule(reactContext: ReactApplicationContext) :
             tokensByEndpoint.clear()
             validEndpointIds.clear()
             requestedEndpointId = null
+            currentUid = null
 
             Log.d(TAG, "Stopped BLE advertising")
             promise.resolve(true)
@@ -218,6 +221,25 @@ class BLEPeripheralModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    @ReactMethod
+    fun transmitUid(uid: String, promise: Promise) {
+        try {
+            // Store the UID for transmission via BLE
+            currentUid = uid
+            
+            val response = JSONObject()
+            response.put("type", "device_pairing")
+            response.put("uid", uid)
+            response.put("timestamp", System.currentTimeMillis() / 1000)
+            
+            Log.d(TAG, "UID set for transmission: $uid")
+            promise.resolve(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to transmit UID", e)
+            promise.reject("UID_ERROR", e.message, e)
+        }
+    }
+
     private fun setupGattServer() {
         if (!checkBluetoothConnectPermission()) {
             Log.e(TAG, "BLUETOOTH_CONNECT permission not granted")
@@ -239,10 +261,17 @@ class BLEPeripheralModule(reactContext: ReactApplicationContext) :
             BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
         )
 
+        val devicePairingCharacteristic = BluetoothGattCharacteristic(
+            DEVICE_PAIRING_UUID,
+            BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+            BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
+        )
+
         // Create service
         val service = BluetoothGattService(SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
         service.addCharacteristic(getEndpointsCharacteristic)
         service.addCharacteristic(getTokenCharacteristic)
+        service.addCharacteristic(devicePairingCharacteristic)
 
         // Add service to GATT server
         bluetoothGattServer?.addService(service)
@@ -308,6 +337,19 @@ class BLEPeripheralModule(reactContext: ReactApplicationContext) :
                         responseData = tokensByEndpoint[endpointId]
                     } else {
                         Log.d(TAG, "No endpoint ID specified in token request")
+                    }
+                }
+                DEVICE_PAIRING_UUID -> {
+                    val uid = currentUid
+                    if (uid != null) {
+                        Log.d(TAG, "Client requesting device pairing data with UID: $uid")
+                        val response = JSONObject()
+                        response.put("type", "device_pairing")
+                        response.put("uid", uid)
+                        response.put("timestamp", System.currentTimeMillis() / 1000)
+                        responseData = response.toString().toByteArray(Charsets.UTF_8)
+                    } else {
+                        Log.d(TAG, "No UID available for device pairing")
                     }
                 }
             }
@@ -384,6 +426,20 @@ class BLEPeripheralModule(reactContext: ReactApplicationContext) :
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to parse token request", e)
+                    }
+                }
+                DEVICE_PAIRING_UUID -> {
+                    try {
+                        if (value != null) {
+                            val requestJson = JSONObject(String(value, Charsets.UTF_8))
+                            val requestType = requestJson.optString("type")
+
+                            if (requestType == "devicePairing") {
+                                Log.d(TAG, "Device pairing request received")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to parse device pairing request", e)
                     }
                 }
             }

@@ -211,6 +211,14 @@ async fn ble_get_token(endpoint_id: String, state: State<'_, AppState>) -> Resul
     ble.get_token(endpoint_id).await.map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn ble_verify_device_proximity(state: State<'_, AppState>) -> Result<String, String> {
+    // Clone the Arc to release the State borrow, then lock
+    let ble_manager = state.ble_manager.clone();
+    let ble = ble_manager.lock().await;
+    ble.verify_device_proximity().await.map_err(|e| e.to_string())
+}
+
 /// Builds and runs the Tauri application for the portal with tray support, registering plugins,
 /// authorization handlers, BLE commands, and (on iOS) a deep-link listener.
 ///
@@ -303,7 +311,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             ble_disconnect,
             ble_is_connected,
             ble_get_endpoints,
-            ble_get_token
+            ble_get_token,
+            ble_verify_device_proximity
         ])
         .run(tauri::generate_context!())
         .map_err(|e| e.into())

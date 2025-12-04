@@ -11,6 +11,7 @@ interface BLEPeripheralNativeModule {
   stopAdvertising(): Promise<boolean>
   isAdvertising(): Promise<boolean>
   setTokenForEndpoint(endpointId: string, token: string): Promise<boolean>
+  transmitUid(uid: string): Promise<boolean>
 }
 
 /**
@@ -21,18 +22,21 @@ interface BLEPeripheralNativeModule {
 export const BLE_SERVICE_UUID = normalizeBleUuid('550e8400-e29b-41d4-a716-446655440000')
 export const BLE_CHARACTERISTIC_GET_ENDPOINTS = normalizeBleUuid('550e8400-e29b-41d4-a716-446655440001')
 export const BLE_CHARACTERISTIC_GET_TOKEN = normalizeBleUuid('550e8400-e29b-41d4-a716-446655440002')
+export const BLE_CHARACTERISTIC_DEVICE_PAIRING = normalizeBleUuid('550e8400-e29b-41d4-a716-446655440003')
 
 /**
  * BLE Message Types
  */
 export type BLERequest = {
-  type: 'getEndpoints' | 'getToken'
+  type: 'getEndpoints' | 'getToken' | 'devicePairing'
   endpointId?: string // Required for getToken
 }
 
 export type BLEResponse = {
-  type: 'endpoints' | 'token' | 'error'
+  type: 'endpoints' | 'token' | 'device_pairing' | 'error'
   data?: Endpoint[] | string
+  uid?: string // For device pairing responses
+  timestamp?: number // For device pairing responses
   error?: string
 }
 
@@ -266,6 +270,29 @@ export class BLEService {
   }
 
   /**
+   * Transmit UID via BLE for device pairing verification
+   */
+  async transmitUid(uid: string): Promise<void> {
+    try {
+      console.log(`BLE: Transmitting UID for device pairing: ${uid}`)
+
+      if (!BLEPeripheralModule) {
+        throw new Error('BLE Peripheral module not available')
+      }
+
+      const success = await (BLEPeripheralModule as BLEPeripheralNativeModule).transmitUid(uid)
+      if (!success) {
+        throw new Error('Failed to transmit UID via BLE')
+      }
+
+      console.log('BLE: UID transmitted successfully')
+    } catch (error) {
+      console.error('Failed to transmit UID via BLE:', error)
+      throw error
+    }
+  }
+
+  /**
    * Handle incoming BLE requests
    * This would be called by the BLE characteristic write handler
    */
@@ -287,6 +314,13 @@ export class BLEService {
           return {
             type: 'token',
             data: token,
+          }
+        }
+        case 'devicePairing': {
+          // Device pairing requests are handled by the native module
+          // The UID will be transmitted when transmitUid is called
+          return {
+            type: 'device_pairing',
           }
         }
         default:
