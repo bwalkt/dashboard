@@ -9,8 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TestPageRouteImport } from './routes/test-page'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TableRouteImport } from './routes/table'
 import { Route as QrTestRouteImport } from './routes/qr-test'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as DevicePairingRouteImport } from './routes/device-pairing'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthPromptRouteImport } from './routes/auth-prompt'
@@ -25,6 +28,16 @@ import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 
+const TestPageRoute = TestPageRouteImport.update({
+  id: '/test-page',
+  path: '/test-page',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TableRoute = TableRouteImport.update({
   id: '/table',
   path: '/table',
@@ -33,6 +46,11 @@ const TableRoute = TableRouteImport.update({
 const QrTestRoute = QrTestRouteImport.update({
   id: '/qr-test',
   path: '/qr-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevicePairingRoute = DevicePairingRouteImport.update({
@@ -106,8 +124,11 @@ export interface FileRoutesByFullPath {
   '/auth-prompt': typeof AuthPromptRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/device-pairing': typeof DevicePairingRoute
+  '/privacy': typeof PrivacyRoute
   '/qr-test': typeof QrTestRoute
   '/table': typeof TableRoute
+  '/terms': typeof TermsRoute
+  '/test-page': typeof TestPageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
@@ -122,8 +143,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth-prompt': typeof AuthPromptRoute
   '/device-pairing': typeof DevicePairingRoute
+  '/privacy': typeof PrivacyRoute
   '/qr-test': typeof QrTestRoute
   '/table': typeof TableRoute
+  '/terms': typeof TermsRoute
+  '/test-page': typeof TestPageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
@@ -140,8 +164,11 @@ export interface FileRoutesById {
   '/auth-prompt': typeof AuthPromptRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/device-pairing': typeof DevicePairingRoute
+  '/privacy': typeof PrivacyRoute
   '/qr-test': typeof QrTestRoute
   '/table': typeof TableRoute
+  '/terms': typeof TermsRoute
+  '/test-page': typeof TestPageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
@@ -159,8 +186,11 @@ export interface FileRouteTypes {
     | '/auth-prompt'
     | '/dashboard'
     | '/device-pairing'
+    | '/privacy'
     | '/qr-test'
     | '/table'
+    | '/terms'
+    | '/test-page'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
@@ -175,8 +205,11 @@ export interface FileRouteTypes {
     | '/'
     | '/auth-prompt'
     | '/device-pairing'
+    | '/privacy'
     | '/qr-test'
     | '/table'
+    | '/terms'
+    | '/test-page'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
@@ -192,8 +225,11 @@ export interface FileRouteTypes {
     | '/auth-prompt'
     | '/dashboard'
     | '/device-pairing'
+    | '/privacy'
     | '/qr-test'
     | '/table'
+    | '/terms'
+    | '/test-page'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
@@ -210,8 +246,11 @@ export interface RootRouteChildren {
   AuthPromptRoute: typeof AuthPromptRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   DevicePairingRoute: typeof DevicePairingRoute
+  PrivacyRoute: typeof PrivacyRoute
   QrTestRoute: typeof QrTestRoute
   TableRoute: typeof TableRoute
+  TermsRoute: typeof TermsRoute
+  TestPageRoute: typeof TestPageRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
@@ -220,6 +259,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/test-page': {
+      id: '/test-page'
+      path: '/test-page'
+      fullPath: '/test-page'
+      preLoaderRoute: typeof TestPageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/table': {
       id: '/table'
       path: '/table'
@@ -232,6 +285,13 @@ declare module '@tanstack/react-router' {
       path: '/qr-test'
       fullPath: '/qr-test'
       preLoaderRoute: typeof QrTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/device-pairing': {
@@ -353,8 +413,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuthPromptRoute: AuthPromptRoute,
   DashboardRoute: DashboardRouteWithChildren,
   DevicePairingRoute: DevicePairingRoute,
+  PrivacyRoute: PrivacyRoute,
   QrTestRoute: QrTestRoute,
   TableRoute: TableRoute,
+  TermsRoute: TermsRoute,
+  TestPageRoute: TestPageRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,

@@ -267,15 +267,60 @@ export function DevicePairingLanding({}: DevicePairingLandingProps) {
           </button>
 
           {/* Footer */}
-          <p
+          <div
             style={{
               fontSize: '0.875rem',
               color: colors.textDarkColor,
               margin: 0,
+              display: 'flex',
+              gap: spacing.sm,
+              alignItems: 'center',
             }}
           >
-            Terms & Privacy Policy
-          </p>
+            <button
+              onClick={() => (window.location.href = '/terms')}
+              style={{
+                color: colors.textDarkColor,
+                textDecoration: 'underline',
+                transition: 'color 0.2s ease',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 'inherit',
+                padding: 0,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = colors.primaryColor
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = colors.textDarkColor
+              }}
+            >
+              Terms
+            </button>
+            <span>&</span>
+            <button
+              onClick={() => (window.location.href = '/privacy')}
+              style={{
+                color: colors.textDarkColor,
+                textDecoration: 'underline',
+                transition: 'color 0.2s ease',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 'inherit',
+                padding: 0,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = colors.primaryColor
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = colors.textDarkColor
+              }}
+            >
+              Privacy Policy
+            </button>
+          </div>
         </div>
       </div>
     </div>

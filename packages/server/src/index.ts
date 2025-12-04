@@ -11,6 +11,7 @@ import { redis } from "./config/redis.js";
 import headerValidationPlugin from "./middleware/header-validation.js";
 import { authRoutes } from "./routes/auth.js";
 import { centrifugoRoutes } from "./routes/centrifugo.js";
+import { deviceRoutes } from "./routes/devices.js";
 import { emailRoutes } from "./routes/email.js";
 import { faqRoutes } from "./routes/faq.js";
 import { gatewayRoutes } from "./routes/gateway.js";
@@ -81,6 +82,7 @@ export default async function (
   // Register routes
   await fastify.register(authRoutes);
   await fastify.register(centrifugoRoutes);
+  await fastify.register(deviceRoutes);
   await fastify.register(emailRoutes);
   await fastify.register(faqRoutes);
   await fastify.register(gatewayRoutes);
