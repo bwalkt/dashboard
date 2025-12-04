@@ -24,6 +24,7 @@
     "@dnd-kit/utilities": "catalog:",
     "@faker-js/faker": "catalog:",
     "@hookform/resolvers": "catalog:",
+    "@mantine/hooks": "^8.3.9",
     "@pzero/shared": "workspace:*",
     "@radix-ui/react-accordion": "catalog:",
     "@radix-ui/react-alert-dialog": "catalog:",

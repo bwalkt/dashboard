@@ -1,17 +1,18 @@
+import { useIdle } from '@mantine/hooks'
 import type { User } from '@pzero/shared'
 import { api } from '@pzero/shared/api'
+import { useEffect } from 'react'
 import { ZStorage } from './store'
 
 export const STORE = 'auth'
 
-const INACTIVITY_TIMEOUT = parseInt(import.meta.env.VITE_NO_ACTIVITY_MINS || '30') * 60 * 1000 // Convert minutes to ms
+const INACTIVITY_TIMEOUT_MINUTES = parseInt(import.meta.env.VITE_NO_ACTIVITY_MINS || '30')
 
 export class AuthStoreClass extends ZStorage {
   // Current user data
   user?: User | null = null
   loading: boolean = true
   lastActivity: number = Date.now()
-  inactivityTimer?: NodeJS.Timeout | null = null
 
   // Legacy fields for compatibility
   email?: string
@@ -43,9 +44,6 @@ export class AuthStoreClass extends ZStorage {
       } else {
         this.setLoading(false)
       }
-
-      // Setup activity tracking
-      this.setupActivityTracking()
 
       console.log('AuthStore: Initialization complete')
     } catch (error) {
@@ -85,7 +83,8 @@ export class AuthStoreClass extends ZStorage {
   private async checkInactivityOnLoad() {
     if (this.user && this.lastActivity) {
       const timeSinceLastActivity = Date.now() - this.lastActivity
-      if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
+      const timeoutMs = INACTIVITY_TIMEOUT_MINUTES * 60 * 1000
+      if (timeSinceLastActivity >= timeoutMs) {
         console.log('AuthStore: User was inactive too long, logging out on page load...')
         await this.logout()
       }
@@ -117,7 +116,6 @@ export class AuthStoreClass extends ZStorage {
       })
 
       this.updateLastActivity()
-      this.setupInactivityTimer()
     } else {
       this.email = undefined
       this.name = ''
@@ -129,8 +127,6 @@ export class AuthStoreClass extends ZStorage {
       // Clear persisted data
       await this.removeItem('user')
       await this.removeItem('legacy')
-
-      this.clearInactivityTimer()
     }
   }
 
@@ -145,10 +141,6 @@ export class AuthStoreClass extends ZStorage {
 
     // Persist activity timestamp
     await this.setItem({ key: 'lastActivity', data: now })
-
-    // Reset the inactivity timer
-    this.clearInactivityTimer()
-    this.setupInactivityTimer()
   }
 
   async updateUserAfterRegistration(user: User) {
@@ -158,8 +150,6 @@ export class AuthStoreClass extends ZStorage {
   }
 
   async logout() {
-    this.clearInactivityTimer()
-
     try {
       await api.post('/auth/logout', undefined, { skipRefresh: true })
     } catch (error) {
@@ -201,56 +191,12 @@ export class AuthStoreClass extends ZStorage {
     }
   }
 
-  private setupInactivityTimer() {
-    // Clear existing timer
-    this.clearInactivityTimer()
-
-    // Only setup timer if user is authenticated and timeout is configured
-    if (this.user && INACTIVITY_TIMEOUT > 0) {
-      this.inactivityTimer = setTimeout(() => {
-        this.handleInactivity()
-      }, INACTIVITY_TIMEOUT)
-    }
-  }
-
-  private clearInactivityTimer() {
-    if (this.inactivityTimer) {
-      clearTimeout(this.inactivityTimer)
-      this.inactivityTimer = null
-    }
-  }
-
-  private async handleInactivity() {
+  // Method to be called when user becomes idle (from useIdle hook)
+  async handleUserIdle() {
     if (!this.user) return
 
-    const timeSinceLastActivity = Date.now() - this.lastActivity
-
-    if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
-      console.log('AuthStore: User inactive for too long, logging out...')
-      await this.logout()
-    } else {
-      // User was active recently, reset the timer
-      this.setupInactivityTimer()
-    }
-  }
-
-  private setupActivityTracking() {
-    if (typeof window === 'undefined') return
-
-    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
-
-    const handleUserActivity = () => {
-      if (this.user) {
-        this.updateLastActivity()
-      }
-    }
-
-    // Setup activity listeners
-    activityEvents.forEach(event => {
-      document.addEventListener(event, handleUserActivity, true)
-    })
-
-    console.log('AuthStore: Activity tracking initialized')
+    console.log('AuthStore: User has been idle, logging out...')
+    await this.logout()
   }
 }
 
@@ -266,7 +212,26 @@ function getAuthStore(): AuthStoreClass {
 
 export const AuthStore = getAuthStore()
 
-// React hook for using AuthStore in components
+// React hook for using AuthStore in components with idle detection
 export function useAuthStore() {
-  return getAuthStore()
+  const authStore = getAuthStore()
+  const idle = useIdle(INACTIVITY_TIMEOUT_MINUTES * 60 * 1000, {
+    events: ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'],
+    initialState: false,
+  })
+
+  useEffect(() => {
+    if (idle && authStore.user) {
+      authStore.handleUserIdle()
+    }
+  }, [idle, authStore])
+
+  // Update last activity when user becomes active again
+  useEffect(() => {
+    if (!idle && authStore.user) {
+      authStore.updateLastActivity()
+    }
+  }, [idle, authStore])
+
+  return authStore
 }
