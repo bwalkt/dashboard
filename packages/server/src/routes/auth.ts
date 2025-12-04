@@ -342,6 +342,37 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
+   * GET /auth/logout
+   * Logout user (invalidate tokens) - GET version for compatibility
+   */
+  fastify.get(
+    "/auth/logout",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        // Clear JWT cookies
+        reply.clearCookie("accessToken", {
+          path: "/",
+        });
+
+        reply.clearCookie("refreshToken", {
+          path: "/",
+        });
+
+        // Return success message
+        return reply.send({
+          message: "Logged out successfully",
+        });
+      } catch (error) {
+        console.error("Logout error:", error);
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Logout failed",
+        } as ErrorResponse);
+      }
+    },
+  );
+
+  /**
    * POST /auth/register
    * Register new user with email
    */

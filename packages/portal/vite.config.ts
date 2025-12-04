@@ -5,6 +5,8 @@ import { defineConfig } from 'vite'
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST
+// @ts-expect-error process is a nodejs global
+const backendHost = process.env.VITE_API_BASE_URL || 'http://localhost:8090'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -23,12 +25,12 @@ export default defineConfig({
       : undefined,
     proxy: {
       '/api': {
-        target: 'http://localhost:8090',
+        target: backendHost,
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, ''),
       },
       '/auth/callback': {
-        target: 'http://localhost:8090',
+        target: backendHost,
         changeOrigin: true,
       },
     },

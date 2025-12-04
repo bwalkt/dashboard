@@ -14,7 +14,7 @@ import { centrifugoRoutes } from "./routes/centrifugo.js";
 import { emailRoutes } from "./routes/email.js";
 import { faqRoutes } from "./routes/faq.js";
 import { gatewayRoutes } from "./routes/gateway.js";
-import { policyRoutes } from "./routes/policy.js";
+import { privacyRoutes } from "./routes/privacy.js";
 import { proxyRoutes } from "./routes/proxy.js";
 import { smsRoutes } from "./routes/sms.js";
 import { termsRoutes } from "./routes/terms.js";
@@ -87,7 +87,7 @@ export default async function (
   await fastify.register(proxyRoutes);
   await fastify.register(smsRoutes);
   await fastify.register(termsRoutes);
-  await fastify.register(policyRoutes);
+  await fastify.register(privacyRoutes);
   // Console log when server starts
   fastify.addHook("onReady", async () => {});
   await db.initialize();

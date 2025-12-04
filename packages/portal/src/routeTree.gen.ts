@@ -10,12 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TableRouteImport } from './routes/table'
+import { Route as QrTestRouteImport } from './routes/qr-test'
+import { Route as DevicePairingRouteImport } from './routes/device-pairing'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthPromptRouteImport } from './routes/auth-prompt'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DataTableTreeRouteImport } from './routes/data-table.tree'
 import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
+import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
 import { Route as DashboardOverviewRouteImport } from './routes/dashboard/overview'
 import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
@@ -25,6 +28,16 @@ import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 const TableRoute = TableRouteImport.update({
   id: '/table',
   path: '/table',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QrTestRoute = QrTestRouteImport.update({
+  id: '/qr-test',
+  path: '/qr-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevicePairingRoute = DevicePairingRouteImport.update({
+  id: '/device-pairing',
+  path: '/device-pairing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -57,6 +70,11 @@ const DashboardUsersRoute = DashboardUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardProfileRoute = DashboardProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardOverviewRoute = DashboardOverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
@@ -87,12 +105,15 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth-prompt': typeof AuthPromptRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/device-pairing': typeof DevicePairingRoute
+  '/qr-test': typeof QrTestRoute
   '/table': typeof TableRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -100,12 +121,15 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth-prompt': typeof AuthPromptRoute
+  '/device-pairing': typeof DevicePairingRoute
+  '/qr-test': typeof QrTestRoute
   '/table': typeof TableRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -115,12 +139,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth-prompt': typeof AuthPromptRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/device-pairing': typeof DevicePairingRoute
+  '/qr-test': typeof QrTestRoute
   '/table': typeof TableRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -131,12 +158,15 @@ export interface FileRouteTypes {
     | '/'
     | '/auth-prompt'
     | '/dashboard'
+    | '/device-pairing'
+    | '/qr-test'
     | '/table'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
     | '/dashboard/overview'
+    | '/dashboard/profile'
     | '/dashboard/users'
     | '/data-table/tree'
     | '/dashboard/'
@@ -144,12 +174,15 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth-prompt'
+    | '/device-pairing'
+    | '/qr-test'
     | '/table'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
     | '/dashboard/overview'
+    | '/dashboard/profile'
     | '/dashboard/users'
     | '/data-table/tree'
     | '/dashboard'
@@ -158,12 +191,15 @@ export interface FileRouteTypes {
     | '/'
     | '/auth-prompt'
     | '/dashboard'
+    | '/device-pairing'
+    | '/qr-test'
     | '/table'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
     | '/dashboard/overview'
+    | '/dashboard/profile'
     | '/dashboard/users'
     | '/data-table/tree'
     | '/dashboard/'
@@ -173,6 +209,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthPromptRoute: typeof AuthPromptRoute
   DashboardRoute: typeof DashboardRouteWithChildren
+  DevicePairingRoute: typeof DevicePairingRoute
+  QrTestRoute: typeof QrTestRoute
   TableRoute: typeof TableRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthSignInRoute: typeof AuthSignInRoute
@@ -187,6 +225,20 @@ declare module '@tanstack/react-router' {
       path: '/table'
       fullPath: '/table'
       preLoaderRoute: typeof TableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qr-test': {
+      id: '/qr-test'
+      path: '/qr-test'
+      fullPath: '/qr-test'
+      preLoaderRoute: typeof QrTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/device-pairing': {
+      id: '/device-pairing'
+      path: '/device-pairing'
+      fullPath: '/device-pairing'
+      preLoaderRoute: typeof DevicePairingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -231,6 +283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardUsersRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/profile': {
+      id: '/dashboard/profile'
+      path: '/profile'
+      fullPath: '/dashboard/profile'
+      preLoaderRoute: typeof DashboardProfileRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/overview': {
       id: '/dashboard/overview'
       path: '/overview'
@@ -272,6 +331,7 @@ declare module '@tanstack/react-router' {
 interface DashboardRouteChildren {
   DashboardLogsRoute: typeof DashboardLogsRoute
   DashboardOverviewRoute: typeof DashboardOverviewRoute
+  DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardUsersRoute: typeof DashboardUsersRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
@@ -279,6 +339,7 @@ interface DashboardRouteChildren {
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLogsRoute: DashboardLogsRoute,
   DashboardOverviewRoute: DashboardOverviewRoute,
+  DashboardProfileRoute: DashboardProfileRoute,
   DashboardUsersRoute: DashboardUsersRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
@@ -291,6 +352,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthPromptRoute: AuthPromptRoute,
   DashboardRoute: DashboardRouteWithChildren,
+  DevicePairingRoute: DevicePairingRoute,
+  QrTestRoute: QrTestRoute,
   TableRoute: TableRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   AuthSignInRoute: AuthSignInRoute,

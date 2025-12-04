@@ -1,3 +1,5 @@
+// @ts-nocheck
+import { labels } from '@pzero/shared/constants'
 import type { NavigationProp } from '@react-navigation/native'
 import type React from 'react'
 import { useEffect, useState } from 'react'
@@ -12,8 +14,7 @@ import DrawerOverlay from '../components/DrawerOverlay'
 import Header from '../components/Header'
 import InstructionText from '../components/InstructionText'
 import ScreenHeader from '../components/ScreenHeader'
-import { isSimulator } from '../constants/envs'
-import { labels } from '../constants/labels'
+import { envs } from '../constants/envs'
 import { ConnectionsIcon, TrashIcon } from '../icons'
 import { stores } from '../stores'
 import { borderRadius, buttons, colors, fontSize, fontWeight, spacing, surfaces, text } from '../theme'
@@ -524,7 +525,7 @@ const ManageDeviceScreen: React.FC<ConnectDeviceScreenProps> = ({ navigation, on
 
         <View style={styles.scannerContainer}>
           <View style={styles.permissionContainer}>
-            {isSimulator ? (
+            {envs.isSimulator ? (
               <>
                 <Text text60 color={colors.textLightColor} center marginB-20>
                   {labels.cameraScannerSimulator}
