@@ -189,7 +189,7 @@ export async function deviceRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.code(500).send({
           error: "Internal server error",
           message: "Failed to connect device",
-          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
         });
       }
     }
@@ -238,7 +238,7 @@ export async function deviceRoutes(fastify: FastifyInstance): Promise<void> {
 
         return reply.code(200).send({
           success: true,
-          devices: result.rows.map(device => ({
+          devices: result.rows.map((device: any) => ({
             id: device.id,
             name: device.name,
             handle: device.handle,

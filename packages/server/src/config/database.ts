@@ -49,6 +49,10 @@ class DatabaseManager {
   public getPool(): pg.Pool {
     return this.pool;
   }
+
+  public async query(text: string, params?: any[]): Promise<pg.QueryResult> {
+    return this.pool.query(text, params);
+  }
 }
 
 // Export singleton instance

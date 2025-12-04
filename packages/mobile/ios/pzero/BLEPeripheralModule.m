@@ -20,4 +20,8 @@ RCT_EXTERN_METHOD(setTokenForEndpoint:(NSString *)endpointId
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(transmitUid:(NSString *)uid
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end
