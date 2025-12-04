@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { UserAvatarProfile } from '@/components/user-avatar-profile'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/stores/auth'
 
 /**
  * Render a user avatar dropdown menu that provides account-related navigation and sign-out.
@@ -25,7 +25,7 @@ import { useAuth } from '@/contexts/AuthContext'
  */
 export function UserNav() {
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
+  const { user, signOut } = useAuthStore()
 
   const handleSignOut = async () => {
     try {

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/stores/auth'
 
 /**
  * Render the sign-up page with a local form and a GitHub OAuth sign-in option.
@@ -18,7 +18,7 @@ import { useAuth } from '@/contexts/AuthContext'
  */
 export default function SignUpViewPage() {
   const navigate = useNavigate()
-  const { user, loading, signUp } = useAuth()
+  const authStore = useAuthStore()
   const [emailSent, setEmailSent] = useState(false)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -27,15 +27,15 @@ export default function SignUpViewPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user && !loading) {
+    if (authStore.user && !authStore.loading) {
       navigate({ to: '/dashboard/overview', replace: true })
     }
-  }, [user, loading, navigate])
+  }, [authStore.user, authStore.loading, navigate])
 
   const handleResendCode = async () => {
     setIsLoading(true)
     try {
-      await signUp({ email, name })
+      await api.post('/auth/register', { email, name })
       setOtpCode('') // Clear the OTP input
       toast.success('New verification code sent to your email')
     } catch (error: any) {
@@ -64,6 +64,11 @@ export default function SignUpViewPage() {
           code: otpCode,
         })
 
+        // Update AuthStore with the new user
+        if (result.user) {
+          await authStore.updateUserAfterRegistration(result.user)
+        }
+
         toast.success('Registration successful!')
         navigate({ to: '/dashboard/overview', replace: true })
       } catch (error: any) {
@@ -81,7 +86,7 @@ export default function SignUpViewPage() {
 
       setIsLoading(true)
       try {
-        const result = await signUp({
+        await api.post('/auth/register', {
           email: formEmail,
           name: formName,
         })

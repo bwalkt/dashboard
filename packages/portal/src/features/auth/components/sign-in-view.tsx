@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/stores/auth'
 import GithubSignInButton from './github-auth-button'
 
 /**
@@ -21,7 +21,7 @@ import GithubSignInButton from './github-auth-button'
  */
 export default function SignInViewPage(_props: {}) {
   const navigate = useNavigate()
-  const { user, loading, signIn } = useAuth()
+  const authStore = useAuthStore()
   const [isLoading, setIsLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [email, setEmail] = useState('')
@@ -29,15 +29,15 @@ export default function SignInViewPage(_props: {}) {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user && !loading) {
+    if (authStore.user && !authStore.loading) {
       navigate({ to: '/dashboard/overview', replace: true })
     }
-  }, [user, loading, navigate])
+  }, [authStore.user, authStore.loading, navigate])
 
   const handleResendCode = async () => {
     setIsLoading(true)
     try {
-      await signIn({ email })
+      await api.post('/auth/login', { email })
       setOtpCode('') // Clear the OTP input
       toast.success('New verification code sent to your email')
     } catch (error: any) {
@@ -61,10 +61,15 @@ export default function SignInViewPage(_props: {}) {
 
       setIsLoading(true)
       try {
-        await api.post('/auth/login/verify', {
+        const result = await api.post('/auth/login/verify', {
           email: email,
           code: otpCode,
         })
+
+        // Update AuthStore with the logged in user
+        if (result.user) {
+          await authStore.setUser(result.user)
+        }
 
         toast.success('Sign in successful!')
         navigate({ to: '/dashboard/overview', replace: true })
@@ -82,7 +87,7 @@ export default function SignInViewPage(_props: {}) {
 
       setIsLoading(true)
       try {
-        await signIn({ email: formEmail })
+        await api.post('/auth/login', { email: formEmail })
         setEmail(formEmail)
         setEmailSent(true)
         toast.success('Check your email for verification code')

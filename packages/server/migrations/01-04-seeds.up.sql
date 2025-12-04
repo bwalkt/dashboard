@@ -5,7 +5,8 @@
 INSERT INTO
   pzero.all_auth (email, email_verified)
 VALUES
-  ('uma.krishnan@boardwalktech.com', TRUE);
+  ('uma.krishnan@boardwalktech.com', TRUE)
+ON CONFLICT (email, is_act) DO NOTHING;
 
 -- Seed default org
 INSERT INTO
@@ -17,7 +18,8 @@ SELECT
 FROM
   pzero.all_auth
 WHERE
-  email = 'uma.krishnan@boardwalktech.com';
+  email = 'uma.krishnan@boardwalktech.com'
+ON CONFLICT (handle, is_act) DO NOTHING;
 
 INSERT INTO
   pzero.all_orgs (name, handle, website,  near_verification, data)
@@ -30,7 +32,8 @@ SELECT
 FROM
   pzero.all_auth
 WHERE
-  email = 'uma.krishnan@boardwalktech.com';
+  email = 'uma.krishnan@boardwalktech.com'
+ON CONFLICT (handle, is_act) DO NOTHING;
 -- Seed user profile
 INSERT INTO
   pzero.all_users (id, name, handle, part, org_id, data)
@@ -46,4 +49,5 @@ FROM
   CROSS JOIN pzero.all_orgs o
 WHERE
   a.email = 'uma.krishnan@boardwalktech.com'
-  AND o.handle = 'pzero';
+  AND o.handle = 'pzero'
+ON CONFLICT (part, is_act, org_id, id) DO NOTHING;

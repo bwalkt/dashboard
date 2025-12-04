@@ -1,6 +1,6 @@
 import { Navigate, useRouter } from '@tanstack/react-router'
 import type React from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/stores/auth'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
  * @returns The protected content (`children`) when authenticated; a centered loading spinner while auth state is loading; otherwise a `Navigate` element redirecting to `/auth/sign-in` with the current location saved in state.
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth()
+  const { user, loading } = useAuthStore()
   const router = useRouter()
 
   if (loading) {
