@@ -11,6 +11,7 @@ use uuid::Uuid;
 const BLE_SERVICE_UUID: &str = "550e8400-e29b-41d4-a716-446655440000";
 const BLE_CHARACTERISTIC_GET_ENDPOINTS: &str = "550e8400-e29b-41d4-a716-446655440001";
 const BLE_CHARACTERISTIC_GET_TOKEN: &str = "550e8400-e29b-41d4-a716-446655440002";
+const BLE_CHARACTERISTIC_DEVICE_PAIRING: &str = "550e8400-e29b-41d4-a716-446655440003";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BLERequest {
@@ -28,6 +29,10 @@ pub struct BLEResponse {
     pub data: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamp: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -210,6 +215,7 @@ impl BLEManager {
         let char_uuid_str = match request.request_type.as_str() {
             "getEndpoints" => BLE_CHARACTERISTIC_GET_ENDPOINTS,
             "getToken" => BLE_CHARACTERISTIC_GET_TOKEN,
+            "devicePairing" => BLE_CHARACTERISTIC_DEVICE_PAIRING,
             _ => return Err("Unknown request type".into()),
         };
 
@@ -307,5 +313,35 @@ impl BLEManager {
 
         println!("Received token: {}", token);
         Ok(token)
+    }
+
+    /// Verify device proximity by retrieving UID via BLE
+    pub async fn verify_device_proximity(&self) -> Result<String, Box<dyn Error>> {
+        println!("Verifying device proximity via BLE...");
+
+        let response = self
+            .send_request(BLERequest {
+                request_type: "devicePairing".to_string(),
+                endpoint_id: None,
+            })
+            .await?;
+
+        if response.response_type == "error" {
+            return Err(response
+                .error
+                .unwrap_or_else(|| "Unknown error".to_string())
+                .into());
+        }
+
+        if response.response_type != "device_pairing" {
+            return Err("Invalid response type".into());
+        }
+
+        let uid = response
+            .uid
+            .ok_or("No UID in device pairing response")?;
+
+        println!("Device proximity verified. UID: {}", uid);
+        Ok(uid)
     }
 }

@@ -9,17 +9,20 @@ class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
   private var service: CBMutableService?
   private var getEndpointsCharacteristic: CBMutableCharacteristic?
   private var getTokenCharacteristic: CBMutableCharacteristic?
+  private var devicePairingCharacteristic: CBMutableCharacteristic?
 
   // Cached data for characteristics
   private var endpointsData: Data?
   private var tokensByEndpoint: [String: Data] = [:]
   private var validEndpointIds: Set<String> = []
   private var requestedEndpointId: String?
+  private var currentUid: String?
 
   // BLE Service and Characteristic UUIDs (must match verifier)
   private let serviceUUID = CBUUID(string: "550e8400-e29b-41d4-a716-446655440000")
   private let getEndpointsUUID = CBUUID(string: "550e8400-e29b-41d4-a716-446655440001")
   private let getTokenUUID = CBUUID(string: "550e8400-e29b-41d4-a716-446655440002")
+  private let devicePairingUUID = CBUUID(string: "550e8400-e29b-41d4-a716-446655440003")
 
   override init() {
     super.init()
@@ -112,6 +115,7 @@ class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
     self.tokensByEndpoint.removeAll()
     self.validEndpointIds.removeAll()
     self.requestedEndpointId = nil
+    self.currentUid = nil
 
     resolve(true)
   }
@@ -124,6 +128,33 @@ class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
     }
 
     resolve(manager.isAdvertising)
+  }
+
+  @objc
+  func transmitUid(_ uid: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    // Store the UID for transmission via BLE
+    self.currentUid = uid
+    
+    // Create response object
+    let response: [String: Any] = [
+      "type": "device_pairing",
+      "uid": uid,
+      "timestamp": Date().timeIntervalSince1970
+    ]
+    
+    if let jsonData = try? JSONSerialization.data(withJSONObject: response, options: []) {
+      print("BLE Peripheral: UID set for transmission: \(uid)")
+      
+      // If we have connected centrals, notify them of the new data
+      if let characteristic = devicePairingCharacteristic,
+         let manager = peripheralManager {
+        manager.updateValue(jsonData, for: characteristic, onSubscribedCentrals: nil)
+      }
+      
+      resolve(true)
+    } else {
+      reject("SERIALIZATION_ERROR", "Failed to serialize UID data", nil)
+    }
   }
 
   @objc
@@ -167,16 +198,25 @@ class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
       permissions: [.readable, .writeable]
     )
 
+    devicePairingCharacteristic = CBMutableCharacteristic(
+      type: devicePairingUUID,
+      properties: [.read, .write, .notify],
+      value: nil,
+      permissions: [.readable, .writeable]
+    )
+
     // Create service
     service = CBMutableService(type: serviceUUID, primary: true)
 
     // Safely unwrap characteristics
-    guard let endpoints = getEndpointsCharacteristic, let token = getTokenCharacteristic else {
+    guard let endpoints = getEndpointsCharacteristic, 
+          let token = getTokenCharacteristic,
+          let pairing = devicePairingCharacteristic else {
       print("BLE Peripheral: Failed to create characteristics")
       return
     }
 
-    service?.characteristics = [endpoints, token]
+    service?.characteristics = [endpoints, token, pairing]
 
     // Add service to peripheral manager
     guard let service = service else {
@@ -237,6 +277,18 @@ class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
       } else {
         print("BLE Peripheral: No endpoint ID specified in token request")
       }
+    } else if request.characteristic.uuid == devicePairingUUID {
+      if let uid = currentUid {
+        let response: [String: Any] = [
+          "type": "device_pairing",
+          "uid": uid,
+          "timestamp": Date().timeIntervalSince1970
+        ]
+        responseData = try? JSONSerialization.data(withJSONObject: response, options: [])
+        print("BLE Peripheral: Client requesting device pairing data with UID: \(uid)")
+      } else {
+        print("BLE Peripheral: No UID available for device pairing")
+      }
     }
 
     if let data = responseData {
@@ -284,6 +336,14 @@ class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
           }
           // Token will be set by the app via setTokenForEndpoint
           // The verifier will read it via didReceiveRead
+          peripheral.respond(to: request, withResult: .success)
+        } else if requestType == "devicePairing" {
+          // Handle device pairing request
+          if request.characteristic.uuid == devicePairingUUID {
+            print("BLE Peripheral: Device pairing request received")
+            // The UID will be set by the app via transmitUid
+            // The verifier will read it via didReceiveRead
+          }
           peripheral.respond(to: request, withResult: .success)
         } else {
           peripheral.respond(to: request, withResult: .requestNotSupported)
