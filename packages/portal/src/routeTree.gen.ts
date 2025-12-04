@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TestPageRouteImport } from './routes/test-page'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TableRouteImport } from './routes/table'
 import { Route as QrTestRouteImport } from './routes/qr-test'
@@ -28,11 +27,6 @@ import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 
-const TestPageRoute = TestPageRouteImport.update({
-  id: '/test-page',
-  path: '/test-page',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -128,7 +122,6 @@ export interface FileRoutesByFullPath {
   '/qr-test': typeof QrTestRoute
   '/table': typeof TableRoute
   '/terms': typeof TermsRoute
-  '/test-page': typeof TestPageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
@@ -147,7 +140,6 @@ export interface FileRoutesByTo {
   '/qr-test': typeof QrTestRoute
   '/table': typeof TableRoute
   '/terms': typeof TermsRoute
-  '/test-page': typeof TestPageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
@@ -168,7 +160,6 @@ export interface FileRoutesById {
   '/qr-test': typeof QrTestRoute
   '/table': typeof TableRoute
   '/terms': typeof TermsRoute
-  '/test-page': typeof TestPageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
@@ -190,7 +181,6 @@ export interface FileRouteTypes {
     | '/qr-test'
     | '/table'
     | '/terms'
-    | '/test-page'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
@@ -209,7 +199,6 @@ export interface FileRouteTypes {
     | '/qr-test'
     | '/table'
     | '/terms'
-    | '/test-page'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
@@ -229,7 +218,6 @@ export interface FileRouteTypes {
     | '/qr-test'
     | '/table'
     | '/terms'
-    | '/test-page'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
@@ -250,7 +238,6 @@ export interface RootRouteChildren {
   QrTestRoute: typeof QrTestRoute
   TableRoute: typeof TableRoute
   TermsRoute: typeof TermsRoute
-  TestPageRoute: typeof TestPageRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
@@ -259,13 +246,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/test-page': {
-      id: '/test-page'
-      path: '/test-page'
-      fullPath: '/test-page'
-      preLoaderRoute: typeof TestPageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -417,7 +397,6 @@ const rootRouteChildren: RootRouteChildren = {
   QrTestRoute: QrTestRoute,
   TableRoute: TableRoute,
   TermsRoute: TermsRoute,
-  TestPageRoute: TestPageRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,

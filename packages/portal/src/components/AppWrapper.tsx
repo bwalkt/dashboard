@@ -15,7 +15,7 @@ export function AppWrapper({ children }: AppWrapperProps) {
   const devicePairing = useDevicePairing()
 
   // Routes that should bypass the pairing check - use window.location to avoid router dependency
-  const publicRoutes = ['/terms', '/privacy', '/test-page']
+  const publicRoutes = ['/terms', '/privacy']
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : ''
   const isPublicRoute = publicRoutes.includes(currentPath)
 
