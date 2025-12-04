@@ -2,6 +2,18 @@
 
 A modern monorepo architecture for building cross-platform applications with React Native, React, and Node.js.
 
+## 🌐 Endpoints
+
+The following endpoints are available for the deployed services:
+
+- **sfdc-dashboard**: https://sfdc-example.incmix.com
+- **sfdc-server**: https://sfdc-server.incmix.com
+- **server**: https://pzero-api.incmix.com
+- **server-envoy**: https://pzero-envoy.incmix.com
+- **server-envoy-wasm**: https://pzero-emvoy-wasm.incmix.com
+- **portal**: https://pzero-portal.incmix.com
+- **dokploy**: https://dokploy.incmix.com
+
 ## 📦 Packages
 
 This monorepo contains the following packages:
