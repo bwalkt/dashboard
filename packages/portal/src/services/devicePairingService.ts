@@ -89,6 +89,12 @@ export class DevicePairingService {
     timeoutMs: number = 300000, // 5 minutes
   ): Promise<MobilePairingResponse> {
     return new Promise((resolve, reject) => {
+      // Guard against duplicate waiters
+      if (this.connectionCallbacks.has(connectionId)) {
+        reject(new Error(`Already waiting for connection ${connectionId}`))
+        return
+      }
+
       // Set up timeout
       const timeout = setTimeout(() => {
         this.connectionCallbacks.delete(connectionId)

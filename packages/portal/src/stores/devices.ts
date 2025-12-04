@@ -592,20 +592,8 @@ let _devicesStore: DevicesStoreClass | null = null
 
 function getDevicesStore(): DevicesStoreClass {
   if (!_devicesStore) {
-    try {
-      _devicesStore = new DevicesStoreClass()
-      console.log('Initialized DevicesStore:', _devicesStore.currentDevice || 'Not initialized yet')
-    } catch (error) {
-      // If store already exists, try to get existing instance
-      if (error instanceof Error && error.message.includes('already exists')) {
-        console.log('DevicesStore already exists, reusing existing instance')
-        // Create a new instance but don't initialize storage again
-        _devicesStore = Object.create(DevicesStoreClass.prototype)
-        _devicesStore.storeName = STORE
-      } else {
-        throw error
-      }
-    }
+    _devicesStore = new DevicesStoreClass()
+    console.log('Initialized DevicesStore:', _devicesStore.currentDevice || 'Not initialized yet')
   }
   return _devicesStore
 }

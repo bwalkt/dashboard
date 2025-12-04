@@ -25,9 +25,7 @@ class IndexedDBAdapter {
     const value = await get(key, this.store)
     return value
   }
-  getId(): string {
-    return this.id
-  }
+
   // Async method to delete a value
   async delete(key: string): Promise<void> {
     await del(key, this.store)

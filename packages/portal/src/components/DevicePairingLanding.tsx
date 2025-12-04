@@ -334,10 +334,10 @@ export function DevicePairingLanding({}: DevicePairingLandingProps) {
               placeholder={defaultNickname || 'Enter a nickname for this device'}
               style={{
                 width: '100%',
-                padding: `${spacing.sm}px ${spacing.md}px`,
+                padding: `${spacing.sm} ${spacing.md}`,
                 fontSize: '1rem',
                 border: `1px solid ${colors.borderColor}`,
-                borderRadius: `${borderRadius.md}px`,
+                borderRadius: borderRadius.md,
                 backgroundColor: colors.cardBackgroundColor,
                 color: colors.textLightColor,
                 outline: 'none',
