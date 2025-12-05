@@ -40,8 +40,8 @@ FROM node:22-alpine AS production
 
 WORKDIR /app
 
-# Install PostgreSQL client for debugging (optional)
-RUN apk add --no-cache postgresql-client
+# # Install PostgreSQL client for debugging (optional)
+# RUN apk add --no-cache postgresql-client
 
 # Install pnpm globally (no tsx needed since we're running compiled JS)
 RUN npm install -g pnpm@10.18.3
@@ -74,7 +74,8 @@ RUN rm -rf /tmp/* /var/cache/apk/* && \
 
 WORKDIR /app/packages/server
 
-COPY packages/server/migrations ./migrations
+COPY packages/server/migrations/*.sql ./migrations/
+COPY packages/server/scripts ./scripts
 
 # Expose port
 EXPOSE 8080
