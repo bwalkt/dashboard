@@ -288,10 +288,19 @@ export function useAuthStore() {
     }
   }, [idle, authStore])
 
-  // Return store with reactive values
+  // Return store with reactive values, ensuring methods are properly bound
   return {
     ...authStore,
     loading,
     user,
+    // Explicitly bind methods to ensure they work correctly
+    setUser: authStore.setUser.bind(authStore),
+    setLoading: authStore.setLoading.bind(authStore),
+    checkAuth: authStore.checkAuth.bind(authStore),
+    logout: authStore.logout.bind(authStore),
+    updateLastActivity: authStore.updateLastActivity.bind(authStore),
+    updateUserAfterRegistration: authStore.updateUserAfterRegistration.bind(authStore),
+    handleUserIdle: authStore.handleUserIdle.bind(authStore),
+    subscribe: authStore.subscribe.bind(authStore),
   }
 }
