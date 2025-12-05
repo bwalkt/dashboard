@@ -30,7 +30,7 @@ export async function proxyRoutes(fastify: FastifyInstance): Promise<void> {
 
       try {
         // Construct proxy URL - can throw validation errors
-        const url = constructProxyURL(request);
+        const url = await constructProxyURL(request);
         // Build headers: filter undefined values and convert arrays to comma-separated strings
         const reqHeaders = Object.entries(request.headers)
           .filter(([k, v]) => v !== undefined&& k.toLowerCase() !== 'transfer-encoding')
