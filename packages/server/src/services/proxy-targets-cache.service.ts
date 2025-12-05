@@ -52,10 +52,26 @@ export async function refreshProxyTargetsCache(): Promise<ProxyTarget[]> {
 
 /**
  * Get proxy targets from Redis cache
- * @returns Array of proxy targets or null if not cached
+ * If cache is expired or missing, fetches from database and refreshes cache
+ * @returns Array of proxy targets or null if database fetch fails
  */
 export async function getProxyTargetsFromCache(): Promise<ProxyTarget[] | null> {
   try {
+    // Check if cache exists and is not expired
+    const cacheExists = await redis.exists(PROXY_TARGETS_CACHE_KEY);
+    const ttl = await redis.ttl(PROXY_TARGETS_CACHE_KEY);
+    
+    // If cache doesn't exist or is expired (TTL <= 0), refresh from database
+    if (!cacheExists || ttl <= 0) {
+      console.log('Proxy targets cache expired or missing, refreshing from database...');
+      try {
+        return await refreshProxyTargetsCache();
+      } catch (error) {
+        console.error('Failed to refresh proxy targets cache:', error);
+        return null;
+      }
+    }
+    
     const cachedData = await redis.get(PROXY_TARGETS_CACHE_KEY);
     if (!cachedData) {
       return null;
@@ -70,17 +86,19 @@ export async function getProxyTargetsFromCache(): Promise<ProxyTarget[] | null> 
 
 /**
  * Get proxy target by ID from cache
+ * If cache is expired or missing, fetches from database and refreshes cache
  * @param id Proxy target ID
  * @returns Proxy target or null if not found
  */
 export async function getProxyTargetById(
   id: string,
 ): Promise<ProxyTarget | null> {
+  // Use getProxyTargetsFromCache which handles cache expiration automatically
   const targets = await getProxyTargetsFromCache();
   if (!targets) {
     return null;
   }
-
+  
   return targets.find((target) => target.id === id) || null;
 }
 

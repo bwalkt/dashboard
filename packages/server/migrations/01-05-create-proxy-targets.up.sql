@@ -31,3 +31,5 @@ CREATE TRIGGER trigger_proxy_targets_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION pzero.update_proxy_targets_updated_at();
 
+
+INSERT INTO pzero.proxy_targets (name, url, port) VALUES ('Salesforce Server', 'pzero-sfdc-server', 3000);
