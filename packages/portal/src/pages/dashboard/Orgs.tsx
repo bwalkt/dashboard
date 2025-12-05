@@ -1,26 +1,32 @@
+import * as React from 'react'
+import { DataTable } from '@/app/data-table'
+import { columns } from '@/features/orgs/components/columns'
+import { filterFields } from '@/features/orgs/constants'
+import { orgData } from '@/features/orgs/data'
+
 export default function OrgsPage() {
+  // Override SidebarInset margins for full-width table
+  React.useEffect(() => {
+    const sidebarInset = document.querySelector('[data-slot="sidebar-inset"]')
+    if (sidebarInset) {
+      sidebarInset.classList.add('!m-0')
+    }
+
+    return () => {
+      if (sidebarInset) {
+        sidebarInset.classList.remove('!m-0')
+      }
+    }
+  }, [])
+
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Organizations</h1>
-      <div className="bg-white rounded-lg border p-6">
-        <div className="space-y-4">
-          <div className="border-b pb-4">
-            <h3 className="font-semibold">Acme Corporation</h3>
-            <p className="text-sm text-gray-600">acme-corp</p>
-            <span className="inline-flex px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Active</span>
-          </div>
-          <div className="border-b pb-4">
-            <h3 className="font-semibold">Beta Industries</h3>
-            <p className="text-sm text-gray-600">beta-industries</p>
-            <span className="inline-flex px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Active</span>
-          </div>
-          <div className="border-b pb-4">
-            <h3 className="font-semibold">Gamma Startup</h3>
-            <p className="text-sm text-gray-600">gamma-startup</p>
-            <span className="inline-flex px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Inactive</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <DataTable
+      columns={columns}
+      data={orgData}
+      filterFields={filterFields}
+      title="Organizations"
+      description="Manage your organization accounts and settings."
+      containerPadding={false}
+    />
   )
 }
