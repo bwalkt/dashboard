@@ -4,9 +4,20 @@ import addFormats from 'ajv-formats'
 import { extractCompanyInfoFromDomain, generateOrgHandle } from '../utils/handles'
 import { type PaginationListResponse, PaginationListResponseSchema } from './pagination'
 import { generateContactEmail, UserSchema } from './users'
-
+import type { BaseLocTable } from './type'
 const ajv = new Ajv()
 addFormats(ajv)
+
+export interface CreateOrgData extends BaseLocTable {
+  logo_url?: string | null
+  website?: string | null
+  email?: string | null
+  phone?: string | null
+}
+export interface Org extends CreateOrgData {
+  status: OrgStatus
+  plan: OrgPlan
+}
 
 // Base field definitions for reuse
 const baseFields = {
@@ -114,22 +125,6 @@ export const OrgWithUserResponseSchema = {
 export type OrgStatus = (typeof baseFields.status.enum)[number]
 export type OrgPlan = (typeof baseFields.plan.enum)[number]
 
-
-export interface CreateOrgData {
-  name: string
-  handle: string
-  description?: string | null
-  logo_url?: string | null
-  website?: string | null
-  email?: string | null
-  phone?: string | null
-  address?: string | null
-}
-export interface Org extends CreateOrgData {
-  id: string
-  status: OrgStatus
-  plan: OrgPlan
-}
 export interface CreateOrganizationWithUserData extends CreateOrgData {
   create_user?: {
     name: string

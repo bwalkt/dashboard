@@ -8,8 +8,6 @@ import { filterFields } from '@/features/orgs/constants'
 import { orgData } from '@/features/orgs/data'
 
 export default function OrgsPage() {
-  const navigate = useNavigate()
-
   // Override SidebarInset margins for full-width table
   React.useEffect(() => {
     const sidebarInset = document.querySelector('[data-slot="sidebar-inset"]')

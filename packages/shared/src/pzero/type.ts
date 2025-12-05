@@ -10,8 +10,11 @@ export interface SectionResponse {
 export interface BaseTable {
   name: string
   handle: string
+  dscr?: string
   id: string
   c_at: string
+  u_at?: string
+  address?: string
   is_del?: boolean
   is_act?: boolean
   data?: {
@@ -20,6 +23,7 @@ export interface BaseTable {
     }
     [key: string]: any
   }
+  tags?: Record<string, any> | string[] | null
 }
 
 export interface BaseLocTable extends BaseTable {
