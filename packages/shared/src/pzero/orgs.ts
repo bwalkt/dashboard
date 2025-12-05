@@ -74,9 +74,7 @@ export const UpdateOrgDataSchema = createSchema([
   'phone',
   'status',
   'plan',
-  'address',
-  'settings',
-  'metadata',
+  'address'
 ])
 
 // API Response schemas
@@ -116,19 +114,6 @@ export const OrgWithUserResponseSchema = {
 export type OrgStatus = (typeof baseFields.status.enum)[number]
 export type OrgPlan = (typeof baseFields.plan.enum)[number]
 
-export interface Org {
-  id: string
-  name: string
-  handle: string
-  description: string | null
-  logo_url: string | null
-  website: string | null
-  email: string | null
-  phone: string | null
-  status: OrgStatus
-  plan: OrgPlan
-  address: string | null
-}
 
 export interface CreateOrgData {
   name: string
@@ -139,10 +124,12 @@ export interface CreateOrgData {
   email?: string | null
   phone?: string | null
   address?: string | null
-  settings?: Record<string, any>
-  metadata?: Record<string, any>
 }
-
+export interface Org extends CreateOrgData {
+  id: string
+  status: OrgStatus
+  plan: OrgPlan
+}
 export interface CreateOrganizationWithUserData extends CreateOrgData {
   create_user?: {
     name: string
