@@ -56,6 +56,7 @@ export interface DataTableProps<TData, TValue> extends TreeDataTableProps<TData 
   headerPadding?: TablePadding
   containerPadding?: boolean
   fullWidth?: boolean
+  groupByComponent?: React.ReactNode
 }
 
 export function DataTable<TData, TValue>({
@@ -75,6 +76,7 @@ export function DataTable<TData, TValue>({
   headerPadding = 'sm',
   containerPadding = true,
   fullWidth = false,
+  groupByComponent,
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(defaultColumnFilters)
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -196,9 +198,10 @@ export function DataTable<TData, TValue>({
           <div className={!containerPadding ? 'px-4' : ''}>
             <DataTableToolbar
               groupByComponent={
-                groupByOptions.length > 0 && !enableExpanding ? (
+                groupByComponent ||
+                (groupByOptions.length > 0 && !enableExpanding ? (
                   <DataTableGroupBy groupByOptions={groupByOptions} groupBy={groupBy} onGroupByChange={setGroupBy} />
-                ) : null
+                ) : null)
               }
             />
           </div>

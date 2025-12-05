@@ -1,4 +1,4 @@
-import { createValidator } from '@boardwalk/shared/validator/ajv'
+import { createValidator } from '@pzero/shared/validator/ajv'
 import { createParser } from 'nuqs/server'
 
 import { dataTableConfig } from '@/config/data-table'
