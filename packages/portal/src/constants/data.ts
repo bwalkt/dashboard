@@ -31,16 +31,16 @@ export type Product = {
 //Info: The following data is used for the sidebar navigation and Cmd K bar.
 export const navItems: NavItem[] = [
   {
-    title: 'Dashboard',
-    url: '/dashboard/overview',
+    title: 'Overview',
+    url: '/overview',
     icon: 'dashboard',
     isActive: false,
-    shortcut: ['d', 'd'],
-    items: [], // Empty array as there are no child items for Dashboard
+    shortcut: ['o', 'v'],
+    items: [], // Empty array as there are no child items for Overview
   },
   {
     title: 'Organizations',
-    url: '/dashboard/orgs',
+    url: '/orgs',
     icon: 'users',
     isActive: false,
     shortcut: ['o', 'r'],
@@ -54,9 +54,9 @@ export const navItems: NavItem[] = [
     items: [
       {
         title: 'Users Table',
-        url: '/dashboard/users',
+        url: '/users',
         icon: 'users',
-        shortcut: ['t', 'b'],
+        shortcut: ['u', 's'],
       },
       {
         title: 'Avatar Table',
@@ -72,7 +72,7 @@ export const navItems: NavItem[] = [
       },
       {
         title: 'Logs',
-        url: '/dashboard/logs',
+        url: '/logs',
         icon: 'infinity',
         shortcut: ['l', 'g'],
       },

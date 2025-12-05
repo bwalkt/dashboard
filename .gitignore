@@ -13,11 +13,12 @@ lerna-debug.log*
 *.key
 .env
 .env*
+.tanstack
 node_modules
 dist
 dist-ssr
 *.local
-routrTreegen.ts 
+routeTreegen.ts 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

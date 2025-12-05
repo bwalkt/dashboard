@@ -25,7 +25,7 @@ export default function OrgsPage() {
   }, [])
 
   const AddOrgButton = () => (
-    <Button onClick={() => navigate({ to: '/dashboard/orgs/new' })}>
+    <Button onClick={() => navigate({ to: '/orgs/new' })}>
       <Icons.add className="mr-2 h-4 w-4" />
       Add Organization
     </Button>
