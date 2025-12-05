@@ -24,6 +24,7 @@ import { Route as DashboardSignozRouteImport } from './routes/dashboard/signoz'
 import { Route as DashboardProxyTargetsRouteImport } from './routes/dashboard/proxy-targets'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
 import { Route as DashboardOverviewRouteImport } from './routes/dashboard/overview'
+import { Route as DashboardOrgsRouteImport } from './routes/dashboard/orgs'
 import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
@@ -106,6 +107,11 @@ const DashboardOverviewRoute = DashboardOverviewRouteImport.update({
   path: '/overview',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardOrgsRoute = DashboardOrgsRouteImport.update({
+  id: '/orgs',
+  path: '/orgs',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardLogsRoute = DashboardLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
+  '/dashboard/orgs': typeof DashboardOrgsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
+  '/dashboard/orgs': typeof DashboardOrgsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
+  '/dashboard/orgs': typeof DashboardOrgsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
+    | '/dashboard/orgs'
     | '/dashboard/overview'
     | '/dashboard/profile'
     | '/dashboard/proxy-targets'
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
+    | '/dashboard/orgs'
     | '/dashboard/overview'
     | '/dashboard/profile'
     | '/dashboard/proxy-targets'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
+    | '/dashboard/orgs'
     | '/dashboard/overview'
     | '/dashboard/profile'
     | '/dashboard/proxy-targets'
@@ -397,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardOverviewRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/orgs': {
+      id: '/dashboard/orgs'
+      path: '/orgs'
+      fullPath: '/dashboard/orgs'
+      preLoaderRoute: typeof DashboardOrgsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/logs': {
       id: '/dashboard/logs'
       path: '/logs'
@@ -458,6 +477,7 @@ const DashboardSignozRouteWithChildren = DashboardSignozRoute._addFileChildren(
 
 interface DashboardRouteChildren {
   DashboardLogsRoute: typeof DashboardLogsRoute
+  DashboardOrgsRoute: typeof DashboardOrgsRoute
   DashboardOverviewRoute: typeof DashboardOverviewRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardProxyTargetsRoute: typeof DashboardProxyTargetsRoute
@@ -468,6 +488,7 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLogsRoute: DashboardLogsRoute,
+  DashboardOrgsRoute: DashboardOrgsRoute,
   DashboardOverviewRoute: DashboardOverviewRoute,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardProxyTargetsRoute: DashboardProxyTargetsRoute,
