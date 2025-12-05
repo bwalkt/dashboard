@@ -48,7 +48,7 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Organizations',
-    url: '/dashboard/orgs',
+    url: '/orgs',
     icon: 'users',
     isActive: false,
     shortcut: ['o', 'r'],

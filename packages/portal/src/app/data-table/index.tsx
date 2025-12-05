@@ -54,9 +54,6 @@ export interface DataTableProps<TData, TValue> extends TreeDataTableProps<TData 
   description?: string
   cellPadding?: TablePadding
   headerPadding?: TablePadding
-  containerPadding?: boolean
-  fullWidth?: boolean
-  groupByComponent?: React.ReactNode
 }
 
 export function DataTable<TData, TValue>({
@@ -74,9 +71,6 @@ export function DataTable<TData, TValue>({
   onExpandedChange,
   cellPadding = 'none',
   headerPadding = 'sm',
-  containerPadding = true,
-  fullWidth = false,
-  groupByComponent,
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(defaultColumnFilters)
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -183,28 +177,20 @@ export function DataTable<TData, TValue>({
       expanded={expanded}
       enableExpanding={enableExpanding}
     >
-      <AppLayout
-        hasFilters={filterFields.length > 0}
-        title={title}
-        description={description}
-        style={fullWidth ? { padding: 0 } : undefined}
-      >
-        <div className={`flex max-w-full flex-1 flex-col gap-4 ${containerPadding ? 'p-4 pb-2' : 'pb-2'}`}>
-          <div className={`flex items-center gap-2 ${!containerPadding ? 'px-4' : ''}`}>
+      <AppLayout hasFilters={filterFields.length > 0} title={title} description={description}>
+        <div className="flex max-w-full flex-1 flex-col gap-4 p-4 pb-2">
+          <div className="flex items-center gap-2">
             <div className="flex-1">
               <DataTableFilterCommand searchParamsParser={searchParamsParser} />
             </div>
           </div>
-          <div className={!containerPadding ? 'px-4' : ''}>
-            <DataTableToolbar
-              groupByComponent={
-                groupByComponent ||
-                (groupByOptions.length > 0 && !enableExpanding ? (
-                  <DataTableGroupBy groupByOptions={groupByOptions} groupBy={groupBy} onGroupByChange={setGroupBy} />
-                ) : null)
-              }
-            />
-          </div>
+          <DataTableToolbar
+            groupByComponent={
+              groupByOptions.length > 0 && !enableExpanding ? (
+                <DataTableGroupBy groupByOptions={groupByOptions} groupBy={groupBy} onGroupByChange={setGroupBy} />
+              ) : null
+            }
+          />
 
           {/* Render grouped table or normal table */}
           {groupBy ? (
@@ -220,7 +206,7 @@ export function DataTable<TData, TValue>({
               />
             </div>
           ) : (
-            <div className={`${containerPadding ? 'rounded-md border' : 'border-t'} overflow-hidden`}>
+            <div className="rounded-md border overflow-hidden">
               <Table
                 containerClassName="max-h-[calc(100vh-320px)] overflow-auto"
                 style={{
@@ -287,11 +273,7 @@ export function DataTable<TData, TValue>({
               </Table>
             </div>
           )}
-          {!groupBy && (
-            <div className={!containerPadding ? 'px-4' : ''}>
-              <DataTablePagination />
-            </div>
-          )}
+          {!groupBy && <DataTablePagination />}
         </div>
       </AppLayout>
     </DataTableProvider>
