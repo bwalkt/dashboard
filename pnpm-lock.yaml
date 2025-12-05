@@ -6,6 +6,7 @@ settings:
 
 catalogs:
   default:
+<<<<<<< HEAD
     '@babel/core':
       specifier: 7.28.5
       version: 7.28.5
@@ -15,6 +16,8 @@ catalogs:
     '@babel/runtime':
       specifier: 7.28.4
       version: 7.28.4
+=======
+>>>>>>> 96e4303 (feat: add org)
     '@date-fns/utc':
       specifier: 2.1.1
       version: 2.1.1
@@ -123,6 +126,7 @@ catalogs:
     '@radix-ui/react-visually-hidden':
       specifier: 1.2.4
       version: 1.2.4
+<<<<<<< HEAD
     '@react-native-community/cli':
       specifier: 20.0.2
       version: 20.0.2
@@ -153,6 +157,8 @@ catalogs:
     '@react-navigation/native-stack':
       specifier: 7.8.5
       version: 7.8.5
+=======
+>>>>>>> 96e4303 (feat: add org)
     '@sentry/react':
       specifier: 10.29.0
       version: 10.29.0
@@ -175,11 +181,16 @@ catalogs:
       specifier: 2.9.1
       version: 2.9.1
     '@tauri-apps/cli':
+<<<<<<< HEAD
       specifier: 2.9.5
       version: 2.9.5
     '@types/jest':
       specifier: 30.0.0
       version: 30.0.0
+=======
+      specifier: 2.8.4
+      version: 2.8.4
+>>>>>>> 96e4303 (feat: add org)
     '@types/node':
       specifier: 24.10.1
       version: 24.10.1
@@ -189,6 +200,7 @@ catalogs:
     '@types/react-dom':
       specifier: 19.2.3
       version: 19.2.3
+<<<<<<< HEAD
     '@types/react-test-renderer':
       specifier: 19.1.0
       version: 19.1.0
@@ -198,15 +210,26 @@ catalogs:
     '@vitest/ui':
       specifier: 4.0.15
       version: 4.0.15
+=======
+    '@types/uuid':
+      specifier: 10.0.0
+      version: 10.0.0
+    '@vitejs/plugin-react':
+      specifier: 5.0.4
+      version: 5.0.4
+>>>>>>> 96e4303 (feat: add org)
     ajv:
       specifier: 8.17.1
       version: 8.17.1
     ajv-formats:
       specifier: 3.0.1
       version: 3.0.1
+<<<<<<< HEAD
     axios:
       specifier: 1.13.2
       version: 1.13.2
+=======
+>>>>>>> 96e4303 (feat: add org)
     class-variance-authority:
       specifier: 0.7.1
       version: 0.7.1
@@ -225,9 +248,12 @@ catalogs:
     input-otp:
       specifier: 1.4.2
       version: 1.4.2
+<<<<<<< HEAD
     jest:
       specifier: 30.2.0
       version: 30.2.0
+=======
+>>>>>>> 96e4303 (feat: add org)
     json-2-csv:
       specifier: 5.5.10
       version: 5.5.10
@@ -250,11 +276,16 @@ catalogs:
       specifier: 0.2.0
       version: 0.2.0
     nuqs:
+<<<<<<< HEAD
       specifier: 2.8.3
       version: 2.8.3
     p-queue:
       specifier: 9.0.1
       version: 9.0.1
+=======
+      specifier: 2.4.1
+      version: 2.4.1
+>>>>>>> 96e4303 (feat: add org)
     postcss:
       specifier: 8.5.6
       version: 8.5.6
@@ -268,6 +299,7 @@ catalogs:
       specifier: 14.3.8
       version: 14.3.8
     react-hook-form:
+<<<<<<< HEAD
       specifier: 7.68.0
       version: 7.68.0
     react-native:
@@ -327,15 +359,24 @@ catalogs:
     react-phone-number-input:
       specifier: 3.4.14
       version: 3.4.14
+=======
+      specifier: 7.55.0
+      version: 7.55.0
+>>>>>>> 96e4303 (feat: add org)
     react-resizable-panels:
       specifier: 3.0.6
       version: 3.0.6
     react-responsive:
+<<<<<<< HEAD
       specifier: 10.0.1
       version: 10.0.1
     react-router-dom:
       specifier: 7.10.1
       version: 7.10.1
+=======
+      specifier: 10.0.0
+      version: 10.0.0
+>>>>>>> 96e4303 (feat: add org)
     recharts:
       specifier: 3.5.1
       version: 3.5.1
@@ -369,9 +410,12 @@ catalogs:
     vaul:
       specifier: 1.1.2
       version: 1.1.2
+<<<<<<< HEAD
     vitest:
       specifier: 4.0.15
       version: 4.0.15
+=======
+>>>>>>> 96e4303 (feat: add org)
     zustand:
       specifier: 5.0.9
       version: 5.0.9
