@@ -3,10 +3,14 @@ import { api } from '@pzero/shared/api'
 export interface CreateOrgPayload {
   name: string
 <<<<<<< HEAD
+<<<<<<< HEAD
   handle: string
 =======
   slug: string
 >>>>>>> ae9947a (feat: org and user)
+=======
+  handle: string
+>>>>>>> a238af6 (feat: org and user)
   description?: string
   status: 'active' | 'inactive' | 'suspended'
   plan: 'free' | 'starter' | 'pro' | 'enterprise'
@@ -46,8 +50,12 @@ export interface Org {
 export interface Organization {
   id: string
   name: string
+<<<<<<< HEAD
   slug: string
 >>>>>>> ae9947a (feat: org and user)
+=======
+  handle: string
+>>>>>>> a238af6 (feat: org and user)
   description?: string
   status: 'active' | 'inactive' | 'suspended'
   plan: 'free' | 'starter' | 'pro' | 'enterprise'

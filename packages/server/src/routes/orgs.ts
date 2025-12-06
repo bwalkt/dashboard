@@ -6,6 +6,7 @@ import { userService } from "../services/user.service.js";
 export interface CreateOrgPayload {
   name: string;
 <<<<<<< HEAD
+<<<<<<< HEAD
   handle: string;
   dscr?: string;
   status: 'active' | 'inactive' | 'suspended';
@@ -20,6 +21,9 @@ export interface CreateOrgPayload {
   }
 =======
   slug: string;
+=======
+  handle: string;
+>>>>>>> a238af6 (feat: org and user)
   description?: string;
   status: 'active' | 'inactive' | 'suspended';
   plan: 'free' | 'starter' | 'pro' | 'enterprise';
@@ -62,7 +66,7 @@ export interface Org {
 export interface Organization {
   id: string;
   name: string;
-  slug: string;
+  handle: string;
   description?: string;
   status: string;
   plan: string;
@@ -95,6 +99,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Validate required fields
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (!data.name || !data.handle || !data.status || !data.plan) {
           return reply.status(400).send({
             error: "Bad Request",
@@ -117,22 +122,31 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           [data.handle]
 =======
         if (!data.name || !data.slug || !data.email || !data.status || !data.plan || !data.owner_id) {
+=======
+        if (!data.name || !data.handle || !data.email || !data.status || !data.plan || !data.owner_id) {
+>>>>>>> a238af6 (feat: org and user)
           return reply.status(400).send({
             error: "Bad Request",
-            message: "Name, slug, email, status, plan, and owner_id are required",
+            message: "Name, handle, email, status, plan, and owner_id are required",
           });
         }
 
-        // Check if slug is unique
+        // Check if handle is unique
         const existingOrg = await db.pool.query(
+<<<<<<< HEAD
           "SELECT id FROM pzero.all_orgs WHERE slug = $1 AND deleted_at IS NULL",
           [data.slug]
 >>>>>>> ae9947a (feat: org and user)
+=======
+          "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND deleted_at IS NULL",
+          [data.handle]
+>>>>>>> a238af6 (feat: org and user)
         );
 
         if (existingOrg.rows.length > 0) {
           return reply.status(409).send({
             error: "Conflict",
+<<<<<<< HEAD
 <<<<<<< HEAD
             message: "Organization handle already exists",
           });
@@ -150,6 +164,9 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         })
 =======
             message: "Organization slug already exists",
+=======
+            message: "Organization handle already exists",
+>>>>>>> a238af6 (feat: org and user)
           });
         }
 
@@ -160,6 +177,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           [
             JSON.stringify({
               name: data.name,
+<<<<<<< HEAD
 <<<<<<< HEAD
               handle: data.handle,
               website: data.website || "",
@@ -182,6 +200,21 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
               settings: JSON.stringify(data.settings || {}),
               metadata: JSON.stringify(data.metadata || {})
 >>>>>>> ae9947a (feat: org and user)
+=======
+              handle: data.handle,
+              website: data.website || "",
+              c_by: data.owner_id,
+              data: {
+                description: data.description || "",
+                status: data.status,
+                plan: data.plan,
+                email: data.email,
+                phone: data.phone || "",
+                address: data.address || "",
+                settings: data.settings || {},
+                metadata: data.metadata || {}
+              }
+>>>>>>> a238af6 (feat: org and user)
             }),
           ],
         );
@@ -285,24 +318,28 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         const data = request.body as CreateOrgWithUserPayload;
 
         // Validate required fields
-        if (!data.name || !data.slug || !data.email || !data.status || !data.plan || !data.owner_id) {
+        if (!data.name || !data.handle || !data.email || !data.status || !data.plan || !data.owner_id) {
           return reply.status(400).send({
             error: "Bad Request",
-            message: "Name, slug, email, status, plan, and owner_id are required",
+            message: "Name, handle, email, status, plan, and owner_id are required",
           });
         }
 
-        // Check if slug is unique
+        // Check if handle is unique
         const existingOrg = await db.pool.query(
-          "SELECT id FROM pzero.all_orgs WHERE slug = $1 AND deleted_at IS NULL",
-          [data.slug]
+          "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND deleted_at IS NULL",
+          [data.handle]
         );
 
         if (existingOrg.rows.length > 0) {
           return reply.status(409).send({
             error: "Conflict",
+<<<<<<< HEAD
             message: "Organization slug already exists",
 >>>>>>> ae9947a (feat: org and user)
+=======
+            message: "Organization handle already exists",
+>>>>>>> a238af6 (feat: org and user)
           });
         }
 
@@ -392,17 +429,19 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           [
             JSON.stringify({
               name: data.name,
-              slug: data.slug,
-              description: data.description || "",
-              status: data.status,
-              plan: data.plan,
-              email: data.email,
+              handle: data.handle,
               website: data.website || "",
-              phone: data.phone || "",
-              address: data.address || "",
-              owner_id: data.owner_id,
-              settings: JSON.stringify(data.settings || {}),
-              metadata: JSON.stringify(data.metadata || {})
+              c_by: data.owner_id,
+              data: {
+                description: data.description || "",
+                status: data.status,
+                plan: data.plan,
+                email: data.email,
+                phone: data.phone || "",
+                address: data.address || "",
+                settings: data.settings || {},
+                metadata: data.metadata || {}
+              }
             }),
           ],
         );
@@ -574,6 +613,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           values.push(data.name);
         }
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (data.handle !== undefined) {
           fields.push(`handle = $${paramCount++}`);
           values.push(data.handle);
@@ -585,6 +625,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         if (data.slug !== undefined) {
           fields.push(`slug = $${paramCount++}`);
           values.push(data.slug);
+=======
+        if (data.handle !== undefined) {
+          fields.push(`handle = $${paramCount++}`);
+          values.push(data.handle);
+>>>>>>> a238af6 (feat: org and user)
         }
         if (data.description !== undefined) {
           fields.push(`description = $${paramCount++}`);

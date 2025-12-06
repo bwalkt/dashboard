@@ -1,8 +1,5 @@
 import { ALLOWED_COUNTRIES, DEFAULT_COUNTRY, validatePhoneNumber } from '@pzero/shared/phone'
-<<<<<<< HEAD
 import { generateOrgHandle } from '@pzero/shared/utils/handles'
-=======
->>>>>>> ae9947a (feat: org and user)
 import { createValidator } from '@pzero/shared/validator/ajv'
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
@@ -25,15 +22,10 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { userData } from '@/features/users/data'
 import { createAjvResolver } from '@/lib/ajv-resolver'
-<<<<<<< HEAD
 import { toastUtils } from '@/lib/toast'
 import { orgsService } from '@/services/api/orgs'
 import { usersService } from '@/services/api/users'
 import { useAuthStore } from '@/stores/auth'
-=======
-import { orgsService } from '@/services/api/orgs'
-import { usersService } from '@/services/api/users'
->>>>>>> ae9947a (feat: org and user)
 import { useOrgsStore } from '@/stores/orgs'
 
 interface OrgFormValues {
@@ -237,7 +229,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
 
     try {
       // Validate email and website domain match
-<<<<<<< HEAD
       // Temporarily disabled for testing
       // if (data.email && data.website) {
       //   try {
@@ -254,56 +245,22 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       //     return
       //   }
       // }
-=======
-      if (data.email && data.website) {
-        try {
-          const emailDomain = data.email.split('@')[1]?.toLowerCase()
-          const websiteUrl = new URL(data.website)
-          const websiteDomain = websiteUrl.hostname.replace('www.', '').toLowerCase()
-
-          if (emailDomain !== websiteDomain) {
-            toast.error(`Email domain (${emailDomain}) must match website domain (${websiteDomain})`)
-            return
-          }
-        } catch (error) {
-          toast.error('Invalid website URL format')
-          return
-        }
-      }
->>>>>>> ae9947a (feat: org and user)
 
       // Validate phone number if provided
       if (data.phone) {
         const phoneValidation = validatePhoneNumber(data.phone, DEFAULT_COUNTRY)
         if (!phoneValidation.isValid) {
-<<<<<<< HEAD
           toastUtils.error(phoneValidation.error || 'Invalid phone number')
-=======
-          toast.error(phoneValidation.error || 'Invalid phone number')
->>>>>>> ae9947a (feat: org and user)
           return
         }
         // Check if the phone is from an allowed country
         const isAllowed = ALLOWED_COUNTRIES.some(c => c.code === phoneValidation.country)
         if (!isAllowed) {
-<<<<<<< HEAD
           toastUtils.error(`Phone numbers from ${phoneValidation.country} are not supported`)
-=======
-          toast.error(`Phone numbers from ${phoneValidation.country} are not supported`)
           return
         }
       }
 
-      // Validate new user data if creating a new user
-      if (data.create_new_user) {
-        if (!data.new_user?.name || !data.new_user?.email) {
-          toast.error('User name and email are required when creating a new user')
->>>>>>> ae9947a (feat: org and user)
-          return
-        }
-      }
-
-<<<<<<< HEAD
       // Validate user data if creating a new user
       if (data.create_new_user) {
         if (!data.contact_name || !data.email) {
@@ -322,44 +279,32 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       const orgData = {
         name: data.name,
         handle: data.handle,
-=======
       // Get current user ID - TODO: Get from auth context
       const currentUserId = 'current-user-id'
 
       // Create organization with user data
       const orgData = {
         name: data.name,
-        slug: data.slug,
->>>>>>> ae9947a (feat: org and user)
-        description: data.description,
+        handle: data.handle,
+        dscr: data.dscr,
         status: data.status,
         plan: data.plan,
         email: data.email,
         website: data.website,
         phone: data.phone,
         address: data.address,
-<<<<<<< HEAD
-=======
-        owner_id: currentUserId,
->>>>>>> ae9947a (feat: org and user)
         settings: {},
         metadata: {},
         create_user: data.create_new_user
           ? {
-<<<<<<< HEAD
               name: data.contact_name,
               email: data.email,
-=======
-              name: data.new_user.name,
-              email: data.new_user.email,
->>>>>>> ae9947a (feat: org and user)
               email_verified: true, // Auto-verify email for admin-created users
             }
           : undefined,
         associate_users: data.user_ids || [],
       }
 
-<<<<<<< HEAD
       console.log('🚀 CLIENT: Sending org creation request with payload:', JSON.stringify(orgData, null, 2))
       console.log('🚀 CLIENT: Form data validation state:', {
         isValid: form.formState.isValid,
@@ -378,17 +323,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         ? `Org created successfully with new user`
         : 'Org created successfully'
       toastUtils.successTemp(successMessage)
-=======
-      const result = await orgsService.createOrganizationWithUser(orgData)
-
-      // Update local store with the created organization
-      await orgsStore.createOrganization(result.organization)
-
-      const successMessage = data.create_new_user
-        ? `Organization created successfully with new user (${result.user?.email})`
-        : 'Organization created successfully'
-      toast.success(successMessage)
->>>>>>> ae9947a (feat: org and user)
 
       form.reset()
       onOpenChange(false)
@@ -581,11 +515,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
   )
 
   const FormContent = () => (
-<<<<<<< HEAD
     <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full" id="org-form">
-=======
-    <Form form={form} onSubmit={form.handleSubmit(onSubmit)} id="org-form" className="flex flex-col h-full">
->>>>>>> ae9947a (feat: org and user)
       <div className="flex-1 overflow-y-auto px-6 py-4">
         <div className="space-y-4">
           <FormFields />
@@ -608,11 +538,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
               Cancel
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting} className="flex-1">
-<<<<<<< HEAD
               {form.formState.isSubmitting ? 'Creating...' : 'Create Org'}
-=======
-              {form.formState.isSubmitting ? 'Creating...' : 'Create Organization'}
->>>>>>> ae9947a (feat: org and user)
             </Button>
           </div>
         </Form>
@@ -627,13 +553,8 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         style={{ width: '800px', maxWidth: '90vw' }}
       >
         <SheetHeader className="px-6 pt-6">
-<<<<<<< HEAD
           <SheetTitle>Add New Org</SheetTitle>
           <SheetDescription>Create a new org. Fill in the details below.</SheetDescription>
-=======
-          <SheetTitle>Add New Organization</SheetTitle>
-          <SheetDescription>Create a new organization. Fill in the details below.</SheetDescription>
->>>>>>> ae9947a (feat: org and user)
         </SheetHeader>
         <div className="flex-1 overflow-hidden min-h-0">
           <FormContent />
@@ -642,7 +563,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
             Cancel
           </Button>
-<<<<<<< HEAD
           <Button
             type="submit"
             form="org-form"
@@ -656,10 +576,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
             }}
           >
             {form.formState.isSubmitting ? 'Creating...' : 'Create Org'}
-=======
-          <Button type="submit" form="org-form" disabled={form.formState.isSubmitting} className="flex-1">
-            {form.formState.isSubmitting ? 'Creating...' : 'Create Organization'}
->>>>>>> ae9947a (feat: org and user)
           </Button>
         </SheetFooter>
       </SheetContent>
