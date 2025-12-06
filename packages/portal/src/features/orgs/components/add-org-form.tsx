@@ -27,16 +27,15 @@ import { usersService } from '@/services/api/users'
 import { useOrgsStore } from '@/stores/orgs'
 
 interface OrgFormValues {
+  website: string
   name: string
-  slug: string
+  handle: string
   description: string
   status: 'active' | 'inactive' | 'suspended'
   plan: 'free' | 'starter' | 'pro' | 'enterprise'
   email: string
-  website: string
   phone: string
   address: string
-  billing_email: string
   user_ids: string[]
   new_user: {
     name: string
@@ -48,8 +47,9 @@ interface OrgFormValues {
 const orgFormSchema = {
   type: 'object',
   properties: {
+    website: { type: 'string', format: 'uri' },
     name: { type: 'string', minLength: 1 },
-    slug: {
+    handle: {
       type: 'string',
       minLength: 1,
       pattern: '^[a-z0-9-]+$',
@@ -64,10 +64,8 @@ const orgFormSchema = {
       enum: ['free', 'starter', 'pro', 'enterprise'],
     },
     email: { type: 'string', format: 'email' },
-    website: { type: 'string', format: 'uri' },
     phone: { type: 'string' },
     address: { type: 'string' },
-    billing_email: { type: 'string', format: 'email' },
     user_ids: {
       type: 'array',
       items: { type: 'string' },
@@ -83,7 +81,7 @@ const orgFormSchema = {
     },
     create_new_user: { type: 'boolean', default: false },
   },
-  required: ['name', 'slug', 'status', 'plan', 'email'],
+  required: ['website', 'name', 'handle', 'status', 'plan', 'email'],
   additionalProperties: false,
 }
 
@@ -101,16 +99,15 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
   const form = useForm<OrgFormValues>({
     resolver: createAjvResolver(validateOrgForm),
     defaultValues: {
+      website: '',
       name: '',
-      slug: '',
+      handle: '',
       description: '',
       status: 'active' as const,
       plan: 'starter' as const,
       email: '',
-      website: '',
       phone: '',
       address: '',
-      billing_email: '',
       user_ids: [],
       new_user: {
         name: '',
@@ -120,17 +117,49 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
     },
   })
 
-  // Auto-generate slug from name
+  // Auto-generate name and handle from website domain
   React.useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'name' && value.name) {
-        const slug = value.name
+    const subscription = form.watch((value, { name: fieldName }) => {
+      if (fieldName === 'website' && value.website) {
+        try {
+          const url = new URL(value.website.startsWith('http') ? value.website : `https://${value.website}`)
+          const domain = url.hostname.replace('www.', '')
+          const domainParts = domain.split('.')
+          const companyName = domainParts[0]
+
+          // Auto-fill name if empty
+          if (!value.name) {
+            const capitalizedName = companyName.charAt(0).toUpperCase() + companyName.slice(1)
+            form.setValue('name', capitalizedName, { shouldValidate: true })
+          }
+
+          // Auto-fill handle if empty
+          if (!value.handle) {
+            const handle = companyName
+              .toLowerCase()
+              .replace(/[^\w-]/g, '')
+              .trim()
+            form.setValue('handle', handle, { shouldValidate: true })
+          }
+
+          // Auto-fill email if empty
+          if (!value.email) {
+            form.setValue('email', `contact@${domain}`, { shouldValidate: true })
+          }
+        } catch (error) {
+          // Invalid URL, ignore
+        }
+      }
+
+      // Also allow manual name -> handle generation
+      if (fieldName === 'name' && value.name && !value.handle) {
+        const handle = value.name
           .toLowerCase()
           .replace(/[^\w\s-]/g, '')
           .replace(/\s+/g, '-')
           .replace(/-+/g, '-')
           .trim()
-        form.setValue('slug', slug, { shouldValidate: true })
+        form.setValue('handle', handle, { shouldValidate: true })
       }
     })
     return () => subscription.unsubscribe()
@@ -184,7 +213,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       // Create organization with user data
       const orgData = {
         name: data.name,
-        slug: data.slug,
+        handle: data.handle,
         description: data.description,
         status: data.status,
         plan: data.plan,
@@ -227,6 +256,20 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
     <>
       <FormField
         control={form.control}
+        name="website"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Website *</FormLabel>
+            <FormControl>
+              <Input type="url" placeholder="https://acme.com" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
         name="name"
         render={({ field }) => (
           <FormItem>
@@ -241,10 +284,10 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
 
       <FormField
         control={form.control}
-        name="slug"
+        name="handle"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Slug *</FormLabel>
+            <FormLabel>Handle *</FormLabel>
             <FormControl>
               <Input placeholder="acme-corporation" {...field} />
             </FormControl>
@@ -324,20 +367,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
             <FormLabel>Email *</FormLabel>
             <FormControl>
               <Input type="email" placeholder="contact@acme.com" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="website"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Website</FormLabel>
-            <FormControl>
-              <Input type="url" placeholder="https://acme.com" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>

@@ -2,7 +2,7 @@ import { api } from '@pzero/shared/api'
 
 export interface CreateOrgPayload {
   name: string
-  slug: string
+  handle: string
   description?: string
   status: 'active' | 'inactive' | 'suspended'
   plan: 'free' | 'starter' | 'pro' | 'enterprise'
@@ -28,7 +28,7 @@ export interface CreateOrgWithUserPayload extends CreateOrgPayload {
 export interface Organization {
   id: string
   name: string
-  slug: string
+  handle: string
   description?: string
   status: 'active' | 'inactive' | 'suspended'
   plan: 'free' | 'starter' | 'pro' | 'enterprise'
