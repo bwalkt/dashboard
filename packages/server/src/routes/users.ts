@@ -1,8 +1,15 @@
+<<<<<<< HEAD
 import { type User } from "@pzero/shared/pzero";
+=======
+>>>>>>> ae9947a (feat: org and user)
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../config/database.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { userService } from "../services/user.service.js";
+<<<<<<< HEAD
+=======
+
+>>>>>>> ae9947a (feat: org and user)
 export interface CreateUserPayload {
   name: string;
   email: string;
@@ -14,6 +21,23 @@ export interface CreateUserPayload {
   metadata?: Record<string, any>;
 }
 
+<<<<<<< HEAD
+=======
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  email_verified: boolean;
+  phone_verified: boolean;
+  avatar?: string;
+  org_id?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+>>>>>>> ae9947a (feat: org and user)
 
 export interface UserWithVerification extends User {
   verification_token?: string;
@@ -26,7 +50,11 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
    * Create a new user (similar to registration)
    */
   fastify.post(
+<<<<<<< HEAD
     "/users",
+=======
+    "/api/users",
+>>>>>>> ae9947a (feat: org and user)
     {
       preHandler: authenticateToken,
     },
@@ -134,7 +162,11 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
           SELECT u.*, a.email, a.email_verified
           FROM pzero.all_users u
           JOIN pzero.all_auth a ON u.id = a.id
+<<<<<<< HEAD
           WHERE u.is_del = false
+=======
+          WHERE u.deleted_at IS NULL
+>>>>>>> ae9947a (feat: org and user)
           ORDER BY u.created_at DESC
         `);
 
@@ -230,8 +262,13 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
         // Soft delete by setting deleted_at timestamp
         const result = await db.pool.query(
           `UPDATE pzero.all_users 
+<<<<<<< HEAD
            SET is_del = true
            WHERE id = $1 AND is_del = false
+=======
+           SET deleted_at = CURRENT_TIMESTAMP 
+           WHERE id = $1 AND deleted_at IS NULL
+>>>>>>> ae9947a (feat: org and user)
            RETURNING id`,
           [id]
         );

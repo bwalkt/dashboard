@@ -24,6 +24,7 @@ import { smsRoutes } from "./routes/sms.js";
 import { termsRoutes } from "./routes/terms.js";
 import { userRoutes } from "./routes/users.js";
 import { refreshProxyTargetsCache } from "./services/proxy-targets-cache.service.js";
+import { userRoutes } from "./routes/users.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

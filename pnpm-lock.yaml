@@ -7,6 +7,9 @@ settings:
 catalogs:
   default:
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ae9947a (feat: org and user)
     '@babel/core':
       specifier: 7.28.5
       version: 7.28.5
@@ -16,8 +19,11 @@ catalogs:
     '@babel/runtime':
       specifier: 7.28.4
       version: 7.28.4
+<<<<<<< HEAD
 =======
 >>>>>>> 96e4303 (feat: add org)
+=======
+>>>>>>> ae9947a (feat: org and user)
     '@date-fns/utc':
       specifier: 2.1.1
       version: 2.1.1
@@ -127,6 +133,9 @@ catalogs:
       specifier: 1.2.4
       version: 1.2.4
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ae9947a (feat: org and user)
     '@react-native-community/cli':
       specifier: 20.0.2
       version: 20.0.2
@@ -157,8 +166,11 @@ catalogs:
     '@react-navigation/native-stack':
       specifier: 7.8.5
       version: 7.8.5
+<<<<<<< HEAD
 =======
 >>>>>>> 96e4303 (feat: add org)
+=======
+>>>>>>> ae9947a (feat: org and user)
     '@sentry/react':
       specifier: 10.29.0
       version: 10.29.0
@@ -182,15 +194,21 @@ catalogs:
       version: 2.9.1
     '@tauri-apps/cli':
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ae9947a (feat: org and user)
       specifier: 2.9.5
       version: 2.9.5
     '@types/jest':
       specifier: 30.0.0
       version: 30.0.0
+<<<<<<< HEAD
 =======
       specifier: 2.8.4
       version: 2.8.4
 >>>>>>> 96e4303 (feat: add org)
+=======
+>>>>>>> ae9947a (feat: org and user)
     '@types/node':
       specifier: 24.10.1
       version: 24.10.1
@@ -200,6 +218,7 @@ catalogs:
     '@types/react-dom':
       specifier: 19.2.3
       version: 19.2.3
+<<<<<<< HEAD
 <<<<<<< HEAD
     '@types/react-test-renderer':
       specifier: 19.1.0
@@ -218,6 +237,17 @@ catalogs:
       specifier: 5.0.4
       version: 5.0.4
 >>>>>>> 96e4303 (feat: add org)
+=======
+    '@types/react-test-renderer':
+      specifier: 19.1.0
+      version: 19.1.0
+    '@vitejs/plugin-react':
+      specifier: 5.1.1
+      version: 5.1.1
+    '@vitest/ui':
+      specifier: 4.0.15
+      version: 4.0.15
+>>>>>>> ae9947a (feat: org and user)
     ajv:
       specifier: 8.17.1
       version: 8.17.1
@@ -225,11 +255,17 @@ catalogs:
       specifier: 3.0.1
       version: 3.0.1
 <<<<<<< HEAD
+<<<<<<< HEAD
     axios:
       specifier: 1.13.2
       version: 1.13.2
 =======
 >>>>>>> 96e4303 (feat: add org)
+=======
+    axios:
+      specifier: 1.13.2
+      version: 1.13.2
+>>>>>>> ae9947a (feat: org and user)
     class-variance-authority:
       specifier: 0.7.1
       version: 0.7.1
@@ -249,11 +285,17 @@ catalogs:
       specifier: 1.4.2
       version: 1.4.2
 <<<<<<< HEAD
+<<<<<<< HEAD
     jest:
       specifier: 30.2.0
       version: 30.2.0
 =======
 >>>>>>> 96e4303 (feat: add org)
+=======
+    jest:
+      specifier: 30.2.0
+      version: 30.2.0
+>>>>>>> ae9947a (feat: org and user)
     json-2-csv:
       specifier: 5.5.10
       version: 5.5.10
@@ -277,15 +319,21 @@ catalogs:
       version: 0.2.0
     nuqs:
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ae9947a (feat: org and user)
       specifier: 2.8.3
       version: 2.8.3
     p-queue:
       specifier: 9.0.1
       version: 9.0.1
+<<<<<<< HEAD
 =======
       specifier: 2.4.1
       version: 2.4.1
 >>>>>>> 96e4303 (feat: add org)
+=======
+>>>>>>> ae9947a (feat: org and user)
     postcss:
       specifier: 8.5.6
       version: 8.5.6
@@ -300,6 +348,9 @@ catalogs:
       version: 14.3.8
     react-hook-form:
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ae9947a (feat: org and user)
       specifier: 7.68.0
       version: 7.68.0
     react-native:
@@ -359,24 +410,33 @@ catalogs:
     react-phone-number-input:
       specifier: 3.4.14
       version: 3.4.14
+<<<<<<< HEAD
 =======
       specifier: 7.55.0
       version: 7.55.0
 >>>>>>> 96e4303 (feat: add org)
+=======
+>>>>>>> ae9947a (feat: org and user)
     react-resizable-panels:
       specifier: 3.0.6
       version: 3.0.6
     react-responsive:
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ae9947a (feat: org and user)
       specifier: 10.0.1
       version: 10.0.1
     react-router-dom:
       specifier: 7.10.1
       version: 7.10.1
+<<<<<<< HEAD
 =======
       specifier: 10.0.0
       version: 10.0.0
 >>>>>>> 96e4303 (feat: add org)
+=======
+>>>>>>> ae9947a (feat: org and user)
     recharts:
       specifier: 3.5.1
       version: 3.5.1
@@ -411,11 +471,17 @@ catalogs:
       specifier: 1.1.2
       version: 1.1.2
 <<<<<<< HEAD
+<<<<<<< HEAD
     vitest:
       specifier: 4.0.15
       version: 4.0.15
 =======
 >>>>>>> 96e4303 (feat: add org)
+=======
+    vitest:
+      specifier: 4.0.15
+      version: 4.0.15
+>>>>>>> ae9947a (feat: org and user)
     zustand:
       specifier: 5.0.9
       version: 5.0.9

@@ -20,6 +20,13 @@ export interface User {
   phone_verified: boolean
   avatar?: string
   org_id?: string
+<<<<<<< HEAD
+=======
+  metadata?: Record<string, any>
+  created_at: string
+  updated_at: string
+  deleted_at?: string
+>>>>>>> ae9947a (feat: org and user)
 }
 
 export interface UserWithVerification extends User {
@@ -53,7 +60,10 @@ class UsersService {
    */
   async getUsers(): Promise<User[]> {
     const response = await api.get<User[]>('/api/users')
+<<<<<<< HEAD
     // add pagination handling if needed
+=======
+>>>>>>> ae9947a (feat: org and user)
     return response
   }
 
@@ -81,6 +91,39 @@ class UsersService {
   }
 
   /**
+<<<<<<< HEAD
+=======
+   * Verify user email
+   */
+  async verifyEmail(userId: string, token: string): Promise<User> {
+    const response = await api.post<User>(`/api/users/${userId}/verify-email`, { token })
+    return response
+  }
+
+  /**
+   * Send verification email
+   */
+  async sendVerificationEmail(userId: string): Promise<void> {
+    await api.post(`/api/users/${userId}/send-verification`)
+  }
+
+  /**
+   * Manually mark email as verified (admin action)
+   */
+  async markEmailVerified(userId: string): Promise<User> {
+    const response = await api.post<User>(`/api/users/${userId}/mark-verified`)
+    return response
+  }
+
+  /**
+   * Reset user password
+   */
+  async resetPassword(userId: string, newPassword: string): Promise<void> {
+    await api.post(`/api/users/${userId}/reset-password`, { password: newPassword })
+  }
+
+  /**
+>>>>>>> ae9947a (feat: org and user)
    * Associate user with organization
    */
   async associateWithOrg(userId: string, orgId: string): Promise<User> {
