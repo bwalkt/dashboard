@@ -1,3 +1,4 @@
+import { ALLOWED_COUNTRIES, DEFAULT_COUNTRY, validatePhoneNumber } from '@pzero/shared/phone'
 import { createValidator } from '@pzero/shared/validator/ajv'
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
@@ -10,15 +11,19 @@ import {
   MultiSelectorList,
   MultiSelectorTrigger,
 } from '@/components/form-builder/multi-select'
+import { PhoneInput } from '@/components/form-builder/phone-input'
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { userData } from '@/features/users/data'
 import { createAjvResolver } from '@/lib/ajv-resolver'
+import { orgsService } from '@/services/api/orgs'
+import { usersService } from '@/services/api/users'
 import { useOrgsStore } from '@/stores/orgs'
 
 interface OrgFormValues {
@@ -111,7 +116,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         name: '',
         email: '',
       },
-      create_new_user: false,
+      create_new_user: true,
     },
   })
 
@@ -133,6 +138,38 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
 
   const onSubmit = async (data: OrgFormValues) => {
     try {
+      // Validate email and website domain match
+      if (data.email && data.website) {
+        try {
+          const emailDomain = data.email.split('@')[1]?.toLowerCase()
+          const websiteUrl = new URL(data.website)
+          const websiteDomain = websiteUrl.hostname.replace('www.', '').toLowerCase()
+
+          if (emailDomain !== websiteDomain) {
+            toast.error(`Email domain (${emailDomain}) must match website domain (${websiteDomain})`)
+            return
+          }
+        } catch (error) {
+          toast.error('Invalid website URL format')
+          return
+        }
+      }
+
+      // Validate phone number if provided
+      if (data.phone) {
+        const phoneValidation = validatePhoneNumber(data.phone, DEFAULT_COUNTRY)
+        if (!phoneValidation.isValid) {
+          toast.error(phoneValidation.error || 'Invalid phone number')
+          return
+        }
+        // Check if the phone is from an allowed country
+        const isAllowed = ALLOWED_COUNTRIES.some(c => c.code === phoneValidation.country)
+        if (!isAllowed) {
+          toast.error(`Phone numbers from ${phoneValidation.country} are not supported`)
+          return
+        }
+      }
+
       // Validate new user data if creating a new user
       if (data.create_new_user) {
         if (!data.new_user?.name || !data.new_user?.email) {
@@ -141,49 +178,40 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         }
       }
 
-      // Prepare new user data if creating a new user
-      let newUserId: string | undefined
-      if (data.create_new_user && data.new_user?.name && data.new_user?.email) {
-        newUserId = crypto.randomUUID()
-        // TODO: Create user via API when backend is ready
-        console.log('Would create new user:', {
-          id: newUserId,
-          name: data.new_user.name,
-          email: data.new_user.email,
-        })
-      }
+      // Get current user ID - TODO: Get from auth context
+      const currentUserId = 'current-user-id'
 
-      // Combine existing user IDs with new user ID
-      const associatedUserIds = [...(data.user_ids || []), ...(newUserId ? [newUserId] : [])]
-
-      const newOrg = {
-        id: crypto.randomUUID(),
+      // Create organization with user data
+      const orgData = {
         name: data.name,
         slug: data.slug,
-        description: data.description || null,
+        description: data.description,
         status: data.status,
         plan: data.plan,
         email: data.email,
-        website: data.website || null,
-        phone: data.phone || null,
-        address: data.address || null,
-        billing_email: data.billing_email || data.email,
-        logo_url: null,
-        owner_id: 'current-user-id', // TODO: Get from auth context
+        website: data.website,
+        phone: data.phone,
+        address: data.address,
+        owner_id: currentUserId,
         settings: {},
-        metadata: {
-          associated_users: associatedUserIds,
-        },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        deleted_at: null,
+        metadata: {},
+        create_user: data.create_new_user
+          ? {
+              name: data.new_user.name,
+              email: data.new_user.email,
+              email_verified: true, // Auto-verify email for admin-created users
+            }
+          : undefined,
+        associate_users: data.user_ids || [],
       }
 
-      // TODO: Replace with actual API call
-      await orgsStore.createOrganization(newOrg)
+      const result = await orgsService.createOrganizationWithUser(orgData)
+
+      // Update local store with the created organization
+      await orgsStore.createOrganization(result.organization)
 
       const successMessage = data.create_new_user
-        ? 'Organization created successfully with new user'
+        ? `Organization created successfully with new user (${result.user?.email})`
         : 'Organization created successfully'
       toast.success(successMessage)
 
@@ -195,8 +223,8 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
     }
   }
 
-  const FormContent = () => (
-    <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+  const FormFields = () => (
+    <>
       <FormField
         control={form.control}
         name="name"
@@ -323,7 +351,13 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
           <FormItem>
             <FormLabel>Phone</FormLabel>
             <FormControl>
-              <Input placeholder="+1-555-0123" {...field} />
+              <PhoneInput
+                placeholder="Enter phone number"
+                countries={ALLOWED_COUNTRIES.map(c => c.code)}
+                defaultCountry={DEFAULT_COUNTRY}
+                value={field.value}
+                onChange={value => field.onChange(value || '')}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -343,127 +377,15 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
           </FormItem>
         )}
       />
+    </>
+  )
 
-      <FormField
-        control={form.control}
-        name="billing_email"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Billing Email</FormLabel>
-            <FormControl>
-              <Input type="email" placeholder="billing@acme.com" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <Separator className="my-6" />
-
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">User Association</h4>
-          <p className="text-xs text-muted-foreground">
-            Associate existing users with this organization or create a new user.
-          </p>
+  const FormContent = () => (
+    <Form form={form} onSubmit={form.handleSubmit(onSubmit)} id="org-form" className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="space-y-4">
+          <FormFields />
         </div>
-
-        <FormField
-          control={form.control}
-          name="user_ids"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Existing Users</FormLabel>
-              <FormControl>
-                <MultiSelector values={field.value || []} onValuesChange={field.onChange} className="max-w-xs">
-                  <MultiSelectorTrigger>
-                    <MultiSelectorInput placeholder="Search users..." />
-                  </MultiSelectorTrigger>
-                  <MultiSelectorContent>
-                    <MultiSelectorList>
-                      {userData.map(user => (
-                        <MultiSelectorItem key={user.id} value={user.id}>
-                          <div className="flex items-center gap-2">
-                            {user.avatar && <img src={user.avatar} alt={user.name} className="h-5 w-5 rounded-full" />}
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium">{user.name}</span>
-                              <span className="text-xs text-muted-foreground">{user.email}</span>
-                            </div>
-                          </div>
-                        </MultiSelectorItem>
-                      ))}
-                    </MultiSelectorList>
-                  </MultiSelectorContent>
-                </MultiSelector>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="create_new_user"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">Create New User</FormLabel>
-                <div className="text-[0.8rem] text-muted-foreground">
-                  Create and associate a new user with this organization
-                </div>
-              </div>
-              <FormControl>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border border-input bg-background"
-                  checked={field.value}
-                  onChange={field.onChange}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        {form.watch('create_new_user') && (
-          <div className="ml-4 space-y-4 border-l-2 border-muted pl-4">
-            <FormField
-              control={form.control}
-              name="new_user.name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>User Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="John Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="new_user.email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>User Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="john@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        )}
-      </div>
-
-      <div className={asPage ? 'flex gap-4 pt-4' : 'pt-4'}>
-        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className={asPage ? 'flex-1' : ''}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={form.formState.isSubmitting} className={asPage ? 'flex-1' : ''}>
-          {form.formState.isSubmitting ? 'Creating...' : 'Create Organization'}
-        </Button>
       </div>
     </Form>
   )
@@ -475,19 +397,42 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
           <h1 className="text-3xl font-bold">Add New Organization</h1>
           <p className="text-muted-foreground mt-2">Create a new organization. Fill in the details below.</p>
         </div>
-        <FormContent />
+        <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormFields />
+          <div className="flex gap-4 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting} className="flex-1">
+              {form.formState.isSubmitting ? 'Creating...' : 'Create Organization'}
+            </Button>
+          </div>
+        </Form>
       </div>
     )
   }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[400px] sm:w-[540px]">
-        <SheetHeader>
+      <SheetContent
+        className="w-[500px] sm:!w-[700px] lg:!w-[800px] sm:!max-w-[800px] max-w-[90vw] flex flex-col h-full"
+        style={{ width: '800px', maxWidth: '90vw' }}
+      >
+        <SheetHeader className="px-6 pt-6">
           <SheetTitle>Add New Organization</SheetTitle>
           <SheetDescription>Create a new organization. Fill in the details below.</SheetDescription>
         </SheetHeader>
-        <FormContent />
+        <div className="flex-1 overflow-hidden min-h-0">
+          <FormContent />
+        </div>
+        <SheetFooter className="flex gap-4 px-6 pb-6 pt-4">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+            Cancel
+          </Button>
+          <Button type="submit" form="org-form" disabled={form.formState.isSubmitting} className="flex-1">
+            {form.formState.isSubmitting ? 'Creating...' : 'Create Organization'}
+          </Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   )

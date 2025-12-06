@@ -1,7 +1,7 @@
 import type * as React from 'react'
 
 import { cn } from '@/lib/utils'
-
+export type InputProps = React.ComponentProps<'input'>
 /**
  * Renders a styled input element and forwards all native input props.
  *

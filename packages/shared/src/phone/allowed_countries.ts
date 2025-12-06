@@ -25,6 +25,18 @@ export const ALLOWED_COUNTRIES: CountryConfig[] = [
     callingCode: '1',
     flag: '🇺🇸',
   },
+  {
+    code: 'CN',
+    name: 'Canada',
+    callingCode: '1',
+    flag: '🇨🇦',
+  },
+  {
+    code: 'GB',
+    name: 'United Kingdom',
+    callingCode: '44',
+    flag: '🇬🇧',
+  },
 ]
 
 /**
