@@ -292,3 +292,7 @@ jest.mock('react-native-international-phone-number', () => {
     default: React.forwardRef((props, ref) => React.createElement('PhoneInput', { ...props, ref })),
   }
 })
+
+jest.mock('uuid', () => ({
+  v7: jest.fn(() => 'mocked-uuid-v7'),
+}))
