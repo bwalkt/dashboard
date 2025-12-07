@@ -724,11 +724,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * DELETE /api/orgs/:id
+   * DELETE /orgs/:id
    * Delete organization (soft delete)
    */
   fastify.delete(
-    "/api/orgs/:id",
+    "/orgs/:id",
     {
       preHandler: authenticateToken,
     },
@@ -771,11 +771,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * GET /api/orgs/:id/users
+   * GET /orgs/:id/users
    * Get users in an organization
    */
   fastify.get(
-    "/api/orgs/:id/users",
+    "/orgs/:id/users",
     {
       preHandler: authenticateToken,
     },
