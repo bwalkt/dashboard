@@ -27,7 +27,7 @@ export interface CreateOrgWithUserPayload extends CreateOrgPayload {
   associate_users?: string[];
 }
 
-export interface Organization {
+export interface Org {
   id: string;
   name: string;
   handle: string;
@@ -228,7 +228,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         );
 
         const response: {
-          organization: Organization;
+          organization: Org;
           user?: { id: string; email: string; name: string };
         } = {
           organization: orgResult.rows[0],

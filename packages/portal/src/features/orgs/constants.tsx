@@ -1,6 +1,6 @@
 'use client'
 
-import type { Organization } from '@pzero/shared/pzero'
+import type { Org } from '@pzero/shared/pzero'
 import type { DataTableFilterField } from '@/components/data-table/types'
 
 export const filterFields = [
@@ -37,4 +37,4 @@ export const filterFields = [
     type: 'input',
     placeholder: 'Filter by email...',
   },
-] satisfies DataTableFilterField<Organization>[]
+] satisfies DataTableFilterField<Org>[]

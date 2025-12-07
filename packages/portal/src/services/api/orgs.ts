@@ -25,7 +25,7 @@ export interface CreateOrgWithUserPayload extends CreateOrgPayload {
   associate_users?: string[]
 }
 
-export interface Organization {
+export interface Org {
   id: string
   name: string
   handle: string
@@ -49,20 +49,20 @@ class OrgsService {
   /**
    * Create a new organization
    */
-  async createOrganization(data: CreateOrgPayload): Promise<Organization> {
-    const response = await api.post<Organization>('/api/orgs', data)
+  async createOrg(data: CreateOrgPayload): Promise<Org> {
+    const response = await api.post<Org>('/api/orgs', data)
     return response
   }
 
   /**
    * Create an organization with optional user creation
    */
-  async createOrganizationWithUser(data: CreateOrgWithUserPayload): Promise<{
-    organization: Organization
+  async createOrgWithUser(data: CreateOrgWithUserPayload): Promise<{
+    organization: Org
     user?: { id: string; email: string; name: string }
   }> {
     const response = await api.post<{
-      organization: Organization
+      organization: Org
       user?: { id: string; email: string; name: string }
     }>('/api/orgs/create-with-user', data)
     return response
@@ -71,31 +71,31 @@ class OrgsService {
   /**
    * Get all organizations
    */
-  async getOrganizations(): Promise<Organization[]> {
-    const response = await api.get<Organization[]>('/api/orgs')
+  async getOrgs(): Promise<Org[]> {
+    const response = await api.get<Org[]>('/api/orgs')
     return response
   }
 
   /**
    * Get organization by ID
    */
-  async getOrganization(id: string): Promise<Organization> {
-    const response = await api.get<Organization>(`/api/orgs/${id}`)
+  async getOrg(id: string): Promise<Org> {
+    const response = await api.get<Org>(`/api/orgs/${id}`)
     return response
   }
 
   /**
    * Update organization
    */
-  async updateOrganization(id: string, data: Partial<CreateOrgPayload>): Promise<Organization> {
-    const response = await api.put<Organization>(`/api/orgs/${id}`, data)
+  async updateOrg(id: string, data: Partial<CreateOrgPayload>): Promise<Org> {
+    const response = await api.put<Org>(`/api/orgs/${id}`, data)
     return response
   }
 
   /**
    * Delete organization
    */
-  async deleteOrganization(id: string): Promise<void> {
+  async deleteOrg(id: string): Promise<void> {
     await api.delete(`/api/orgs/${id}`)
   }
 

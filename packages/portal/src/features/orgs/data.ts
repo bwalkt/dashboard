@@ -1,10 +1,10 @@
-import type { Organization } from '@pzero/shared/pzero'
+import type { Org } from '@pzero/shared/pzero'
 
-export const orgData: Organization[] = [
+export const orgData: Org[] = [
   {
     id: '1',
     name: 'Acme Corporation',
-    slug: 'acme-corp',
+    handle: 'acme-corp',
     description: 'A leading technology company specializing in innovative solutions.',
     status: 'active',
     plan: 'enterprise',
@@ -13,7 +13,7 @@ export const orgData: Organization[] = [
     logo_url: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop&crop=center',
     phone: '+1-555-0123',
     address: '123 Tech Street, Silicon Valley, CA 94000',
-    billing_email: 'billing@acme.com',
+
     metadata: { industry: 'Technology', employee_count: 500 },
     created_at: '2023-01-15T10:30:00Z',
     updated_at: '2024-11-15T14:22:00Z',
@@ -21,7 +21,7 @@ export const orgData: Organization[] = [
   {
     id: '2',
     name: 'Beta Systems',
-    slug: 'beta-systems',
+    handle: 'beta-systems',
     description: 'Cloud infrastructure and DevOps solutions provider.',
     status: 'active',
     plan: 'pro',
@@ -30,7 +30,6 @@ export const orgData: Organization[] = [
     logo_url: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400&h=400&fit=crop&crop=center',
     phone: '+1-555-0456',
     address: '456 Cloud Lane, Seattle, WA 98101',
-    billing_email: 'finance@betasystems.io',
     metadata: { industry: 'Cloud Services', employee_count: 150 },
     created_at: '2023-03-22T09:15:00Z',
     updated_at: '2024-10-28T16:45:00Z',
@@ -38,7 +37,7 @@ export const orgData: Organization[] = [
   {
     id: '3',
     name: 'Gamma Innovations',
-    slug: 'gamma-innovations',
+    handle: 'gamma-innovations',
     description: 'AI and machine learning research company.',
     status: 'inactive',
     plan: 'starter',
@@ -47,7 +46,6 @@ export const orgData: Organization[] = [
     logo_url: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=400&fit=crop&crop=center',
     phone: '+1-555-0789',
     address: '789 AI Boulevard, Austin, TX 73301',
-    billing_email: 'accounts@gamma.ai',
     metadata: { industry: 'Artificial Intelligence', employee_count: 75 },
     created_at: '2023-06-08T11:20:00Z',
     updated_at: '2024-09-12T08:30:00Z',
@@ -55,7 +53,7 @@ export const orgData: Organization[] = [
   {
     id: '4',
     name: 'Delta Enterprises',
-    slug: 'delta-enterprises',
+    handle: 'delta-enterprises',
     description: 'Financial technology and blockchain solutions.',
     status: 'suspended',
     plan: 'free',
@@ -64,7 +62,6 @@ export const orgData: Organization[] = [
     logo_url: null,
     phone: '+1-555-0321',
     address: '321 Fintech Row, New York, NY 10001',
-    billing_email: 'billing@delta.finance',
     metadata: { industry: 'FinTech', employee_count: 25 },
     created_at: '2023-08-14T13:45:00Z',
     updated_at: '2024-08-20T12:15:00Z',
@@ -72,7 +69,7 @@ export const orgData: Organization[] = [
   {
     id: '5',
     name: 'Epsilon Labs',
-    slug: 'epsilon-labs',
+    handle: 'epsilon-labs',
     description: 'Research and development in quantum computing.',
     status: 'active',
     plan: 'enterprise',
@@ -81,7 +78,6 @@ export const orgData: Organization[] = [
     logo_url: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400&h=400&fit=crop&crop=center',
     phone: '+1-555-0654',
     address: '654 Quantum Drive, Boston, MA 02101',
-    billing_email: 'finance@epsilon.labs',
     metadata: { industry: 'Quantum Computing', employee_count: 200 },
     created_at: '2023-11-03T07:00:00Z',
     updated_at: '2024-12-01T10:20:00Z',

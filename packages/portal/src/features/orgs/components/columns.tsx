@@ -1,4 +1,4 @@
-import type { Organization } from '@pzero/shared/pzero'
+import type { Org } from '@pzero/shared/pzero'
 import type { ColumnDef } from '@tanstack/react-table'
 import { format } from 'date-fns'
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header'
@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 
-export const columns: ColumnDef<Organization>[] = [
+export const columns: ColumnDef<Org>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -47,7 +47,7 @@ export const columns: ColumnDef<Organization>[] = [
           </Avatar>
           <div className="flex flex-col">
             <span className="font-medium">{name}</span>
-            <span className="text-xs text-muted-foreground">{row.original.slug}</span>
+            <span className="text-xs text-muted-foreground">{row.original.handle}</span>
           </div>
         </div>
       )

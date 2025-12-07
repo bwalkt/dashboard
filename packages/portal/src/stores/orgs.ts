@@ -1,18 +1,13 @@
 import { api } from '@pzero/shared/api'
-import type {
-  CreateOrganizationData,
-  Organization,
-  OrganizationsListResponse,
-  UpdateOrganizationData,
-} from '@pzero/shared/pzero'
+import type { CreateOrgData, Org, OrgsListResponse, UpdateOrgData } from '@pzero/shared/pzero'
 import { ZStorage } from './store'
 
 export const STORE = 'orgs'
 
 export class OrgsStoreClass extends ZStorage {
   // Current organization data
-  currentOrg?: Organization | null = null
-  organizations: Organization[] = []
+  currentOrg?: Org | null = null
+  orgs: Org[] = []
   loading: boolean = false
   error: string | null = null
 
@@ -35,9 +30,9 @@ export class OrgsStoreClass extends ZStorage {
       }
 
       // Load organizations list from cache
-      const cachedOrgs = await this.getItem('organizations')
+      const cachedOrgs = await this.getItem('orgs')
       if (cachedOrgs && Array.isArray(cachedOrgs)) {
-        this.organizations = cachedOrgs
+        this.orgs = cachedOrgs
       }
     } catch (error) {
       console.error('OrgsStore: Failed to initialize:', error)
@@ -52,7 +47,7 @@ export class OrgsStoreClass extends ZStorage {
     this.error = error
   }
 
-  async setCurrentOrg(org: Organization | null) {
+  async setCurrentOrg(org: Org | null) {
     this.currentOrg = org
 
     if (org) {
@@ -62,7 +57,7 @@ export class OrgsStoreClass extends ZStorage {
     }
   }
 
-  async fetchOrganizations(page: number = 1, limit: number = 20, query?: string) {
+  async fetchOrgs(page: number = 1, limit: number = 20, query?: string) {
     this.setLoading(true)
     this.setError(null)
 
@@ -73,19 +68,19 @@ export class OrgsStoreClass extends ZStorage {
         ...(query && { q: query }),
       })
 
-      const response = await api.get<OrganizationsListResponse>(`/orgs?${params}`)
+      const response = await api.get<OrgsListResponse>(`/orgs?${params}`)
 
-      this.organizations = response.organizations
+      this.orgs = response.orgs
       this.totalCount = response.total
       this.currentPage = response.page
       this.pageSize = response.limit
 
       // Cache organizations
-      await this.setItem({ key: 'organizations', data: response.organizations })
+      await this.setItem({ key: 'orgs', data: response.orgs })
 
       return response
     } catch (error: any) {
-      const errorMessage = error?.message || 'Failed to fetch organizations'
+      const errorMessage = error?.message || 'Failed to fetch orgs'
       this.setError(errorMessage)
       throw error
     } finally {
@@ -93,22 +88,22 @@ export class OrgsStoreClass extends ZStorage {
     }
   }
 
-  async fetchOrganization(id: string) {
+  async fetchOrg(id: string) {
     this.setLoading(true)
     this.setError(null)
 
     try {
-      const response = await api.get<{ organization: Organization }>(`/orgs/${id}`)
+      const response = await api.get<{ organization: Org }>(`/orgs/${id}`)
 
       // Update in list if exists
-      const index = this.organizations.findIndex(org => org.id === id)
+      const index = this.orgs.findIndex(org => org.id === id)
       if (index !== -1) {
-        this.organizations[index] = response.organization
+        this.orgs[index] = response.organization
       }
 
       return response.organization
     } catch (error: any) {
-      const errorMessage = error?.message || 'Failed to fetch organization'
+      const errorMessage = error?.message || 'Failed to fetch org'
       this.setError(errorMessage)
       throw error
     } finally {
@@ -116,23 +111,23 @@ export class OrgsStoreClass extends ZStorage {
     }
   }
 
-  async createOrganization(data: CreateOrganizationData) {
+  async createOrg(data: CreateOrgData) {
     this.setLoading(true)
     this.setError(null)
 
     try {
-      const response = await api.post<{ organization: Organization }>('/orgs', data)
+      const response = await api.post<{ organization: Org }>('/orgs', data)
 
       // Add to beginning of list
-      this.organizations = [response.organization, ...this.organizations]
+      this.orgs = [response.organization, ...this.orgs]
       this.totalCount += 1
 
       // Update cache
-      await this.setItem({ key: 'organizations', data: this.organizations })
+      await this.setItem({ key: 'orgs', data: this.orgs })
 
       return response.organization
     } catch (error: any) {
-      const errorMessage = error?.message || 'Failed to create organization'
+      const errorMessage = error?.message || 'Failed to create org'
       this.setError(errorMessage)
       throw error
     } finally {
@@ -140,17 +135,17 @@ export class OrgsStoreClass extends ZStorage {
     }
   }
 
-  async updateOrganization(id: string, data: UpdateOrganizationData) {
+  async updateOrg(id: string, data: UpdateOrgData) {
     this.setLoading(true)
     this.setError(null)
 
     try {
-      const response = await api.patch<{ organization: Organization }>(`/orgs/${id}`, data)
+      const response = await api.patch<{ organization: Org }>(`/orgs/${id}`, data)
 
       // Update in list
-      const index = this.organizations.findIndex(org => org.id === id)
+      const index = this.orgs.findIndex(org => org.id === id)
       if (index !== -1) {
-        this.organizations[index] = response.organization
+        this.orgs[index] = response.organization
       }
 
       // Update current org if it's the same
@@ -159,11 +154,11 @@ export class OrgsStoreClass extends ZStorage {
       }
 
       // Update cache
-      await this.setItem({ key: 'organizations', data: this.organizations })
+      await this.setItem({ key: 'orgs', data: this.orgs })
 
       return response.organization
     } catch (error: any) {
-      const errorMessage = error?.message || 'Failed to update organization'
+      const errorMessage = error?.message || 'Failed to update org'
       this.setError(errorMessage)
       throw error
     } finally {
@@ -171,7 +166,7 @@ export class OrgsStoreClass extends ZStorage {
     }
   }
 
-  async deleteOrganization(id: string) {
+  async deleteOrg(id: string) {
     this.setLoading(true)
     this.setError(null)
 
@@ -179,7 +174,7 @@ export class OrgsStoreClass extends ZStorage {
       await api.delete(`/orgs/${id}`)
 
       // Remove from list
-      this.organizations = this.organizations.filter(org => org.id !== id)
+      this.orgs = this.orgs.filter(org => org.id !== id)
       this.totalCount = Math.max(0, this.totalCount - 1)
 
       // Clear current org if it's the deleted one
@@ -188,11 +183,11 @@ export class OrgsStoreClass extends ZStorage {
       }
 
       // Update cache
-      await this.setItem({ key: 'organizations', data: this.organizations })
+      await this.setItem({ key: 'orgs', data: this.orgs })
 
       return true
     } catch (error: any) {
-      const errorMessage = error?.message || 'Failed to delete organization'
+      const errorMessage = error?.message || 'Failed to delete org'
       this.setError(errorMessage)
       throw error
     } finally {
@@ -200,8 +195,8 @@ export class OrgsStoreClass extends ZStorage {
     }
   }
 
-  async switchOrganization(orgId: string) {
-    const org = this.organizations.find(o => o.id === orgId)
+  async switchOrg(orgId: string) {
+    const org = this.orgs.find(o => o.id === orgId)
 
     if (org) {
       await this.setCurrentOrg(org)
@@ -209,16 +204,16 @@ export class OrgsStoreClass extends ZStorage {
     }
 
     // If not in cache, fetch it
-    const fetchedOrg = await this.fetchOrganization(orgId)
+    const fetchedOrg = await this.fetchOrg(orgId)
     await this.setCurrentOrg(fetchedOrg)
     return fetchedOrg
   }
 
   clearCache() {
-    this.organizations = []
+    this.orgs = []
     this.totalCount = 0
     this.currentPage = 1
-    this.removeItem('organizations')
+    this.removeItem('orgs')
   }
 }
 

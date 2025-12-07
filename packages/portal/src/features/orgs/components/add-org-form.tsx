@@ -234,14 +234,14 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         associate_users: data.user_ids || [],
       }
 
-      const result = await orgsService.createOrganizationWithUser(orgData)
+      const result = await orgsService.createOrgWithUser(orgData)
 
       // Update local store with the created organization
-      await orgsStore.createOrganization(result.organization)
+      await orgsStore.createOrg(result.organization)
 
       const successMessage = data.create_new_user
-        ? `Organization created successfully with new user (${result.user?.email})`
-        : 'Organization created successfully'
+        ? `Org created successfully with new user (${result.user?.email})`
+        : 'Org created successfully'
       toast.success(successMessage)
 
       form.reset()
@@ -273,7 +273,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         name="name"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Organization Name *</FormLabel>
+            <FormLabel>Org Name *</FormLabel>
             <FormControl>
               <Input placeholder="Acme Corporation" {...field} />
             </FormControl>
@@ -423,7 +423,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
     return (
       <div className="container mx-auto max-w-2xl py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">Add New Organization</h1>
+          <h1 className="text-3xl font-bold">Add New Org</h1>
           <p className="text-muted-foreground mt-2">Create a new organization. Fill in the details below.</p>
         </div>
         <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -433,7 +433,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
               Cancel
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting} className="flex-1">
-              {form.formState.isSubmitting ? 'Creating...' : 'Create Organization'}
+              {form.formState.isSubmitting ? 'Creating...' : 'Create Org'}
             </Button>
           </div>
         </Form>
@@ -448,8 +448,8 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         style={{ width: '800px', maxWidth: '90vw' }}
       >
         <SheetHeader className="px-6 pt-6">
-          <SheetTitle>Add New Organization</SheetTitle>
-          <SheetDescription>Create a new organization. Fill in the details below.</SheetDescription>
+          <SheetTitle>Add New Org</SheetTitle>
+          <SheetDescription>Create a new org. Fill in the details below.</SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-hidden min-h-0">
           <FormContent />
@@ -459,7 +459,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
             Cancel
           </Button>
           <Button type="submit" form="org-form" disabled={form.formState.isSubmitting} className="flex-1">
-            {form.formState.isSubmitting ? 'Creating...' : 'Create Organization'}
+            {form.formState.isSubmitting ? 'Creating...' : 'Create Org'}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -1,23 +1,23 @@
 import { createValidator } from '@boardwalk/shared/validator/ajv'
-import type { Organization, OrganizationPlan, OrganizationStatus } from '@pzero/shared/pzero'
+import type { Org, OrgPlan, OrgStatus } from '@pzero/shared/pzero'
 import { FieldErrors, FieldValues, ResolverOptions } from 'react-hook-form'
 
-export interface OrganizationFormValues {
+export interface OrgFormValues {
   name: string
-  slug: string
+  handle: string
   description?: string
   email?: string
   phone?: string
   website?: string
-  status: OrganizationStatus
-  plan: OrganizationPlan
+  status: OrgStatus
+  plan: OrgPlan
 }
 
-export const organizationSchema = {
+export const orgSchema = {
   type: 'object',
   properties: {
     name: { type: 'string', minLength: 1 },
-    slug: { type: 'string', minLength: 1, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
+    handle: { type: 'string', minLength: 1, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
     description: { type: 'string' },
     email: { type: 'string', format: 'email' },
     phone: { type: 'string' },
@@ -25,18 +25,14 @@ export const organizationSchema = {
     status: { type: 'string', enum: ['active', 'inactive', 'suspended'] },
     plan: { type: 'string', enum: ['free', 'starter', 'pro', 'enterprise'] },
   },
-  required: ['name', 'slug', 'status', 'plan'],
+  required: ['name', 'handle', 'status', 'plan'],
   additionalProperties: false,
 }
 
-const validateOrganization = createValidator<OrganizationFormValues>(organizationSchema)
+const validateOrg = createValidator<OrgFormValues>(orgSchema)
 
-export const organizationResolver = async (
-  values: FieldValues,
-  context: any,
-  options: ResolverOptions<FieldValues>,
-) => {
-  const result = validateOrganization.validate(values)
+export const orgResolver = async (values: FieldValues, context: any, options: ResolverOptions<FieldValues>) => {
+  const result = validateOrg.validate(values)
 
   if (result.success) {
     return {
@@ -55,13 +51,13 @@ export const organizationResolver = async (
 
       if (fieldPath === 'name') {
         if (error.code === 'minLength') {
-          message = 'Organization name is required'
+          message = 'Org name is required'
         }
-      } else if (fieldPath === 'slug') {
+      } else if (fieldPath === 'handle') {
         if (error.code === 'minLength') {
-          message = 'Slug is required'
+          message = 'Handle is required'
         } else if (error.code === 'pattern') {
-          message = 'Slug must contain only lowercase letters, numbers, and hyphens'
+          message = 'Handle must contain only lowercase letters, numbers, and hyphens'
         }
       } else if (fieldPath === 'email') {
         if (error.code === 'format') {
@@ -106,9 +102,9 @@ export const organizationResolver = async (
   }
 }
 
-export const defaultFormValues: Partial<OrganizationFormValues> = {
+export const defaultFormValues: Partial<OrgFormValues> = {
   name: '',
-  slug: '',
+  handle: '',
   description: '',
   email: '',
   phone: '',

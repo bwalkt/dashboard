@@ -1,6 +1,7 @@
 'use client'
 
-import type { Organization } from '@pzero/shared/pzero'
+import type { Org } from '@pzero/shared/pzero'
+import { generateOrgHandle } from '@pzero/shared/utils/handles'
 import React from 'react'
 import { useForm } from 'react-hook-form'
 import { FormInput } from '@/components/forms/form-input'
@@ -9,11 +10,11 @@ import { FormTextarea } from '@/components/forms/form-textarea'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
-import { defaultFormValues, OrganizationFormValues, organizationResolver } from '../utils/form-schema'
+import { defaultFormValues, OrgFormValues, orgResolver } from '../utils/form-schema'
 
 interface OrgFormProps {
-  org?: Organization
-  onSubmit: (values: OrganizationFormValues) => void | Promise<void>
+  org?: Org
+  onSubmit: (values: OrgFormValues) => void | Promise<void>
   onCancel?: () => void
   loading?: boolean
 }
@@ -34,12 +35,12 @@ const planOptions = [
 export function OrgForm({ org, onSubmit, onCancel, loading }: OrgFormProps) {
   const isEditing = Boolean(org)
 
-  const form = useForm<OrganizationFormValues>({
-    resolver: organizationResolver,
+  const form = useForm<OrgFormValues>({
+    resolver: orgResolver,
     defaultValues: org
       ? {
           name: org.name,
-          slug: org.slug,
+          handle: org.handle,
           description: org.description || '',
           email: org.email || '',
           phone: org.phone || '',
@@ -50,50 +51,39 @@ export function OrgForm({ org, onSubmit, onCancel, loading }: OrgFormProps) {
       : defaultFormValues,
   })
 
-  const handleSubmit = async (values: OrganizationFormValues) => {
+  const handleSubmit = async (values: OrgFormValues) => {
     await onSubmit(values)
   }
 
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-  }
+  const generateHandle = generateOrgHandle
 
   const nameValue = form.watch('name')
 
   React.useEffect(() => {
     if (nameValue && !isEditing) {
-      const slug = generateSlug(nameValue)
-      form.setValue('slug', slug)
+      const handle = generateHandle(nameValue)
+      form.setValue('handle', handle)
     }
   }, [nameValue, isEditing, form])
 
   return (
     <Card className="w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>{isEditing ? 'Edit Organization' : 'Create Organization'}</CardTitle>
+        <CardTitle>{isEditing ? 'Edit Org' : 'Create Org'}</CardTitle>
         <CardDescription>
-          {isEditing ? 'Update the organization details below.' : 'Fill in the details to create a new organization.'}
+          {isEditing ? 'Update the org details below.' : 'Fill in the details to create a new org.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormInput control={form.control} name="name" label="Org Name" placeholder="Enter org name" required />
               <FormInput
                 control={form.control}
-                name="name"
-                label="Organization Name"
-                placeholder="Enter organization name"
-                required
-              />
-              <FormInput
-                control={form.control}
-                name="slug"
-                label="Slug"
-                placeholder="organization-slug"
+                name="handle"
+                label="Handle"
+                placeholder="org-handle"
                 description="URL-friendly identifier (lowercase, no spaces)"
                 required
               />
@@ -103,7 +93,7 @@ export function OrgForm({ org, onSubmit, onCancel, loading }: OrgFormProps) {
               control={form.control}
               name="description"
               label="Description"
-              placeholder="Brief description of the organization"
+              placeholder="Brief description of the org"
               rows={3}
             />
 
@@ -113,7 +103,7 @@ export function OrgForm({ org, onSubmit, onCancel, loading }: OrgFormProps) {
                 name="email"
                 label="Contact Email"
                 type="email"
-                placeholder="contact@organization.com"
+                placeholder="contact@org.com"
               />
               <FormInput
                 control={form.control}
@@ -124,13 +114,7 @@ export function OrgForm({ org, onSubmit, onCancel, loading }: OrgFormProps) {
               />
             </div>
 
-            <FormInput
-              control={form.control}
-              name="website"
-              label="Website"
-              type="url"
-              placeholder="https://organization.com"
-            />
+            <FormInput control={form.control} name="website" label="Website" type="url" placeholder="https://org.com" />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormSelect
