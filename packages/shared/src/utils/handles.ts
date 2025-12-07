@@ -28,45 +28,27 @@ export function generateHandle(text: string, options: HandleOptions = {}): strin
 
   // Replace invalid characters, preserving dots if requested
   if (preserveDots) {
-<<<<<<< HEAD
     // For email-style handles, preserve dots and @ symbols
     handle = handle.replace(/[^\w.-@]/g, separator)
   } else {
     // Standard handle: replace dots and other invalid chars with separator
     handle = handle.replace(/[^\w\s-]/g, separator)
-=======
-    // For email-style handles, preserve dots but replace other invalid chars
-    handle = handle.replace(/[^\w.-]/g, separator)
-  } else {
-    // Standard handle: only allow word chars and separator
-    handle = handle.replace(/[^\w\s-]/g, '')
->>>>>>> 2c87106 (feat: create org)
     // Replace spaces and multiple separators with single separator
     handle = handle.replace(/\s+/g, separator)
   }
 
-<<<<<<< HEAD
   // Replace multiple separators with single separator (escape special regex chars)
   const escapedSeparator = separator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const separatorRegex = new RegExp(`${escapedSeparator}+`, 'g')
-=======
-  // Replace multiple separators with single separator
-  const separatorRegex = new RegExp(`${separator}+`, 'g')
->>>>>>> 2c87106 (feat: create org)
   handle = handle.replace(separatorRegex, separator)
 
   // Trim separators from start and end if requested
   if (trimSeparators) {
-<<<<<<< HEAD
     const trimRegex = new RegExp(`^${escapedSeparator}+|${escapedSeparator}+$`, 'g')
-=======
-    const trimRegex = new RegExp(`^${separator}+|${separator}+$`, 'g')
->>>>>>> 2c87106 (feat: create org)
     handle = handle.replace(trimRegex, '')
   }
 
   // Truncate to max length
-<<<<<<< HEAD
   if (maxLength > 0 && handle.length > maxLength) {
     // Find the last separator before the maxLength point to avoid breaking words
     let truncateAt = maxLength
@@ -83,14 +65,6 @@ export function generateHandle(text: string, options: HandleOptions = {}): strin
     // Trim any trailing separators
     if (trimSeparators) {
       handle = handle.replace(new RegExp(`${escapedSeparator}+$`), '')
-=======
-  if (maxLength > 0) {
-    handle = handle.substring(0, maxLength)
-
-    // If we truncated in the middle of a word, try to end at a separator
-    if (trimSeparators && handle.endsWith(separator)) {
-      handle = handle.replace(new RegExp(`${separator}+$`), '')
->>>>>>> 2c87106 (feat: create org)
     }
   }
 
@@ -142,20 +116,12 @@ export function generateEmailHandle(email: string): string {
  * This matches the pattern used in mobile/src/screens/SettingsScreen.tsx
  */
 export function generateDeviceNicknameFromName(userName: string, deviceName?: string): string {
-<<<<<<< HEAD
   if (!userName || userName.trim() === '') {
-=======
-  if (!userName) {
->>>>>>> 2c87106 (feat: create org)
     return ''
   }
 
   // Take the first name
-<<<<<<< HEAD
   const firstName = userName.trim().split(' ')[0]
-=======
-  const firstName = userName.split(' ')[0]
->>>>>>> 2c87106 (feat: create org)
   const device = deviceName || 'Device'
 
   return `${firstName}'s ${device}`
@@ -186,7 +152,6 @@ export function extractCompanyInfoFromDomain(website: string): {
   companyName: string
   handle: string
 } {
-<<<<<<< HEAD
   if (!website || website.trim() === '') {
     throw new Error('Invalid website URL')
   }
@@ -200,11 +165,6 @@ export function extractCompanyInfoFromDomain(website: string): {
       throw new Error('Invalid website URL')
     }
 
-=======
-  try {
-    const url = new URL(website.startsWith('http') ? website : `https://${website}`)
-    const domain = url.hostname.replace('www.', '')
->>>>>>> 2c87106 (feat: create org)
     const domainParts = domain.split('.')
     const companyName = domainParts[0]
 
