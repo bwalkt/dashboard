@@ -28,22 +28,23 @@ export function generateHandle(text: string, options: HandleOptions = {}): strin
 
   // Replace invalid characters, preserving dots if requested
   if (preserveDots) {
-    // For email-style handles, preserve dots but replace other invalid chars
-    handle = handle.replace(/[^\w.-]/g, separator)
+    // For email-style handles, preserve dots and @ symbols
+    handle = handle.replace(/[^\w.-@]/g, separator)
   } else {
-    // Standard handle: only allow word chars and separator
-    handle = handle.replace(/[^\w\s-]/g, '')
+    // Standard handle: replace dots and other invalid chars with separator
+    handle = handle.replace(/[^\w\s-]/g, separator)
     // Replace spaces and multiple separators with single separator
     handle = handle.replace(/\s+/g, separator)
   }
 
-  // Replace multiple separators with single separator
-  const separatorRegex = new RegExp(`${separator}+`, 'g')
+  // Replace multiple separators with single separator (escape special regex chars)
+  const escapedSeparator = separator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const separatorRegex = new RegExp(`${escapedSeparator}+`, 'g')
   handle = handle.replace(separatorRegex, separator)
 
   // Trim separators from start and end if requested
   if (trimSeparators) {
-    const trimRegex = new RegExp(`^${separator}+|${separator}+$`, 'g')
+    const trimRegex = new RegExp(`^${escapedSeparator}+|${escapedSeparator}+$`, 'g')
     handle = handle.replace(trimRegex, '')
   }
 
@@ -53,7 +54,7 @@ export function generateHandle(text: string, options: HandleOptions = {}): strin
 
     // If we truncated in the middle of a word, try to end at a separator
     if (trimSeparators && handle.endsWith(separator)) {
-      handle = handle.replace(new RegExp(`${separator}+$`), '')
+      handle = handle.replace(new RegExp(`${escapedSeparator}+$`), '')
     }
   }
 
@@ -148,12 +149,12 @@ export function extractCompanyInfoFromDomain(website: string): {
   try {
     const url = new URL(website.startsWith('http') ? website : `https://${website}`)
     const domain = url.hostname.replace('www.', '')
-    
+
     // Additional validation: ensure the domain has at least one dot (proper domain structure)
-    if (!domain.includes('.') || domain === website) {
+    if (!domain.includes('.')) {
       throw new Error('Invalid website URL')
     }
-    
+
     const domainParts = domain.split('.')
     const companyName = domainParts[0]
 
