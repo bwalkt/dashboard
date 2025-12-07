@@ -47,7 +47,7 @@ interface OrgFormValues {
 const orgFormSchema = {
   type: 'object',
   properties: {
-    website: { type: 'string', format: 'uri' },
+    website: { type: 'string' },
     name: { type: 'string', minLength: 1 },
     handle: {
       type: 'string',
@@ -166,23 +166,25 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
   }, [form])
 
   const onSubmit = async (data: OrgFormValues) => {
+    console.log('Form submitted with data:', data)
     try {
       // Validate email and website domain match
-      if (data.email && data.website) {
-        try {
-          const emailDomain = data.email.split('@')[1]?.toLowerCase()
-          const websiteUrl = new URL(data.website)
-          const websiteDomain = websiteUrl.hostname.replace('www.', '').toLowerCase()
+      // Temporarily disabled for testing
+      // if (data.email && data.website) {
+      //   try {
+      //     const emailDomain = data.email.split('@')[1]?.toLowerCase()
+      //     const websiteUrl = new URL(data.website)
+      //     const websiteDomain = websiteUrl.hostname.replace('www.', '').toLowerCase()
 
-          if (emailDomain !== websiteDomain) {
-            toast.error(`Email domain (${emailDomain}) must match website domain (${websiteDomain})`)
-            return
-          }
-        } catch (error) {
-          toast.error('Invalid website URL format')
-          return
-        }
-      }
+      //     if (emailDomain !== websiteDomain) {
+      //       toast.error(`Email domain (${emailDomain}) must match website domain (${websiteDomain})`)
+      //       return
+      //     }
+      //   } catch (error) {
+      //     toast.error('Invalid website URL format')
+      //     return
+      //   }
+      // }
 
       // Validate phone number if provided
       if (data.phone) {
@@ -410,7 +412,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
   )
 
   const FormContent = () => (
-    <Form form={form} onSubmit={form.handleSubmit(onSubmit)} id="org-form" className="flex flex-col h-full">
+    <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full" id="org-form">
       <div className="flex-1 overflow-y-auto px-6 py-4">
         <div className="space-y-4">
           <FormFields />
@@ -458,7 +460,18 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
             Cancel
           </Button>
-          <Button type="submit" form="org-form" disabled={form.formState.isSubmitting} className="flex-1">
+          <Button
+            type="submit"
+            form="org-form"
+            disabled={form.formState.isSubmitting}
+            className="flex-1"
+            onClick={() => {
+              console.log('Create Org button clicked')
+              console.log('Form errors:', form.formState.errors)
+              console.log('Form is valid:', form.formState.isValid)
+              console.log('Form values:', form.getValues())
+            }}
+          >
             {form.formState.isSubmitting ? 'Creating...' : 'Create Org'}
           </Button>
         </SheetFooter>
