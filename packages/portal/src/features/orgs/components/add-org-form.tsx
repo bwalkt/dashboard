@@ -1,4 +1,4 @@
-import { ALLOWED_COUNTRIES, DEFAULT_COUNTRY, validatePhoneNumber } from '@pzero/shared/phone'
+mport { ALLOWED_COUNTRIES, DEFAULT_COUNTRY, validatePhoneNumber } from '@pzero/shared/phone'
 import { generateOrgHandle } from '@pzero/shared/utils/handles'
 import { createValidator } from '@pzero/shared/validator/ajv'
 import * as React from 'react'
@@ -279,14 +279,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       const orgData = {
         name: data.name,
         handle: data.handle,
-      // Get current user ID - TODO: Get from auth context
-      const currentUserId = 'current-user-id'
-
-      // Create organization with user data
-      const orgData = {
-        name: data.name,
-        handle: data.handle,
-        dscr: data.dscr,
+        description: data.description,
         status: data.status,
         plan: data.plan,
         email: data.email,
@@ -305,7 +298,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         associate_users: data.user_ids || [],
       }
 
-<<<<<<< HEAD
       console.log('🚀 CLIENT: Sending org creation request with payload:', JSON.stringify(orgData, null, 2))
       console.log('🚀 CLIENT: Form data validation state:', {
         isValid: form.formState.isValid,
@@ -316,23 +308,14 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
 
       const result = await orgsService.createOrgWithUser(orgData)
       console.log('✅ CLIENT: Received successful response from server:', JSON.stringify(result, null, 2))
-=======
-      const result = await orgsService.createOrgWithUser(orgData)
->>>>>>> 2c87106 (feat: create org)
 
       // Update local store with the created organization
       await orgsStore.createOrg(result.organization)
 
       const successMessage = data.create_new_user
-<<<<<<< HEAD
         ? `Org created successfully with new user`
         : 'Org created successfully'
       toastUtils.successTemp(successMessage)
-=======
-        ? `Org created successfully with new user (${result.user?.email})`
-        : 'Org created successfully'
-      toast.success(successMessage)
->>>>>>> 2c87106 (feat: create org)
 
       form.reset()
       onOpenChange(false)
@@ -573,7 +556,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
             Cancel
           </Button>
-<<<<<<< HEAD
           <Button
             type="submit"
             form="org-form"
@@ -586,9 +568,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
               console.log('Form values:', form.getValues())
             }}
           >
-=======
-          <Button type="submit" form="org-form" disabled={form.formState.isSubmitting} className="flex-1">
->>>>>>> 2c87106 (feat: create org)
             {form.formState.isSubmitting ? 'Creating...' : 'Create Org'}
           </Button>
         </SheetFooter>
