@@ -1,6 +1,7 @@
 import type { JSONSchemaType } from 'ajv'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
+import { extractCompanyInfoFromDomain, generateContactEmail } from '../utils/handles'
 
 const ajv = new Ajv()
 addFormats(ajv)
@@ -230,7 +231,7 @@ export {
   extractCompanyInfoFromDomain,
   generateContactEmail,
   generateNameFromEmail,
-  generateOrgHandle as generateHandleFromName,
+  generateOrgHandle,
 } from '../utils/handles'
 
 export function generateOrgDefaults(website: string): Partial<CreateOrgData> {
@@ -245,7 +246,7 @@ export function generateOrgDefaults(website: string): Partial<CreateOrgData> {
 }
 
 // Validation helpers
-export function isValidOrganization(data: unknown): data is Organization {
+export function isValidOrganization(data: unknown): data is Org {
   return validateOrganization(data)
 }
 

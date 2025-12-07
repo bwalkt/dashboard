@@ -27,7 +27,6 @@ declare global {
   interface Navigator {
     userAgent: string
   }
-  var navigator: Navigator | undefined
 }
 
 interface BrowserInfo {
