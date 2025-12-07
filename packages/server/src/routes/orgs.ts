@@ -47,6 +47,7 @@ export interface CreateOrgWithUserPayload extends CreateOrgPayload {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 export interface Org {
   id: string;
   name: string;
@@ -64,6 +65,9 @@ export interface Org {
   }
 =======
 export interface Organization {
+=======
+export interface Org {
+>>>>>>> 2c87106 (feat: create org)
   id: string;
   name: string;
   handle: string;
@@ -473,8 +477,12 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         );
 
         const response: {
+<<<<<<< HEAD
           organization: Organization;
 >>>>>>> ae9947a (feat: org and user)
+=======
+          organization: Org;
+>>>>>>> 2c87106 (feat: create org)
           user?: { id: string; email: string; name: string };
         } = {
           organization: orgResult.rows[0],

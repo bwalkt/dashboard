@@ -5,7 +5,11 @@ export const orgData: Org[] = [
     id: '1',
     name: 'Acme Corporation',
     handle: 'acme-corp',
+<<<<<<< HEAD
     dscr: 'A leading technology company specializing in innovative solutions.',
+=======
+    description: 'A leading technology company specializing in innovative solutions.',
+>>>>>>> 2c87106 (feat: create org)
     status: 'active',
     plan: 'enterprise',
     email: 'contact@acme.com',
@@ -13,14 +17,25 @@ export const orgData: Org[] = [
     logo_url: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop&crop=center',
     phone: '+1-555-0123',
     address: '123 Tech Street, Silicon Valley, CA 94000',
+<<<<<<< HEAD
     tags: { industry: 'Technology', employee_count: 500 },
     c_at: '2023-01-15T10:30:00Z',
+=======
+
+    metadata: { industry: 'Technology', employee_count: 500 },
+    created_at: '2023-01-15T10:30:00Z',
+    updated_at: '2024-11-15T14:22:00Z',
+>>>>>>> 2c87106 (feat: create org)
   },
   {
     id: '2',
     name: 'Beta Systems',
     handle: 'beta-systems',
+<<<<<<< HEAD
     dscr: 'Cloud infrastructure and DevOps solutions provider.',
+=======
+    description: 'Cloud infrastructure and DevOps solutions provider.',
+>>>>>>> 2c87106 (feat: create org)
     status: 'active',
     plan: 'pro',
     email: 'hello@betasystems.io',
@@ -28,14 +43,24 @@ export const orgData: Org[] = [
     logo_url: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400&h=400&fit=crop&crop=center',
     phone: '+1-555-0456',
     address: '456 Cloud Lane, Seattle, WA 98101',
+<<<<<<< HEAD
     tags: { industry: 'Cloud Services', employee_count: 150 },
     c_at: '2023-03-22T09:15:00Z',
+=======
+    metadata: { industry: 'Cloud Services', employee_count: 150 },
+    created_at: '2023-03-22T09:15:00Z',
+    updated_at: '2024-10-28T16:45:00Z',
+>>>>>>> 2c87106 (feat: create org)
   },
   {
     id: '3',
     name: 'Gamma Innovations',
     handle: 'gamma-innovations',
+<<<<<<< HEAD
     dscr: 'AI and machine learning research company.',
+=======
+    description: 'AI and machine learning research company.',
+>>>>>>> 2c87106 (feat: create org)
     status: 'inactive',
     plan: 'starter',
     email: 'info@gamma.ai',
@@ -43,15 +68,25 @@ export const orgData: Org[] = [
     logo_url: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=400&fit=crop&crop=center',
     phone: '+1-555-0789',
     address: '789 AI Boulevard, Austin, TX 73301',
+<<<<<<< HEAD
     tags: { industry: 'Artificial Intelligence', employee_count: 75 },
     c_at: '2023-06-08T11:20:00Z',
     u_at: '2024-09-12T08:30:00Z',
+=======
+    metadata: { industry: 'Artificial Intelligence', employee_count: 75 },
+    created_at: '2023-06-08T11:20:00Z',
+    updated_at: '2024-09-12T08:30:00Z',
+>>>>>>> 2c87106 (feat: create org)
   },
   {
     id: '4',
     name: 'Delta Enterprises',
     handle: 'delta-enterprises',
+<<<<<<< HEAD
     dscr: 'Financial technology and blockchain solutions.',
+=======
+    description: 'Financial technology and blockchain solutions.',
+>>>>>>> 2c87106 (feat: create org)
     status: 'suspended',
     plan: 'free',
     email: 'contact@delta.finance',
@@ -59,15 +94,25 @@ export const orgData: Org[] = [
     logo_url: null,
     phone: '+1-555-0321',
     address: '321 Fintech Row, New York, NY 10001',
+<<<<<<< HEAD
     tags: { industry: 'FinTech', employee_count: 25 },
     c_at: '2023-08-14T13:45:00Z',
     u_at: '2024-08-20T12:15:00Z',
+=======
+    metadata: { industry: 'FinTech', employee_count: 25 },
+    created_at: '2023-08-14T13:45:00Z',
+    updated_at: '2024-08-20T12:15:00Z',
+>>>>>>> 2c87106 (feat: create org)
   },
   {
     id: '5',
     name: 'Epsilon Labs',
     handle: 'epsilon-labs',
+<<<<<<< HEAD
     dscr: 'Research and development in quantum computing.',
+=======
+    description: 'Research and development in quantum computing.',
+>>>>>>> 2c87106 (feat: create org)
     status: 'active',
     plan: 'enterprise',
     email: 'research@epsilon.labs',
@@ -75,8 +120,14 @@ export const orgData: Org[] = [
     logo_url: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400&h=400&fit=crop&crop=center',
     phone: '+1-555-0654',
     address: '654 Quantum Drive, Boston, MA 02101',
+<<<<<<< HEAD
     tags: { industry: 'Quantum Computing', employee_count: 200 },
     c_at: '2023-11-03T07:00:00Z',
     u_at: '2024-12-01T10:20:00Z',
+=======
+    metadata: { industry: 'Quantum Computing', employee_count: 200 },
+    created_at: '2023-11-03T07:00:00Z',
+    updated_at: '2024-12-01T10:20:00Z',
+>>>>>>> 2c87106 (feat: create org)
   },
 ]

@@ -42,6 +42,9 @@ export interface CreateOrgWithUserPayload extends CreateOrgPayload {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2c87106 (feat: create org)
 export interface Org {
   id: string
   name: string
@@ -85,18 +88,24 @@ class OrgsService {
    * Create a new organization
    */
 <<<<<<< HEAD
+<<<<<<< HEAD
   async createOrg(data: CreateOrgPayload): Promise<Org> {
     const response = await api.post<Org>('/api/orgs', data)
 =======
   async createOrganization(data: CreateOrgPayload): Promise<Organization> {
     const response = await api.post<Organization>('/api/orgs', data)
 >>>>>>> ae9947a (feat: org and user)
+=======
+  async createOrg(data: CreateOrgPayload): Promise<Org> {
+    const response = await api.post<Org>('/api/orgs', data)
+>>>>>>> 2c87106 (feat: create org)
     return response
   }
 
   /**
    * Create an organization with optional user creation
    */
+<<<<<<< HEAD
 <<<<<<< HEAD
   async createOrgWithUser(data: CreateOrgWithUserPayload): Promise<{
     organization: Org
@@ -125,10 +134,14 @@ class OrgsService {
 =======
   async createOrganizationWithUser(data: CreateOrgWithUserPayload): Promise<{
     organization: Organization
+=======
+  async createOrgWithUser(data: CreateOrgWithUserPayload): Promise<{
+    organization: Org
+>>>>>>> 2c87106 (feat: create org)
     user?: { id: string; email: string; name: string }
   }> {
     const response = await api.post<{
-      organization: Organization
+      organization: Org
       user?: { id: string; email: string; name: string }
     }>('/api/orgs/create-with-user', data)
     return response
@@ -139,12 +152,17 @@ class OrgsService {
    * Get all organizations
    */
 <<<<<<< HEAD
+<<<<<<< HEAD
   async getOrgs(): Promise<Org[]> {
     const response = await api.get<Org[]>('/api/orgs')
 =======
   async getOrganizations(): Promise<Organization[]> {
     const response = await api.get<Organization[]>('/api/orgs')
 >>>>>>> ae9947a (feat: org and user)
+=======
+  async getOrgs(): Promise<Org[]> {
+    const response = await api.get<Org[]>('/api/orgs')
+>>>>>>> 2c87106 (feat: create org)
     return response
   }
 
@@ -152,12 +170,17 @@ class OrgsService {
    * Get organization by ID
    */
 <<<<<<< HEAD
+<<<<<<< HEAD
   async getOrg(id: string): Promise<Org> {
     const response = await api.get<Org>(`/api/orgs/${id}`)
 =======
   async getOrganization(id: string): Promise<Organization> {
     const response = await api.get<Organization>(`/api/orgs/${id}`)
 >>>>>>> ae9947a (feat: org and user)
+=======
+  async getOrg(id: string): Promise<Org> {
+    const response = await api.get<Org>(`/api/orgs/${id}`)
+>>>>>>> 2c87106 (feat: create org)
     return response
   }
 
@@ -165,12 +188,17 @@ class OrgsService {
    * Update organization
    */
 <<<<<<< HEAD
+<<<<<<< HEAD
   async updateOrg(id: string, data: Partial<CreateOrgPayload>): Promise<Org> {
     const response = await api.put<Org>(`/api/orgs/${id}`, data)
 =======
   async updateOrganization(id: string, data: Partial<CreateOrgPayload>): Promise<Organization> {
     const response = await api.put<Organization>(`/api/orgs/${id}`, data)
 >>>>>>> ae9947a (feat: org and user)
+=======
+  async updateOrg(id: string, data: Partial<CreateOrgPayload>): Promise<Org> {
+    const response = await api.put<Org>(`/api/orgs/${id}`, data)
+>>>>>>> 2c87106 (feat: create org)
     return response
   }
 
@@ -178,10 +206,14 @@ class OrgsService {
    * Delete organization
    */
 <<<<<<< HEAD
+<<<<<<< HEAD
   async deleteOrg(id: string): Promise<void> {
 =======
   async deleteOrganization(id: string): Promise<void> {
 >>>>>>> ae9947a (feat: org and user)
+=======
+  async deleteOrg(id: string): Promise<void> {
+>>>>>>> 2c87106 (feat: create org)
     await api.delete(`/api/orgs/${id}`)
   }
 
