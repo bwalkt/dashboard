@@ -50,17 +50,20 @@ export function generateHandle(text: string, options: HandleOptions = {}): strin
 
   // Truncate to max length
   if (maxLength > 0 && handle.length > maxLength) {
-    handle = handle.substring(0, maxLength)
-
-    // If we truncated in the middle of a word, try to end at a separator
+    // Find the last separator before the maxLength point to avoid breaking words
+    let truncateAt = maxLength
     if (trimSeparators) {
-      // Find the last separator before the truncation point to avoid breaking words
-      const lastSeparatorIndex = handle.lastIndexOf(separator)
-      if (lastSeparatorIndex > 0 && lastSeparatorIndex > maxLength - 10) {
-        // Only if reasonably close to the end
-        handle = handle.substring(0, lastSeparatorIndex)
+      const lastSeparatorIndex = handle.lastIndexOf(separator, maxLength - 1)
+      if (lastSeparatorIndex > 0 && lastSeparatorIndex > maxLength - 20) {
+        // Only if reasonably close to the end (within 20 chars)
+        truncateAt = lastSeparatorIndex
       }
-      // Also trim any trailing separators
+    }
+
+    handle = handle.substring(0, truncateAt)
+
+    // Trim any trailing separators
+    if (trimSeparators) {
       handle = handle.replace(new RegExp(`${escapedSeparator}+$`), '')
     }
   }
