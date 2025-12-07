@@ -49,11 +49,18 @@ export function generateHandle(text: string, options: HandleOptions = {}): strin
   }
 
   // Truncate to max length
-  if (maxLength > 0) {
+  if (maxLength > 0 && handle.length > maxLength) {
     handle = handle.substring(0, maxLength)
 
     // If we truncated in the middle of a word, try to end at a separator
-    if (trimSeparators && handle.endsWith(separator)) {
+    if (trimSeparators) {
+      // Find the last separator before the truncation point to avoid breaking words
+      const lastSeparatorIndex = handle.lastIndexOf(separator)
+      if (lastSeparatorIndex > 0 && lastSeparatorIndex > maxLength - 10) {
+        // Only if reasonably close to the end
+        handle = handle.substring(0, lastSeparatorIndex)
+      }
+      // Also trim any trailing separators
       handle = handle.replace(new RegExp(`${escapedSeparator}+$`), '')
     }
   }
