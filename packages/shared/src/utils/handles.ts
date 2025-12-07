@@ -105,12 +105,12 @@ export function generateEmailHandle(email: string): string {
  * This matches the pattern used in mobile/src/screens/SettingsScreen.tsx
  */
 export function generateDeviceNicknameFromName(userName: string, deviceName?: string): string {
-  if (!userName) {
+  if (!userName || userName.trim() === '') {
     return ''
   }
 
   // Take the first name
-  const firstName = userName.split(' ')[0]
+  const firstName = userName.trim().split(' ')[0]
   const device = deviceName || 'Device'
 
   return `${firstName}'s ${device}`
@@ -141,9 +141,19 @@ export function extractCompanyInfoFromDomain(website: string): {
   companyName: string
   handle: string
 } {
+  if (!website || website.trim() === '') {
+    throw new Error('Invalid website URL')
+  }
+
   try {
     const url = new URL(website.startsWith('http') ? website : `https://${website}`)
     const domain = url.hostname.replace('www.', '')
+    
+    // Additional validation: ensure the domain has at least one dot (proper domain structure)
+    if (!domain.includes('.') || domain === website) {
+      throw new Error('Invalid website URL')
+    }
+    
     const domainParts = domain.split('.')
     const companyName = domainParts[0]
 

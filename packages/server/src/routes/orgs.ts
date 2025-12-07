@@ -48,11 +48,11 @@ export interface Org {
 
 export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   /**
-   * POST /api/orgs
+   * POST /orgs
    * Create a new organization
    */
   fastify.post(
-    "/api/orgs",
+    "/orgs",
     {
       preHandler: authenticateToken,
     },
@@ -124,11 +124,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * POST /api/orgs/create-with-user
+   * POST /orgs/create-with-user
    * Create organization with optional user creation and association
    */
   fastify.post(
-    "/api/orgs/create-with-user",
+    "/orgs/create-with-user",
     {
       preHandler: authenticateToken,
     },
@@ -255,11 +255,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * GET /api/orgs
+   * GET /orgs
    * Get all organizations
    */
   fastify.get(
-    "/api/orgs",
+    "/orgs",
     {
       preHandler: authenticateToken,
     },
@@ -283,11 +283,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * GET /api/orgs/:id
+   * GET /orgs/:id
    * Get organization by ID
    */
   fastify.get(
-    "/api/orgs/:id",
+    "/orgs/:id",
     {
       preHandler: authenticateToken,
     },
@@ -319,11 +319,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * PUT /api/orgs/:id
+   * PUT /orgs/:id
    * Update organization
    */
   fastify.put(
-    "/api/orgs/:id",
+    "/orgs/:id",
     {
       preHandler: authenticateToken,
     },
