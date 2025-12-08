@@ -1,4 +1,4 @@
-mport { ALLOWED_COUNTRIES, DEFAULT_COUNTRY, validatePhoneNumber } from '@pzero/shared/phone'
+import { ALLOWED_COUNTRIES, DEFAULT_COUNTRY, validatePhoneNumber } from '@pzero/shared/phone'
 import { generateOrgHandle } from '@pzero/shared/utils/handles'
 import { createValidator } from '@pzero/shared/validator/ajv'
 import * as React from 'react'
