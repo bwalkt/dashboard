@@ -39,6 +39,14 @@ export async function proxyTargetsRoutes(fastify: FastifyInstance): Promise<void
           });
         }
 
+        // Validate name is not empty
+        if (typeof name !== "string" || name.trim().length === 0) {
+          return reply.code(400).send({
+            error: "Invalid name",
+            message: "name must be a non-empty string",
+          });
+        }
+
         // Validate url is not empty
         if (typeof url !== "string" || url.trim().length === 0) {
           return reply.code(400).send({
