@@ -1,4 +1,5 @@
 import { ALLOWED_COUNTRIES, DEFAULT_COUNTRY, validatePhoneNumber } from '@pzero/shared/phone'
+import { generateOrgHandle } from '@pzero/shared/utils/handles'
 import { createValidator } from '@pzero/shared/validator/ajv'
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
@@ -24,6 +25,7 @@ import { userData } from '@/features/users/data'
 import { createAjvResolver } from '@/lib/ajv-resolver'
 import { orgsService } from '@/services/api/orgs'
 import { usersService } from '@/services/api/users'
+import { useAuthStore } from '@/stores/auth'
 import { useOrgsStore } from '@/stores/orgs'
 
 interface OrgFormValues {
@@ -31,6 +33,7 @@ interface OrgFormValues {
   name: string
   handle: string
   description: string
+  contact_name: string
   status: 'active' | 'inactive' | 'suspended'
   plan: 'free' | 'starter' | 'pro' | 'enterprise'
   email: string
@@ -55,6 +58,7 @@ const orgFormSchema = {
       pattern: '^[a-z0-9-]+$',
     },
     description: { type: 'string' },
+    contact_name: { type: 'string', minLength: 1 },
     status: {
       type: 'string',
       enum: ['active', 'inactive', 'suspended'],
@@ -63,7 +67,10 @@ const orgFormSchema = {
       type: 'string',
       enum: ['free', 'starter', 'pro', 'enterprise'],
     },
-    email: { type: 'string', format: 'email' },
+    email: {
+      type: 'string',
+      format: 'email',
+    },
     phone: { type: 'string' },
     address: { type: 'string' },
     user_ids: {
@@ -75,17 +82,30 @@ const orgFormSchema = {
       type: 'object',
       properties: {
         name: { type: 'string' },
-        email: { type: 'string', format: 'email' },
+        email: {
+          type: 'string',
+          anyOf: [{ format: 'email' }, { maxLength: 0 }],
+        },
       },
       default: { name: '', email: '' },
     },
     create_new_user: { type: 'boolean', default: false },
   },
-  required: ['website', 'name', 'handle', 'status', 'plan', 'email'],
+  required: ['website', 'name', 'handle', 'contact_name', 'status', 'plan', 'email'],
   additionalProperties: false,
 }
 
 const validateOrgForm = createValidator<OrgFormValues>(orgFormSchema)
+
+// Debug helper to log validation issues
+const debugValidation = (data: any) => {
+  const result = validateOrgForm.validate(data)
+  if (!result.success) {
+    console.log('🔍 Validation failed for data:', data)
+    console.log('❌ Validation errors:', result.errors)
+  }
+  return result
+}
 
 interface AddOrgFormProps {
   open: boolean
@@ -94,6 +114,7 @@ interface AddOrgFormProps {
 }
 
 export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormProps) {
+  const { user } = useAuthStore()
   const orgsStore = useOrgsStore()
 
   const form = useForm<OrgFormValues>({
@@ -103,6 +124,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       name: '',
       handle: '',
       description: '',
+      contact_name: '',
       status: 'active' as const,
       plan: 'starter' as const,
       email: '',
@@ -135,10 +157,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
 
           // Auto-fill handle if empty
           if (!value.handle) {
-            const handle = companyName
-              .toLowerCase()
-              .replace(/[^\w-]/g, '')
-              .trim()
+            const handle = generateOrgHandle(companyName)
             form.setValue('handle', handle, { shouldValidate: true })
           }
 
@@ -153,12 +172,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
 
       // Also allow manual name -> handle generation
       if (fieldName === 'name' && value.name && !value.handle) {
-        const handle = value.name
-          .toLowerCase()
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .trim()
+        const handle = generateOrgHandle(value.name)
         form.setValue('handle', handle, { shouldValidate: true })
       }
     })
@@ -166,7 +180,11 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
   }, [form])
 
   const onSubmit = async (data: OrgFormValues) => {
-    console.log('Form submitted with data:', data)
+    console.log('🚀 Form submitted with data:', data)
+
+    // Add debugging for API calls
+    console.log('📡 About to make API request to orgsService.createOrgWithUser')
+
     try {
       // Validate email and website domain match
       // Temporarily disabled for testing
@@ -190,27 +208,43 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       if (data.phone) {
         const phoneValidation = validatePhoneNumber(data.phone, DEFAULT_COUNTRY)
         if (!phoneValidation.isValid) {
-          toast.error(phoneValidation.error || 'Invalid phone number')
+          toast.error(phoneValidation.error || 'Invalid phone number', {
+            duration: Infinity,
+            dismissible: true,
+          })
           return
         }
         // Check if the phone is from an allowed country
         const isAllowed = ALLOWED_COUNTRIES.some(c => c.code === phoneValidation.country)
         if (!isAllowed) {
-          toast.error(`Phone numbers from ${phoneValidation.country} are not supported`)
+          toast.error(`Phone numbers from ${phoneValidation.country} are not supported`, {
+            duration: Infinity,
+            dismissible: true,
+          })
           return
         }
       }
 
-      // Validate new user data if creating a new user
+      // Validate user data if creating a new user
       if (data.create_new_user) {
-        if (!data.new_user?.name || !data.new_user?.email) {
-          toast.error('User name and email are required when creating a new user')
+        if (!data.contact_name || !data.email) {
+          toast.error('Contact name and email are required when creating a new user', {
+            duration: Infinity,
+            dismissible: true,
+          })
           return
         }
       }
 
-      // Get current user ID - TODO: Get from auth context
-      const currentUserId = 'current-user-id'
+      // Get current user ID from auth store
+      if (!user?.id) {
+        toast.error('You must be logged in to create an organization', {
+          duration: Infinity,
+          dismissible: true,
+        })
+        return
+      }
+      const currentUserId = user.id
 
       // Create organization with user data
       const orgData = {
@@ -228,28 +262,48 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         metadata: {},
         create_user: data.create_new_user
           ? {
-              name: data.new_user.name,
-              email: data.new_user.email,
+              name: data.contact_name,
+              email: data.email,
               email_verified: true, // Auto-verify email for admin-created users
             }
           : undefined,
         associate_users: data.user_ids || [],
       }
 
-      const result = await orgsService.createOrgWithUser(orgData)
+      console.log('📦 Making API call with orgData:', orgData)
+      const result = await orgsService.createOrg(orgData)
+      console.log('✅ API call successful! Result:', result)
 
       // Update local store with the created organization
-      await orgsStore.createOrg(result.organization)
+      await orgsStore.createOrg(result)
+      console.log('🔄 Updated local store')
 
       const successMessage = data.create_new_user
-        ? `Org created successfully with new user (${result.user?.email})`
+        ? `Org created successfully with new user`
         : 'Org created successfully'
       toast.success(successMessage)
 
       form.reset()
       onOpenChange(false)
     } catch (error) {
-      toast.error('Failed to create organization')
+      console.error('❌ API call failed with error:', error)
+      console.error('📋 Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        error: error,
+      })
+
+      if (error instanceof Error && error.message.includes('Authentication required')) {
+        toast.error('Please log in first to create an organization', {
+          duration: Infinity,
+          dismissible: true,
+        })
+      } else {
+        toast.error('Failed to create organization', {
+          duration: Infinity,
+          dismissible: true,
+        })
+      }
       console.error('Create org error:', error)
     }
   }
@@ -306,6 +360,20 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
             <FormLabel>Description</FormLabel>
             <FormControl>
               <Textarea placeholder="Brief description of the organization" className="min-h-[60px]" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="contact_name"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Contact Name *</FormLabel>
+            <FormControl>
+              <Input placeholder="John Doe" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>

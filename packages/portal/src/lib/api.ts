@@ -8,7 +8,7 @@
  * - Consistent configuration
  * - Built-in retry logic for authentication failures
  */
-
+import { envs } from '@constants/envs'
 export interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
   body?: any
   baseUrl?: string
@@ -40,9 +40,11 @@ export class ApiError extends Error {
  * @returns The backend base URL string, or empty string for relative URLs.
  */
 function getBackendUrl(): string {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL
+  const backendUrl = envs.getBackendUrl()
   // If not set or empty, use relative URLs (proxied through Vite)
-  return backendUrl || ''
+  console.log('Backend URL:', backendUrl)
+  debugger
+  return backendUrl || 'http://localhost:8090'
 }
 
 /**
@@ -81,6 +83,7 @@ async function refreshToken(): Promise<void> {
   refreshPromise = (async () => {
     try {
       const backendUrl = getBackendUrl()
+      debugger
       const refreshUrl = backendUrl ? `${backendUrl}/auth/refresh` : '/auth/refresh'
       const response = await fetch(refreshUrl, {
         method: 'POST',
@@ -116,7 +119,9 @@ async function refreshToken(): Promise<void> {
  * @throws ApiError when the request fails due to an HTTP error or network failure
  */
 export async function apiRequest<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options
+  debugger
+  const backendUrl = getBackendUrl()
+  const { baseUrl = backendUrl, body, headers = {}, skipRefresh = false, ...fetchOptions } = options
 
   // Construct the full URL (handle empty baseUrl for relative paths)
   const url = baseUrl ? `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}` : endpoint
