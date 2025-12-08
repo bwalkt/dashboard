@@ -6,7 +6,7 @@ import { refreshProxyTargetsCache } from "../services/proxy-targets-cache.servic
 interface CreateProxyTargetRequest {
   name: string;
   url: string;
-  port: number;
+  port?: number;
 }
 
 interface UpdateProxyTargetRequest {
@@ -32,19 +32,10 @@ export async function proxyTargetsRoutes(fastify: FastifyInstance): Promise<void
         const { name, url, port } = request.body;
 
         // Validate required fields
-        if (!name || !url || port === undefined) {
+        if (!name || !url) {
           return reply.code(400).send({
             error: "Missing required fields",
-            message: "name, url, and port are required",
-          });
-        }
-
-        // Validate port range
-        const portNum = Number(port);
-        if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) {
-          return reply.code(400).send({
-            error: "Invalid port",
-            message: "Port must be an integer between 1 and 65535",
+            message: "name and url are required",
           });
         }
 
@@ -56,10 +47,22 @@ export async function proxyTargetsRoutes(fastify: FastifyInstance): Promise<void
           });
         }
 
-        // Insert new proxy target
+        // Validate port range if provided, otherwise use default 80
+        let portNum: number | null = null;
+        if (port !== undefined) {
+          portNum = Number(port);
+          if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) {
+            return reply.code(400).send({
+              error: "Invalid port",
+              message: "Port must be an integer between 1 and 65535",
+            });
+          }
+        }
+
+        // Insert new proxy target (port will default to 80 if not provided)
         const insertQuery = `
           INSERT INTO pzero.proxy_targets (name, url, port)
-          VALUES ($1, $2, $3)
+          VALUES ($1, $2, COALESCE($3, 80))
           RETURNING *
         `;
 
@@ -271,15 +274,21 @@ export async function proxyTargetsRoutes(fastify: FastifyInstance): Promise<void
         }
 
         if (port !== undefined) {
-          const portNum = Number(port);
-          if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) {
-            return reply.code(400).send({
-              error: "Invalid port",
-              message: "Port must be an integer between 1 and 65535",
-            });
+          if (port === null) {
+            // Explicitly set to null to use database default (80)
+            updates.push(`port = $${paramIndex++}`);
+            values.push(null);
+          } else {
+            const portNum = Number(port);
+            if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) {
+              return reply.code(400).send({
+                error: "Invalid port",
+                message: "Port must be an integer between 1 and 65535",
+              });
+            }
+            updates.push(`port = $${paramIndex++}`);
+            values.push(portNum);
           }
-          updates.push(`port = $${paramIndex++}`);
-          values.push(portNum);
         }
 
         if (updates.length === 0) {

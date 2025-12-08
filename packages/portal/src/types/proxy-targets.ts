@@ -2,7 +2,7 @@ export interface ProxyTarget {
   id: string
   name: string
   url: string
-  port: number
+  port: number | null
   createdAt: string
   updatedAt: string
 }
@@ -10,7 +10,7 @@ export interface ProxyTarget {
 export interface CreateProxyTargetRequest {
   name: string
   url: string
-  port: number
+  port?: number
 }
 
 export interface UpdateProxyTargetRequest {

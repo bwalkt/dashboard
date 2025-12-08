@@ -8,7 +8,7 @@ export interface ProxyTarget {
   id: string;
   name: string;
   url: string;
-  port: number;
+  port: number | null;
 }
 
 /**

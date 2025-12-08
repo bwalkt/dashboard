@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS pzero.proxy_targets (
   id UUID PRIMARY KEY DEFAULT pzero.gen_id(),
   name VARCHAR(100) NOT NULL,
   url VARCHAR(255) NOT NULL UNIQUE,
-  port INTEGER NOT NULL CHECK (port > 0 AND port <= 65535),
+  port INTEGER NOT NULL DEFAULT 80 CHECK (port > 0 AND port <= 65535),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

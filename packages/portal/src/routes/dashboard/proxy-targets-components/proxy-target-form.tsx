@@ -12,7 +12,7 @@ import type { CreateProxyTargetRequest, ProxyTarget, UpdateProxyTargetRequest } 
 interface ProxyTargetFormData {
   name: string
   url: string
-  port: number
+  port?: number
 }
 
 // AJV Schema for validation
@@ -23,7 +23,7 @@ const createFormSchema = {
     url: { type: 'string', minLength: 1, maxLength: 255 },
     port: { type: 'number', minimum: 1, maximum: 65535 },
   },
-  required: ['name', 'url', 'port'],
+  required: ['name', 'url'],
   additionalProperties: false,
 }
 
@@ -70,12 +70,12 @@ export function ProxyTargetForm({
       ? {
           name: target.name,
           url: target.url,
-          port: target.port,
+          port: target.port ?? undefined,
         }
       : {
           name: '',
           url: '',
-          port: 3000,
+          port: undefined,
         },
   })
 
@@ -107,11 +107,10 @@ export function ProxyTargetForm({
               name="port"
               type="number"
               label="Port"
-              placeholder="3000"
+              placeholder="80 (default)"
               min={1}
               max={65535}
-              description="Port number (1-65535)"
-              required
+              description="Port number (1-65535). Defaults to 80 if not specified."
             />
 
             <div className="flex justify-end gap-2 pt-4">

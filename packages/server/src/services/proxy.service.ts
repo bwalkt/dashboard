@@ -38,12 +38,14 @@ export async function constructProxyURL(request: FastifyRequest): Promise<string
   console.log(request.raw.url,request.url)
   const url = new URL(request.raw.url as string, process.env.SERVER_BASE_URL || "http://localhost:8090");
   let path = url.pathname.replace(/^\/proxy\//, '');
-
+  
   const queryParams = url.search;
   if (queryParams && queryParams.length > 0) {
     path += queryParams;
   }
-
-  return `http://${target.url}:${target.port}/${path}`;
+  
+  // Use port from target or default to 80
+  const port = target.port ?? 80;
+  return `http://${target.url}:${port}/${path}`;
 
 }
