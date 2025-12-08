@@ -1,14 +1,27 @@
 import type { FastifyRequest } from "fastify";
-import { getProxyTargetById } from "./proxy-targets-cache.service.js";
+import {
+  getProxyTargetById,
+  ProxyTargetsCacheUnavailableError,
+} from "./proxy-targets-cache.service.js";
 
 const PROXY_TARGET_ID_HEADER = 'x-proxy-target-id';
 
 async function getProxyTarget(id: string) {
-  const target = await getProxyTargetById(id);
-  if (!target) {
-    throw new Error(`Proxy target with id ${id} not found`);
+  try {
+    const target = await getProxyTargetById(id);
+    if (!target) {
+      // Genuine "not found" case - target ID doesn't exist
+      throw new Error(`Proxy target with id ${id} not found`);
+    }
+    return target;
+  } catch (error) {
+    // Re-throw ProxyTargetsCacheUnavailableError to distinguish infrastructure failures
+    if (error instanceof ProxyTargetsCacheUnavailableError) {
+      throw error;
+    }
+    // Re-throw other errors (including "not found" errors)
+    throw error;
   }
-  return target;
 }
 
 export async function constructProxyURL(request: FastifyRequest): Promise<string> {

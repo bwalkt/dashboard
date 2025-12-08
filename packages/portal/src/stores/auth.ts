@@ -288,12 +288,10 @@ export function useAuthStore() {
     }
   }, [idle, authStore])
 
-  // Return store with reactive values, ensuring methods are properly bound
+  // Return only the public API, ensuring methods are properly bound
   return {
-    ...authStore,
     loading,
     user,
-    // Explicitly bind methods to ensure they work correctly
     setUser: authStore.setUser.bind(authStore),
     setLoading: authStore.setLoading.bind(authStore),
     checkAuth: authStore.checkAuth.bind(authStore),

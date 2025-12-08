@@ -96,8 +96,8 @@ export async function proxyTargetsRoutes(fastify: FastifyInstance): Promise<void
       } catch (error) {
         console.error("Error creating proxy target:", error);
 
-        // Handle unique constraint violation
-        if (error instanceof Error && error.message.includes("unique")) {
+        // Handle unique constraint violation (PostgreSQL error code 23505)
+        if ((error as any)?.code === "23505") {
           return reply.code(409).send({
             error: "Conflict",
             message: "A proxy target with this URL already exists",
@@ -332,8 +332,8 @@ export async function proxyTargetsRoutes(fastify: FastifyInstance): Promise<void
       } catch (error) {
         console.error("Error updating proxy target:", error);
 
-        // Handle unique constraint violation
-        if (error instanceof Error && error.message.includes("unique")) {
+        // Handle unique constraint violation (PostgreSQL error code 23505)
+        if ((error as any)?.code === "23505") {
           return reply.code(409).send({
             error: "Conflict",
             message: "A proxy target with this URL already exists",
@@ -408,39 +408,6 @@ export async function proxyTargetsRoutes(fastify: FastifyInstance): Promise<void
         return reply.code(500).send({
           error: "Internal server error",
           message: "Failed to delete proxy target",
-        });
-      }
-    }
-  );
-
-  // POST /proxy-targets/refresh-cache - Manually refresh the Redis cache
-  fastify.post(
-    "/proxy-targets/refresh-cache",
-    {
-      preHandler: [authenticateToken],
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const proxyTargets = await refreshProxyTargetsCache();
-
-        return reply.code(200).send({
-          success: true,
-          message: "Proxy targets cache refreshed successfully",
-          count: proxyTargets.length,
-          proxyTargets: proxyTargets,
-        });
-      } catch (error) {
-        console.error("Error refreshing proxy targets cache:", error);
-
-        return reply.code(500).send({
-          error: "Internal server error",
-          message: "Failed to refresh proxy targets cache",
-          details:
-            process.env.NODE_ENV === "development"
-              ? error instanceof Error
-                ? error.message
-                : String(error)
-              : undefined,
         });
       }
     }

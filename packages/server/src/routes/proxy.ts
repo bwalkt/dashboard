@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { config } from "../config/env.js";
 import { constructProxyURL } from "../services/proxy.service.js";
+import { ProxyTargetsCacheUnavailableError } from "../services/proxy-targets-cache.service.js";
 export async function proxyRoutes(fastify: FastifyInstance): Promise<void> {
   /**
    * ALL /proxy/*
@@ -168,8 +169,14 @@ export async function proxyRoutes(fastify: FastifyInstance): Promise<void> {
         };
 
         if (error instanceof Error) {
-          // URL/validation errors from constructProxyURL
-          if (
+          // Infrastructure failures - cache or database unavailable
+          if (error instanceof ProxyTargetsCacheUnavailableError) {
+            statusCode = 503;
+            errorMessage = 'Service Unavailable: Proxy targets cache or database is unavailable';
+            logContext.errorType = 'cache_unavailable';
+          }
+          // URL/validation errors from constructProxyURL (including "not found" cases)
+          else if (
             error.message.includes('Proxy target') ||
             error.message.includes('required') ||
             error.message.includes('must be a string') ||
