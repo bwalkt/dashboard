@@ -55,6 +55,8 @@ export interface EnvironmentConfig {
   ALLOWED_DOMAINS: string | undefined;
   COOKIE_DOMAIN: string | undefined;
   LOGO_PUBLIC_URL: string | undefined;
+  SIGNOZ_API_URL: string | undefined;
+  SIGNOZ_API_KEY: string | undefined;
 }
 const DEFAULT_ALLOWED_HEADERS = [
   "Content-Type",
@@ -160,6 +162,8 @@ export const config: EnvironmentConfig = {
   ALLOWED_DOMAINS: process.env.ALLOWED_DOMAINS,
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
   LOGO_PUBLIC_URL: process.env.LOGO_PUBLIC_URL,
+  SIGNOZ_API_URL: process.env.SIGNOZ_API_URL,
+  SIGNOZ_API_KEY: process.env.SIGNOZ_API_KEY,
 };
 
 /**

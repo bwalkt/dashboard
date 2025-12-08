@@ -18,6 +18,7 @@ import { gatewayRoutes } from "./routes/gateway.js";
 import { privacyRoutes } from "./routes/privacy.js";
 import { proxyRoutes } from "./routes/proxy.js";
 import { proxyTargetsRoutes } from "./routes/proxy-targets.js";
+import { signozRoutes } from "./routes/signoz.js";
 import { smsRoutes } from "./routes/sms.js";
 import { termsRoutes } from "./routes/terms.js";
 import { refreshProxyTargetsCache } from "./services/proxy-targets-cache.service.js";
@@ -169,6 +170,7 @@ export default async function (
   await fastify.register(gatewayRoutes);
   await fastify.register(proxyRoutes);
   await fastify.register(proxyTargetsRoutes);
+  await fastify.register(signozRoutes);
   await fastify.register(smsRoutes);
   await fastify.register(termsRoutes);
   await fastify.register(privacyRoutes);
