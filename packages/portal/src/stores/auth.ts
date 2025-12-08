@@ -1,7 +1,7 @@
 import { useIdle } from '@mantine/hooks'
 import type { User } from '@pzero/shared'
 import { api } from '@pzero/shared/api'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { ZStorage } from './store'
 
 export const STORE = 'auth'
@@ -23,9 +23,25 @@ export class AuthStoreClass extends ZStorage {
   isLoggedIn: boolean = false
   lastActiveAt?: number
 
+  // Listeners for state changes
+  private listeners: Set<() => void> = new Set()
+
   constructor() {
     super(STORE)
     this.initializeStore()
+  }
+
+  // Subscribe to state changes
+  subscribe(listener: () => void) {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+
+  // Notify all listeners of state changes
+  private notify() {
+    this.listeners.forEach(listener => listener())
   }
 
   private async initializeStore() {
@@ -40,11 +56,20 @@ export class AuthStoreClass extends ZStorage {
 
       // If user exists, verify with server
       if (this.user) {
-        await this.checkAuth()
-      } else {
-        this.setLoading(false)
+        // Add timeout to prevent hanging
+        await Promise.race([
+          this.checkAuth(),
+          new Promise<void>(resolve => {
+            setTimeout(() => {
+              console.warn('AuthStore: checkAuth timed out after 10 seconds')
+              resolve()
+            }, 10000)
+          }),
+        ])
       }
 
+      // Always set loading to false, even if checkAuth hangs
+      this.setLoading(false)
       console.log('AuthStore: Initialization complete')
     } catch (error) {
       console.error('AuthStore: Initialization failed:', error)
@@ -128,10 +153,13 @@ export class AuthStoreClass extends ZStorage {
       await this.removeItem('user')
       await this.removeItem('legacy')
     }
+
+    this.notify()
   }
 
   setLoading(loading: boolean) {
     this.loading = loading
+    this.notify()
   }
 
   async updateLastActivity() {
@@ -175,7 +203,15 @@ export class AuthStoreClass extends ZStorage {
     this.setLoading(true)
 
     try {
-      const response = await api.get<{ user: User }>('/auth/me')
+      // Add timeout to prevent hanging (8 seconds)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Auth check timeout'))
+        }, 8000)
+      })
+
+      const response = await Promise.race([api.get<{ user: User }>('/auth/me'), timeoutPromise])
+
       const { user } = response
 
       if (user) {
@@ -215,10 +251,29 @@ export const AuthStore = getAuthStore()
 // React hook for using AuthStore in components with idle detection
 export function useAuthStore() {
   const authStore = getAuthStore()
+
+  // Use React state to track store values for reactivity
+  const [loading, setLoading] = useState(authStore.loading)
+  const [user, setUser] = useState(authStore.user)
+
   const idle = useIdle(INACTIVITY_TIMEOUT_MINUTES * 60 * 1000, {
     events: ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'],
     initialState: false,
   })
+
+  // Subscribe to store changes
+  useEffect(() => {
+    const unsubscribe = authStore.subscribe(() => {
+      setLoading(authStore.loading)
+      setUser(authStore.user)
+    })
+
+    // Initial sync
+    setLoading(authStore.loading)
+    setUser(authStore.user)
+
+    return unsubscribe
+  }, [authStore])
 
   useEffect(() => {
     if (idle && authStore.user) {
@@ -233,5 +288,17 @@ export function useAuthStore() {
     }
   }, [idle, authStore])
 
-  return authStore
+  // Return only the public API, ensuring methods are properly bound
+  return {
+    loading,
+    user,
+    setUser: authStore.setUser.bind(authStore),
+    setLoading: authStore.setLoading.bind(authStore),
+    checkAuth: authStore.checkAuth.bind(authStore),
+    logout: authStore.logout.bind(authStore),
+    updateLastActivity: authStore.updateLastActivity.bind(authStore),
+    updateUserAfterRegistration: authStore.updateUserAfterRegistration.bind(authStore),
+    handleUserIdle: authStore.handleUserIdle.bind(authStore),
+    subscribe: authStore.subscribe.bind(authStore),
+  }
 }

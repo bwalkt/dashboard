@@ -20,6 +20,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DataTableTreeRouteImport } from './routes/data-table.tree'
 import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
+import { Route as DashboardProxyTargetsRouteImport } from './routes/dashboard/proxy-targets'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
 import { Route as DashboardOverviewRouteImport } from './routes/dashboard/overview'
 import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
@@ -82,6 +83,11 @@ const DashboardUsersRoute = DashboardUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardProxyTargetsRoute = DashboardProxyTargetsRouteImport.update({
+  id: '/proxy-targets',
+  path: '/proxy-targets',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardProfileRoute = DashboardProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/dashboard/logs'
     | '/dashboard/overview'
     | '/dashboard/profile'
+    | '/dashboard/proxy-targets'
     | '/dashboard/users'
     | '/data-table/tree'
     | '/dashboard/'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/dashboard/logs'
     | '/dashboard/overview'
     | '/dashboard/profile'
+    | '/dashboard/proxy-targets'
     | '/dashboard/users'
     | '/data-table/tree'
     | '/dashboard'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/dashboard/logs'
     | '/dashboard/overview'
     | '/dashboard/profile'
+    | '/dashboard/proxy-targets'
     | '/dashboard/users'
     | '/data-table/tree'
     | '/dashboard/'
@@ -323,6 +335,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardUsersRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/proxy-targets': {
+      id: '/dashboard/proxy-targets'
+      path: '/proxy-targets'
+      fullPath: '/dashboard/proxy-targets'
+      preLoaderRoute: typeof DashboardProxyTargetsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/profile': {
       id: '/dashboard/profile'
       path: '/profile'
@@ -372,6 +391,7 @@ interface DashboardRouteChildren {
   DashboardLogsRoute: typeof DashboardLogsRoute
   DashboardOverviewRoute: typeof DashboardOverviewRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
+  DashboardProxyTargetsRoute: typeof DashboardProxyTargetsRoute
   DashboardUsersRoute: typeof DashboardUsersRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
@@ -380,6 +400,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLogsRoute: DashboardLogsRoute,
   DashboardOverviewRoute: DashboardOverviewRoute,
   DashboardProfileRoute: DashboardProfileRoute,
+  DashboardProxyTargetsRoute: DashboardProxyTargetsRoute,
   DashboardUsersRoute: DashboardUsersRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
