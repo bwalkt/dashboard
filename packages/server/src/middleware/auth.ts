@@ -20,11 +20,12 @@ export async function authenticateToken(
     }
 
     const authHeader = request.headers.authorization;
+    const customAuthHeader = request.headers["x-custom-auth"] as string | undefined;
     const headerToken = authService.extractTokenFromHeader(authHeader);
     const cookieToken = authService.extractTokenFromCookies(request.cookies);
 
-    // Try header token first, then cookie token
-    const token = headerToken || cookieToken;
+    // Try custom auth header first, then Authorization header, then cookie token
+    const token = customAuthHeader || headerToken || cookieToken;
 
     if (!token) {
       return reply.status(401).send({

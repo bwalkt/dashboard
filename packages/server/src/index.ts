@@ -17,8 +17,10 @@ import { faqRoutes } from "./routes/faq.js";
 import { gatewayRoutes } from "./routes/gateway.js";
 import { privacyRoutes } from "./routes/privacy.js";
 import { proxyRoutes } from "./routes/proxy.js";
+import { proxyTargetsRoutes } from "./routes/proxy-targets.js";
 import { smsRoutes } from "./routes/sms.js";
 import { termsRoutes } from "./routes/terms.js";
+import { refreshProxyTargetsCache } from "./services/proxy-targets-cache.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -34,6 +36,17 @@ export default async function (
   // Initialize database and Redis
   await db.initialize();
   await redis.initialize();
+
+  // Load proxy targets into Redis cache on startup
+  try {
+    await refreshProxyTargetsCache();
+  } catch (error) {
+    console.warn(
+      "⚠️  Failed to load proxy targets cache on startup:",
+      error instanceof Error ? error.message : error,
+    );
+    console.warn("Server will continue, but proxy targets may not be available until cache is refreshed");
+  }
 
   // Register CORS plugin
   await fastify.register(cors, {
@@ -155,13 +168,10 @@ export default async function (
   await fastify.register(faqRoutes);
   await fastify.register(gatewayRoutes);
   await fastify.register(proxyRoutes);
+  await fastify.register(proxyTargetsRoutes);
   await fastify.register(smsRoutes);
   await fastify.register(termsRoutes);
   await fastify.register(privacyRoutes);
-  // Console log when server starts
-  fastify.addHook("onReady", async () => {});
-  await db.initialize();
-  await redis.initialize();
 
   // Close resources on server shutdown
   fastify.addHook("onClose", async () => {

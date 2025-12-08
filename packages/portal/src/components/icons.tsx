@@ -69,6 +69,7 @@ export const Icons = {
   users: IconUsers,
   table: IconTable,
   tree: IconNetwork,
+  network: IconNetwork,
   infinity: IconInfinity,
   arrowRight: IconArrowRight,
   help: IconHelpCircle,
