@@ -22,8 +22,8 @@ import { proxyTargetsRoutes } from "./routes/proxy-targets.js";
 import { signozRoutes } from "./routes/signoz.js";
 import { smsRoutes } from "./routes/sms.js";
 import { termsRoutes } from "./routes/terms.js";
-import { refreshProxyTargetsCache } from "./services/proxy-targets-cache.service.js";
 import { userRoutes } from "./routes/users.js";
+import { refreshProxyTargetsCache } from "./services/proxy-targets-cache.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
