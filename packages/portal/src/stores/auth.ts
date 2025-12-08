@@ -28,6 +28,7 @@ export class AuthStoreClass extends ZStorage {
 
   constructor() {
     super(STORE)
+<<<<<<< HEAD
     // Start with loading true during initialization
     this.loading = true
     this.initializeAuth()
@@ -53,6 +54,11 @@ export class AuthStoreClass extends ZStorage {
       this.isLoggedIn = false
       this.notify()
     }
+=======
+    // Set loading to false immediately for unsigned users, then check auth
+    this.loading = false
+    this.checkAuthWithTimeout()
+>>>>>>> f13fa36 (feat: not found when not logged in)
   }
 
   // Subscribe to state changes
@@ -257,6 +263,7 @@ export class AuthStoreClass extends ZStorage {
       const { user } = response
       if (user) {
         await this.setUser(user)
+<<<<<<< HEAD
       } else {
         // No user from server, clear auth state
         this.user = null
@@ -270,6 +277,11 @@ export class AuthStoreClass extends ZStorage {
       // Always set loading to false after auth check
       this.loading = false
       this.notify()
+=======
+      }
+    } catch (error) {
+      // Auth failed or timed out - user remains null, which is correct for unsigned users
+>>>>>>> f13fa36 (feat: not found when not logged in)
     }
   }
 
