@@ -9,6 +9,7 @@ RUN npm install -g pnpm@10.18.3
 # Build arguments for Vite environment variables
 ARG VITE_BACKEND_URL
 ARG VITE_PROXY_URL
+ARG VITE_PROXY_TARGET
 ARG VITE_OTEL_EXPORTER_URL
 ARG VITE_CHALLENGE_SECRET
 
