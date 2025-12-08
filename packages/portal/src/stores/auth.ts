@@ -28,7 +28,9 @@ export class AuthStoreClass extends ZStorage {
 
   constructor() {
     super(STORE)
-    this.initializeStore()
+    // Set loading to false immediately for unsigned users, then check auth
+    this.loading = false
+    this.checkAuthWithTimeout()
   }
 
   // Subscribe to state changes
@@ -48,8 +50,10 @@ export class AuthStoreClass extends ZStorage {
     try {
       console.log('AuthStore: Initializing...')
 
-      // Load persisted data
-      await this.loadPersistedData()
+      // Add timeout to prevent hanging on IndexedDB operations
+      const initializationTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Store initialization timeout')), 3000)
+      })
 
       // Check if user should be logged out due to inactivity
       await this.checkInactivityOnLoad()
@@ -67,12 +71,33 @@ export class AuthStoreClass extends ZStorage {
           }),
         ])
       }
+      await Promise.race([this.doInitialization(), initializationTimeout])
 
       // Always set loading to false, even if checkAuth hangs
       this.setLoading(false)
       console.log('AuthStore: Initialization complete')
     } catch (error) {
       console.error('AuthStore: Initialization failed:', error)
+      // Always ensure loading is set to false on any error
+      this.setLoading(false)
+    }
+  }
+
+  private async doInitialization() {
+    // Load persisted data
+    await this.loadPersistedData()
+    console.log('AuthStore: Persisted data loaded, user:', !!this.user)
+
+    // Check if user should be logged out due to inactivity
+    await this.checkInactivityOnLoad()
+    console.log('AuthStore: Inactivity check complete, user:', !!this.user)
+
+    // If user exists, verify with server
+    if (this.user) {
+      console.log('AuthStore: User exists, calling checkAuth()')
+      await this.checkAuth()
+    } else {
+      console.log('AuthStore: No user found, setting loading=false')
       this.setLoading(false)
     }
   }
@@ -196,6 +221,23 @@ export class AuthStoreClass extends ZStorage {
     // Redirect to sign-in
     if (typeof window !== 'undefined') {
       window.location.href = '/auth/sign-in'
+    }
+  }
+
+  async checkAuthWithTimeout() {
+    try {
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Auth check timeout')), 3000)
+      })
+
+      const response = (await Promise.race([api.get<{ user: User }>('/auth/me'), timeoutPromise])) as { user: User }
+
+      const { user } = response
+      if (user) {
+        await this.setUser(user)
+      }
+    } catch (error) {
+      // Auth failed or timed out - user remains null, which is correct for unsigned users
     }
   }
 
