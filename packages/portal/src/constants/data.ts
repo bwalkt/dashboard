@@ -76,4 +76,10 @@ export const navItems: NavItem[] = [
     icon: 'network',
     shortcut: ['p', 't'],
   },
+  {
+    title: 'SigNoz',
+    url: '/dashboard/signoz/traces',
+    icon: 'activity',
+    shortcut: ['s', 'z'],
+  },
 ]

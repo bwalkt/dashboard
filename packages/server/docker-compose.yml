@@ -107,6 +107,8 @@ services:
       - TWILIO_VERIFY_SERVICE_SID=${TWILIO_VERIFY_SERVICE_SID}
       - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
       - TWILIO_MESSAGE=${TWILIO_MESSAGE}
+      - SIGNOZ_API_KEY=${SIGNOZ_API_KEY}
+      - SIGNOZ_API_URL=${SIGNOZ_API_URL}
     depends_on:
       postgres:
         condition: service_healthy

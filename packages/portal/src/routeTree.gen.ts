@@ -20,6 +20,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DataTableTreeRouteImport } from './routes/data-table.tree'
 import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
+import { Route as DashboardSignozRouteImport } from './routes/dashboard/signoz'
 import { Route as DashboardProxyTargetsRouteImport } from './routes/dashboard/proxy-targets'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
 import { Route as DashboardOverviewRouteImport } from './routes/dashboard/overview'
@@ -27,6 +28,8 @@ import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as DashboardSignozIndexRouteImport } from './routes/dashboard/signoz/index'
+import { Route as DashboardSignozTracesRouteImport } from './routes/dashboard/signoz/traces'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -83,6 +86,11 @@ const DashboardUsersRoute = DashboardUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardSignozRoute = DashboardSignozRouteImport.update({
+  id: '/signoz',
+  path: '/signoz',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardProxyTargetsRoute = DashboardProxyTargetsRouteImport.update({
   id: '/proxy-targets',
   path: '/proxy-targets',
@@ -118,6 +126,16 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardSignozIndexRoute = DashboardSignozIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardSignozRoute,
+} as any)
+const DashboardSignozTracesRoute = DashboardSignozTracesRouteImport.update({
+  id: '/traces',
+  path: '/traces',
+  getParentRoute: () => DashboardSignozRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -135,9 +153,12 @@ export interface FileRoutesByFullPath {
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
+  '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
   '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
+  '/dashboard/signoz/': typeof DashboardSignozIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -157,6 +178,8 @@ export interface FileRoutesByTo {
   '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
+  '/dashboard/signoz': typeof DashboardSignozIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -175,9 +198,12 @@ export interface FileRoutesById {
   '/dashboard/overview': typeof DashboardOverviewRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
+  '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
   '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
+  '/dashboard/signoz/': typeof DashboardSignozIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -197,9 +223,12 @@ export interface FileRouteTypes {
     | '/dashboard/overview'
     | '/dashboard/profile'
     | '/dashboard/proxy-targets'
+    | '/dashboard/signoz'
     | '/dashboard/users'
     | '/data-table/tree'
     | '/dashboard/'
+    | '/dashboard/signoz/traces'
+    | '/dashboard/signoz/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -219,6 +248,8 @@ export interface FileRouteTypes {
     | '/dashboard/users'
     | '/data-table/tree'
     | '/dashboard'
+    | '/dashboard/signoz/traces'
+    | '/dashboard/signoz'
   id:
     | '__root__'
     | '/'
@@ -236,9 +267,12 @@ export interface FileRouteTypes {
     | '/dashboard/overview'
     | '/dashboard/profile'
     | '/dashboard/proxy-targets'
+    | '/dashboard/signoz'
     | '/dashboard/users'
     | '/data-table/tree'
     | '/dashboard/'
+    | '/dashboard/signoz/traces'
+    | '/dashboard/signoz/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -335,6 +369,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardUsersRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/signoz': {
+      id: '/dashboard/signoz'
+      path: '/signoz'
+      fullPath: '/dashboard/signoz'
+      preLoaderRoute: typeof DashboardSignozRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/proxy-targets': {
       id: '/dashboard/proxy-targets'
       path: '/proxy-targets'
@@ -384,14 +425,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/signoz/': {
+      id: '/dashboard/signoz/'
+      path: '/'
+      fullPath: '/dashboard/signoz/'
+      preLoaderRoute: typeof DashboardSignozIndexRouteImport
+      parentRoute: typeof DashboardSignozRoute
+    }
+    '/dashboard/signoz/traces': {
+      id: '/dashboard/signoz/traces'
+      path: '/traces'
+      fullPath: '/dashboard/signoz/traces'
+      preLoaderRoute: typeof DashboardSignozTracesRouteImport
+      parentRoute: typeof DashboardSignozRoute
+    }
   }
 }
+
+interface DashboardSignozRouteChildren {
+  DashboardSignozTracesRoute: typeof DashboardSignozTracesRoute
+  DashboardSignozIndexRoute: typeof DashboardSignozIndexRoute
+}
+
+const DashboardSignozRouteChildren: DashboardSignozRouteChildren = {
+  DashboardSignozTracesRoute: DashboardSignozTracesRoute,
+  DashboardSignozIndexRoute: DashboardSignozIndexRoute,
+}
+
+const DashboardSignozRouteWithChildren = DashboardSignozRoute._addFileChildren(
+  DashboardSignozRouteChildren,
+)
 
 interface DashboardRouteChildren {
   DashboardLogsRoute: typeof DashboardLogsRoute
   DashboardOverviewRoute: typeof DashboardOverviewRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardProxyTargetsRoute: typeof DashboardProxyTargetsRoute
+  DashboardSignozRoute: typeof DashboardSignozRouteWithChildren
   DashboardUsersRoute: typeof DashboardUsersRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
@@ -401,6 +471,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardOverviewRoute: DashboardOverviewRoute,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardProxyTargetsRoute: DashboardProxyTargetsRoute,
+  DashboardSignozRoute: DashboardSignozRouteWithChildren,
   DashboardUsersRoute: DashboardUsersRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
