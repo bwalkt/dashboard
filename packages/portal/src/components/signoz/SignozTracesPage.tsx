@@ -65,8 +65,12 @@ export function SignozTracesPage() {
         setAllData(data)
       } else {
         // Subsequent pages - append data
+        // Preserve metadata from existing aggregated state (or from first page)
+        // Only concatenate the data array
         setAllData(prev => ({
-          ...data,
+          total: prev?.total ?? data.total,
+          limit: prev?.limit ?? data.limit,
+          offset: prev?.offset ?? data.offset,
           data: [...(prev?.data || []), ...(data.data || [])],
         }))
       }

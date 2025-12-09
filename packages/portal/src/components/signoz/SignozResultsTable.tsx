@@ -126,17 +126,23 @@ export function SignozResultsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item, index) => (
-                <TableRow key={index}>
-                  {columns.map(column => (
-                    <TableCell key={column} className="max-w-xs truncate">
-                      <div className="truncate" title={formatCellValue(item[column])}>
-                        {formatCellValue(item[column])}
-                      </div>
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
+              {items.map((item, index) => {
+                // Generate a stable unique key for each row
+                // Prefer trace_id or span_id if available, otherwise use composite key
+                const stableKey = item.trace_id ? item.trace_id : item.span_id ? item.span_id : `item-${index}`
+
+                return (
+                  <TableRow key={stableKey}>
+                    {columns.map(column => (
+                      <TableCell key={column} className="max-w-xs truncate">
+                        <div className="truncate" title={formatCellValue(item[column])}>
+                          {formatCellValue(item[column])}
+                        </div>
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </div>

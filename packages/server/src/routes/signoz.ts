@@ -40,6 +40,14 @@ export async function signozRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
 
+        // Validate time range
+        if (filters.startTime >= filters.endTime) {
+          return reply.code(400).send({
+            error: "Invalid time range",
+            message: "startTime must be less than endTime",
+          });
+        }
+
         // Validate pagination
         if (
           typeof pagination.limit !== "number" ||

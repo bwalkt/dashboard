@@ -41,17 +41,26 @@ function getSigNozApiKey(): string {
 }
 
 /**
+ * Escape single quotes in a string value for use in SigNoz filter expressions
+ */
+function escapeSingleQuotes(value: string): string {
+  return value.replace(/'/g, "\\'");
+}
+
+/**
  * Build filter expression from filters
  */
 function buildFilterExpression(filters: SigNozFilters): string | undefined {
   const conditions: string[] = [];
 
   if (filters.serviceName) {
-    conditions.push(`serviceName = "${filters.serviceName}"`);
+    const escapedServiceName = escapeSingleQuotes(filters.serviceName);
+    conditions.push(`serviceName = '${escapedServiceName}'`);
   }
 
   if (filters.httpMethod) {
-    conditions.push(`http.method = "${filters.httpMethod}"`);
+    const escapedHttpMethod = escapeSingleQuotes(filters.httpMethod);
+    conditions.push(`http.method = '${escapedHttpMethod}'`);
   }
 
   if (conditions.length === 0) {
@@ -143,8 +152,10 @@ function transformSigNozResponse(
     return item;
   });
   
-  // Get total count from meta if available, otherwise use rows length
-  const total = apiResponse?.data?.meta?.rowsScanned || items.length;
+  // Get total count from meta if available, otherwise use items length
+  // Ensure the value is a number before returning it
+  const metaTotal = apiResponse?.data?.meta?.total;
+  const total = typeof metaTotal === 'number' ? metaTotal : items.length;
   
   return {
     data: items,
