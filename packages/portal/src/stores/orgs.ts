@@ -93,20 +93,12 @@ export class OrgsStoreClass extends ZStorage {
     this.setError(null)
 
     try {
-<<<<<<< HEAD
       const response = await api.get<{ org: Org }>(`/orgs/${id}`)
-=======
-      const response = await api.get<{ organization: Org }>(`/orgs/${id}`)
->>>>>>> 2c87106 (feat: create org)
 
       // Update in list if exists
       const index = this.orgs.findIndex(org => org.id === id)
       if (index !== -1) {
-<<<<<<< HEAD
         this.orgs[index] = response.org
-=======
-        this.orgs[index] = response.organization
->>>>>>> 2c87106 (feat: create org)
       }
 
       return response.org
@@ -124,17 +116,10 @@ export class OrgsStoreClass extends ZStorage {
     this.setError(null)
 
     try {
-<<<<<<< HEAD
       const response = await api.post<{ org: Org }>('/orgs', data)
 
       // Add to beginning of list
       this.orgs = [response.org, ...this.orgs]
-=======
-      const response = await api.post<{ organization: Org }>('/orgs', data)
-
-      // Add to beginning of list
-      this.orgs = [response.organization, ...this.orgs]
->>>>>>> 2c87106 (feat: create org)
       this.totalCount += 1
 
       // Update cache
@@ -155,20 +140,12 @@ export class OrgsStoreClass extends ZStorage {
     this.setError(null)
 
     try {
-<<<<<<< HEAD
       const response = await api.patch<{ org: Org }>(`/orgs/${id}`, data)
-=======
-      const response = await api.patch<{ organization: Org }>(`/orgs/${id}`, data)
->>>>>>> 2c87106 (feat: create org)
 
       // Update in list
       const index = this.orgs.findIndex(org => org.id === id)
       if (index !== -1) {
-<<<<<<< HEAD
         this.orgs[index] = response.org
-=======
-        this.orgs[index] = response.organization
->>>>>>> 2c87106 (feat: create org)
       }
 
       // Update current org if it's the same

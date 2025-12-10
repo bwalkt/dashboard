@@ -3,8 +3,9 @@ import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import { extractCompanyInfoFromDomain, generateOrgHandle } from '../utils/handles'
 import { type PaginationListResponse, PaginationListResponseSchema } from './pagination'
-import { generateContactEmail, UserSchema } from './users'
 import type { BaseLocTable } from './type'
+import { generateContactEmail, UserSchema } from './users'
+
 const ajv = new Ajv()
 addFormats(ajv)
 
@@ -85,7 +86,7 @@ export const UpdateOrgDataSchema = createSchema([
   'phone',
   'status',
   'plan',
-  'address'
+  'address',
 ])
 
 // API Response schemas

@@ -5,25 +5,7 @@ import { userService } from "../services/user.service.js";
 
 export interface CreateOrgPayload {
   name: string;
-<<<<<<< HEAD
-<<<<<<< HEAD
   handle: string;
-  dscr?: string;
-  status: 'active' | 'inactive' | 'suspended';
-  plan: 'free' | 'starter' | 'pro' | 'enterprise';
-  website?: string;
-  phone?: string;
-  address?: string;
-  data?: {
-    meta?: {
-      c_by: string
-    }
-  }
-=======
-  slug: string;
-=======
-  handle: string;
->>>>>>> a238af6 (feat: org and user)
   description?: string;
   status: 'active' | 'inactive' | 'suspended';
   plan: 'free' | 'starter' | 'pro' | 'enterprise';
@@ -31,10 +13,8 @@ export interface CreateOrgPayload {
   website?: string;
   phone?: string;
   address?: string;
-  owner_id: string;
   settings?: Record<string, any>;
   metadata?: Record<string, any>;
->>>>>>> ae9947a (feat: org and user)
 }
 
 export interface CreateOrgWithUserPayload extends CreateOrgPayload {
@@ -46,28 +26,7 @@ export interface CreateOrgWithUserPayload extends CreateOrgPayload {
   associate_users?: string[];
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 export interface Org {
-  id: string;
-  name: string;
-  handle: string;
-  dscr?: string;
-  status: string;
-  plan: string;
-  website?: string;
-  phone?: string;
-  address?: string;
-  data?: {
-    meta?: {
-      c_by: string
-    }
-  }
-=======
-export interface Organization {
-=======
-export interface Org {
->>>>>>> 2c87106 (feat: create org)
   id: string;
   name: string;
   handle: string;
@@ -78,22 +37,20 @@ export interface Org {
   website?: string;
   phone?: string;
   address?: string;
-  owner_id: string;
-  settings?: Record<string, any>;
-  metadata?: Record<string, any>;
-  created_at: string;
-  updated_at: string;
-  deleted_at?: string;
->>>>>>> ae9947a (feat: org and user)
+  data?: {
+    meta?: {
+      uid: string
+    }
+  }
 }
 
 export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   /**
-   * POST /orgs
+   * POST /api/orgs
    * Create a new organization
    */
   fastify.post(
-    "/orgs",
+    "/api/orgs",
     {
       preHandler: authenticateToken,
     },
@@ -102,9 +59,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         const data = request.body as CreateOrgPayload;
 
         // Validate required fields
-<<<<<<< HEAD
-<<<<<<< HEAD
-        if (!data.name || !data.handle || !data.status || !data.plan) {
+        if (!data.name || !data.handle || !data.email || !data.status || !data.plan) {
           return reply.status(400).send({
             error: "Bad Request",
             message: "Name, handle, email, status, and plan are required",
@@ -122,92 +77,26 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Check if handle is unique
         const existingOrg = await db.pool.query(
-          "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND is_del",
-          [data.handle]
-=======
-        if (!data.name || !data.slug || !data.email || !data.status || !data.plan || !data.owner_id) {
-=======
-        if (!data.name || !data.handle || !data.email || !data.status || !data.plan || !data.owner_id) {
->>>>>>> a238af6 (feat: org and user)
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Name, handle, email, status, plan, and owner_id are required",
-          });
-        }
-
-        // Check if handle is unique
-        const existingOrg = await db.pool.query(
-<<<<<<< HEAD
-          "SELECT id FROM pzero.all_orgs WHERE slug = $1 AND deleted_at IS NULL",
-          [data.slug]
->>>>>>> ae9947a (feat: org and user)
-=======
           "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND deleted_at IS NULL",
           [data.handle]
->>>>>>> a238af6 (feat: org and user)
         );
 
         if (existingOrg.rows.length > 0) {
           return reply.status(409).send({
             error: "Conflict",
-<<<<<<< HEAD
-<<<<<<< HEAD
             message: "Organization handle already exists",
-          });
-        }
-        console.log('🔥 SERVER: Creating organization with handle:', {
-              name: data.name,
-              handle: data.handle,
-              website: data.website || "",
-              dscr: data.dscr || "",
-              status: data.status,
-              plan: data.plan,
-              address: data.address || "",
-              phone: data.phone || "",
-              c_by: authenticatedUserId
-        })
-=======
-            message: "Organization slug already exists",
-=======
-            message: "Organization handle already exists",
->>>>>>> a238af6 (feat: org and user)
           });
         }
 
->>>>>>> ae9947a (feat: org and user)
         // Use the create_org postgres function
         const createResult = await db.pool.query(
           `SELECT pzero.create_org($1) as result`,
           [
             JSON.stringify({
               name: data.name,
-<<<<<<< HEAD
-<<<<<<< HEAD
               handle: data.handle,
               website: data.website || "",
-              dscr: data.dscr || "",
-              status: data.status,
-              plan: data.plan,
-              address: data.address || "",
-              phone: data.phone || "",
-              c_by: authenticatedUserId
-=======
-              slug: data.slug,
-              description: data.description || "",
-              status: data.status,
-              plan: data.plan,
-              email: data.email,
-              website: data.website || "",
-              phone: data.phone || "",
-              address: data.address || "",
-              owner_id: data.owner_id,
-              settings: JSON.stringify(data.settings || {}),
-              metadata: JSON.stringify(data.metadata || {})
->>>>>>> ae9947a (feat: org and user)
-=======
-              handle: data.handle,
-              website: data.website || "",
-              c_by: data.owner_id,
+              c_by: authenticatedUserId,
               data: {
                 description: data.description || "",
                 status: data.status,
@@ -216,9 +105,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
                 phone: data.phone || "",
                 address: data.address || "",
                 settings: data.settings || {},
-                metadata: data.metadata || {}
+                metadata: data.metadata || {},
+                meta: {
+                  uid: authenticatedUserId
+                }
               }
->>>>>>> a238af6 (feat: org and user)
             }),
           ],
         );
@@ -243,18 +134,16 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * POST /orgs/create-with-user
+   * POST /api/orgs/create-with-user
    * Create organization with optional user creation and association
    */
   fastify.post(
-    "/orgs/create-with-user",
+    "/api/orgs/create-with-user",
     {
       preHandler: authenticateToken,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-<<<<<<< HEAD
-        console.log("🔥 SERVER: Handling /orgs/create-with-user request")
         const data = request.body as CreateOrgWithUserPayload;
         
         console.log('🔥 SERVER: Received request at /orgs/create-with-user')
@@ -273,10 +162,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         }
 
         // Validate required fields
-        if (!data.name || !data.handle || !data.status || !data.plan) {
+        if (!data.name || !data.handle || !data.email || !data.status || !data.plan) {
           console.log('🔥 SERVER: Validation failed - missing required fields:', {
             name: !data.name ? 'MISSING' : 'OK',
             handle: !data.handle ? 'MISSING' : 'OK',
+            email: !data.email ? 'MISSING' : 'OK',
             status: !data.status ? 'MISSING' : 'OK',
             plan: !data.plan ? 'MISSING' : 'OK'
           })
@@ -285,65 +175,20 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
             message: "Name, handle, email, status, and plan are required",
           });
         }
-        console.log('🔥 SERVER: Validation passed - all required fields present:', {
-          name: data.name,
-          handle: data.handle,
-          status: data.status,
-          plan: data.plan
-        })
+
         // Check if handle is unique
         console.log('🔥 SERVER: Checking if handle is unique:', data.handle)
-        // begin transaction
-        const client = await db.pool.connect();
-        try {
-          await client.query('BEGIN');
-        } catch (err) {
-          await client.query('ROLLBACK');
-          client.release();
-          return reply.status(500).send({
-            error: "Internal Server Error",
-            message: "Failed to start database transaction",
-          });
-        }
-        const existingOrg = await client.query(
-          "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND is_del = FALSE",
+        const existingOrg = await db.pool.query(
+          "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND deleted_at IS NULL",
           [data.handle]
         );
         console.log('🔥 SERVER: Handle check result:', { found: existingOrg.rows.length > 0, rowCount: existingOrg.rows.length })
 
         if (existingOrg.rows.length > 0) {
           console.log('🔥 SERVER: Handle conflict detected, returning 409')
-          await client.query('ROLLBACK');
-          client.release();
           return reply.status(409).send({
             error: "Conflict",
             message: "Organization handle already exists",
-=======
-        const data = request.body as CreateOrgWithUserPayload;
-
-        // Validate required fields
-        if (!data.name || !data.handle || !data.email || !data.status || !data.plan || !data.owner_id) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Name, handle, email, status, plan, and owner_id are required",
-          });
-        }
-
-        // Check if handle is unique
-        const existingOrg = await db.pool.query(
-          "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND deleted_at IS NULL",
-          [data.handle]
-        );
-
-        if (existingOrg.rows.length > 0) {
-          return reply.status(409).send({
-            error: "Conflict",
-<<<<<<< HEAD
-            message: "Organization slug already exists",
->>>>>>> ae9947a (feat: org and user)
-=======
-            message: "Organization handle already exists",
->>>>>>> a238af6 (feat: org and user)
           });
         }
 
@@ -354,12 +199,6 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           // Check if user already exists
           const existingUser = await userService.getUserByEmail(data.create_user.email);
           if (existingUser) {
-<<<<<<< HEAD
-            console.log('🔥 SERVER: User creation conflict - email already exists:', data.create_user.email)
-            await client.query('ROLLBACK');
-            client.release();
-=======
->>>>>>> ae9947a (feat: org and user)
             return reply.status(409).send({
               error: "Conflict",
               message: "User with this email already exists",
@@ -373,84 +212,37 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
             email_verified: data.create_user.email_verified ?? true, // Auto-verify for admin-created users
           });
         }
-<<<<<<< HEAD
-        console.log('🔥 SERVER: Created user:', createdUser)
+
         // Create organization using the postgres function
         const orgCreateData = {
           name: data.name,
           handle: data.handle,
           website: data.website || "",
-          dscr: data.dscr || "",
-          status: data.status,
-          plan: data.plan,
-          phone: data.phone || "",
-          address: data.address || "",
           c_by: authenticatedUserId,
           data: {
+            description: data.description || "",
+            status: data.status,
+            plan: data.plan,
+            email: data.email,
+            phone: data.phone || "",
+            address: data.address || "",
+            settings: data.settings || {},
+            metadata: data.metadata || {},
             meta: {
-              c_by: authenticatedUserId
+              uid: authenticatedUserId
             }
           }
         }
         console.log('🔥 SERVER: Creating organization with data:', JSON.stringify(orgCreateData, null, 2))
         
-        const createResult = await client.query(
+        const createResult = await db.pool.query(
           `SELECT pzero.create_org($1) as result`,
           [JSON.stringify(orgCreateData)],
         );
         console.log('🔥 SERVER: Organization creation result:', JSON.stringify(createResult.rows, null, 2))
 
-        const result = createResult.rows[0].result;
-        console.log('🔥 SERVER: Created organization with ID:', result)
-
-        // Associate created user with organization
-        if (createdUser) {
-          console.log("🔥 SERVER: Associating created user with organization:", result);
-          const orgUser = {
-            org_id: result,
-            uid: createdUser.id,
-            c_by: authenticatedUserId
-          }
-          await client.query(`SELECT pzero.create_user_with_auth($1:jsonb)`,
-            [JSON.stringify(orgUser)]
-          );
-        }
-
-        // Fetch the complete organization record
-        const orgResult = await client.query(
-          `SELECT * FROM pzero.all_orgs WHERE id = $1`,
-          [result]
-        );
-
-
-        const response: {
-          organization: Org;
-=======
-
-        // Create organization using the postgres function
-        const createResult = await db.pool.query(
-          `SELECT pzero.create_org($1) as result`,
-          [
-            JSON.stringify({
-              name: data.name,
-              handle: data.handle,
-              website: data.website || "",
-              c_by: data.owner_id,
-              data: {
-                description: data.description || "",
-                status: data.status,
-                plan: data.plan,
-                email: data.email,
-                phone: data.phone || "",
-                address: data.address || "",
-                settings: data.settings || {},
-                metadata: data.metadata || {}
-              }
-            }),
-          ],
-        );
-
         const { org_id } = createResult.rows[0].result;
+        console.log('🔥 SERVER: Created organization with ID:', org_id)
 
         // Associate created user with organization
         if (createdUser) {
@@ -477,12 +269,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         );
 
         const response: {
-<<<<<<< HEAD
-          organization: Organization;
->>>>>>> ae9947a (feat: org and user)
-=======
           organization: Org;
->>>>>>> 2c87106 (feat: create org)
           user?: { id: string; email: string; name: string };
         } = {
           organization: orgResult.rows[0],
@@ -495,10 +282,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
             email: createdUser.email,
             name: createdUser.name,
           };
-<<<<<<< HEAD
-          client.query('COMMIT')
-          client.release()
-        } 
+        }
 
         console.log('🔥 SERVER: Sending successful response:', JSON.stringify(response, null, 2))
         return reply.send(response);
@@ -509,15 +293,6 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           stack: error instanceof Error ? error.stack : 'No stack trace',
           type: typeof error
         })
-        client.query('ROLLBACK');
-        client.release();
-=======
-        }
-
-        return reply.send(response);
-      } catch (error) {
-        console.error("Create organization with user error:", error);
->>>>>>> ae9947a (feat: org and user)
         return reply.status(500).send({
           error: "Internal Server Error",
           message: "Failed to create organization with user",
@@ -527,11 +302,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * GET /orgs
+   * GET /api/orgs
    * Get all organizations
    */
   fastify.get(
-    "/orgs",
+    "/api/orgs",
     {
       preHandler: authenticateToken,
     },
@@ -539,11 +314,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
       try {
         const result = await db.pool.query(`
           SELECT * FROM pzero.all_orgs 
-<<<<<<< HEAD
-          WHERE is_del = FALSE
-=======
           WHERE deleted_at IS NULL
->>>>>>> ae9947a (feat: org and user)
           ORDER BY created_at DESC
         `);
 
@@ -559,11 +330,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * GET /orgs/:id
+   * GET /api/orgs/:id
    * Get organization by ID
    */
   fastify.get(
-    "/orgs/:id",
+    "/api/orgs/:id",
     {
       preHandler: authenticateToken,
     },
@@ -572,11 +343,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         const { id } = request.params as { id: string };
 
         const result = await db.pool.query(
-<<<<<<< HEAD
-          `SELECT * FROM pzero.all_orgs WHERE id = $1 AND is_del = FALSE`,
-=======
           `SELECT * FROM pzero.all_orgs WHERE id = $1 AND deleted_at IS NULL`,
->>>>>>> ae9947a (feat: org and user)
           [id]
         );
 
@@ -599,11 +366,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * PUT /orgs/:id
+   * PUT /api/orgs/:id
    * Update organization
    */
   fastify.put(
-    "/orgs/:id",
+    "/api/orgs/:id",
     {
       preHandler: authenticateToken,
     },
@@ -620,29 +387,13 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           fields.push(`name = $${paramCount++}`);
           values.push(data.name);
         }
-<<<<<<< HEAD
-<<<<<<< HEAD
         if (data.handle !== undefined) {
           fields.push(`handle = $${paramCount++}`);
           values.push(data.handle);
-        }
-        if (data.dscr!== undefined) {
-          fields.push(`dscr = $${paramCount++}`);
-          values.push(data.dscr);
-=======
-        if (data.slug !== undefined) {
-          fields.push(`slug = $${paramCount++}`);
-          values.push(data.slug);
-=======
-        if (data.handle !== undefined) {
-          fields.push(`handle = $${paramCount++}`);
-          values.push(data.handle);
->>>>>>> a238af6 (feat: org and user)
         }
         if (data.description !== undefined) {
           fields.push(`description = $${paramCount++}`);
           values.push(data.description);
->>>>>>> ae9947a (feat: org and user)
         }
         if (data.status !== undefined) {
           fields.push(`status = $${paramCount++}`);
@@ -652,13 +403,10 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           fields.push(`plan = $${paramCount++}`);
           values.push(data.plan);
         }
-<<<<<<< HEAD
-=======
         if (data.email !== undefined) {
           fields.push(`email = $${paramCount++}`);
           values.push(data.email);
         }
->>>>>>> ae9947a (feat: org and user)
         if (data.website !== undefined) {
           fields.push(`website = $${paramCount++}`);
           values.push(data.website);
@@ -671,8 +419,6 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           fields.push(`address = $${paramCount++}`);
           values.push(data.address);
         }
-<<<<<<< HEAD
-=======
         if (data.settings !== undefined) {
           fields.push(`settings = $${paramCount++}`);
           values.push(JSON.stringify(data.settings));
@@ -681,7 +427,6 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           fields.push(`metadata = $${paramCount++}`);
           values.push(JSON.stringify(data.metadata));
         }
->>>>>>> ae9947a (feat: org and user)
 
         if (fields.length === 0) {
           return reply.status(400).send({
@@ -696,11 +441,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         const result = await db.pool.query(
           `UPDATE pzero.all_orgs
            SET ${fields.join(", ")}
-<<<<<<< HEAD
-           WHERE id = $${paramCount} AND is_del = FALSE
-=======
            WHERE id = $${paramCount} AND deleted_at IS NULL
->>>>>>> ae9947a (feat: org and user)
            RETURNING *`,
           values,
         );
@@ -724,11 +465,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * DELETE /orgs/:id
+   * DELETE /api/orgs/:id
    * Delete organization (soft delete)
    */
   fastify.delete(
-    "/orgs/:id",
+    "/api/orgs/:id",
     {
       preHandler: authenticateToken,
     },
@@ -738,16 +479,9 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Soft delete by setting deleted_at timestamp
         const result = await db.pool.query(
-<<<<<<< HEAD
-          `UPDATE pzero.all_orgs
-            SET is_del = TRUE,
-                is_act = FALSE,
-           WHERE id = $1 AND is_act = FALSE
-=======
           `UPDATE pzero.all_orgs 
            SET deleted_at = CURRENT_TIMESTAMP 
            WHERE id = $1 AND deleted_at IS NULL
->>>>>>> ae9947a (feat: org and user)
            RETURNING id`,
           [id]
         );
@@ -771,11 +505,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * GET /orgs/:id/users
+   * GET /api/orgs/:id/users
    * Get users in an organization
    */
   fastify.get(
-    "/orgs/:id/users",
+    "/api/orgs/:id/users",
     {
       preHandler: authenticateToken,
     },
@@ -787,11 +521,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           SELECT u.*, a.email, a.email_verified
           FROM pzero.all_users u
           JOIN pzero.all_auth a ON u.id = a.id
-<<<<<<< HEAD
-          WHERE u.org_id = $1 AND u.is_del = FALSE
-=======
           WHERE u.org_id = $1 AND u.deleted_at IS NULL
->>>>>>> ae9947a (feat: org and user)
           ORDER BY u.created_at DESC
         `, [id]);
 

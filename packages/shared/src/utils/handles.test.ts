@@ -1,11 +1,5 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { describe, expect, it } from 'vitest'
-=======
->>>>>>> 2c87106 (feat: create org)
-=======
-import { describe, expect, it } from 'vitest'
->>>>>>> 045bd20 (feat: org and user)
+
 import {
   extractCompanyInfoFromDomain,
   generateContactEmail,
