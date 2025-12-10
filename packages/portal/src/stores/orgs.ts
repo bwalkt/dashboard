@@ -93,15 +93,15 @@ export class OrgsStoreClass extends ZStorage {
     this.setError(null)
 
     try {
-      const response = await api.get<{ organization: Org }>(`/orgs/${id}`)
+      const response = await api.get<{ org: Org }>(`/orgs/${id}`)
 
       // Update in list if exists
       const index = this.orgs.findIndex(org => org.id === id)
       if (index !== -1) {
-        this.orgs[index] = response.organization
+        this.orgs[index] = response.org
       }
 
-      return response.organization
+      return response.org
     } catch (error: any) {
       const errorMessage = error?.message || 'Failed to fetch org'
       this.setError(errorMessage)
@@ -116,16 +116,16 @@ export class OrgsStoreClass extends ZStorage {
     this.setError(null)
 
     try {
-      const response = await api.post<{ organization: Org }>('/orgs', data)
+      const response = await api.post<{ org: Org }>('/orgs', data)
 
       // Add to beginning of list
-      this.orgs = [response.organization, ...this.orgs]
+      this.orgs = [response.org, ...this.orgs]
       this.totalCount += 1
 
       // Update cache
       await this.setItem({ key: 'orgs', data: this.orgs })
 
-      return response.organization
+      return response.org
     } catch (error: any) {
       const errorMessage = error?.message || 'Failed to create org'
       this.setError(errorMessage)
@@ -140,23 +140,23 @@ export class OrgsStoreClass extends ZStorage {
     this.setError(null)
 
     try {
-      const response = await api.patch<{ organization: Org }>(`/orgs/${id}`, data)
+      const response = await api.patch<{ org: Org }>(`/orgs/${id}`, data)
 
       // Update in list
       const index = this.orgs.findIndex(org => org.id === id)
       if (index !== -1) {
-        this.orgs[index] = response.organization
+        this.orgs[index] = response.org
       }
 
       // Update current org if it's the same
       if (this.currentOrg?.id === id) {
-        await this.setCurrentOrg(response.organization)
+        await this.setCurrentOrg(response.org)
       }
 
       // Update cache
       await this.setItem({ key: 'orgs', data: this.orgs })
 
-      return response.organization
+      return response.org
     } catch (error: any) {
       const errorMessage = error?.message || 'Failed to update org'
       this.setError(errorMessage)

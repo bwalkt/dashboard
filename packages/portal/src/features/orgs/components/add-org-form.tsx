@@ -3,7 +3,6 @@ import { generateOrgHandle } from '@pzero/shared/utils/handles'
 import { createValidator } from '@pzero/shared/validator/ajv'
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
 import {
   MultiSelector,
   MultiSelectorContent,
@@ -23,6 +22,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { userData } from '@/features/users/data'
 import { createAjvResolver } from '@/lib/ajv-resolver'
+import { toastUtils } from '@/lib/toast'
 import { orgsService } from '@/services/api/orgs'
 import { usersService } from '@/services/api/users'
 import { useAuthStore } from '@/stores/auth'
@@ -50,7 +50,12 @@ interface OrgFormValues {
 const orgFormSchema = {
   type: 'object',
   properties: {
-    website: { type: 'string' },
+    website: {
+      type: 'string',
+      minLength: 1,
+      pattern:
+        '^(https?:\\/\\/)?([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\\.)*[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\\.[a-zA-Z]{2,}\\/?$',
+    },
     name: { type: 'string', minLength: 1 },
     handle: {
       type: 'string',
@@ -97,14 +102,19 @@ const orgFormSchema = {
 
 const validateOrgForm = createValidator<OrgFormValues>(orgFormSchema)
 
-// Debug helper to log validation issues
-const debugValidation = (data: any) => {
-  const result = validateOrgForm.validate(data)
-  if (!result.success) {
-    console.log('🔍 Validation failed for data:', data)
-    console.log('❌ Validation errors:', result.errors)
+// Utility to derive name from email
+const deriveNameFromEmail = (email: string): string => {
+  if (!email || !email.includes('@')) {
+    return ''
   }
-  return result
+
+  const localPart = email.split('@')[0]
+  const nameParts = localPart
+    .split(/[._+-]/)
+    .filter(part => part.length > 0)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+
+  return nameParts.join(' ')
 }
 
 interface AddOrgFormProps {
@@ -119,6 +129,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
 
   const form = useForm<OrgFormValues>({
     resolver: createAjvResolver(validateOrgForm),
+    mode: 'onBlur',
     defaultValues: {
       website: '',
       name: '',
@@ -143,47 +154,78 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
   React.useEffect(() => {
     const subscription = form.watch((value, { name: fieldName }) => {
       if (fieldName === 'website' && value.website) {
-        try {
-          const url = new URL(value.website.startsWith('http') ? value.website : `https://${value.website}`)
-          const domain = url.hostname.replace('www.', '')
-          const domainParts = domain.split('.')
-          const companyName = domainParts[0]
+        // Simple domain extraction
+        let website = value.website.trim()
+
+        // Auto-add https:// if no protocol provided
+        if (website && !website.match(/^https?:\/\//)) {
+          website = `https://${website}`
+          // Update the form value immediately to avoid validation issues
+          setTimeout(() => {
+            form.setValue('website', website, { shouldValidate: true })
+          }, 0)
+        }
+
+        // Remove protocol and www for parsing
+        let cleanDomain = website
+          .replace(/^https?:\/\//, '')
+          .replace(/^www\./, '')
+          .replace(/\/$/, '')
+
+        // Extract company name and full domain
+        const parts = cleanDomain.split('.')
+
+        if (parts.length >= 2) {
+          const companyName = parts[0]
+          const domain = cleanDomain // This should be the full domain like "arasva.com"
 
           // Auto-fill name if empty
-          if (!value.name) {
+          if ((!value.name || value.name.trim() === '') && companyName) {
             const capitalizedName = companyName.charAt(0).toUpperCase() + companyName.slice(1)
-            form.setValue('name', capitalizedName, { shouldValidate: true })
+            form.setValue('name', capitalizedName, { shouldValidate: false })
           }
 
           // Auto-fill handle if empty
-          if (!value.handle) {
+          if ((!value.handle || value.handle.trim() === '') && companyName) {
             const handle = generateOrgHandle(companyName)
-            form.setValue('handle', handle, { shouldValidate: true })
+            form.setValue('handle', handle, { shouldValidate: false })
           }
 
-          // Auto-fill email if empty
-          if (!value.email) {
-            form.setValue('email', `contact@${domain}`, { shouldValidate: true })
+          // Auto-fill email (always update if it starts with "contact@" or is empty)
+          const shouldUpdateEmail = !value.email || value.email.trim() === '' || value.email.startsWith('contact@')
+
+          if (shouldUpdateEmail && cleanDomain) {
+            const email = `contact@${cleanDomain}`
+            form.setValue('email', email, { shouldValidate: false })
           }
-        } catch (error) {
-          // Invalid URL, ignore
+        }
+      }
+
+      // Auto-generate contact name from email when email changes
+      if (fieldName === 'email' && value.email) {
+        const shouldUpdateContactName = !value.contact_name || value.contact_name.trim() === ''
+
+        if (shouldUpdateContactName) {
+          const derivedName = deriveNameFromEmail(value.email)
+          if (derivedName) {
+            form.setValue('contact_name', derivedName, { shouldValidate: false })
+          }
         }
       }
 
       // Also allow manual name -> handle generation
       if (fieldName === 'name' && value.name && !value.handle) {
         const handle = generateOrgHandle(value.name)
-        form.setValue('handle', handle, { shouldValidate: true })
+        form.setValue('handle', handle, { shouldValidate: false })
       }
     })
     return () => subscription.unsubscribe()
   }, [form])
 
   const onSubmit = async (data: OrgFormValues) => {
-    console.log('🚀 Form submitted with data:', data)
-
-    // Add debugging for API calls
-    console.log('📡 About to make API request to orgsService.createOrgWithUser')
+    console.log('Form submission started with data:', data)
+    console.log('Form validation errors:', form.formState.errors)
+    console.log('Form validation state:', form.formState.isValid)
 
     try {
       // Validate email and website domain match
@@ -208,19 +250,13 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       if (data.phone) {
         const phoneValidation = validatePhoneNumber(data.phone, DEFAULT_COUNTRY)
         if (!phoneValidation.isValid) {
-          toast.error(phoneValidation.error || 'Invalid phone number', {
-            duration: Infinity,
-            dismissible: true,
-          })
+          toastUtils.error(phoneValidation.error || 'Invalid phone number')
           return
         }
         // Check if the phone is from an allowed country
         const isAllowed = ALLOWED_COUNTRIES.some(c => c.code === phoneValidation.country)
         if (!isAllowed) {
-          toast.error(`Phone numbers from ${phoneValidation.country} are not supported`, {
-            duration: Infinity,
-            dismissible: true,
-          })
+          toastUtils.error(`Phone numbers from ${phoneValidation.country} are not supported`)
           return
         }
       }
@@ -228,23 +264,16 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       // Validate user data if creating a new user
       if (data.create_new_user) {
         if (!data.contact_name || !data.email) {
-          toast.error('Contact name and email are required when creating a new user', {
-            duration: Infinity,
-            dismissible: true,
-          })
+          toastUtils.error('Contact name and email are required when creating a new user')
           return
         }
       }
 
-      // Get current user ID from auth store
+      // Ensure user is authenticated
       if (!user?.id) {
-        toast.error('You must be logged in to create an organization', {
-          duration: Infinity,
-          dismissible: true,
-        })
+        toastUtils.error('You must be logged in to create an organization')
         return
       }
-      const currentUserId = user.id
 
       // Create organization with user data
       const orgData = {
@@ -257,7 +286,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         website: data.website,
         phone: data.phone,
         address: data.address,
-        owner_id: currentUserId,
         settings: {},
         metadata: {},
         create_user: data.create_new_user
@@ -270,41 +298,41 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         associate_users: data.user_ids || [],
       }
 
-      console.log('📦 Making API call with orgData:', orgData)
-      const result = await orgsService.createOrg(orgData)
-      console.log('✅ API call successful! Result:', result)
+      console.log('🚀 CLIENT: Sending org creation request with payload:', JSON.stringify(orgData, null, 2))
+      console.log('🚀 CLIENT: Form data validation state:', {
+        isValid: form.formState.isValid,
+        errors: form.formState.errors,
+        isDirty: form.formState.isDirty,
+        isSubmitting: form.formState.isSubmitting,
+      })
+
+      const result = await orgsService.createOrgWithUser(orgData)
+      console.log('✅ CLIENT: Received successful response from server:', JSON.stringify(result, null, 2))
 
       // Update local store with the created organization
-      await orgsStore.createOrg(result)
-      console.log('🔄 Updated local store')
+      await orgsStore.createOrg(result.organization)
 
       const successMessage = data.create_new_user
         ? `Org created successfully with new user`
         : 'Org created successfully'
-      toast.success(successMessage)
+      toastUtils.successTemp(successMessage)
 
       form.reset()
       onOpenChange(false)
     } catch (error) {
-      console.error('❌ API call failed with error:', error)
-      console.error('📋 Error details:', {
+      console.error('❌ CLIENT: Error creating organization:', error)
+      console.error('❌ CLIENT: Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        error: error,
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        type: typeof error,
+        stringified: JSON.stringify(error, null, 2),
       })
 
       if (error instanceof Error && error.message.includes('Authentication required')) {
-        toast.error('Please log in first to create an organization', {
-          duration: Infinity,
-          dismissible: true,
-        })
+        toastUtils.error('Please log in first to create an organization')
       } else {
-        toast.error('Failed to create organization', {
-          duration: Infinity,
-          dismissible: true,
-        })
+        toastUtils.error('Failed to create organization')
       }
-      console.error('Create org error:', error)
     }
   }
 
@@ -317,7 +345,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
           <FormItem>
             <FormLabel>Website *</FormLabel>
             <FormControl>
-              <Input type="url" placeholder="https://acme.com" {...field} />
+              <Input type="text" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -331,7 +359,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
           <FormItem>
             <FormLabel>Org Name *</FormLabel>
             <FormControl>
-              <Input placeholder="Acme Corporation" {...field} />
+              <Input {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -345,7 +373,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
           <FormItem>
             <FormLabel>Handle *</FormLabel>
             <FormControl>
-              <Input placeholder="acme-corporation" {...field} />
+              <Input {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -360,20 +388,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
             <FormLabel>Description</FormLabel>
             <FormControl>
               <Textarea placeholder="Brief description of the organization" className="min-h-[60px]" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="contact_name"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Contact Name *</FormLabel>
-            <FormControl>
-              <Input placeholder="John Doe" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -437,6 +451,20 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
             <FormLabel>Email *</FormLabel>
             <FormControl>
               <Input type="email" placeholder="contact@acme.com" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="contact_name"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Contact Name *</FormLabel>
+            <FormControl>
+              <Input {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>

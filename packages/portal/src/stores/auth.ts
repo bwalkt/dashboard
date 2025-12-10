@@ -28,9 +28,31 @@ export class AuthStoreClass extends ZStorage {
 
   constructor() {
     super(STORE)
-    // Set loading to false immediately for unsigned users, then check auth
-    this.loading = false
-    this.checkAuthWithTimeout()
+    // Start with loading true during initialization
+    this.loading = true
+    this.initializeAuth()
+  }
+
+  private async initializeAuth() {
+    try {
+      // First, load any persisted user data
+      await this.loadPersistedData()
+
+      // If we have a persisted user, we're not loading anymore
+      if (this.user) {
+        this.loading = false
+        this.notify()
+      }
+
+      // Then check with server to validate/refresh auth
+      await this.checkAuthWithTimeout()
+    } catch (error) {
+      console.error('AuthStore: Failed to initialize auth:', error)
+      this.loading = false
+      this.user = null
+      this.isLoggedIn = false
+      this.notify()
+    }
   }
 
   // Subscribe to state changes
@@ -235,9 +257,19 @@ export class AuthStoreClass extends ZStorage {
       const { user } = response
       if (user) {
         await this.setUser(user)
+      } else {
+        // No user from server, clear auth state
+        this.user = null
+        this.isLoggedIn = false
       }
     } catch (error) {
-      // Auth failed or timed out - user remains null, which is correct for unsigned users
+      // Auth failed or timed out - clear auth state
+      this.user = null
+      this.isLoggedIn = false
+    } finally {
+      // Always set loading to false after auth check
+      this.loading = false
+      this.notify()
     }
   }
 

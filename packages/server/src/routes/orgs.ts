@@ -13,7 +13,6 @@ export interface CreateOrgPayload {
   website?: string;
   phone?: string;
   address?: string;
-  owner_id: string;
   settings?: Record<string, any>;
   metadata?: Record<string, any>;
 }
@@ -38,21 +37,20 @@ export interface Org {
   website?: string;
   phone?: string;
   address?: string;
-  owner_id: string;
-  settings?: Record<string, any>;
-  metadata?: Record<string, any>;
-  created_at: string;
-  updated_at: string;
-  deleted_at?: string;
+  data?: {
+    meta?: {
+      uid: string
+    }
+  }
 }
 
 export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   /**
-   * POST /orgs
+   * POST /api/orgs
    * Create a new organization
    */
   fastify.post(
-    "/orgs",
+    "/api/orgs",
     {
       preHandler: authenticateToken,
     },
@@ -61,10 +59,19 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         const data = request.body as CreateOrgPayload;
 
         // Validate required fields
-        if (!data.name || !data.handle || !data.email || !data.status || !data.plan || !data.owner_id) {
+        if (!data.name || !data.handle || !data.email || !data.status || !data.plan) {
           return reply.status(400).send({
             error: "Bad Request",
-            message: "Name, handle, email, status, plan, and owner_id are required",
+            message: "Name, handle, email, status, and plan are required",
+          });
+        }
+
+        // Get authenticated user ID
+        const authenticatedUserId = (request as any).user?.id;
+        if (!authenticatedUserId) {
+          return reply.status(401).send({
+            error: "Unauthorized",
+            message: "Authentication required",
           });
         }
 
@@ -89,7 +96,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
               name: data.name,
               handle: data.handle,
               website: data.website || "",
-              c_by: data.owner_id,
+              c_by: authenticatedUserId,
               data: {
                 description: data.description || "",
                 status: data.status,
@@ -98,7 +105,10 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
                 phone: data.phone || "",
                 address: data.address || "",
                 settings: data.settings || {},
-                metadata: data.metadata || {}
+                metadata: data.metadata || {},
+                meta: {
+                  uid: authenticatedUserId
+                }
               }
             }),
           ],
@@ -124,33 +134,58 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * POST /orgs/create-with-user
+   * POST /api/orgs/create-with-user
    * Create organization with optional user creation and association
    */
   fastify.post(
-    "/orgs/create-with-user",
+    "/api/orgs/create-with-user",
     {
       preHandler: authenticateToken,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = request.body as CreateOrgWithUserPayload;
+        
+        console.log('🔥 SERVER: Received request at /orgs/create-with-user')
+        console.log('🔥 SERVER: Request headers:', JSON.stringify(request.headers, null, 2))
+        console.log('🔥 SERVER: Request body:', JSON.stringify(data, null, 2))
+        console.log('🔥 SERVER: Request user context:', request.user ? JSON.stringify(request.user, null, 2) : 'No user context')
+
+        // Get authenticated user ID
+        const authenticatedUserId = (request as any).user?.id;
+        if (!authenticatedUserId) {
+          console.log('🔥 SERVER: Authentication failed - no user context')
+          return reply.status(401).send({
+            error: "Unauthorized",
+            message: "Authentication required",
+          });
+        }
 
         // Validate required fields
-        if (!data.name || !data.handle || !data.email || !data.status || !data.plan || !data.owner_id) {
+        if (!data.name || !data.handle || !data.email || !data.status || !data.plan) {
+          console.log('🔥 SERVER: Validation failed - missing required fields:', {
+            name: !data.name ? 'MISSING' : 'OK',
+            handle: !data.handle ? 'MISSING' : 'OK',
+            email: !data.email ? 'MISSING' : 'OK',
+            status: !data.status ? 'MISSING' : 'OK',
+            plan: !data.plan ? 'MISSING' : 'OK'
+          })
           return reply.status(400).send({
             error: "Bad Request",
-            message: "Name, handle, email, status, plan, and owner_id are required",
+            message: "Name, handle, email, status, and plan are required",
           });
         }
 
         // Check if handle is unique
+        console.log('🔥 SERVER: Checking if handle is unique:', data.handle)
         const existingOrg = await db.pool.query(
           "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND deleted_at IS NULL",
           [data.handle]
         );
+        console.log('🔥 SERVER: Handle check result:', { found: existingOrg.rows.length > 0, rowCount: existingOrg.rows.length })
 
         if (existingOrg.rows.length > 0) {
+          console.log('🔥 SERVER: Handle conflict detected, returning 409')
           return reply.status(409).send({
             error: "Conflict",
             message: "Organization handle already exists",
@@ -179,29 +214,35 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         }
 
         // Create organization using the postgres function
+        const orgCreateData = {
+          name: data.name,
+          handle: data.handle,
+          website: data.website || "",
+          c_by: authenticatedUserId,
+          data: {
+            description: data.description || "",
+            status: data.status,
+            plan: data.plan,
+            email: data.email,
+            phone: data.phone || "",
+            address: data.address || "",
+            settings: data.settings || {},
+            metadata: data.metadata || {},
+            meta: {
+              uid: authenticatedUserId
+            }
+          }
+        }
+        console.log('🔥 SERVER: Creating organization with data:', JSON.stringify(orgCreateData, null, 2))
+        
         const createResult = await db.pool.query(
           `SELECT pzero.create_org($1) as result`,
-          [
-            JSON.stringify({
-              name: data.name,
-              handle: data.handle,
-              website: data.website || "",
-              c_by: data.owner_id,
-              data: {
-                description: data.description || "",
-                status: data.status,
-                plan: data.plan,
-                email: data.email,
-                phone: data.phone || "",
-                address: data.address || "",
-                settings: data.settings || {},
-                metadata: data.metadata || {}
-              }
-            }),
-          ],
+          [JSON.stringify(orgCreateData)],
         );
+        console.log('🔥 SERVER: Organization creation result:', JSON.stringify(createResult.rows, null, 2))
 
         const { org_id } = createResult.rows[0].result;
+        console.log('🔥 SERVER: Created organization with ID:', org_id)
 
         // Associate created user with organization
         if (createdUser) {
@@ -243,9 +284,15 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           };
         }
 
+        console.log('🔥 SERVER: Sending successful response:', JSON.stringify(response, null, 2))
         return reply.send(response);
       } catch (error) {
-        console.error("Create organization with user error:", error);
+        console.error("❌ SERVER: Create organization with user error:", error);
+        console.error("❌ SERVER: Error details:", {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : 'No stack trace',
+          type: typeof error
+        })
         return reply.status(500).send({
           error: "Internal Server Error",
           message: "Failed to create organization with user",
@@ -255,11 +302,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * GET /orgs
+   * GET /api/orgs
    * Get all organizations
    */
   fastify.get(
-    "/orgs",
+    "/api/orgs",
     {
       preHandler: authenticateToken,
     },
@@ -283,11 +330,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * GET /orgs/:id
+   * GET /api/orgs/:id
    * Get organization by ID
    */
   fastify.get(
-    "/orgs/:id",
+    "/api/orgs/:id",
     {
       preHandler: authenticateToken,
     },
@@ -319,11 +366,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * PUT /orgs/:id
+   * PUT /api/orgs/:id
    * Update organization
    */
   fastify.put(
-    "/orgs/:id",
+    "/api/orgs/:id",
     {
       preHandler: authenticateToken,
     },
@@ -418,11 +465,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * DELETE /orgs/:id
+   * DELETE /api/orgs/:id
    * Delete organization (soft delete)
    */
   fastify.delete(
-    "/orgs/:id",
+    "/api/orgs/:id",
     {
       preHandler: authenticateToken,
     },
@@ -458,11 +505,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   );
 
   /**
-   * GET /orgs/:id/users
+   * GET /api/orgs/:id/users
    * Get users in an organization
    */
   fastify.get(
-    "/orgs/:id/users",
+    "/api/orgs/:id/users",
     {
       preHandler: authenticateToken,
     },

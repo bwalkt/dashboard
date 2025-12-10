@@ -1,7 +1,9 @@
 import type { JSONSchemaType } from 'ajv'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
-import { extractCompanyInfoFromDomain, generateContactEmail } from '../utils/handles'
+import { extractCompanyInfoFromDomain, generateOrgHandle } from '../utils/handles'
+import { type PaginationListResponse, PaginationListResponseSchema } from './pagination'
+import { generateContactEmail, UserSchema } from './users'
 
 const ajv = new Ajv()
 addFormats(ajv)
@@ -105,28 +107,9 @@ export const UpdateOrgDataSchema = createSchema([
 export const OrgResponseSchema = {
   type: 'object' as const,
   properties: {
-    organization: OrgSchema,
+    org: OrgSchema,
   },
-  required: ['organization'] as const,
-  additionalProperties: false,
-}
-
-export const OrgWithUserResponseSchema = {
-  type: 'object' as const,
-  properties: {
-    organization: OrgSchema,
-    user: {
-      type: 'object' as const,
-      properties: {
-        id: { type: 'string' as const },
-        email: { type: 'string' as const },
-        name: { type: 'string' as const },
-      },
-      required: ['id', 'email', 'name'] as const,
-      additionalProperties: false,
-    },
-  },
-  required: ['organization'] as const,
+  required: ['org'] as const,
   additionalProperties: false,
 }
 
@@ -137,11 +120,19 @@ export const OrgsListResponseSchema = {
       type: 'array' as const,
       items: OrgSchema,
     },
-    total: { type: 'number' as const },
-    page: { type: 'number' as const },
-    limit: { type: 'number' as const },
+    ...PaginationListResponseSchema.properties,
   },
-  required: ['orgs', 'total', 'page', 'limit'] as const,
+  required: ['orgs', ...PaginationListResponseSchema.required] as const,
+  additionalProperties: false,
+}
+
+export const OrgWithUserResponseSchema = {
+  type: 'object' as const,
+  properties: {
+    org: OrgSchema,
+    user: UserSchema,
+  },
+  required: ['org', 'user'] as const,
   additionalProperties: false,
 }
 
@@ -199,11 +190,11 @@ export type UpdateOrgData = Partial<Omit<CreateOrgData, 'handle'>> & {
 }
 
 export interface OrgResponse {
-  organization: Org
+  org: Org
 }
 
 export interface OrgWithUserResponse {
-  organization: Org
+  org: Org
   user?: {
     id: string
     email: string
@@ -211,11 +202,8 @@ export interface OrgWithUserResponse {
   }
 }
 
-export interface OrgsListResponse {
+export interface OrgsListResponse extends PaginationListResponse {
   orgs: Org[]
-  total: number
-  page: number
-  limit: number
 }
 
 // Compiled validators
@@ -226,13 +214,8 @@ export const validateOrgResponse = ajv.compile(OrgResponseSchema)
 export const validateOrgWithUserResponse = ajv.compile(OrgWithUserResponseSchema)
 export const validateOrgsListResponse = ajv.compile(OrgsListResponseSchema)
 
-// Re-export handle utilities for convenience
-export {
-  extractCompanyInfoFromDomain,
-  generateContactEmail,
-  generateNameFromEmail,
-  generateOrgHandle,
-} from '../utils/handles'
+// Re-export organization-related utilities for convenience
+export { extractCompanyInfoFromDomain, generateOrgHandle } from '../utils/handles'
 
 export function generateOrgDefaults(website: string): Partial<CreateOrgData> {
   const { domain, companyName, handle } = extractCompanyInfoFromDomain(website)

@@ -10,7 +10,6 @@ export interface CreateOrgPayload {
   website?: string
   phone?: string
   address?: string
-  owner_id: string
   settings?: Record<string, any>
   metadata?: Record<string, any>
 }
@@ -61,11 +60,26 @@ class OrgsService {
     organization: Org
     user?: { id: string; email: string; name: string }
   }> {
-    const response = await api.post<{
-      organization: Org
-      user?: { id: string; email: string; name: string }
-    }>('/api/orgs/create-with-user', data)
-    return response
+    console.log('📡 API SERVICE: Sending request to /api/orgs/create-with-user')
+    console.log('📡 API SERVICE: Request payload:', JSON.stringify(data, null, 2))
+
+    try {
+      const response = await api.post<{
+        organization: Org
+        user?: { id: string; email: string; name: string }
+      }>('/api/orgs/create-with-user', data)
+
+      console.log('📡 API SERVICE: Received successful response:', JSON.stringify(response, null, 2))
+      return response
+    } catch (error) {
+      console.error('📡 API SERVICE: Request failed:', error)
+      console.error('📡 API SERVICE: Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        type: typeof error,
+      })
+      throw error
+    }
   }
 
   /**

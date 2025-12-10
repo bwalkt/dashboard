@@ -8,7 +8,7 @@
  * - Consistent configuration
  * - Built-in retry logic for authentication failures
  */
-import { envs } from '@constants/envs'
+import { envs } from '@/constants/envs'
 export interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
   body?: any
   baseUrl?: string

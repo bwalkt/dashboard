@@ -56,8 +56,9 @@ export async function authenticateToken(
         message: "User not found",
       });
     }
-    // Attach user to request
-    (request as unknown as AuthenticatedRequest).user = user;
+    // Clean up user object by removing derived fields before attaching to request
+    const { is_del, is_act, c_at, ...cleanUser } = user;
+    (request as unknown as AuthenticatedRequest).user = cleanUser;
   } catch (error) {
     console.error("Authentication middleware error:", error);
     return reply.status(500).send({
