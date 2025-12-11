@@ -19,12 +19,15 @@ static_resources:
                         - match: { prefix: "/" }
                           route: { cluster: server_cluster }
                 http_filters:
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
                   - name: envoy.filters.http.wasm
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
                       config:
                         name: "challenge_handler"
-                        root_id: "request_logger"
+                        root_id: "challenge_handler"
                         fail_open: false
                         vm_config:
                           vm_id: "challenge_handler_vm"
