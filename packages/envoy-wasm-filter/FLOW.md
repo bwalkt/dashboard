@@ -107,44 +107,37 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant Envoy
-    participant WASM as WASM Filter
-    participant Cache as Shared Data
+    actor Client
+    participant Envoy as Envoy WASM Filter
+    participant Shared as Shared Data Cache
     participant AuthZ as AuthZ Service
+    participant Origin as Origin Server
     
-    Client->>Envoy: HTTP Request
-    Envoy->>WASM: OnHttpRequestHeaders
+    Client->>Envoy: HTTP request (protected route)
+    Envoy->>Envoy: Extract & validate challenge headers<br/>x-challenge-id, x-challenge-answer
+    Envoy->>Shared: GET key "challenge:<id>"
     
-    alt Public Route
-        WASM->>WASM: Check PublicRoutes list
-        WASM->>Envoy: ActionContinue
-        Envoy->>Client: Forward to Upstream
-    else Protected Route
-        WASM->>WASM: Extract Challenge Headers
-        WASM->>Cache: GetSharedData(challenge:id)
+    alt Cache hit & matches provided answer
+        Shared-->>Envoy: expectedAnswer (match)
+        Envoy->>Origin: Forward request (ActionContinue)
+        Origin-->>Client: 200/response
+    else Cache hit & answer mismatch
+        Shared-->>Envoy: expectedAnswer (mismatch)
+        Envoy-->>Client: 403 Forbidden (invalid challenge answer)
+    else Cache miss
+        Envoy->>AuthZ: async POST /validate {challengeId, challengeAnswer}
+        Envoy-->>Client: Request paused (ActionPause)
+        AuthZ->>AuthZ: verifyChallenge(challengeId, challengeAnswer)
         
-        alt Cache Hit
-            Cache->>WASM: Return Cached Answer
-            WASM->>WASM: Validate Answer
-            alt Valid
-                WASM->>Envoy: ActionContinue
-            else Invalid
-                WASM->>Envoy: SendHttpResponse(403)
-            end
-        else Cache Miss
-            WASM->>Envoy: ActionPause
-            WASM->>AuthZ: DispatchHttpCall(/validate)
-            Note over WASM: Async Call
-            AuthZ->>WASM: Callback Response
-            
-            alt Valid Response
-                WASM->>Cache: SetSharedData(challenge:id)
-                WASM->>Envoy: ResumeHttpRequest
-                WASM->>Envoy: ActionContinue
-            else Invalid Response
-                WASM->>Envoy: SendHttpResponse(403)
-            end
+        alt AuthZ validates successfully
+            AuthZ-->>Envoy: 200 {ok:true, expectedAnswer}<br/>with optional x-challenge-ttl
+            Envoy->>Shared: SET challenge:<id> = expectedAnswer (with TTL)
+            Envoy->>Envoy: ResumeHttpRequest()
+            Envoy->>Origin: Resume & forward request
+            Origin-->>Client: 200/response
+        else AuthZ rejects challenge
+            AuthZ-->>Envoy: 403 {ok:false, message}
+            Envoy-->>Client: 403 Forbidden
         end
     end
 ```
