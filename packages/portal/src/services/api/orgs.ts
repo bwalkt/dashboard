@@ -10,8 +10,11 @@ export interface CreateOrgPayload {
   website?: string
   phone?: string
   address?: string
-  settings?: Record<string, any>
-  metadata?: Record<string, any>
+  data?: {
+    meta?: {
+      c_by: string
+    }
+  }
 }
 
 export interface CreateOrgWithUserPayload extends CreateOrgPayload {
@@ -35,13 +38,11 @@ export interface Org {
   website?: string
   phone?: string
   address?: string
-  logo_url?: string
-  owner_id: string
-  settings?: Record<string, any>
-  metadata?: Record<string, any>
-  created_at: string
-  updated_at: string
-  deleted_at?: string
+  data?: {
+    meta?: {
+      c_by: string
+    }
+  }
 }
 
 class OrgsService {

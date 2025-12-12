@@ -1,7 +1,6 @@
 export * from './math/index.js'
 export * from './mock/data-table.js'
 export * from './phone/index.js'
-export * from './pzero/index.js'
 export * from './types/index.js'
 export * from './utils/functionHeader.js'
 export * from './utils/functionShorthand.js'

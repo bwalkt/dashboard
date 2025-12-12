@@ -610,13 +610,10 @@ if not isinstance(org_input, dict):
 handle = org_input.get('handle', '').strip() if org_input.get('handle') else None
 name = org_input.get('name', '').strip() if org_input.get('name') else None
 c_by = org_input.get('c_by', '').strip() if org_input.get('c_by') else None
-
 if not handle:
     plpy.error('handle is required')
 if not name:
     plpy.error('name is required')
-if not c_by:
-    plpy.error('c_by is required')
 
 # Extract optional fields
 website = org_input.get('website', '').strip() if org_input.get('website') else None

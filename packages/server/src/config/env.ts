@@ -33,9 +33,6 @@ export interface EnvironmentConfig {
   BREVO_API_KEY: string;
   BREVO_SENDER_EMAIL: string;
   BREVO_SENDER_NAME: string;
-  SIGNALWIRE_PROJECT_ID: string;
-  SIGNALWIRE_TOKEN: string;
-  SIGNALWIRE_PHONE_NUMBER: string;
   TWILIO_ACCOUNT_SID: string;
   TWILIO_API_KEY: string;
   TWILIO_API_SECRET: string;
@@ -126,9 +123,6 @@ export const config: EnvironmentConfig = {
   BREVO_API_KEY: process.env.BREVO_API_KEY || "",
   BREVO_SENDER_EMAIL: process.env.BREVO_SENDER_EMAIL || "",
   BREVO_SENDER_NAME: process.env.BREVO_SENDER_NAME || "P-Zero",
-  SIGNALWIRE_PROJECT_ID: process.env.SIGNALWIRE_PROJECT_ID || "",
-  SIGNALWIRE_TOKEN: process.env.SIGNALWIRE_TOKEN || "",
-  SIGNALWIRE_PHONE_NUMBER: process.env.SIGNALWIRE_PHONE_NUMBER || "",
   TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || "",
   TWILIO_API_KEY: process.env.TWILIO_API_KEY || "",
   TWILIO_API_SECRET: process.env.TWILIO_API_SECRET || "",
@@ -182,9 +176,6 @@ export function validateEnvironment(): void {
     "JWT_SECRET",
     "BREVO_API_KEY",
     "BREVO_SENDER_EMAIL",
-    "SIGNALWIRE_PROJECT_ID",
-    "SIGNALWIRE_TOKEN",
-    "SIGNALWIRE_PHONE_NUMBER",
     "TWILIO_ACCOUNT_SID",
     "TWILIO_API_KEY",
     "TWILIO_API_SECRET",

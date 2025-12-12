@@ -70,17 +70,7 @@ vi.mock("twilio", () => ({
   })),
 }));
 
-// Mock SMS service
-vi.mock("@signalwire/realtime-api", () => ({
-  SignalWire: vi.fn().mockResolvedValue({
-    messaging: {
-      send: vi.fn().mockResolvedValue({
-        id: "test-message-id",
-        status: "queued",
-      }),
-    },
-  }),
-}));
+// SMS service is already mocked via the Twilio mock above
 
 // Mock axios for any HTTP requests
 vi.mock("axios", () => ({

@@ -1,4 +1,4 @@
-import { SignalWire } from "@signalwire/realtime-api";
+import twilio from "twilio";
 import { config } from "../config/env.js";
 
 interface SendSMSOptions {
@@ -12,44 +12,30 @@ interface SendVerificationCodeOptions {
 }
 
 class SMSService {
-  private client!: Awaited<ReturnType<typeof SignalWire>>;
-  private clientPromise: Promise<void>;
+  private client: twilio.Twilio;
 
   constructor() {
-    this.clientPromise = this.initializeClient();
-  }
-
-  private async initializeClient() {
-    this.client = await SignalWire({
-      project: config.SIGNALWIRE_PROJECT_ID,
-      token: config.SIGNALWIRE_TOKEN,
-    });
+    this.client = twilio(
+      config.TWILIO_ACCOUNT_SID,
+      config.TWILIO_API_SECRET || config.TWILIO_API_KEY
+    );
   }
 
   /**
-   * Ensure the client is initialized before use
-   */
-  private async ensureInitialized(): Promise<void> {
-    await this.clientPromise;
-  }
-
-  /**
-   * Send an SMS message using SignalWire
+   * Send an SMS message using Twilio
    */
   public async sendSMS(options: SendSMSOptions): Promise<void> {
     try {
-      console.log("🔧 Ensuring client is initialized...");
-      await this.ensureInitialized();
       console.log("📱 Attempting to send SMS to:", options.to);
-      console.log("📱 From:", config.SIGNALWIRE_PHONE_NUMBER);
+      console.log("📱 From:", config.TWILIO_PHONE_NUMBER);
 
-      const result = await this.client.messaging.send({
-        from: config.SIGNALWIRE_PHONE_NUMBER,
+      const result = await this.client.messages.create({
+        from: config.TWILIO_PHONE_NUMBER,
         to: options.to,
         body: options.message,
       });
 
-      console.log("✅ SMS sent successfully:", result);
+      console.log("✅ SMS sent successfully:", result.sid);
     } catch (error) {
       console.error("❌ Failed to send SMS - Full error:", error);
       console.error("❌ Error type:", typeof error);
@@ -74,6 +60,52 @@ class SMSService {
       to: options.to,
       message,
     });
+  }
+
+  /**
+   * Send verification code using Twilio Verify Service (if configured)
+   */
+  public async sendVerificationCodeWithVerify(phone: string): Promise<void> {
+    if (!config.TWILIO_VERIFY_SERVICE_SID) {
+      throw new Error("Twilio Verify Service SID not configured");
+    }
+
+    try {
+      const verification = await this.client.verify.v2
+        .services(config.TWILIO_VERIFY_SERVICE_SID)
+        .verifications.create({
+          to: phone,
+          channel: "sms",
+        });
+
+      console.log("✅ Verification sent successfully:", verification.status);
+    } catch (error) {
+      console.error("❌ Failed to send verification:", error);
+      throw new Error("Failed to send verification code");
+    }
+  }
+
+  /**
+   * Check verification code using Twilio Verify Service
+   */
+  public async checkVerificationCode(phone: string, code: string): Promise<boolean> {
+    if (!config.TWILIO_VERIFY_SERVICE_SID) {
+      throw new Error("Twilio Verify Service SID not configured");
+    }
+
+    try {
+      const verificationCheck = await this.client.verify.v2
+        .services(config.TWILIO_VERIFY_SERVICE_SID)
+        .verificationChecks.create({
+          to: phone,
+          code: code,
+        });
+
+      return verificationCheck.status === "approved";
+    } catch (error) {
+      console.error("❌ Failed to check verification code:", error);
+      return false;
+    }
   }
 
   /**

@@ -1,8 +1,8 @@
+import { type User } from "@pzero/shared/pzero";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../config/database.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { userService } from "../services/user.service.js";
-
 export interface CreateUserPayload {
   name: string;
   email: string;
@@ -14,20 +14,6 @@ export interface CreateUserPayload {
   metadata?: Record<string, any>;
 }
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  email_verified: boolean;
-  phone_verified: boolean;
-  avatar?: string;
-  org_id?: string;
-  metadata?: Record<string, any>;
-  created_at: string;
-  updated_at: string;
-  deleted_at?: string;
-}
 
 export interface UserWithVerification extends User {
   verification_token?: string;
@@ -40,7 +26,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
    * Create a new user (similar to registration)
    */
   fastify.post(
-    "/api/users",
+    "/users",
     {
       preHandler: authenticateToken,
     },
@@ -148,7 +134,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
           SELECT u.*, a.email, a.email_verified
           FROM pzero.all_users u
           JOIN pzero.all_auth a ON u.id = a.id
-          WHERE u.deleted_at IS NULL
+          WHERE u.is_del = false
           ORDER BY u.created_at DESC
         `);
 
@@ -244,8 +230,8 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
         // Soft delete by setting deleted_at timestamp
         const result = await db.pool.query(
           `UPDATE pzero.all_users 
-           SET deleted_at = CURRENT_TIMESTAMP 
-           WHERE id = $1 AND deleted_at IS NULL
+           SET is_del = true
+           WHERE id = $1 AND is_del = false
            RETURNING id`,
           [id]
         );

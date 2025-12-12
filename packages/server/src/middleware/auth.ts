@@ -57,8 +57,14 @@ export async function authenticateToken(
       });
     }
     // Clean up user object by removing derived fields before attaching to request
-    const { is_del, is_act, c_at, ...cleanUser } = user;
-    (request as unknown as AuthenticatedRequest).user = cleanUser;
+    // @ts-ignore 
+    if (user.is_del || !user.is_act) {
+      return reply.status(401).send({
+        error: "Unauthorized",
+        message: "User is deleted or inactive",
+      });
+    }
+    (request as unknown as AuthenticatedRequest).user = user;
   } catch (error) {
     console.error("Authentication middleware error:", error);
     return reply.status(500).send({

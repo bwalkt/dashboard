@@ -601,14 +601,12 @@ CREATE TABLE pzero.all_users (
   LIKE uuid_base_loc_table including ALL,
   LIKE pzero.base_part including ALL,
   avatar text,
-  status pzero.user_status,
-  online_status pzero.user_online_status,
-  last_seen timestamptz,
+  status pzero.user_status DEFAULT 'ACTIVE',
+  online_status pzero.user_online_status DEFAULT 'ACTIVE',
+  last_seen timestamptz default now(),
   PRIMARY KEY (part, is_act, org_id, id),
   FOREIGN key (id, is_act) REFERENCES pzero.all_auth (id, is_act) ON DELETE CASCADE
-)
-PARTITION BY
-  list (is_act);
+) PARTITION BY list (is_act);
 
 -- Indexes will be created automatically by event trigger
 -- orgs, device and auth are global and not entities part of org

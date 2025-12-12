@@ -29,12 +29,6 @@ const baseFields = {
     enum: ['free', 'starter', 'pro', 'enterprise'] as const,
     default: 'starter',
   },
-  owner_id: { type: 'string' as const },
-  settings: { type: 'object' as const, additionalProperties: true },
-  metadata: { type: 'object' as const, additionalProperties: true },
-  created_at: { type: 'string' as const },
-  updated_at: { type: 'string' as const },
-  deleted_at: { type: 'string' as const, nullable: true },
 }
 
 // Helper function to create schema with selected fields
@@ -61,30 +55,12 @@ function createSchema<T extends keyof typeof baseFields>(
 
 // Core schemas
 export const OrgSchema = createSchema(
-  [
-    'id',
-    'name',
-    'handle',
-    'description',
-    'logo_url',
-    'website',
-    'email',
-    'phone',
-    'status',
-    'plan',
-    'owner_id',
-    'address',
-    'settings',
-    'metadata',
-    'created_at',
-    'updated_at',
-    'deleted_at',
-  ],
-  ['id', 'name', 'handle', 'status', 'plan', 'owner_id', 'created_at', 'updated_at'],
+  ['id', 'name', 'handle', 'description', 'logo_url', 'website', 'email', 'phone', 'status', 'plan', 'address'],
+  ['id', 'name', 'handle', 'status', 'plan'],
 )
 
 export const CreateOrgDataSchema = createSchema(
-  ['name', 'handle', 'description', 'logo_url', 'website', 'email', 'phone', 'address', 'settings', 'metadata'],
+  ['name', 'handle', 'description', 'logo_url', 'website', 'email', 'phone', 'address'],
   ['name', 'handle'],
 )
 
@@ -152,12 +128,6 @@ export interface Org {
   status: OrgStatus
   plan: OrgPlan
   address: string | null
-  owner_id: string
-  settings?: Record<string, any>
-  metadata?: Record<string, any>
-  created_at: string
-  updated_at: string
-  deleted_at: string | null
 }
 
 export interface CreateOrgData {
