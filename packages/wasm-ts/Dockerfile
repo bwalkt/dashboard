@@ -14,10 +14,10 @@ COPY ./packages/wasm-ts/assembly ./assembly
 RUN mkdir -p build
 
 # Install dependencies
-RUN npm install
+RUN pnpm install
 
 # Build the WASM filter
-RUN npm run asbuild
+RUN pnpm run asbuild
 
 # Runtime stage
 FROM envoyproxy/envoy:v1.30-latest AS runner

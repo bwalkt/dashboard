@@ -44,6 +44,33 @@ function getStoredChallenge(): { challengeId: string; challengeAnswer: string } 
 }
 
 /**
+ * Redact sensitive headers from logging
+ */
+function redactSensitiveHeaders(headers: Headers): Record<string, string> {
+  const sensitiveKeys = [
+    'authorization',
+    'cookie',
+    'set-cookie',
+    'x-auth-token',
+    'x-api-key',
+    'x-access-token',
+    'x-refresh-token',
+  ]
+  const redacted: Record<string, string> = {}
+
+  headers.forEach((value, key) => {
+    const lowerKey = key.toLowerCase()
+    if (sensitiveKeys.some(sensitive => lowerKey.includes(sensitive))) {
+      redacted[key] = '<redacted>'
+    } else {
+      redacted[key] = value
+    }
+  })
+
+  return redacted
+}
+
+/**
  * Extract and solve challenge from response headers
  * Stores the solution in localStorage for future requests
  */
@@ -52,13 +79,15 @@ async function handleChallengeHeaders(response: Response): Promise<void> {
   const challenge = response.headers.get(CHALLENGE_HEADER)
   const challengeAnswer = response.headers.get(CHALLENGE_ANSWER_HEADER)
 
-  // Log all challenge-related headers for debugging
-  console.log('Challenge headers received:', {
-    challengeId,
-    challenge,
-    challengeAnswer,
-    allHeaders: Object.fromEntries(response.headers.entries()),
-  })
+  // Log challenge-related headers for debugging (only in development)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Challenge headers received:', {
+      challengeId,
+      challenge,
+      challengeAnswer,
+      allHeaders: redactSensitiveHeaders(response.headers),
+    })
+  }
 
   // Store if we have challengeId and either challengeAnswer (preferred) or challenge
   if (challengeId) {

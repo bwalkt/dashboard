@@ -4,7 +4,7 @@
   "description": "AssemblyScript Envoy WASM filter for challenge handling",
   "type": "module",
   "scripts": {
-    "asbuild:release": "asc assembly/index.ts",
+    "asbuild:release": "asc --config asconfig.json --target release assembly/index.ts",
     "asbuild": "pnpm asbuild:release"
   },
   "keywords": [

@@ -168,7 +168,7 @@ services:
       - pzero-network
     ports:
       - "8183:8082" # External port for WASM TS filter requests
-      - "9903:9903" # Admin interface
+      # Admin interface (9903) is not exposed externally - only accessible from within container
     volumes:
       - ./envoy-wasm-ts.yaml:/etc/envoy/envoy.yaml:ro
     command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
