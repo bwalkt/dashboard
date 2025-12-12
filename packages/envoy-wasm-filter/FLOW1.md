@@ -1,3 +1,4 @@
+```mermaid
 sequenceDiagram
     actor Client
     participant Envoy as Envoy WASM Filter
@@ -29,3 +30,4 @@ sequenceDiagram
             Envoy-->>Client: 403 Forbidden
         end
     end
+```
