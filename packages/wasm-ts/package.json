@@ -1,0 +1,25 @@
+{
+  "name": "@pzero/wasm-ts",
+  "version": "1.0.0",
+  "description": "AssemblyScript Envoy WASM filter for challenge handling",
+  "type": "module",
+  "scripts": {
+    "asbuild:release": "asc --config asconfig.json --target release assembly/index.ts",
+    "asbuild": "pnpm asbuild:release"
+  },
+  "keywords": [
+    "envoy",
+    "wasm",
+    "proxy-wasm",
+    "assemblyscript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@solo-io/proxy-runtime": "^0.1.15"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.19.22"
+  },
+  "packageManager": "pnpm@10.18.3"
+}
