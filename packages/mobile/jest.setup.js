@@ -1,6 +1,12 @@
 // Setup React Native environment
 global.__DEV__ = true
 
+// Mock uuid module
+jest.mock('uuid', () => ({
+  v7: jest.fn(() => '550e8400-e29b-41d4-a716-446655440000'),
+  v4: jest.fn(() => '550e8400-e29b-41d4-a716-446655440000'),
+}))
+
 // Mock React Native
 jest.mock('react-native', () => {
   const React = require('react')
