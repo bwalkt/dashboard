@@ -186,7 +186,19 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         })
         // Check if handle is unique
         console.log('🔥 SERVER: Checking if handle is unique:', data.handle)
-        const existingOrg = await db.pool.query(
+        // begin transaction
+        const client = await db.pool.connect();
+        try {
+          await client.query('BEGIN');
+        } catch (err) {
+          await client.query('ROLLBACK');
+          client.release();
+          return reply.status(500).send({
+            error: "Internal Server Error",
+            message: "Failed to start database transaction",
+          });
+        }
+        const existingOrg = await client.query(
           "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND is_del = FALSE",
           [data.handle]
         );
@@ -194,6 +206,8 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
         if (existingOrg.rows.length > 0) {
           console.log('🔥 SERVER: Handle conflict detected, returning 409')
+          await client.query('ROLLBACK');
+          client.release();
           return reply.status(409).send({
             error: "Conflict",
             message: "Organization handle already exists",
@@ -207,6 +221,9 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           // Check if user already exists
           const existingUser = await userService.getUserByEmail(data.create_user.email);
           if (existingUser) {
+            console.log('🔥 SERVER: User creation conflict - email already exists:', data.create_user.email)
+            await client.query('ROLLBACK');
+            client.release();
             return reply.status(409).send({
               error: "Conflict",
               message: "User with this email already exists",
@@ -240,30 +257,34 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         }
         console.log('🔥 SERVER: Creating organization with data:', JSON.stringify(orgCreateData, null, 2))
         
-        const createResult = await db.pool.query(
+        const createResult = await client.query(
           `SELECT pzero.create_org($1) as result`,
           [JSON.stringify(orgCreateData)],
         );
         console.log('🔥 SERVER: Organization creation result:', JSON.stringify(createResult.rows, null, 2))
 
         const result = createResult.rows[0].result;
-        console.log('🔥 SERVER: Created organization with ID:', result.id)
+        console.log('🔥 SERVER: Created organization with ID:', result)
 
         // Associate created user with organization
         if (createdUser) {
-          await db.pool.query(
-            `INSERT INTO pzero.all_users (id, org_id, status, is_act) VALUES ($1, $2, $3)`,
-            [createdUser.id, result.id, 'ACTIVE', true]
+          console.log("🔥 SERVER: Associating created user with organization:", result);
+          const orgUser = {
+            org_id: result,
+            uid: createdUser.id,
+            c_by: authenticatedUserId
+          }
+          await client.query(`SELECT pzero.create_user_with_auth($1:jsonb)`,
+            [JSON.stringify(orgUser)]
           );
         }
 
-       
-
         // Fetch the complete organization record
-        const orgResult = await db.pool.query(
+        const orgResult = await client.query(
           `SELECT * FROM pzero.all_orgs WHERE id = $1`,
-          [result.id]
+          [result]
         );
+
 
         const response: {
           organization: Org;
@@ -279,7 +300,9 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
             email: createdUser.email,
             name: createdUser.name,
           };
-        }
+          client.query('COMMIT')
+          client.release()
+        } 
 
         console.log('🔥 SERVER: Sending successful response:', JSON.stringify(response, null, 2))
         return reply.send(response);
@@ -290,6 +313,8 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           stack: error instanceof Error ? error.stack : 'No stack trace',
           type: typeof error
         })
+        client.query('ROLLBACK');
+        client.release();
         return reply.status(500).send({
           error: "Internal Server Error",
           message: "Failed to create organization with user",
