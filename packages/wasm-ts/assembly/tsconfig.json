@@ -1,7 +1,4 @@
 {
   "extends": "../node_modules/assemblyscript/std/assembly.json",
-  "include": [
-    "./**/*.ts",
-    "../node_modules/@solo-io/proxy-runtime/assembly/**/*.ts"
-  ]
+  "include": ["./**/*.ts", "../node_modules/@solo-io/proxy-runtime/assembly/**/*.ts"]
 }
