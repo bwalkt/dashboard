@@ -141,14 +141,18 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       // Create or update user in database
       const user = userService.upsertUserFromGitHub(githubUser)
 
-      if (!user.github_id || !user.email) {
+      if (!user.github_id) {
         return reply.status(400).send({
           error: 'Bad Request',
           message: 'Invalid user data from GitHub',
         } as ErrorResponse)
       }
       // Generate JWT tokens
-      const { accessToken, refreshToken } = authService.generateTokenPair(Number(user.id), user.github_id, user.email)
+      const { accessToken, refreshToken } = authService.generateTokenPair(
+        Number(user.id),
+        user.github_id,
+        user.email || '',
+      )
       reply.setCookie('accessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -238,7 +242,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         } as ErrorResponse)
       }
 
-      if (!user.github_id || !user.email) {
+      if (!user.github_id) {
         return reply.status(400).send({
           error: 'Bad Request',
           message: 'Invalid user data from GitHub',
@@ -248,7 +252,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       const { accessToken, refreshToken: newRefreshToken } = authService.generateTokenPair(
         Number(user.id),
         user.github_id,
-        user.email,
+        user.email || '',
       )
 
       // Set JWT tokens as cookies

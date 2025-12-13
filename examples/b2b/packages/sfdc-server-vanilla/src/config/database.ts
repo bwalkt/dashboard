@@ -17,7 +17,7 @@ class DatabaseManager {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         github_id TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
-        email TEXT NOT NULL,
+        email TEXT,
         avatar TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
