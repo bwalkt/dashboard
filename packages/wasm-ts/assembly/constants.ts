@@ -28,10 +28,13 @@ export const PUBLIC_ROUTES: string[] = [
   '/faq',
   '/terms',
   '/privacy',
+  '/proxy/auth/login',
+  '/proxy/auth/callback',
+  '/proxy/auth/refresh',
 ]
 
 // Login routes that require challenge header injection
-export const LOGIN_ROUTES: string[] = ['/auth/callback', '/auth/refresh']
+export const LOGIN_ROUTES: string[] = ['/proxy/auth/callback', '/proxy/auth/refresh']
 
 // Time-to-live for challenge data in shared storage (in seconds)
 // Challenges expire after 1 hour to prevent stale challenges from accumulating
