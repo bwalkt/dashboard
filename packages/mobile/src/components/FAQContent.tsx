@@ -29,7 +29,7 @@ const FAQContent: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await api.get<FAQData>('/faq')
+      const response = await api.get<FAQData>('/public/faq')
       setFaqs(response)
     } catch (err: any) {
       console.error('Error fetching FAQs:', err)

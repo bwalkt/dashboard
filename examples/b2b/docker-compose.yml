@@ -59,6 +59,45 @@ services:
       dragonfly:
         condition: service_healthy
 
+  authz-service:
+    build:
+      context: ../../
+      dockerfile: packages/authz-service/Dockerfile
+    container_name: pzero-b2b-authz-service
+    networks:
+      - pzero-network
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - REDIS_URL=${REDIS_URL:-redis://dragonfly:6379}
+      - CHALLENGE_SECRET=${CHALLENGE_SECRET}
+    restart: unless-stopped
+    depends_on:
+      dragonfly:
+        condition: service_healthy
+
+  pzero-b2b-envoy:
+    build:
+      context: ../../
+      dockerfile: packages/envoy-wasm-filter/Dockerfile
+    container_name: pzero-b2b-envoy-proxy
+    networks:
+      - pzero-network
+    ports:
+      - "3001:8081" # External port for B2B WASM filter requests
+      - "9903:9902" # Admin interface
+    volumes:
+      - ./envoy-b2b.yaml:/etc/envoy/envoy.yaml:ro
+    command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
+    restart: unless-stopped
+    environment:
+      - ENVOY_LOG_LEVEL=info
+    depends_on:
+      pzero-sfdc-server:
+        condition: service_started
+      authz-service:
+        condition: service_started
+
 volumes:
   dragonfly_data:
 

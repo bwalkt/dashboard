@@ -8,7 +8,7 @@ export const fetchContent = async (type: ContentType): Promise<SectionResponse> 
     if (__DEV__) {
       console.log(`Attempting to fetch ${type} from /${type} endpoint...`)
     }
-    const response = await api.get(`/${type}`)
+    const response = await api.get(`/public/${type}`)
     if (__DEV__) {
       console.log(`${type} API response:`, response)
     }
