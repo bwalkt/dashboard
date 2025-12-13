@@ -123,7 +123,7 @@ services:
       pzero-server:
         condition: service_started
     volumes:
-      - ./envoy-wasm.yaml:/etc/envoy/envoy.yaml
+      - ./envoy-wasm-ts.yaml:/etc/envoy/envoy.yaml
 
 volumes:
   postgres_data:
