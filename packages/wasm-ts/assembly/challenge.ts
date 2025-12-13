@@ -122,7 +122,19 @@ function parseChallengeEntry(entryJson: string): string | null {
     return null
   }
   const expiresAtStr = entryJson.substring(expiresAtContentStart, expiresAtEnd)
-  const expiresAt = u32(parseInt(expiresAtStr))
+  // Safely parse u32 - handle potential overflow or invalid values
+  // parseInt returns f64, so we need to check bounds before converting to u32
+  // Skip parsing if string is empty to avoid errors
+  let expiresAt: u32 = 0
+  if (expiresAtStr.length > 0) {
+    const parsedFloat = parseInt(expiresAtStr)
+    // Check if valid finite number and within u32 range (0 to 4294967295)
+    // Use isFinite to check for NaN, Infinity, and -Infinity
+    if (isFinite(parsedFloat) && parsedFloat >= 0 && parsedFloat <= 4294967295) {
+      expiresAt = u32(parsedFloat)
+    }
+  }
+  // Note: expiresAt is not used since expiry checking is disabled
 
   // Expiry checking disabled - Date.now() not available in proxy-wasm
   // Always return value if parsing succeeded
