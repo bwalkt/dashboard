@@ -1,10 +1,13 @@
 // Import tracing first to initialize OpenTelemetry instrumentation
 import './tracing'
 
+// Validate challenge secret before any API requests are made
+import { validateChallengeSecret } from './lib/api'
 // Initialize USE_PROXY from localStorage before any API requests are made
 import { initializeUseProxy } from './lib/proxy-config'
 
 initializeUseProxy()
+validateChallengeSecret()
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'
