@@ -12,7 +12,6 @@
 
 import { getUseProxy } from './proxy-config'
 
-const VALIDATION_HEADER = 'X-Test-Eval'
 const PROXY_TARGET_ID_HEADER = 'x-proxy-target-id'
 const CHALLENGE_ID_HEADER = 'x-challenge-id'
 const CHALLENGE_HEADER = 'x-challenge'
@@ -21,63 +20,6 @@ const CHALLENGE_ANSWER_HEADER = 'x-challenge-answer'
 // LocalStorage keys
 const CHALLENGE_ID_STORAGE_KEY = 'challenge_id'
 const CHALLENGE_ANSWER_STORAGE_KEY = 'challenge_answer'
-
-/**
- * Get the challenge secret from environment variables
- * This should match the CHALLENGE_SECRET on the server
- * @throws Error if VITE_CHALLENGE_SECRET is not set in non-development environments
- */
-function getChallengeSecret(): string {
-  const secret = import.meta.env.VITE_CHALLENGE_SECRET
-
-  if (!secret) {
-    // In development, allow missing secret with a warning
-    if (import.meta.env.DEV || import.meta.env.MODE === 'development') {
-      console.warn(
-        '⚠️ VITE_CHALLENGE_SECRET is not set. Using default secret for development only. ' +
-          'This should be set in production environments.',
-      )
-      return 'default-secret-change-in-production'
-    }
-
-    // In non-development environments, fail fast
-    throw new Error(
-      'VITE_CHALLENGE_SECRET is required but not set. ' +
-        'Please set VITE_CHALLENGE_SECRET in your environment variables.',
-    )
-  }
-
-  return secret
-}
-
-/**
- * Validate that VITE_CHALLENGE_SECRET is set at startup
- * This should be called before any API requests are made
- * @throws Error if VITE_CHALLENGE_SECRET is not set in non-development environments
- */
-export function validateChallengeSecret(): void {
-  // Call getChallengeSecret() which will throw if missing in non-dev environments
-  getChallengeSecret()
-}
-
-/**
- * Solve the challenge by computing SHA256(challengeId + secret)
- * @param challengeId - The challenge ID from the server
- * @returns The computed challenge answer (SHA256 hash)
- */
-async function solveChallenge(challengeId: string): Promise<string> {
-  const secret = getChallengeSecret()
-  const message = challengeId + secret
-
-  // Use Web Crypto API for SHA256 hashing
-  const encoder = new TextEncoder()
-  const data = encoder.encode(message)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-
-  return hashHex
-}
 
 /**
  * Store challenge data in localStorage
@@ -102,22 +44,63 @@ function getStoredChallenge(): { challengeId: string; challengeAnswer: string } 
 }
 
 /**
+ * Redact sensitive headers from logging
+ */
+function redactSensitiveHeaders(headers: Headers): Record<string, string> {
+  const sensitiveKeys = [
+    'authorization',
+    'cookie',
+    'set-cookie',
+    'x-auth-token',
+    'x-api-key',
+    'x-access-token',
+    'x-refresh-token',
+  ]
+  const redacted: Record<string, string> = {}
+
+  headers.forEach((value, key) => {
+    const lowerKey = key.toLowerCase()
+    if (sensitiveKeys.some(sensitive => lowerKey.includes(sensitive))) {
+      redacted[key] = '<redacted>'
+    } else {
+      redacted[key] = value
+    }
+  })
+
+  return redacted
+}
+
+/**
  * Extract and solve challenge from response headers
  * Stores the solution in localStorage for future requests
  */
 async function handleChallengeHeaders(response: Response): Promise<void> {
   const challengeId = response.headers.get(CHALLENGE_ID_HEADER)
   const challenge = response.headers.get(CHALLENGE_HEADER)
+  const challengeAnswer = response.headers.get(CHALLENGE_ANSWER_HEADER)
 
-  if (challengeId && challenge) {
-    try {
-      // Solve the challenge
-      const challengeAnswer = await solveChallenge(challengeId)
-      // Store in localStorage
-      storeChallenge(challengeId, challengeAnswer)
-      console.log('Challenge solved and stored:', { challengeId, challenge })
-    } catch (error) {
-      console.error('Failed to solve challenge:', error)
+  // Log challenge-related headers for debugging (only in development)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Challenge headers received:', {
+      challengeId,
+      challenge,
+      challengeAnswer,
+      allHeaders: redactSensitiveHeaders(response.headers),
+    })
+  }
+
+  // Store if we have challengeId and either challengeAnswer (preferred) or challenge
+  if (challengeId) {
+    const answerToStore = challengeAnswer || challenge
+    if (answerToStore) {
+      try {
+        storeChallenge(challengeId, answerToStore)
+        console.log('Challenge stored in localStorage:', { challengeId, challengeAnswer: answerToStore })
+      } catch (error) {
+        console.error('Failed to store challenge in localStorage:', error)
+      }
+    } else {
+      console.warn('Challenge ID received but no challenge or challengeAnswer header found')
     }
   }
 }
@@ -264,7 +247,6 @@ function serializeBody(
  * Parse a direct API response (non-proxy)
  */
 async function parseDirectResponse<T>(response: Response): Promise<T> {
-  storeValidationHeader(response)
   // Handle challenge headers from response
   await handleChallengeHeaders(response)
 
@@ -287,7 +269,6 @@ async function parseDirectResponse<T>(response: Response): Promise<T> {
  * Parse a proxy API response
  */
 async function parseProxyResponse<T>(response: Response): Promise<T> {
-  storeValidationHeader(response)
   // Handle challenge headers from response
   await handleChallengeHeaders(response)
 
@@ -379,7 +360,7 @@ async function refreshToken(): Promise<void> {
       if (!response.ok) {
         throw new ApiError('Token refresh failed', response.status, response.statusText, response)
       }
-      storeValidationHeader(response)
+
       await handleChallengeHeaders(response)
     } catch (error) {
       throw error
@@ -413,7 +394,6 @@ async function refreshTokenWithProxy(): Promise<void> {
         throw new ApiError('Token refresh failed', response.status, response.statusText, response)
       }
 
-      storeValidationHeader(response)
       await handleChallengeHeaders(response)
     } catch (error) {
       throw error
@@ -424,30 +404,6 @@ async function refreshTokenWithProxy(): Promise<void> {
   })()
 
   return refreshPromise
-}
-
-const storeValidationHeader = (response: Response) => {
-  const value = response.headers.get(VALIDATION_HEADER)
-
-  if (value === null) {
-    return
-  }
-
-  const parts = value.split('*')
-  if (parts.length !== 2) {
-    throw new ApiError('Invalid header value', response.status, response.statusText, response)
-  }
-
-  const randomInt1 = Number(parts[0])
-  const randomInt2 = Number(parts[1])
-
-  if (Number.isNaN(randomInt1) || Number.isNaN(randomInt2)) {
-    throw new ApiError('Invalid header value', response.status, response.statusText, response)
-  }
-
-  const res = randomInt1 * randomInt2
-
-  localStorage.setItem(VALIDATION_HEADER, res.toString())
 }
 
 /**
@@ -474,11 +430,6 @@ export async function apiRequestWithoutProxy<T = any>(endpoint: string, options:
 
   // Handle body serialization
   const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, false)
-
-  const storedValidationHeader = localStorage.getItem(VALIDATION_HEADER)
-  if (storedValidationHeader) {
-    updatedHeaders[VALIDATION_HEADER] = storedValidationHeader
-  }
 
   // Attach challenge headers if available
   const storedChallenge = getStoredChallenge()
@@ -570,11 +521,6 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
 
   // Extract method and preserve all other RequestInit properties (signal, cache, redirect, etc.)
   const { method = 'GET', ...remainingFetchOptions } = fetchOptions
-
-  const storedValidationHeader = localStorage.getItem(VALIDATION_HEADER)
-  if (storedValidationHeader) {
-    updatedHeaders[VALIDATION_HEADER] = storedValidationHeader
-  }
 
   // Attach challenge headers if available
   const storedChallenge = getStoredChallenge()

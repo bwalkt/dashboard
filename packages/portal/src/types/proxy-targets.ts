@@ -35,3 +35,4 @@ export interface RefreshCacheResponse {
   count: number
   proxyTargets: ProxyTarget[]
 }
+
