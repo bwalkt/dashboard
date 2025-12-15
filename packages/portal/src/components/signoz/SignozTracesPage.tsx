@@ -39,10 +39,9 @@ export function SignozTracesPage() {
   }, [filters, pagination])
 
   // Use React Query for data fetching
-  const { data, isLoading, error, refetch, isFetching } = useQuery<RawDataResponse>({
+  const { data, error, refetch, isFetching } = useQuery<RawDataResponse>({
     queryKey: ['signoz-traces', filters, pagination],
     queryFn,
-    enabled: false, // Don't auto-fetch, wait for user to click Query or Load More
     retry: 1,
   })
 
