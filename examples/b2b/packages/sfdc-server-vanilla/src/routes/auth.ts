@@ -164,6 +164,17 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         maxAge: 3600, // 1 hour
       })
 
+      // Issue challenge from authz-service
+      const challengeResponse = await authzService.issueChallenge()
+
+      if (challengeResponse?.challengeId) {
+        // Store challenge ID in Redis for later refresh
+        await redis.set(`user:${user.id}:challengeId`, challengeResponse.challengeId, 3600)
+        // Send challenge as headers
+        reply.header('x-challenge-id', challengeResponse.challengeId)
+        reply.header('x-challenge', challengeResponse.challenge)
+      }
+
       return reply.send({
         message: 'Login successful',
         user,
@@ -267,6 +278,17 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         path: '/',
         maxAge: 3600 * 24 * 30, // 30 days
       })
+      // Refresh challenge from authz-service when JWT is refreshed
+      const oldChallengeId = await redis.get(`user:${user.id}:challengeId`)
+      const challengeResponse = await authzService.refreshChallenge(oldChallengeId)
+
+      if (challengeResponse?.challengeId) {
+        // Store new challenge ID in Redis
+        await redis.set(`user:${user.id}:challengeId`, challengeResponse.challengeId, 3600)
+        // Send challenge as headers
+        reply.header('x-challenge-id', challengeResponse.challengeId)
+        reply.header('x-challenge', challengeResponse.challenge)
+      }
 
       return reply.send({
         user,

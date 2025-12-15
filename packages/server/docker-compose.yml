@@ -159,28 +159,6 @@ services:
       authz-service:
         condition: service_started
 
-  pzero-envoy-wasm-ts:
-    build:
-      context: ../../
-      dockerfile: packages/wasm-ts/Dockerfile
-    container_name: pzero-envoy-wasm-ts-proxy
-    networks:
-      - pzero-network
-    ports:
-      - "8183:8082" # External port for WASM TS filter requests
-      # Admin interface (9903) is not exposed externally - only accessible from within container
-    volumes:
-      - ./envoy-wasm-ts.yaml:/etc/envoy/envoy.yaml:ro
-    command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
-    restart: unless-stopped
-    environment:
-      - ENVOY_LOG_LEVEL=info
-    depends_on:
-      pzero-server:
-        condition: service_started
-      authz-service:
-        condition: service_started
-
 volumes:
   postgres_data:
   dragonfly_data:

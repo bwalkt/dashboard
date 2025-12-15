@@ -1,5 +1,0 @@
-build/
-*.wasm
-*.wat
-*.map
-node_modules
