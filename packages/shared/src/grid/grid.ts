@@ -1,12 +1,21 @@
 import {
+  acosh,
+  asinh,
+  atan2,
+  atanh,
   bitAnd,
   bitOr,
   bitXor,
+  cbrt,
   combinations,
+  cosh,
   det,
   factorial,
   gamma,
+  hypot,
   leftShift,
+  log2,
+  log10,
   evaluate as mathjsEvaluate,
   mean,
   median,
@@ -16,7 +25,10 @@ import {
   randomInt,
   rightLogShift,
   simplify,
+  sinh,
+  sqrt,
   std,
+  tanh,
   trace,
   transpose,
   variance,
@@ -231,7 +243,7 @@ export function genFunction(complexity?: number, size?: number) {
     row: Math.floor(Math.random() * actualSize),
     col: Math.floor(Math.random() * actualSize),
   }
-  
+
   // Ensure yCell is different from xCell
   let yCell: { row: number; col: number }
   do {
@@ -313,10 +325,10 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: () => `ceil(x / ${randDivisor()})`, name: 'ceil,divide' },
       { expr: () => `floor(y / ${randDivisor()})`, name: 'floor,divide' },
       { expr: () => `round((x + y) / ${randDivisor()})`, name: 'round,add,divide' },
-      { expr: () => `sqrt(x^${randPower()})`, name: 'sqrt,pow' },
-      { expr: () => `cbrt(y^${randPower()})`, name: 'cbrt,pow' },
-      { expr: () => `sqrt(${randCoeff()}*x)`, name: 'sqrt,multiply' },
-      { expr: () => `cbrt(${randCoeff()}*y)`, name: 'cbrt,multiply' },
+      { expr: () => `sq(x^${randPower()})`, name: 'sq,pow' },
+      { expr: () => `cb(y^${randPower()})`, name: 'cb,pow' },
+      { expr: () => `sq(${randCoeff()}*x)`, name: 'sq,multiply' },
+      { expr: () => `cb(${randCoeff()}*y)`, name: 'cb,multiply' },
       // Keep some fixed for stability
       { expr: 'x + y', name: 'add' },
       { expr: 'x - y', name: 'subtract' },
@@ -328,9 +340,9 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'gcd(x, y)', name: 'gcd' },
       { expr: 'lcm(x, y)', name: 'lcm' },
       { expr: 'tan(x)', name: 'tan' },
-      { expr: 'sinh(x)', name: 'sinh' },
-      { expr: 'cosh(x)', name: 'cosh' },
-      { expr: 'tanh(x)', name: 'tanh' },
+      { expr: 'sh(x)', name: 'sh' },
+      { expr: 'ch(x)', name: 'ch' },
+      { expr: 'th(x)', name: 'th' },
       // Randomized unit conversions
       { expr: () => `(x + y) ${randLengthConversion()}`, name: 'add,unit_conversion' },
       { expr: () => `(x - y) ${randMassConversion()}`, name: 'subtract,unit_conversion' },
@@ -340,19 +352,24 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: () => `(x * y) ${randLengthConversion()}`, name: 'multiply,unit_conversion' },
       { expr: () => `(x - y) ${randAngleConversion()}`, name: 'subtract,unit_conversion' },
       { expr: () => `abs(x) ${randLengthConversion()}`, name: 'abs,unit_conversion' },
-      { expr: () => `sqrt(x) ${randLengthConversion()}`, name: 'sqrt,unit_conversion' },
+      { expr: () => `sq(x) ${randLengthConversion()}`, name: 'sq,unit_conversion' },
       // Special functions
-      { expr: 'factorial(floor(abs(x)))', name: 'factorial,floor,abs' },
-      { expr: 'gamma(abs(x))', name: 'gamma,abs' },
+      { expr: 'fact(floor(abs(x)))', name: 'fact,floor,abs' },
+      { expr: 'ga(abs(x))', name: 'ga,abs' },
       // Bitwise operations (need integers)
-      { expr: 'bitAnd(floor(x), floor(y))', name: 'bitAnd,floor' },
-      { expr: 'bitOr(floor(x), floor(y))', name: 'bitOr,floor' },
-      { expr: 'bitXor(floor(x), floor(y))', name: 'bitXor,floor' },
-      // Statistical functions on matrix
+      { expr: 'bA(floor(x), floor(y))', name: 'bA,floor' },
+      { expr: 'bO(floor(x), floor(y))', name: 'bO,floor' },
+      { expr: 'bX(floor(x), floor(y))', name: 'bX,floor' },
+      // Statistical functions on matrix (using shortcuts)
       { expr: 'mean(m)', name: 'mean,matrix' },
       { expr: 'std(mr(odd))', name: 'std,matrix_rows' },
       { expr: 'variance(mc(even))', name: 'variance,matrix_cols' },
       { expr: 'median(mr(1-3))', name: 'median,matrix_rows' },
+      // Shorthand statistical functions
+      { expr: 's.hm(mr(1-3))', name: 's.hm,matrix_rows' },
+      { expr: 's.gm(mc(even))', name: 's.gm,matrix_cols' },
+      { expr: 'ts.ma(mr(1-2), 2)', name: 'ts.ma,matrix_rows' },
+      { expr: 'sig.lp(mc(1-3), 0.3)', name: 'sig.lp,matrix_cols' },
       // Actual matrix operations
       { expr: 'det(m)', name: 'det,matrix' },
       { expr: 'trace(m)', name: 'trace,matrix' },
@@ -380,36 +397,36 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: () => `x*y + ${randCoeff()}*x`, name: 'multiply,add' },
       { expr: () => `x*y - ${randCoeff()}*y`, name: 'multiply,subtract' },
       { expr: () => `${randCoeff()}*x*y + ${randOffset()}`, name: 'multiply,add' },
-      { expr: () => `sqrt(x^${randPower()}) + ${randCoeff()}*y`, name: 'sqrt,pow,multiply,add' },
-      { expr: () => `${randCoeff()}*sqrt(x) + cbrt(y^${randPower()})`, name: 'sqrt,cbrt,multiply,pow,add' },
+      { expr: () => `sq(x^${randPower()}) + ${randCoeff()}*y`, name: 'sq,pow,multiply,add' },
+      { expr: () => `${randCoeff()}*sq(x) + cb(y^${randPower()})`, name: 'sq,cb,multiply,pow,add' },
       { expr: () => `abs(x^${randPower()}) + abs(y^${randPower()})`, name: 'abs,pow,add' },
       { expr: () => `ceil(x/${randDivisor()}) + floor(y/${randDivisor()})`, name: 'ceil,floor,divide,add' },
-      { expr: () => `sqrt(${randCoeff()}*x^2 + ${randCoeff()}*y^2)`, name: 'sqrt,multiply,pow,add' },
+      { expr: () => `sq(${randCoeff()}*x^2 + ${randCoeff()}*y^2)`, name: 'sq,multiply,pow,add' },
       // Randomize trig functions
       { expr: () => `${randCoeff()}*sin(x/${randDivisor()}) + cos(y)`, name: 'sin,cos,multiply,divide,add' },
       { expr: () => `tan(x/${randDivisor()}) + ${randCoeff()}*sin(y)`, name: 'tan,sin,multiply,divide,add' },
-      { expr: () => `${randCoeff()}*sinh(x/${randDivisor()}) - cosh(y)`, name: 'sinh,cosh,multiply,divide,subtract' },
+      { expr: () => `${randCoeff()}*sh(x/${randDivisor()}) - ch(y)`, name: 'sh,ch,multiply,divide,subtract' },
       { expr: () => `x^${randPower()} - y^${randPower()}`, name: 'pow,subtract' },
-      { expr: () => `sqrt(x^${randPower()} + y^${randPower()})`, name: 'sqrt,pow,add' },
-      { expr: () => `cbrt(x^${randPower()} + y^${randPower()})`, name: 'cbrt,pow,add' },
+      { expr: () => `sq(x^${randPower()} + y^${randPower()})`, name: 'sq,pow,add' },
+      { expr: () => `cb(x^${randPower()} + y^${randPower()})`, name: 'cb,pow,add' },
       { expr: () => `${randCoeff()}*abs(x) + abs(y)`, name: 'abs,multiply,add' },
       { expr: () => `ceil(x/${randDivisor()}) + floor(y)`, name: 'ceil,floor,divide,add' },
       { expr: () => `${randCoeff()}*max(x, y) + min(x, y)`, name: 'max,min,multiply,add' },
-      { expr: () => `log10(x^${randPower()}) + log10(y)`, name: 'log10,pow,add' },
-      { expr: () => `log2(x) - log2(y^${randPower()})`, name: 'log2,pow,subtract' },
+      { expr: () => `lg(x^${randPower()}) + lg(y)`, name: 'lg,pow,add' },
+      { expr: () => `lg2(x) - lg2(y^${randPower()})`, name: 'lg2,pow,subtract' },
       { expr: () => `exp(x / ${randDivisor()})`, name: 'exp,divide' },
-      { expr: () => `atan2(x/${randDivisor()}, y)`, name: 'atan2,divide' },
-      { expr: () => `hypot(x, y) * ${randSmallCoeff()}`, name: 'hypot,multiply' },
+      { expr: () => `at2(x/${randDivisor()}, y)`, name: 'at2,divide' },
+      { expr: () => `hy(x, y) * ${randSmallCoeff()}`, name: 'hy,multiply' },
       { expr: () => `pow(x, ${randSmallCoeff()})`, name: 'pow' },
       { expr: () => `log(x^${randPower()}, ${Math.floor(Math.random() * 8) + 2})`, name: 'log,pow' },
-      { expr: () => `asinh(x / ${randDivisor()})`, name: 'asinh,divide' },
-      { expr: () => `acosh(abs(x) + ${randOffset()})`, name: 'acosh,abs,add' },
-      { expr: () => `atanh(x / ${randDivisor()})`, name: 'atanh,divide' },
+      { expr: () => `ash(x / ${randDivisor()})`, name: 'ash,divide' },
+      { expr: () => `ach(abs(x) + ${randOffset()})`, name: 'ach,abs,add' },
+      { expr: () => `ath(x / ${randDivisor()})`, name: 'ath,divide' },
       { expr: () => `fix(x * y) / ${randDivisor()}`, name: 'fix,multiply,divide' },
       // Randomized unit conversions
       { expr: () => `(x^${randPower()} + y) ${randLengthConversion()}`, name: 'pow,add,unit_conversion' },
       { expr: () => `(x * y) ${randAngleConversion()}`, name: 'multiply,unit_conversion' },
-      { expr: () => `sqrt(x + y) ${randLengthConversion()}`, name: 'sqrt,add,unit_conversion' },
+      { expr: () => `sq(x + y) ${randLengthConversion()}`, name: 'sq,add,unit_conversion' },
       { expr: () => `(x^${randPower()} - y) ${randMassConversion()}`, name: 'pow,subtract,unit_conversion' },
       { expr: () => `(x / y) ${randTempConversion()}`, name: 'divide,unit_conversion' },
       { expr: () => `(x*y + ${randOffset()}) ${randLengthConversion()}`, name: 'multiply,add,unit_conversion' },
@@ -418,12 +435,12 @@ export function genFunction(complexity?: number, size?: number) {
       // Special functions
       { expr: 'combinations(floor(abs(x)), floor(abs(y)))', name: 'combinations,floor,abs' },
       { expr: 'permutations(floor(abs(x)), floor(abs(y)))', name: 'permutations,floor,abs' },
-      { expr: 'gamma(x) + gamma(y)', name: 'gamma,add' },
+      { expr: 'ga(x) + ga(y)', name: 'ga,add' },
       // Bitwise operations
-      { expr: 'leftShift(floor(x), floor(y))', name: 'leftShift,floor' },
-      { expr: 'rightLogShift(floor(x), floor(y))', name: 'rightLogShift,floor' },
-      { expr: 'bitAnd(floor(x^2), floor(y))', name: 'bitAnd,floor,pow' },
-      { expr: 'bitOr(floor(x), floor(y^2))', name: 'bitOr,floor,pow' },
+      { expr: 'lS(floor(x), floor(y))', name: 'lS,floor' },
+      { expr: 'rS(floor(x), floor(y))', name: 'rS,floor' },
+      { expr: 'bA(floor(x^2), floor(y))', name: 'bA,floor,pow' },
+      { expr: 'bO(floor(x), floor(y^2))', name: 'bO,floor,pow' },
       // Statistical functions on matrix
       { expr: 'mean(mc(1-3)) + std(mc(2-4))', name: 'mean,std,matrix_cols,add' },
       { expr: 'variance(mr(odd)) + variance(mr(even))', name: 'variance,matrix_rows,add' },
@@ -433,7 +450,7 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'det(m) + trace(m)', name: 'det,trace,matrix,add' },
       { expr: 'abs(det(m)) + trace(m)', name: 'abs,det,trace,matrix,add' },
       { expr: () => `${randCoeff()}*det(m) + ${randCoeff()}*trace(m)`, name: 'det,trace,multiply,add,matrix' },
-      { expr: () => `sqrt(abs(det(m)))`, name: 'sqrt,abs,det,matrix' },
+      { expr: () => `sq(abs(det(m)))`, name: 'sq,abs,det,matrix' },
       { expr: () => `log(abs(det(m)) + 1)`, name: 'log,abs,det,add,matrix' },
       // Advanced functions (proof-of-concept) - Timeseries/Signal/Stats
       { expr: 'ts.ma(mr(1-3), 3)', name: 'timeseries,movingAverage,matrix' },
@@ -474,10 +491,10 @@ export function genFunction(complexity?: number, size?: number) {
         expr: () => `x^${randPower()} / ${randDivisor()} - y^${randPower()} / ${randDivisor()}`,
         name: 'pow,divide,subtract',
       },
-      { expr: () => `sqrt(x^${randPower()}) + cbrt(y^${randPower()})`, name: 'sqrt,cbrt,pow,add' },
+      { expr: () => `sq(x^${randPower()}) + cb(y^${randPower()})`, name: 'sq,cb,pow,add' },
       {
-        expr: () => `${randCoeff()}*sqrt(x^${randPower()}) + ${randCoeff()}*cbrt(y^${randPower()})`,
-        name: 'sqrt,cbrt,pow,multiply,add',
+        expr: () => `${randCoeff()}*sq(x^${randPower()}) + ${randCoeff()}*cb(y^${randPower()})`,
+        name: 'sq,cb,pow,multiply,add',
       },
       { expr: () => `(x + ${randCoeff()}*y) / (x - ${randCoeff()}*y)`, name: 'add,subtract,multiply,divide' },
       { expr: () => `(${randCoeff()}*x + y) / (x - ${randCoeff()}*y)`, name: 'add,subtract,multiply,divide' },
@@ -496,8 +513,8 @@ export function genFunction(complexity?: number, size?: number) {
         expr: () => `${randCoeff()}*log(x^${randPower()}) + ${randCoeff()}*exp(y/${randDivisor()})`,
         name: 'log,exp,pow,divide,multiply,add',
       },
-      { expr: () => `sqrt(${randCoeff()}*x^2 + ${randCoeff()}*y^2)`, name: 'sqrt,pow,multiply,add' },
-      { expr: () => `cbrt(${randCoeff()}*x^3 + ${randCoeff()}*y^3)`, name: 'cbrt,pow,multiply,add' },
+      { expr: () => `sq(${randCoeff()}*x^2 + ${randCoeff()}*y^2)`, name: 'sq,pow,multiply,add' },
+      { expr: () => `cb(${randCoeff()}*x^3 + ${randCoeff()}*y^3)`, name: 'cb,pow,multiply,add' },
       {
         expr: () => `pow(abs(x), 1/${randSmallCoeff()}) + pow(abs(y), 1/${randSmallCoeff()})`,
         name: 'pow,abs,divide,add',
@@ -505,49 +522,49 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: () => `sin(x/${randDivisor()}) * cos(y/${randDivisor()})`, name: 'sin,cos,divide,multiply' },
       // Randomize static templates to reduce duplicates
       { expr: () => `${randCoeff()}*log(x) + exp(y/${randDivisor()})`, name: 'log,exp,multiply,divide,add' },
-      { expr: () => `log10(x^${randPower()}) + log2(y^${randPower()})`, name: 'log10,log2,pow,add' },
-      { expr: () => `${randCoeff()}*sqrt(abs(x)) + cbrt(abs(y))`, name: 'sqrt,cbrt,abs,multiply,add' },
+      { expr: () => `lg(x^${randPower()}) + lg2(y^${randPower()})`, name: 'lg,lg2,pow,add' },
+      { expr: () => `${randCoeff()}*sq(abs(x)) + cb(abs(y))`, name: 'sq,cb,abs,multiply,add' },
       { expr: () => `sin(x/${randDivisor()})^${randPower()} + cos(x)^2`, name: 'sin,cos,divide,pow,add' },
       { expr: () => `tan(x/y) + ${randCoeff()}*atan(y/x)`, name: 'tan,atan,divide,multiply,add' },
-      { expr: () => `${randCoeff()}*sinh(x/${randDivisor()}) * cosh(y)`, name: 'sinh,cosh,divide,multiply' },
-      { expr: () => `asinh(x/${randDivisor()}) + acosh(abs(y) + ${randOffset()})`, name: 'asinh,acosh,abs,divide,add' },
+      { expr: () => `${randCoeff()}*sh(x/${randDivisor()}) * ch(y)`, name: 'sh,ch,divide,multiply' },
+      { expr: () => `ash(x/${randDivisor()}) + ach(abs(y) + ${randOffset()})`, name: 'ash,ach,abs,divide,add' },
       { expr: () => `max(x^${randPower()}, y^2) - ${randCoeff()}*min(x, y)`, name: 'max,min,pow,multiply,subtract' },
       { expr: () => `ceil(x/y) + floor(y/x) * ${randSmallCoeff()}`, name: 'ceil,floor,divide,multiply,add' },
       { expr: () => `abs(x - y) / (max(x, y) + ${randOffset()})`, name: 'abs,max,subtract,divide,add' },
       { expr: () => `${randCoeff()}*gcd(x, y) + lcm(x, y)`, name: 'gcd,lcm,multiply,add' },
       { expr: () => `mod(x^${randPower()}, y) + mod(y^2, x)`, name: 'mod,pow,add' },
       { expr: () => `${randCoeff()}*sign(x) * abs(y) + sign(y) * abs(x)`, name: 'sign,abs,multiply,add' },
-      { expr: () => `hypot(x, y) + ${randCoeff()}*sqrt(x*y)`, name: 'hypot,sqrt,multiply,add' },
+      { expr: () => `hy(x, y) + ${randCoeff()}*sq(x*y)`, name: 'hy,sq,multiply,add' },
       { expr: () => `pow(abs(x), ${randFraction()}) + pow(abs(y), ${randFraction()})`, name: 'pow,abs,divide,add' },
       { expr: () => `log(x^${randPower()} + y^2, ${Math.floor(Math.random() * 8) + 2})`, name: 'log,pow,add' },
       { expr: () => `exp(x/${randDivisor() * 10}) * exp(y/${randDivisor() * 10})`, name: 'exp,divide,multiply' },
-      { expr: () => `atan2(sin(x/${randDivisor()}), cos(y))`, name: 'atan2,sin,cos,divide' },
+      { expr: () => `at2(sin(x/${randDivisor()}), cos(y))`, name: 'at2,sin,cos,divide' },
       { expr: () => `fix(x * y) / (ceil(x + y) + ${randOffset()})`, name: 'fix,ceil,multiply,add,divide' },
-      { expr: () => `round(sqrt(x^${randPower()} + y^2))`, name: 'round,sqrt,pow,add' },
+      { expr: () => `round(sq(x^${randPower()} + y^2))`, name: 'round,sq,pow,add' },
       // Randomized unit conversions
       { expr: () => `(x^${randPower()} + y^2) ${randLengthConversion()}`, name: 'pow,add,unit_conversion' },
-      { expr: () => `sqrt(x^${randPower()} + y^2) ${randLengthConversion()}`, name: 'sqrt,pow,add,unit_conversion' },
+      { expr: () => `sq(x^${randPower()} + y^2) ${randLengthConversion()}`, name: 'sq,pow,add,unit_conversion' },
       { expr: () => `(x + y) ${randAngleConversion()}`, name: 'add,unit_conversion' },
       { expr: () => `(x * y + ${randOffset()}) ${randMassConversion()}`, name: 'multiply,add,unit_conversion' },
       { expr: () => `abs(x^${randPower()} - y^2) ${randLengthConversion()}`, name: 'abs,pow,subtract,unit_conversion' },
       { expr: () => `max(x, y)^${randPower()} ${randVolumeConversion()}`, name: 'max,pow,unit_conversion' },
-      { expr: () => `cbrt(x^${randPower()} + y^3) ${randLengthConversion()}`, name: 'cbrt,pow,add,unit_conversion' },
+      { expr: () => `cb(x^${randPower()} + y^3) ${randLengthConversion()}`, name: 'cb,pow,add,unit_conversion' },
       { expr: () => `(${randCoeff()}*x + y) ${randTempConversion()}`, name: 'multiply,add,unit_conversion' },
       // Special functions
-      { expr: 'factorial(floor(abs(x))) + factorial(floor(abs(y)))', name: 'factorial,floor,abs,add' },
+      { expr: 'fact(floor(abs(x))) + fact(floor(abs(y)))', name: 'fact,floor,abs,add' },
       { expr: 'combinations(floor(abs(x)+abs(y)), floor(abs(y)))', name: 'combinations,floor,abs,add' },
       { expr: 'permutations(floor(abs(x*y)), floor(abs(y)))', name: 'permutations,floor,abs,multiply' },
-      { expr: 'gamma(abs(x)) * gamma(abs(y))', name: 'gamma,abs,multiply' },
-      { expr: 'log(gamma(abs(x)))', name: 'log,gamma,abs' },
+      { expr: 'ga(abs(x)) * ga(abs(y))', name: 'ga,abs,multiply' },
+      { expr: 'log(ga(abs(x)))', name: 'log,ga,abs' },
       // Bitwise operations
-      { expr: 'bitXor(bitAnd(floor(x), floor(y)), floor(x+y))', name: 'bitXor,bitAnd,floor,add' },
+      { expr: 'bX(bA(floor(x), floor(y)), floor(x+y))', name: 'bX,bA,floor,add' },
       {
-        expr: 'bitOr(leftShift(floor(x), 2), rightLogShift(floor(y), 2))',
-        name: 'bitOr,leftShift,rightLogShift,floor',
+        expr: 'bO(lS(floor(x), 2), rS(floor(y), 2))',
+        name: 'bO,lS,rS,floor',
       },
-      { expr: 'bitAnd(floor(x^2 + y^2), floor(x*y))', name: 'bitAnd,floor,pow,multiply,add' },
+      { expr: 'bA(floor(x^2 + y^2), floor(x*y))', name: 'bA,floor,pow,multiply,add' },
       // Statistical & matrix operations
-      { expr: 'sqrt(variance(m)) + mean(mr(1-3))', name: 'sqrt,variance,mean,matrix,add' },
+      { expr: 'sq(variance(m)) + mean(mr(1-3))', name: 'sq,variance,mean,matrix,add' },
       { expr: 'std(mc(odd)) / std(mc(even))', name: 'std,matrix_cols,divide' },
       { expr: 'median(mr(all)) * variance(mc(all))', name: 'median,variance,matrix,multiply' },
       { expr: 'abs(mean(m) - median(m))', name: 'abs,mean,median,matrix,subtract' },
@@ -558,12 +575,18 @@ export function genFunction(complexity?: number, size?: number) {
       { expr: 'abs(det(m)) * trace(m)', name: 'abs,det,trace,multiply,matrix' },
       { expr: () => `det(m) * ${randCoeff()} + trace(m)`, name: 'det,trace,multiply,add,matrix' },
       { expr: () => `${randCoeff()}*det(m) + mean(m)`, name: 'det,mean,multiply,add,matrix' },
-      { expr: () => `sqrt(abs(det(m))) + ${randCoeff()}*trace(m)`, name: 'sqrt,abs,det,trace,multiply,add,matrix' },
+      { expr: () => `sq(abs(det(m))) + ${randCoeff()}*trace(m)`, name: 'sq,abs,det,trace,multiply,add,matrix' },
       { expr: () => `log(abs(det(m)) + trace(m))`, name: 'log,abs,det,trace,add,matrix' },
       { expr: () => `abs(det(m) - trace(m))`, name: 'abs,det,trace,subtract,matrix' },
       { expr: () => `${randCoeff()}*det(m) / (trace(m) + 1)`, name: 'det,trace,multiply,divide,add,matrix' },
       { expr: () => `pow(abs(det(m)), 1/${randSmallCoeff()}) + trace(m)`, name: 'pow,abs,det,trace,divide,add,matrix' },
       { expr: () => `det(m) + ${randCoeff()}*mean(m) + trace(m)`, name: 'det,mean,trace,multiply,add,matrix' },
+      // Advanced shorthand functions
+      { expr: 's.cor(mr(1-2), mc(1-2))', name: 's.cor,matrix' },
+      { expr: 'ts.es(mr(all), 0.4)', name: 'ts.es,matrix' },
+      { expr: 'sig.f(mc(1-3))', name: 'sig.f,matrix' },
+      { expr: 's.hm(m(3)) + s.gm(m(3))', name: 's.hm,s.gm,matrix,add' },
+      { expr: 'ts.ma(mr(1-3), 2) * sig.lp(mc(odd), 0.2)', name: 'ts.ma,sig.lp,matrix,multiply' },
     ]
     const selected = ops[Math.floor(Math.random() * ops.length)]
     // Handle both string expressions and generator functions
@@ -664,33 +687,33 @@ export function genFunctionWithValidation(complexity?: number, size?: number, ma
   const gridForTesting = genGrid(size || 5)
   let reattempts = 0
   let func = genFunction(complexity, size)
-  
+
   // Check if result is trivial and regenerate if needed
   while (reattempts < maxReattempts) {
     try {
       const result = evaluate(gridForTesting, func)
-      
+
       // Check for trivial results that should trigger regeneration
       const isTrivial = (r: any) => {
         // Check for exact values we want to avoid
         if (r === 0 || r === 1) return true
-        
+
         // Check for infinity (both numeric and string representations)
         if (typeof r === 'number' && !isFinite(r)) return true
         if (typeof r === 'string' && (r === '∞' || r === '-∞' || r === 'Infinity' || r === '-Infinity')) return true
-        
+
         // Check for NaN
         if (typeof r === 'number' && isNaN(r)) return true
         if (typeof r === 'string' && r === 'NaN') return true
-        
+
         return false
       }
-      
+
       if (!isTrivial(result)) {
         // Good result, keep this function
         break
       }
-      
+
       // Trivial result, regenerate
       reattempts++
       if (reattempts < maxReattempts) {
@@ -704,11 +727,111 @@ export function genFunctionWithValidation(complexity?: number, size?: number, ma
       }
     }
   }
-  
+
   // Update metadata with reattempt count
   func.metadata.reattempts = reattempts
-  
+
   return func
+}
+
+/**
+ * Evaluate a mathematical function with given parameters and return results as JSON
+ * @param input - Object containing expression, parameters, id, and grid
+ * @returns JSON object with evaluation result and metadata
+ */
+export function evalFuncAsJSON(input: {
+  expression: string
+  parameters: {
+    x: string
+    y: string
+  }
+  id: string | number
+  grid: number[][]
+}) {
+  const startTime = Date.now()
+
+  // Parse coordinate strings (e.g., "1,1" -> {row: 1, col: 1})
+  const parseCoords = (coordStr: string) => {
+    const [row, col] = coordStr.split(',').map(n => parseInt(n.trim()))
+    return { row, col }
+  }
+
+  const xCell = parseCoords(input.parameters.x)
+  const yCell = parseCoords(input.parameters.y)
+
+  // Validate coordinates are within grid bounds
+  const gridRows = input.grid.length
+  const gridCols = input.grid[0]?.length || 0
+
+  if (
+    xCell.row >= gridRows ||
+    xCell.col >= gridCols ||
+    yCell.row >= gridRows ||
+    yCell.col >= gridCols ||
+    xCell.row < 0 ||
+    xCell.col < 0 ||
+    yCell.row < 0 ||
+    yCell.col < 0
+  ) {
+    return {
+      function: {
+        id: input.id,
+        expression: input.expression,
+      },
+      parameters: input.parameters,
+      result: {
+        value: null,
+        error: 'Coordinates out of grid bounds',
+      },
+      metadata: {
+        gridSize: gridRows,
+        evaluationTime: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      },
+    }
+  }
+
+  // Get parameter values from grid
+  const x = input.grid[xCell.row][xCell.col]
+  const y = input.grid[yCell.row][yCell.col]
+
+  // Evaluate the function
+  let result: any
+  let evaluationError: string | null = null
+
+  try {
+    result = evaluate(input.grid, {
+      expression: input.expression,
+      xCell,
+      yCell,
+    })
+  } catch (error) {
+    result = null
+    evaluationError = error instanceof Error ? error.message : String(error)
+  }
+
+  const endTime = Date.now()
+
+  // Return JSON result
+  return {
+    function: {
+      id: input.id,
+      expression: input.expression,
+    },
+    parameters: {
+      x: input.parameters.x,
+      y: input.parameters.y,
+    },
+    result: {
+      value: result,
+      error: evaluationError,
+    },
+    metadata: {
+      gridSize: gridRows,
+      evaluationTime: endTime - startTime,
+      timestamp: new Date().toISOString(),
+    },
+  }
 }
 
 /**
@@ -720,21 +843,21 @@ export function genFunctionWithValidation(complexity?: number, size?: number, ma
  */
 export function genFunctionAsJson(grid: number[][], complexity?: number, maxReattempts: number = 10) {
   const gridSize = grid.length
-  
+
   // Generate the function with validation
   const func = genFunctionWithValidation(complexity, gridSize, maxReattempts)
-  
+
   // Evaluate the function
   let result: any
   let evaluationError: string | null = null
-  
+
   try {
     result = evaluate(grid, func)
   } catch (error) {
     result = null
     evaluationError = error instanceof Error ? error.message : String(error)
   }
-  
+
   // Return as JSON object
   return {
     function: {
@@ -924,7 +1047,7 @@ export function evaluate(
 
     // Common scope for all evaluations with safe wrappers for expensive operations
     // Save references to original functions to avoid recursion
-    const factorialOriginal = factorial
+    const factOriginal = factorial
     const combinationsOriginal = combinations
     const permutationsOriginal = permutations
 
@@ -934,18 +1057,18 @@ export function evaluate(
       pi: Math.PI,
       e: Math.E,
       // Wrap expensive operations with safety limits
-      factorial: (n: number) => {
-        const limited = Math.min(Math.max(0, Math.floor(n)), 170) // factorial(170) is near max safe number
-        return factorialOriginal(limited)
+      fact: (n: number) => {
+        const limited = Math.min(Math.max(0, Math.floor(n)), 170) // fact(170) is near max safe number
+        return factOriginal(limited)
       },
       combinations: (n: number, k: number) => {
         n = Math.floor(n)
         k = Math.floor(k)
-        
+
         // Basic validation
         if (n < 0 || k < 0 || k > n) return 0
         if (k === 0 || k === n) return 1
-        
+
         // For very large values, return Infinity instead of computing
         // This prevents incorrect results due to truncation
         if (n > 1000) {
@@ -961,14 +1084,14 @@ export function evaluate(
             // Compute using limited precision for small k
             let result = 1
             for (let i = 0; i < effectiveK; i++) {
-              result = result * (n - i) / (i + 1)
+              result = (result * (n - i)) / (i + 1)
               if (!isFinite(result)) return Infinity
             }
             return Math.round(result)
           }
           return Infinity
         }
-        
+
         // For n <= 1000, use the original function with limits
         const nLimited = Math.min(Math.max(0, n), 1000)
         const kLimited = Math.min(Math.max(0, k), nLimited)
@@ -976,11 +1099,33 @@ export function evaluate(
       },
       permutations: (n: number, k?: number) => {
         const nLimited = Math.min(Math.max(0, Math.floor(n)), 1000)
-        if (k === undefined) return factorialOriginal(nLimited)
+        if (k === undefined) return factOriginal(nLimited)
         const kLimited = Math.min(Math.max(0, Math.floor(k)), nLimited)
         if (kLimited > nLimited) return 0
         return permutationsOriginal(nLimited, kLimited)
       },
+
+      // Shorthand function aliases
+      sq: sqrt,
+      cb: cbrt,
+      ga: gamma,
+      hy: hypot,
+      lg: log10,
+      lg2: log2,
+      sh: sinh,
+      ch: cosh,
+      th: tanh,
+      ash: asinh,
+      ach: acosh,
+      ath: atanh,
+      at2: atan2,
+
+      // Bitwise operation aliases
+      bA: bitAnd,
+      bO: bitOr,
+      bX: bitXor,
+      lS: leftShift,
+      rS: rightLogShift,
     }
 
     const result = mathjsEvaluate(processedExpression, scope)
@@ -1020,7 +1165,7 @@ export function evaluate(
         // For very large numbers, use exponential notation
         const maxDisplayValue = 1e15 // Reasonable threshold for switching to exponential
         let displayValue: string
-        
+
         if (Math.abs(numericValue) > maxDisplayValue) {
           // Use exponential notation for very large numbers
           displayValue = numericValue.toExponential(3)
@@ -1042,14 +1187,14 @@ export function evaluate(
           if (result === -Infinity) return '-∞'
           return 'NaN'
         }
-        
+
         // For very large numbers in unit conversions, use exponential notation
         const maxDisplayValue = 1e15
         if (Math.abs(result) > maxDisplayValue) {
           // Return exponential notation for very large numbers
           return parseFloat(result.toExponential(3))
         }
-        
+
         return Math.round(result * 1000) / 1000
       }
 
@@ -1074,14 +1219,14 @@ export function evaluate(
         // NaN case
         return 'NaN'
       }
-      
+
       // For very large numbers beyond safe integer range, use exponential notation
       const maxDisplayValue = 1e15
       if (Math.abs(result) > maxDisplayValue) {
         // Return as number in exponential notation
         return parseFloat(result.toExponential(3))
       }
-      
+
       return Math.round(result * 1000) / 1000 // Round to 3 decimal places
     }
 

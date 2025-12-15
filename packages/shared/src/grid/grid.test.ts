@@ -1,5 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
-import { evaluate, expandGrid, genFunction, genGrid, getMatrixCols, getMatrixRows } from './grid.js'
+import {
+  evalFuncAsJSON,
+  evaluate,
+  expandGrid,
+  genFunction,
+  genFunctionAsJson,
+  genGrid,
+  getMatrixCols,
+  getMatrixRows,
+} from './grid.js'
 
 describe('genGrid', () => {
   it('should generate a grid with default size of 5x5', () => {
@@ -292,7 +301,7 @@ describe('evaluate', () => {
     const divByZeroFunc = { expression: '1 / (x - x)', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
     const infResult2 = evaluate(grid, divByZeroFunc)
     expect(infResult2).toBe('∞') // 1/0 = Infinity in JavaScript
-    
+
     // Test 0/0 resulting in NaN
     const nanFunc = { expression: '(x - x) / (y - y)', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
     const nanResult = evaluate(grid, nanFunc)
@@ -460,33 +469,33 @@ describe('evaluate', () => {
     ]
 
     // Test very large power calculation
-    const largePowerFunc = { 
-      expression: 'x^7', 
-      xCell: { row: 0, col: 0 }, 
-      yCell: { row: 0, col: 1 } 
+    const largePowerFunc = {
+      expression: 'x^7',
+      xCell: { row: 0, col: 0 },
+      yCell: { row: 0, col: 1 },
     }
     const result = evaluate(grid, largePowerFunc)
     expect(typeof result).toBe('number')
     expect(result).toBeGreaterThan(1e15) // Should be in exponential notation range
     expect(result.toString()).toContain('e+') // Should be in exponential format
-    
+
     // Test very large calculation with unit conversion
-    const largeUnitFunc = { 
-      expression: 'abs(x^7 - y^2) m to ft', 
-      xCell: { row: 0, col: 0 }, 
-      yCell: { row: 0, col: 1 } 
+    const largeUnitFunc = {
+      expression: 'abs(x^7 - y^2) m to ft',
+      xCell: { row: 0, col: 0 },
+      yCell: { row: 0, col: 1 },
     }
     const unitResult = evaluate(grid, largeUnitFunc)
     expect(typeof unitResult).toBe('string')
     expect(unitResult).toContain('e+') // Should contain exponential notation
     expect(unitResult).toContain('ft') // Should contain unit
     expect(unitResult).not.toBe('0 ft') // Should NOT be zero
-    
+
     // Test that normal-sized numbers still work correctly
-    const normalFunc = { 
-      expression: 'x + y', 
-      xCell: { row: 1, col: 0 }, 
-      yCell: { row: 1, col: 1 } 
+    const normalFunc = {
+      expression: 'x + y',
+      xCell: { row: 1, col: 0 },
+      yCell: { row: 1, col: 1 },
     }
     const normalResult = evaluate(grid, normalFunc)
     expect(normalResult).toBe(3000) // 1000 + 2000
@@ -695,5 +704,264 @@ describe('matrix spec parsing edge cases', () => {
       [1, 5, 7, 10], // Column 0 (1st column, odd in 1-indexed)
       [3, 0, 9, 0], // Column 2 (3rd column, odd in 1-indexed)
     ])
+  })
+})
+
+describe('genFunctionAsJson', () => {
+  const testGrid = [
+    [100, 200, 300],
+    [400, 500, 600],
+    [700, 800, 900],
+  ]
+
+  it('should generate a function with proper JSON structure', () => {
+    const result = genFunctionAsJson(testGrid, 1)
+
+    // Check basic structure
+    expect(result).toHaveProperty('function')
+    expect(result).toHaveProperty('parameters')
+    expect(result).toHaveProperty('result')
+    expect(result).toHaveProperty('metadata')
+
+    // Check function properties
+    expect(result.function).toHaveProperty('id')
+    expect(result.function).toHaveProperty('expression')
+    expect(result.function).toHaveProperty('simplifiedExpression')
+    expect(result.function).toHaveProperty('verboseExpression')
+    expect(result.function).toHaveProperty('complexity')
+    expect(result.function.complexity).toBe(1)
+
+    // Check parameters format
+    expect(result.parameters).toHaveProperty('x')
+    expect(result.parameters).toHaveProperty('y')
+    expect(typeof result.parameters.x).toBe('string')
+    expect(typeof result.parameters.y).toBe('string')
+    expect(result.parameters.x).toMatch(/^\d+,\d+$/)
+    expect(result.parameters.y).toMatch(/^\d+,\d+$/)
+
+    // Check result
+    expect(result.result).toHaveProperty('value')
+    expect(result.result).toHaveProperty('error')
+
+    // Check metadata
+    expect(result.metadata).toHaveProperty('gridSize')
+    expect(result.metadata).toHaveProperty('reattempts')
+    expect(result.metadata).toHaveProperty('generationTime')
+    expect(result.metadata).toHaveProperty('timestamp')
+    expect(result.metadata.gridSize).toBe(3)
+  })
+
+  it('should ensure x and y parameters reference different cells', () => {
+    const result = genFunctionAsJson(testGrid, 2)
+
+    expect(result.parameters.x).not.toBe(result.parameters.y)
+  })
+
+  it('should generate different complexities correctly', () => {
+    const result1 = genFunctionAsJson(testGrid, 1)
+    const result2 = genFunctionAsJson(testGrid, 3)
+
+    expect(result1.function.complexity).toBe(1)
+    expect(result2.function.complexity).toBe(3)
+  })
+
+  it('should handle evaluation errors gracefully', () => {
+    // Force an error by providing invalid grid
+    const invalidGrid: any = []
+    const result = genFunctionAsJson(invalidGrid, 1)
+
+    // Should still return proper structure even with errors
+    expect(result).toHaveProperty('function')
+    expect(result).toHaveProperty('parameters')
+    expect(result).toHaveProperty('result')
+    expect(result).toHaveProperty('metadata')
+  })
+})
+
+describe('evalFuncAsJSON', () => {
+  const testGrid = [
+    [100, 200, 300],
+    [400, 500, 600],
+    [700, 800, 900],
+  ]
+
+  it('should evaluate a simple expression correctly', () => {
+    const input = {
+      expression: 'x + y',
+      parameters: {
+        x: '1,1',
+        y: '0,2',
+      },
+      id: 'test-1',
+      grid: testGrid,
+    }
+
+    const result = evalFuncAsJSON(input)
+
+    // Check structure
+    expect(result).toHaveProperty('function')
+    expect(result).toHaveProperty('parameters')
+    expect(result).toHaveProperty('result')
+    expect(result).toHaveProperty('metadata')
+
+    // Check function
+    expect(result.function.id).toBe('test-1')
+    expect(result.function.expression).toBe('x + y')
+
+    // Check parameters
+    expect(result.parameters.x).toBe('1,1')
+    expect(result.parameters.y).toBe('0,2')
+
+    // Check result (500 + 300 = 800)
+    expect(result.result.value).toBe(800)
+    expect(result.result.error).toBeNull()
+
+    // Check metadata
+    expect(result.metadata.gridSize).toBe(3)
+    expect(typeof result.metadata.evaluationTime).toBe('number')
+    expect(typeof result.metadata.timestamp).toBe('string')
+  })
+
+  it('should evaluate shorthand functions correctly', () => {
+    const input = {
+      expression: 'sq(x) + cb(y)',
+      parameters: {
+        x: '0,0',
+        y: '1,0',
+      },
+      id: 'test-shorthand',
+      grid: [
+        [25, 50],
+        [8, 16],
+      ],
+    }
+
+    const result = evalFuncAsJSON(input)
+
+    // sqrt(25) + cbrt(8) = 5 + 2 = 7
+    expect(result.result.value).toBe(7)
+    expect(result.result.error).toBeNull()
+  })
+
+  it('should handle out of bounds coordinates', () => {
+    const input = {
+      expression: 'x + y',
+      parameters: {
+        x: '5,5',
+        y: '1,1',
+      },
+      id: 'test-bounds',
+      grid: testGrid,
+    }
+
+    const result = evalFuncAsJSON(input)
+
+    expect(result.result.value).toBeNull()
+    expect(result.result.error).toBe('Coordinates out of grid bounds')
+    expect(result.parameters.x).toBe('5,5')
+    expect(result.parameters.y).toBe('1,1')
+  })
+
+  it('should handle negative coordinates', () => {
+    const input = {
+      expression: 'x + y',
+      parameters: {
+        x: '-1,0',
+        y: '1,1',
+      },
+      id: 'test-negative',
+      grid: testGrid,
+    }
+
+    const result = evalFuncAsJSON(input)
+
+    expect(result.result.value).toBeNull()
+    expect(result.result.error).toBe('Coordinates out of grid bounds')
+  })
+
+  it('should handle expression evaluation errors', () => {
+    const input = {
+      expression: 'invalidFunction(x, y)',
+      parameters: {
+        x: '1,1',
+        y: '0,0',
+      },
+      id: 'test-error',
+      grid: testGrid,
+    }
+
+    const result = evalFuncAsJSON(input)
+
+    expect(result.result.value).toBeNull()
+    expect(result.result.error).toBeTruthy()
+    expect(typeof result.result.error).toBe('string')
+  })
+
+  it('should work with different grids for same parameters', () => {
+    const grid1 = [
+      [10, 20],
+      [30, 40],
+    ]
+    const grid2 = [
+      [100, 200],
+      [300, 400],
+    ]
+
+    const baseInput = {
+      expression: 'x * y',
+      parameters: { x: '0,1', y: '1,0' },
+      id: 'test-grids',
+    }
+
+    const result1 = evalFuncAsJSON({ ...baseInput, grid: grid1 })
+    const result2 = evalFuncAsJSON({ ...baseInput, grid: grid2 })
+
+    // grid1: x=20, y=30 → 20*30=600
+    // grid2: x=200, y=300 → 200*300=60000
+    expect(result1.result.value).toBe(600)
+    expect(result2.result.value).toBe(60000)
+    expect(result1.result.error).toBeNull()
+    expect(result2.result.error).toBeNull()
+  })
+
+  it('should handle matrix operations', () => {
+    const input = {
+      expression: 'mean(m)',
+      parameters: {
+        x: '1,1',
+        y: '0,0',
+      },
+      id: 'test-matrix',
+      grid: [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9],
+      ],
+    }
+
+    const result = evalFuncAsJSON(input)
+
+    // Mean of 1,2,3,4,5,6,7,8,9 = 45/9 = 5
+    expect(result.result.value).toBe(5)
+    expect(result.result.error).toBeNull()
+  })
+
+  it('should preserve coordinate strings in output', () => {
+    const input = {
+      expression: 'x',
+      parameters: {
+        x: '2,1',
+        y: '0,0',
+      },
+      id: 12345,
+      grid: testGrid,
+    }
+
+    const result = evalFuncAsJSON(input)
+
+    // Should preserve original coordinate strings
+    expect(result.parameters.x).toBe('2,1')
+    expect(result.parameters.y).toBe('0,0')
+    expect(result.function.id).toBe(12345)
   })
 })
