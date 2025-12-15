@@ -110,7 +110,7 @@ services:
       - ./envoy.yaml:/etc/envoy/envoy.yaml
 
   pzero-envoy-wasm:
-    image: ${SERVER_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/wasm-ts:latest}
+    image: ${SERVER_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/envoy-wasm-filter:latest}
     container_name: pzero-envoy-wasm-proxy
     ports:
       - "8182:8081" # External port for client requests
@@ -123,7 +123,7 @@ services:
       pzero-server:
         condition: service_started
     volumes:
-      - ./envoy-wasm-ts.yaml:/etc/envoy/envoy.yaml
+      - ./envoy-wasm.yaml:/etc/envoy/envoy.yaml
 
 volumes:
   postgres_data:
