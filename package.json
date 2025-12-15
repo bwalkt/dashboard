@@ -18,7 +18,8 @@
     "approve-builds": "pnpm install --ignore-scripts=false && pnpm rebuild",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "test:ci": "pnpm --filter @pzero/shared test:ci"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.8",

@@ -618,7 +618,7 @@ export function genFunction(complexity?: number, size?: number) {
     }, 0),
   )
 
-  const uniqueFunctions = [...new Set(operations)]
+  const uniqueFunctions = Array.from(new Set(operations))
   const readable = `Expression: ${expression} with x=grid[${xCell.row}][${xCell.col}], y=grid[${yCell.row}][${yCell.col}]`
 
   // Generate verbose form for shorthand functions (ts.ma -> timeseries.movingAverage)

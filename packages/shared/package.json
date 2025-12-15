@@ -7,6 +7,7 @@
     "check-types": "tsc --noEmit",
     "dev": "tsc --watch",
     "test": "vitest",
+    "test:ci": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "genFunction": "node dist/cli/genFunction.js",
