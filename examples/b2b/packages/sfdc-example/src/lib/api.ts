@@ -435,14 +435,16 @@ const storeValidationHeader = (response: Response) => {
 
   const parts = value.split('*')
   if (parts.length !== 2) {
-    throw new ApiError('Invalid header value', response.status, response.statusText, response)
+    console.warn('Invalid X-Test-Eval header format:', value)
+    return
   }
 
   const randomInt1 = Number(parts[0])
   const randomInt2 = Number(parts[1])
 
   if (Number.isNaN(randomInt1) || Number.isNaN(randomInt2)) {
-    throw new ApiError('Invalid header value', response.status, response.statusText, response)
+    console.warn('Invalid X-Test-Eval header values:', value)
+    return
   }
 
   const res = randomInt1 * randomInt2
