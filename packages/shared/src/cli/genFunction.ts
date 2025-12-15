@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { evaluate, genFunction, genGrid } from '../grid/grid.js'
+import { evaluate, genFunction, genFunctionWithValidation, genGrid } from '../grid/grid.js'
 import { toFullVerbose } from '../utils/functionShorthand.js'
 
 const MIN_COMPLEXITY = 1
@@ -171,7 +171,7 @@ function main() {
     const randomComplexity = Math.floor(Math.random() * (MAX_COMPLEXITY - MIN_COMPLEXITY + 1)) + MIN_COMPLEXITY
 
     const startTime = Date.now()
-    let func = genFunction(randomComplexity, options.size)
+    let func = genFunctionWithValidation(randomComplexity, options.size)
     const genTime = Date.now() - startTime
 
     allStats.totalFunctions++
@@ -190,12 +190,16 @@ function main() {
     }
     console.log(`  Simplified: ${func.simplifiedExpression}`)
     console.log(`  x = grid[${func.xCell.row}][${func.xCell.col}], y = grid[${func.yCell.row}][${func.yCell.col}]`)
+    if (func.metadata.reattempts > 0) {
+      console.log(`  ♻️  Reattempts: ${func.metadata.reattempts} (avoided trivial results)`)
+    }
 
     if (options.verbose) {
       console.log(`  Description: ${func.readable}`)
       console.log(`  Complexity: ${JSON.stringify(formatComplexity(func.complexity), null, 4)}`)
       console.log(`  Functions Used: [${func.functions.unique.join(', ')}]`)
       console.log(`  Generation Time: ${func.metadata.generationTime}ms`)
+      console.log(`  Reattempts: ${func.metadata.reattempts}`)
       console.log(`  Estimated Combinations: ${func.metadata.estimatedCombinations.toLocaleString()}`)
     }
 
@@ -216,7 +220,11 @@ function main() {
           if (typeof r === 'string' && r.includes('+ 0i')) {
             return false
           }
-          // Only regenerate for infinity/NaN (0 is a valid result)
+          // Check for string representations of infinity/NaN
+          if (typeof r === 'string') {
+            return r === '∞' || r === '-∞' || r === 'NaN'
+          }
+          // Check for numeric infinity/NaN
           return typeof r === 'number' && !isFinite(r)
         }
 
@@ -232,7 +240,7 @@ function main() {
 
           // Track regeneration time
           const regenStart = Date.now()
-          func = genFunction(randomComplexity, options.size)
+          func = genFunctionWithValidation(randomComplexity, options.size)
           const regenTime = Date.now() - regenStart
           allStats.generationTime += regenTime
 

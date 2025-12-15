@@ -272,6 +272,33 @@ describe('evaluate', () => {
     expect(result).toBe(0.333) // 1/3 = 0.333... rounded to 3 decimal places
   })
 
+  it('should handle infinity results', () => {
+    const grid = [
+      [4920, 7686],
+      [1, 1000],
+    ]
+
+    // Test expression that results in positive infinity: exp(y/5) with large y
+    const infFunc = { expression: '5*log(x) + exp(y/5)', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
+    const result = evaluate(grid, infFunc)
+    expect(result).toBe('∞') // exp(7686/5) = exp(1537.2) = Infinity
+
+    // Test expression that results in negative infinity
+    const negInfFunc = { expression: '-exp(y)', xCell: { row: 0, col: 0 }, yCell: { row: 1, col: 1 } }
+    const negResult = evaluate(grid, negInfFunc)
+    expect(negResult).toBe('-∞') // -exp(1000) = -Infinity
+
+    // Test division by zero resulting in infinity
+    const divByZeroFunc = { expression: '1 / (x - x)', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
+    const infResult2 = evaluate(grid, divByZeroFunc)
+    expect(infResult2).toBe('∞') // 1/0 = Infinity in JavaScript
+    
+    // Test 0/0 resulting in NaN
+    const nanFunc = { expression: '(x - x) / (y - y)', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
+    const nanResult = evaluate(grid, nanFunc)
+    expect(nanResult).toBe('NaN') // 0/0 = NaN in JavaScript
+  })
+
   it('should handle temperature conversions from degC to degF', () => {
     const grid = [
       [0, 100],
@@ -380,11 +407,14 @@ describe('evaluate', () => {
 
     // Test division by zero (results in Infinity)
     const divByZero = { expression: 'x / y', xCell: { row: 0, col: 0 }, yCell: { row: 0, col: 1 } }
-    expect(evaluate(grid, divByZero)).toBe(0) // Infinity -> 0
+    expect(evaluate(grid, divByZero)).toBe('∞') // 1/0 = Infinity -> '∞'
 
-    // Test very large number multiplication (exceeds MAX_SAFE_INTEGER)
+    // Test very large number multiplication (now returns in exponential notation)
     const largeNum = { expression: 'x * x', xCell: { row: 1, col: 0 }, yCell: { row: 1, col: 1 } }
-    expect(evaluate(grid, largeNum)).toBe(0) // Too large -> 0
+    const result = evaluate(grid, largeNum)
+    expect(typeof result).toBe('number')
+    expect(result).toBeGreaterThan(1e15) // Should be very large
+    expect(result.toString()).toContain('e+') // Should be in exponential notation
   })
 
   it('should throw error with strictBounds when cell references are out of bounds', () => {
@@ -421,6 +451,46 @@ describe('evaluate', () => {
     expect(evaluate(grid, validFunc, { strictBounds: true })).toBe(25) // 5 + 20
     expect(evaluate(grid, validFunc, { strictBounds: false })).toBe(25) // 5 + 20
     expect(evaluate(grid, validFunc)).toBe(25) // 5 + 20 (default)
+  })
+
+  it('should handle very large numbers correctly', () => {
+    const grid = [
+      [7947, 59713],
+      [1000, 2000],
+    ]
+
+    // Test very large power calculation
+    const largePowerFunc = { 
+      expression: 'x^7', 
+      xCell: { row: 0, col: 0 }, 
+      yCell: { row: 0, col: 1 } 
+    }
+    const result = evaluate(grid, largePowerFunc)
+    expect(typeof result).toBe('number')
+    expect(result).toBeGreaterThan(1e15) // Should be in exponential notation range
+    expect(result.toString()).toContain('e+') // Should be in exponential format
+    
+    // Test very large calculation with unit conversion
+    const largeUnitFunc = { 
+      expression: 'abs(x^7 - y^2) m to ft', 
+      xCell: { row: 0, col: 0 }, 
+      yCell: { row: 0, col: 1 } 
+    }
+    const unitResult = evaluate(grid, largeUnitFunc)
+    expect(typeof unitResult).toBe('string')
+    expect(unitResult).toContain('e+') // Should contain exponential notation
+    expect(unitResult).toContain('ft') // Should contain unit
+    expect(unitResult).not.toBe('0 ft') // Should NOT be zero
+    
+    // Test that normal-sized numbers still work correctly
+    const normalFunc = { 
+      expression: 'x + y', 
+      xCell: { row: 1, col: 0 }, 
+      yCell: { row: 1, col: 1 } 
+    }
+    const normalResult = evaluate(grid, normalFunc)
+    expect(normalResult).toBe(3000) // 1000 + 2000
+    expect(normalResult.toString()).not.toContain('e+') // Should NOT be in exponential format
   })
 })
 

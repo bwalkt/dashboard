@@ -226,15 +226,20 @@ export function genFunction(complexity?: number, size?: number) {
   const actualSize = size !== undefined ? size : Math.floor(Math.random() * 6) + 5
   const finalComplexity = Math.max(1, actualComplexity)
 
-  // Generate random grid cells for x and y
+  // Generate random grid cells for x and y, ensuring they are different
   const xCell = {
     row: Math.floor(Math.random() * actualSize),
     col: Math.floor(Math.random() * actualSize),
   }
-  const yCell = {
-    row: Math.floor(Math.random() * actualSize),
-    col: Math.floor(Math.random() * actualSize),
-  }
+  
+  // Ensure yCell is different from xCell
+  let yCell: { row: number; col: number }
+  do {
+    yCell = {
+      row: Math.floor(Math.random() * actualSize),
+      col: Math.floor(Math.random() * actualSize),
+    }
+  } while (yCell.row === xCell.row && yCell.col === xCell.col)
 
   // Generate expression based on complexity
   let expression: string
@@ -629,6 +634,7 @@ export function genFunction(complexity?: number, size?: number) {
       estimatedCombinations: finalComplexity === 1 ? 63 : finalComplexity === 2 ? 66 : 72,
       timestamp: new Date().toISOString(),
       gridSize: actualSize,
+      reattempts: 0, // Will be set by genFunctionWithValidation
       simplification: {
         succeeded: simplificationSucceeded,
         error: simplificationError,
@@ -642,6 +648,115 @@ export function genFunction(complexity?: number, size?: number) {
             ? 0
             : Math.max(0, ((expression.length - simplifiedExpression.length) / expression.length) * 100),
       },
+    },
+  }
+}
+
+/**
+ * Generate a mathematical function with validation to avoid trivial results
+ * Regenerates functions that produce easily guessable results like 0, 1, or Infinity
+ * @param complexity - Complexity level (1-4)
+ * @param size - Grid size
+ * @param maxReattempts - Maximum number of regeneration attempts (default: 10)
+ * @returns Function object with reattempts tracking
+ */
+export function genFunctionWithValidation(complexity?: number, size?: number, maxReattempts: number = 10) {
+  const gridForTesting = genGrid(size || 5)
+  let reattempts = 0
+  let func = genFunction(complexity, size)
+  
+  // Check if result is trivial and regenerate if needed
+  while (reattempts < maxReattempts) {
+    try {
+      const result = evaluate(gridForTesting, func)
+      
+      // Check for trivial results that should trigger regeneration
+      const isTrivial = (r: any) => {
+        // Check for exact values we want to avoid
+        if (r === 0 || r === 1) return true
+        
+        // Check for infinity (both numeric and string representations)
+        if (typeof r === 'number' && !isFinite(r)) return true
+        if (typeof r === 'string' && (r === '∞' || r === '-∞' || r === 'Infinity' || r === '-Infinity')) return true
+        
+        // Check for NaN
+        if (typeof r === 'number' && isNaN(r)) return true
+        if (typeof r === 'string' && r === 'NaN') return true
+        
+        return false
+      }
+      
+      if (!isTrivial(result)) {
+        // Good result, keep this function
+        break
+      }
+      
+      // Trivial result, regenerate
+      reattempts++
+      if (reattempts < maxReattempts) {
+        func = genFunction(complexity, size)
+      }
+    } catch (error) {
+      // Evaluation error, regenerate
+      reattempts++
+      if (reattempts < maxReattempts) {
+        func = genFunction(complexity, size)
+      }
+    }
+  }
+  
+  // Update metadata with reattempt count
+  func.metadata.reattempts = reattempts
+  
+  return func
+}
+
+/**
+ * Generate a mathematical function and return it as JSON with parameters and result
+ * @param grid - The grid to use for parameter values and evaluation
+ * @param complexity - Complexity level (1-4)
+ * @param maxReattempts - Maximum regeneration attempts (default: 10)
+ * @returns JSON object with function, parameters, and evaluation result
+ */
+export function genFunctionAsJson(grid: number[][], complexity?: number, maxReattempts: number = 10) {
+  const gridSize = grid.length
+  
+  // Generate the function with validation
+  const func = genFunctionWithValidation(complexity, gridSize, maxReattempts)
+  
+  // Evaluate the function
+  let result: any
+  let evaluationError: string | null = null
+  
+  try {
+    result = evaluate(grid, func)
+  } catch (error) {
+    result = null
+    evaluationError = error instanceof Error ? error.message : String(error)
+  }
+  
+  // Return as JSON object
+  return {
+    function: {
+      id: func.id,
+      expression: func.expression,
+      simplifiedExpression: func.simplifiedExpression,
+      verboseExpression: func.verboseExpression,
+      complexity: func.complexity.level,
+    },
+    parameters: {
+      x: `${func.xCell.row},${func.xCell.col}`,
+      y: `${func.yCell.row},${func.yCell.col}`,
+    },
+    result: {
+      value: result,
+      error: evaluationError,
+    },
+    metadata: {
+      gridSize: func.metadata.gridSize,
+      reattempts: func.metadata.reattempts,
+      generationTime: func.metadata.generationTime,
+      timestamp: func.metadata.timestamp,
     },
   }
 }
@@ -824,9 +939,39 @@ export function evaluate(
         return factorialOriginal(limited)
       },
       combinations: (n: number, k: number) => {
-        const nLimited = Math.min(Math.max(0, Math.floor(n)), 1000)
-        const kLimited = Math.min(Math.max(0, Math.floor(k)), nLimited)
-        if (kLimited > nLimited) return 0
+        n = Math.floor(n)
+        k = Math.floor(k)
+        
+        // Basic validation
+        if (n < 0 || k < 0 || k > n) return 0
+        if (k === 0 || k === n) return 1
+        
+        // For very large values, return Infinity instead of computing
+        // This prevents incorrect results due to truncation
+        if (n > 1000) {
+          // For large n, most combinations will overflow
+          // Only small k or k close to n might be computable
+          if (k > 10 && k < n - 10) {
+            return Infinity
+          }
+          // Try to compute for small k or large k (close to n)
+          // Use symmetry: C(n,k) = C(n,n-k)
+          const effectiveK = Math.min(k, n - k)
+          if (effectiveK <= 10) {
+            // Compute using limited precision for small k
+            let result = 1
+            for (let i = 0; i < effectiveK; i++) {
+              result = result * (n - i) / (i + 1)
+              if (!isFinite(result)) return Infinity
+            }
+            return Math.round(result)
+          }
+          return Infinity
+        }
+        
+        // For n <= 1000, use the original function with limits
+        const nLimited = Math.min(Math.max(0, n), 1000)
+        const kLimited = Math.min(Math.max(0, k), nLimited)
         return combinationsOriginal(nLimited, kLimited)
       },
       permutations: (n: number, k?: number) => {
@@ -867,30 +1012,44 @@ export function evaluate(
 
         // Apply same validation as numeric results
         if (!isFinite(numericValue)) {
-          return '0'
+          if (numericValue === Infinity) return '∞'
+          if (numericValue === -Infinity) return '-∞'
+          return 'NaN'
         }
 
-        const maxSafeValue = Number.MAX_SAFE_INTEGER
-        if (Math.abs(numericValue) > maxSafeValue) {
-          return '0'
+        // For very large numbers, use exponential notation
+        const maxDisplayValue = 1e15 // Reasonable threshold for switching to exponential
+        let displayValue: string
+        
+        if (Math.abs(numericValue) > maxDisplayValue) {
+          // Use exponential notation for very large numbers
+          displayValue = numericValue.toExponential(3)
+        } else {
+          // Round normally for smaller numbers
+          const roundedValue = Math.round(numericValue * 1000) / 1000
+          displayValue = roundedValue.toString()
         }
-
-        const roundedValue = Math.round(numericValue * 1000) / 1000
 
         // Get the unit string from toString()
         const unitStr = result.toString().replace(/[\d.\-+e]+\s*/, '')
-        return `${roundedValue} ${unitStr}`.trim()
+        return `${displayValue} ${unitStr}`.trim()
       }
 
       // Fallback for other unit types
       if (typeof result === 'number') {
         if (!isFinite(result)) {
-          return 0
+          if (result === Infinity) return '∞'
+          if (result === -Infinity) return '-∞'
+          return 'NaN'
         }
-        const maxSafeValue = Number.MAX_SAFE_INTEGER
-        if (Math.abs(result) > maxSafeValue) {
-          return 0
+        
+        // For very large numbers in unit conversions, use exponential notation
+        const maxDisplayValue = 1e15
+        if (Math.abs(result) > maxDisplayValue) {
+          // Return exponential notation for very large numbers
+          return parseFloat(result.toExponential(3))
         }
+        
         return Math.round(result * 1000) / 1000
       }
 
@@ -908,8 +1067,21 @@ export function evaluate(
 
     // Handle and validate numeric results
     if (typeof result === 'number') {
-      if (!isFinite(result)) return 0
-      if (Math.abs(result) > Number.MAX_SAFE_INTEGER) return 0
+      if (!isFinite(result)) {
+        // Return infinity symbol for infinite results
+        if (result === Infinity) return '∞'
+        if (result === -Infinity) return '-∞'
+        // NaN case
+        return 'NaN'
+      }
+      
+      // For very large numbers beyond safe integer range, use exponential notation
+      const maxDisplayValue = 1e15
+      if (Math.abs(result) > maxDisplayValue) {
+        // Return as number in exponential notation
+        return parseFloat(result.toExponential(3))
+      }
+      
       return Math.round(result * 1000) / 1000 // Round to 3 decimal places
     }
 
