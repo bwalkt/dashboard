@@ -32,6 +32,8 @@ services:
     image: ${AUTHZ_SERVICE_IMAGE:-ghcr.io/${GITHUB_OWNER}/authz-service:latest}
     container_name: pzero-authz-service
     restart: "no"
+    networks:
+      - dokploy-network # Dokploy network required in production
     environment:
       - PORT=3000
       - REDIS_URL=${REDIS_URL}
