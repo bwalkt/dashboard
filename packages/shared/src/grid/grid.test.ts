@@ -10,6 +10,10 @@ import {
   getMatrixRows,
 } from './grid.js'
 
+// Skip mathjs-dependent tests by default due to performance issues
+// Set ENABLE_MATHJS_TESTS=true to run these tests
+const describeMathjs = process.env.ENABLE_MATHJS_TESTS === 'true' ? describe : describe.skip
+
 describe('genGrid', () => {
   it('should generate a grid with default size of 5x5', () => {
     const grid = genGrid()
@@ -93,7 +97,7 @@ describe('expandGrid', () => {
   })
 })
 
-describe.skip('genFunction', () => {
+describeMathjs('genFunction', () => {
   it('should generate a function with valid structure', () => {
     const result = genFunction(1, 5)
 
@@ -187,7 +191,7 @@ describe.skip('genFunction', () => {
   })
 })
 
-describe.skip('evaluate', () => {
+describeMathjs('evaluate', () => {
   it('should evaluate simple arithmetic expressions with x and y', () => {
     const grid = [
       [2, 3, 4],
@@ -503,7 +507,7 @@ describe.skip('evaluate', () => {
   })
 })
 
-describe.skip('matrix spec parsing edge cases', () => {
+describeMathjs('matrix spec parsing edge cases', () => {
   const testGrid = [
     [1, 2, 3, 4],
     [5, 6, 7, 8],
@@ -707,7 +711,7 @@ describe.skip('matrix spec parsing edge cases', () => {
   })
 })
 
-describe.skip('genFunctionAsJson', () => {
+describeMathjs('genFunctionAsJson', () => {
   const testGrid = [
     [100, 200, 300],
     [400, 500, 600],
@@ -778,7 +782,7 @@ describe.skip('genFunctionAsJson', () => {
   })
 })
 
-describe.skip('evalFuncAsJSON', () => {
+describeMathjs('evalFuncAsJSON', () => {
   const testGrid = [
     [100, 200, 300],
     [400, 500, 600],
