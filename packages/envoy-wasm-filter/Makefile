@@ -4,7 +4,7 @@ build:
 	@echo "Building Go proxy-wasm filter with upstream Go 1.24+ and GOOS=wasip1..."
 	@mkdir -p build
 	@if go version | grep -q "go1\.2[4-9]\|go1\.[3-9][0-9]\|go[2-9]\."; then \
-		GOOS=wasip1 GOARCH=wasm go build -o build/filter.wasm .; \
+		GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o build/filter.wasm .; \
 	else \
 		echo "Go 1.24+ not found. Using Docker build instead..."; \
 		$(MAKE) build-docker; \
@@ -17,7 +17,7 @@ build-docker:
 		-v "$(PWD):/build" \
 		-w /build \
 		golang:1.24-alpine \
-		sh -c "GOOS=wasip1 GOARCH=wasm go build -o build/filter.wasm ."
+		sh -c "GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o build/filter.wasm ."
 
 clean:
 	rm -rf build

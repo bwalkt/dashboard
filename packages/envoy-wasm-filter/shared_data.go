@@ -29,7 +29,7 @@ func GetChallengeFromSharedData(challengeID string) (string, bool) {
 		return "", false
 	}
 
-	if value == nil || len(value) == 0 {
+	if len(value) == 0 || value == nil {
 		return "", false
 	}
 

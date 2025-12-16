@@ -13,10 +13,10 @@ RUN go mod download
 COPY ./packages/envoy-wasm-filter/*.go ./
 
 # Build the WASM filter with upstream Go and GOOS=wasip1
-RUN GOOS=wasip1 GOARCH=wasm go build -o filter.wasm .
+RUN env GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o filter.wasm .
 
 # Output stage
-FROM envoyproxy/envoy:v1.30-latest AS runner
+FROM envoyproxy/envoy:v1.33-latest AS runner
 
 COPY --from=builder /build/filter.wasm /etc/envoy/wasm/challenge-authz.wasm
 EXPOSE 8081
