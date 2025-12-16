@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/tetratelabs/proxy-wasm-go-sdk/proxywasm"
-	"github.com/tetratelabs/proxy-wasm-go-sdk/proxywasm/types"
+	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
+	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
 
-func main() {
+func main() {}
+func init() {
 	proxywasm.SetVMContext(&vmContext{})
 }
 
@@ -110,4 +111,3 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 
 // OnHttpCallResponse is not called when a callback is provided to DispatchHttpCall
 // The response is handled in the callback function instead
-
