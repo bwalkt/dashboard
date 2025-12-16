@@ -27,6 +27,7 @@ import { Route as OrgsNewRouteImport } from './routes/orgs/new'
 import { Route as DataTableTreeRouteImport } from './routes/data-table.tree'
 import { Route as DashboardSignozRouteImport } from './routes/dashboard/signoz'
 import { Route as DashboardProxyTargetsRouteImport } from './routes/dashboard/proxy-targets'
+import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
@@ -123,6 +124,11 @@ const DashboardProxyTargetsRoute = DashboardProxyTargetsRouteImport.update({
   path: '/proxy-targets',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardLogsRoute = DashboardLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
   id: '/auth/sign-up',
   path: '/auth/sign-up',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
   '/data-table/tree': typeof DataTableTreeRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/orgs/new': typeof OrgsNewRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
   '/data-table/tree': typeof DataTableTreeRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
+    | '/dashboard/logs'
     | '/dashboard/proxy-targets'
     | '/dashboard/signoz'
     | '/data-table/tree'
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
+    | '/dashboard/logs'
     | '/dashboard/proxy-targets'
     | '/data-table/tree'
     | '/orgs/new'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
+    | '/dashboard/logs'
     | '/dashboard/proxy-targets'
     | '/dashboard/signoz'
     | '/data-table/tree'
@@ -451,6 +463,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProxyTargetsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/logs': {
+      id: '/dashboard/logs'
+      path: '/logs'
+      fullPath: '/dashboard/logs'
+      preLoaderRoute: typeof DashboardLogsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/auth/sign-up': {
       id: '/auth/sign-up'
       path: '/auth/sign-up'
@@ -504,11 +523,13 @@ const DashboardSignozRouteWithChildren = DashboardSignozRoute._addFileChildren(
 )
 
 interface DashboardRouteChildren {
+  DashboardLogsRoute: typeof DashboardLogsRoute
   DashboardProxyTargetsRoute: typeof DashboardProxyTargetsRoute
   DashboardSignozRoute: typeof DashboardSignozRouteWithChildren
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardLogsRoute: DashboardLogsRoute,
   DashboardProxyTargetsRoute: DashboardProxyTargetsRoute,
   DashboardSignozRoute: DashboardSignozRouteWithChildren,
 }

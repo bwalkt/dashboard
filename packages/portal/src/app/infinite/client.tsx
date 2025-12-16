@@ -30,7 +30,6 @@ export function Client() {
   const filterDBRowCount = lastPage?.meta?.filterRowCount
   const metadata = lastPage?.meta?.metadata
   const chartData = lastPage?.meta?.chartData
-  console.log('Raw chart data from API:', chartData?.length, chartData)
   const facets = lastPage?.meta?.facets
   const totalFetched = flatData?.length
 
@@ -82,7 +81,7 @@ export function Client() {
           id: key,
           value,
         }))
-        .filter(({ value }) => value != null)}
+        .filter(({ value }) => value != null && (!Array.isArray(value) || value.length > 0))}
       defaultColumnSorting={sort ? [sort] : undefined}
       defaultRowSelection={search.uuid ? { [search.uuid]: true } : undefined}
       // FIXME: make it configurable - TODO: use `columnHidden: boolean` in `filterFields`
