@@ -327,13 +327,23 @@ CHALLENGE_SECRET=your-secret \
 The filter is written in Go using the [proxy-wasm-go-sdk](https://github.com/proxy-wasm/proxy-wasm-go-sdk).
 
 ### Build Process
+
+**Requirements:**
+- Go 1.24+ (for WASI support)
+- Target: `GOOS=wasip1 GOARCH=wasm`
+
 ```bash
-# Compile with TinyGo
-tinygo build -o filter.wasm -scheduler=none -target=wasi main.go
+# Compile with upstream Go (requires Go 1.24+)
+GOOS=wasip1 GOARCH=wasm go build -o filter.wasm .
+
+# Build using Makefile
+make build
 
 # Docker multi-stage build
 docker build -t envoy-wasm-filter .
 ```
+
+**Note:** The new proxy-wasm/proxy-wasm-go-sdk requires upstream Go 1.24+ with WASI support, not TinyGo.
 
 ## Architecture
 
