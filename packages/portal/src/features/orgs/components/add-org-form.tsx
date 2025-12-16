@@ -39,7 +39,6 @@ interface OrgFormValues {
   email: string
   phone: string
   address: string
-  user_ids: string[]
   new_user: {
     name: string
     email: string
