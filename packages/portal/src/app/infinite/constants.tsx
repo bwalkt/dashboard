@@ -1,24 +1,15 @@
 'use client'
 
 import { format } from 'date-fns'
-import { CopyToClipboardContainer } from '@/components/custom/copy-to-clipboard-container'
-import { KVTabs } from '@/components/custom/kv-tabs'
-import { DataTableColumnRegion } from '@/components/data-table/data-table-column/data-table-column-region'
 import type { DataTableFilterField, Option, SheetField } from '@/components/data-table/types'
-import { LEVELS } from '@/constants/levels'
-import { METHODS } from '@/constants/method'
-import { REGIONS } from '@/constants/region'
 import { formatMilliseconds } from '@/lib/format'
-import { getLevelColor, getLevelLabel } from '@/lib/request/level'
 import { getStatusColor } from '@/lib/request/status-code'
 import { cn } from '@/lib/utils'
-import { PopoverPercentile } from './_components/popover-percentile'
-import { SheetTimingPhases } from './_components/sheet-timing-phases'
-import type { LogsMeta } from './query-options'
-import { type ColumnSchema } from './schema'
+import type { HttpMethod } from '@pzero/shared/types'
+import type { SignozTraceSchema } from './schema'
 
-// instead of filterFields, maybe just 'fields' with a filterDisabled prop?
-// that way, we could have 'message' or 'headers' field with label and value as well as type!
+const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
+
 export const filterFields = [
   {
     label: 'Time Range',
@@ -28,220 +19,69 @@ export const filterFields = [
     commandDisabled: true,
   },
   {
-    label: 'Level',
-    value: 'level',
-    type: 'checkbox',
-    defaultOpen: true,
-    options: LEVELS.map(level => ({ label: level, value: level })),
-    component: (props: Option) => {
-      // TODO: type `Option` with `options` values via Generics
-      const value = props.value as (typeof LEVELS)[number]
-      return (
-        <div className="flex w-full max-w-28 items-center justify-between gap-2 font-mono">
-          <span className="capitalize text-foreground/70 group-hover:text-accent-foreground">{props.label}</span>
-          <div className="flex items-center gap-2">
-            <div className={cn('h-2.5 w-2.5 rounded-[2px]', getLevelColor(value).bg)} />
-            <span className="text-xs text-muted-foreground/70">{getLevelLabel(value)}</span>
-          </div>
-        </div>
-      )
-    },
-  },
-  {
-    label: 'Host',
-    value: 'host',
+    label: 'Service Name',
+    value: 'serviceName',
     type: 'input',
   },
   {
-    label: 'Pathname',
-    value: 'pathname',
-    type: 'input',
-  },
-  {
-    label: 'Status Code',
-    value: 'status',
+    label: 'HTTP Method',
+    value: 'name',
     type: 'checkbox',
-    options: [
-      { label: '200', value: 200 },
-      { label: '400', value: 400 },
-      { label: '404', value: 404 },
-      { label: '500', value: 500 },
-    ], // REMINDER: this is a placeholder to set the type in the client.tsx
-    component: (props: Option) => {
-      if (typeof props.value === 'boolean') return null
-      if (typeof props.value === 'undefined') return null
-      if (typeof props.value === 'string') return null
-      return <span className={cn('font-mono', getStatusColor(props.value).text)}>{props.value}</span>
-    },
-  },
-  {
-    label: 'Method',
-    value: 'method',
-    type: 'checkbox',
-    options: METHODS.map(region => ({ label: region, value: region })),
+    options: HTTP_METHODS.map(method => ({ label: method, value: `HTTP ${method}` })),
     component: (props: Option) => {
       return <span className="font-mono">{props.value}</span>
     },
   },
-  {
-    label: 'Regions',
-    value: 'regions',
-    type: 'checkbox',
-    options: REGIONS.map(region => ({ label: region, value: region })),
-    component: (props: Option) => {
-      return <span className="font-mono">{props.value}</span>
-    },
-  },
-  {
-    label: 'Latency',
-    value: 'latency',
-    type: 'slider',
-    min: 0,
-    max: 5000,
-  },
-  {
-    label: 'DNS',
-    value: 'timing.dns',
-    type: 'slider',
-    min: 0,
-    max: 5000,
-  },
-  {
-    label: 'Connection',
-    value: 'timing.connection',
-    type: 'slider',
-    min: 0,
-    max: 5000,
-  },
-  {
-    label: 'TLS',
-    value: 'timing.tls',
-    type: 'slider',
-    min: 0,
-    max: 5000,
-  },
-  {
-    label: 'TTFB',
-    value: 'timing.ttfb',
-    type: 'slider',
-    min: 0,
-    max: 5000,
-  },
-  {
-    label: 'Transfer',
-    value: 'timing.transfer',
-    type: 'slider',
-    min: 0,
-    max: 5000,
-  },
-] satisfies DataTableFilterField<ColumnSchema>[]
+] satisfies DataTableFilterField<SignozTraceSchema>[]
 
 export const sheetFields = [
   {
-    id: 'uuid',
-    label: 'Request ID',
+    id: 'trace_id',
+    label: 'Trace ID',
     type: 'readonly',
     skeletonClassName: 'w-64',
   },
   {
     id: 'date',
-    label: 'Date',
+    label: 'Timestamp',
     type: 'timerange',
-    component: props => format(new Date(props.date), 'LLL dd, y HH:mm:ss'),
+    component: (props: SignozTraceSchema) => format(new Date(props.date), 'LLL dd, y HH:mm:ss'),
     skeletonClassName: 'w-36',
   },
   {
-    id: 'status',
-    label: 'Status',
-    type: 'checkbox',
-    component: props => {
-      return <span className={cn('font-mono', getStatusColor(props.status).text)}>{props.status}</span>
-    },
-    skeletonClassName: 'w-12',
-  },
-  {
-    id: 'method',
-    label: 'Method',
-    type: 'checkbox',
-    component: props => {
-      return <span className="font-mono">{props.method}</span>
-    },
-    skeletonClassName: 'w-10',
-  },
-  {
-    id: 'host',
-    label: 'Host',
+    id: 'serviceName',
+    label: 'Service Name',
     type: 'input',
-    skeletonClassName: 'w-24',
+    skeletonClassName: 'w-48',
   },
   {
-    id: 'pathname',
-    label: 'Pathname',
+    id: 'name',
+    label: 'Operation',
     type: 'input',
     skeletonClassName: 'w-56',
   },
   {
-    id: 'regions',
-    label: 'Regions',
-    type: 'checkbox',
-    skeletonClassName: 'w-12',
-    component: props => <DataTableColumnRegion value={props.regions[0]} reverse showFlag />,
-  },
-  {
-    id: 'latency',
-    label: 'Latency',
+    id: 'durationMs',
+    label: 'Duration',
     type: 'slider',
-    component: props => (
+    component: (props: SignozTraceSchema) => (
       <>
-        {formatMilliseconds(props.latency)}
+        {formatMilliseconds(props.durationMs)}
         <span className="text-muted-foreground">ms</span>
       </>
     ),
     skeletonClassName: 'w-16',
   },
   {
-    id: 'percentile',
-    label: 'Percentile',
-    type: 'readonly',
-    component: props => {
-      return (
-        <PopoverPercentile
-          data={props}
-          percentiles={props.metadata?.currentPercentiles}
-          filterRows={props.metadata?.filterRows as number}
-          className="ml-auto"
-        />
-      )
+    id: 'responseStatusCode',
+    label: 'Status Code',
+    type: 'checkbox',
+    component: (props: SignozTraceSchema) => {
+      if (props.responseStatusCode === undefined || props.responseStatusCode === null) {
+        return <span className="text-muted-foreground">-</span>
+      }
+      return <span className={cn('font-mono', getStatusColor(props.responseStatusCode).text)}>{props.responseStatusCode}</span>
     },
     skeletonClassName: 'w-12',
   },
-  {
-    id: 'timing.dns', // REMINDER: cannot be 'timing' as it is a property of the object
-    label: 'Timing Phases',
-    type: 'readonly',
-    component: props => <SheetTimingPhases latency={props.latency} timing={props} />,
-    className: 'flex-col items-start w-full gap-1',
-  },
-  {
-    id: 'headers',
-    label: 'Headers',
-    type: 'readonly',
-    component: props => (
-      // REMINDER: negative margin to make it look like the header is on the same level of the tab triggers
-      <KVTabs data={props.headers} className="-mt-[22px]" />
-    ),
-    className: 'flex-col items-start w-full gap-1',
-  },
-  {
-    id: 'message',
-    label: 'Message',
-    type: 'readonly',
-    condition: props => props.message !== undefined,
-    component: props => (
-      <CopyToClipboardContainer variant="destructive">
-        {JSON.stringify(props.message, null, 2)}
-      </CopyToClipboardContainer>
-    ),
-    className: 'flex-col items-start w-full gap-1',
-  },
-] satisfies SheetField<ColumnSchema, LogsMeta>[]
+] satisfies SheetField<SignozTraceSchema, Record<string, unknown>>[]

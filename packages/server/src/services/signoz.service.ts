@@ -102,6 +102,12 @@ function buildTraceQueryPayload(
     selectFields,
     limit: pagination.limit,
     offset: pagination.offset,
+    order: [{
+      "key": {
+        "name": "timestamp"
+    },
+    "direction": "desc"
+    }]
   };
 
   if (filterExpression) {

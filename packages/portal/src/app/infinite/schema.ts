@@ -62,6 +62,30 @@ export interface TimelineChartSchema extends BaseChartSchema {
 }
 
 // =============================================================================
+// SigNoz Trace Schema
+// =============================================================================
+
+export interface SignozTraceSchema {
+  trace_id: string
+  span_id: string
+  serviceName: string
+  name: string // span name/operation
+  durationMs: number
+  responseStatusCode?: number
+  timestamp: number // epoch milliseconds
+  date: Date // converted from timestamp for table display
+  // Additional fields that may come from Signoz API
+  [key: string]: any
+}
+
+export interface SignozTraceFilterSchema {
+  serviceName?: string
+  httpMethod?: string
+  startTime?: number
+  endTime?: number
+}
+
+// =============================================================================
 // Utility Functions for Complex Transformations
 // =============================================================================
 
