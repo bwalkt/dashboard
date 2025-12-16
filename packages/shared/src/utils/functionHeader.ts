@@ -39,7 +39,18 @@ const DEFAULT_CONFIG: FunctionHeaderConfig = {
 export async function hashExpression(expression: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(expression)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  
+  // Handle both Node.js and browser environments
+  let hashBuffer: ArrayBuffer
+  if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.subtle) {
+    // Browser or Node.js 19+ with global crypto
+    hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data)
+  } else {
+    // Node.js environment - use the crypto module
+    const crypto = await import('crypto')
+    hashBuffer = crypto.createHash('sha256').update(data).digest()
+  }
+  
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
   return hashHex
