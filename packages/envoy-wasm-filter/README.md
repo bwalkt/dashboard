@@ -324,7 +324,7 @@ CHALLENGE_SECRET=your-secret \
 
 ## Development
 
-The filter is written in Go using the [proxy-wasm-go-sdk](https://github.com/tetratelabs/proxy-wasm-go-sdk).
+The filter is written in Go using the [proxy-wasm-go-sdk](https://github.com/proxy-wasm/proxy-wasm-go-sdk).
 
 ### Build Process
 ```bash
