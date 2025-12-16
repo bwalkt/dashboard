@@ -41,17 +41,18 @@ export async function hashExpression(expression: string): Promise<string> {
   const data = encoder.encode(expression)
 
   // Handle both Node.js and browser environments
-  let hashBuffer: ArrayBuffer
+  let hashArray: number[]
   if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.subtle) {
     // Browser or Node.js 19+ with global crypto
-    hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data)
+    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data)
+    hashArray = Array.from(new Uint8Array(hashBuffer))
   } else {
     // Node.js environment - use the crypto module
     const crypto = await import('crypto')
-    hashBuffer = crypto.createHash('sha256').update(data).digest()
+    const hashBuffer = crypto.createHash('sha256').update(data).digest()
+    hashArray = Array.from(hashBuffer)
   }
 
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
   return hashHex
 }
