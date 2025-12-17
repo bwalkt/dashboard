@@ -2,11 +2,12 @@ import { configureApi } from '@pzero/shared/api'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './app/App'
+import { envs } from './constants/envs'
 import ErrorBoundary from './ErrorBoundary'
 
 // Configure API client for web environment
 configureApi({
-  getBackendUrl: () => import.meta.env.VITE_BACKEND_URL || '',
+  getBackendUrl: () => envs.BASE_API_URL,
 })
 
 // Environment detection removed - app now works universally

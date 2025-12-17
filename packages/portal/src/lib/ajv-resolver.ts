@@ -1,4 +1,4 @@
-import { BaseValidator } from '@boardwalk/shared/validator/ajv'
+import { BaseValidator } from '@pzero/shared/validator/ajv'
 import { FieldErrors, FieldValues, ResolverOptions } from 'react-hook-form'
 
 /**

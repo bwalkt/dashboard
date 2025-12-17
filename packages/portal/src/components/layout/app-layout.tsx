@@ -11,9 +11,17 @@ export interface AppLayoutProps {
   description?: string
   hasFilters?: boolean
   style?: React.CSSProperties
+  fullWidth?: boolean
 }
 
-export function AppLayout({ children, title, description, hasFilters = false, style }: AppLayoutProps) {
+export function AppLayout({
+  children,
+  title,
+  description,
+  hasFilters = false,
+  style,
+  fullWidth = false,
+}: AppLayoutProps) {
   const [showFilters, setShowFilters] = React.useState(hasFilters)
   const isMobile = useMediaQuery('(max-width: 768px)')
 
@@ -43,6 +51,7 @@ export function AppLayout({ children, title, description, hasFilters = false, st
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters(!showFilters)}
         style={style}
+        fullWidth={fullWidth}
       >
         {children}
       </MainLayout>

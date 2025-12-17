@@ -2,6 +2,10 @@ import { vi } from "vitest";
 
 // Mock database implementation for tests
 export const mockDb = {
+  // Add query method at top level for direct db.query() calls
+  query: vi.fn().mockImplementation((query: string) => {
+    return Promise.resolve({ rows: [], rowCount: 0 });
+  }),
   pool: {
     query: vi.fn().mockImplementation((query: string) => {
       // Handle user creation query

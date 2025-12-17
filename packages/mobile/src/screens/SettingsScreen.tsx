@@ -3,6 +3,7 @@ import { api } from '@pzero/shared/api'
 import { labels } from '@pzero/shared/constants'
 import { DEFAULT_COUNTRY, getAllowedCountryCodes, isValidPhoneNumber, validatePhoneNumber } from '@pzero/shared/phone'
 import type { Section } from '@pzero/shared/pzero'
+import { generateNameFromEmail } from '@pzero/shared/pzero/users'
 import { isBusinessEmail } from '@pzero/shared/validator'
 import type { NavigationProp } from '@react-navigation/native'
 import Ajv from 'ajv'
@@ -560,17 +561,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
     }
     const option = classificationOptions.find((opt: { value: any }) => opt.value === value)
     return option ? option.label : labels.classificationPlaceholder
-  }
-
-  const generateNameFromEmail = (email: string) => {
-    if (!email || !email.includes('@')) return ''
-
-    const localPart = email.split('@')[0]
-    // Split by dots and replace with spaces, then capitalize each word
-    return localPart
-      .split('.')
-      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(' ')
   }
 
   const generateDeviceNicknameFromName = (name: string) => {

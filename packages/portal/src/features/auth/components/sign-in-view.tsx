@@ -8,13 +8,12 @@ import { Input } from '@/components/ui/input'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Label } from '@/components/ui/label'
 import { useAuthStore } from '@/stores/auth'
-import GithubSignInButton from './github-auth-button'
 
 /**
  * Render the sign-in page with an email/password form and a GitHub OAuth option.
  *
  * The component redirects authenticated users (when `user` is present and not loading)
- * to the previous location if available or to `/dashboard/overview`. The UI includes
+ * to the previous location if available or to `/overview`. The UI includes
  * a sign-in form, a GitHub sign-in button, and links to sign-up, Terms of Service, and Privacy Policy.
  *
  * @returns The sign-in page React element containing the form, OAuth button, and related navigation links.
@@ -30,7 +29,7 @@ export default function SignInViewPage(_props: {}) {
   // Redirect if already authenticated
   useEffect(() => {
     if (authStore.user && !authStore.loading) {
-      navigate({ to: '/dashboard/overview', replace: true })
+      navigate({ to: '/overview', replace: true })
     }
   }, [authStore.user, authStore.loading, navigate])
 
@@ -72,7 +71,7 @@ export default function SignInViewPage(_props: {}) {
         }
 
         toast.success('Sign in successful!')
-        navigate({ to: '/dashboard/overview', replace: true })
+        navigate({ to: '/overview', replace: true })
       } catch (error: any) {
         console.error('Verification error:', error)
         // Extract the error message from the API error

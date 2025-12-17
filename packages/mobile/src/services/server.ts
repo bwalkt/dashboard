@@ -5,7 +5,7 @@ const SERVER_PORT = process.env.SERVER_PORT
 import { type Endpoint, type EndpointStatus, endpointStatuses } from '@pzero/shared/pzero'
 import { uuid } from '@pzero/shared/uuid'
 import { Buffer } from 'buffer'
-import crypto from 'react-native-quick-crypto'
+//import crypto from 'react-native-quick-crypto'
 import TcpSocket from 'react-native-tcp-socket'
 import { HistoryStore, Keys } from '../stores/history'
 import { ZStorage } from '../stores/store'
@@ -304,17 +304,17 @@ class HTTPServer extends ZStorage {
     }
 
     // Generate accept key using RN-compatible crypto
-    const acceptKey = crypto
+    /*const acceptKey = crypto
       .createHash('sha1')
       .update(key + WEBSOCKET_MAGIC_STRING)
-      .digest('base64')
+      .digest('base64') */
 
     // Send upgrade response
     const response = [
       'HTTP/1.1 101 Switching Protocols',
       'Upgrade: websocket',
       'Connection: Upgrade',
-      `Sec-WebSocket-Accept: ${acceptKey}`,
+      //      `Sec-WebSocket-Accept: ${acceptKey}`,
       '\r\n',
     ].join('\r\n')
 

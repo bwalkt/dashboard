@@ -15,12 +15,14 @@ import { deviceRoutes } from "./routes/devices.js";
 import { emailRoutes } from "./routes/email.js";
 import { faqRoutes } from "./routes/faq.js";
 import { gatewayRoutes } from "./routes/gateway.js";
+import { orgRoutes } from "./routes/orgs.js";
 import { privacyRoutes } from "./routes/privacy.js";
 import { proxyRoutes } from "./routes/proxy.js";
 import { proxyTargetsRoutes } from "./routes/proxy-targets.js";
 import { signozRoutes } from "./routes/signoz.js";
 import { smsRoutes } from "./routes/sms.js";
 import { termsRoutes } from "./routes/terms.js";
+import { userRoutes } from "./routes/users.js";
 import { refreshProxyTargetsCache } from "./services/proxy-targets-cache.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -168,11 +170,13 @@ export default async function (
   await fastify.register(emailRoutes);
   await fastify.register(faqRoutes);
   await fastify.register(gatewayRoutes);
+  await fastify.register(orgRoutes);
   await fastify.register(proxyRoutes);
   await fastify.register(proxyTargetsRoutes);
   await fastify.register(signozRoutes);
   await fastify.register(smsRoutes);
   await fastify.register(termsRoutes);
+  await fastify.register(userRoutes);
   await fastify.register(privacyRoutes);
 
   // Close resources on server shutdown

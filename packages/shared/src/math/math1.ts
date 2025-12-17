@@ -167,15 +167,20 @@ export class Math1 {
 
     // Handle matrix-based operations that don't need index
     if (['matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(randomOp)) {
+      // Use index 0 as default or clamp the provided index to valid range
+      const targetIdx = Math.max(0, Math.min(index ?? 0, matrix.length - 1))
       switch (randomOp) {
         case 'matrixOperation':
-          return { operation: 'matrixOperation', result: this.createMatrixOperationFunction(matrix) }
+          return { operation: `matrixOperation(${targetIdx})`, result: this.createMatrixOperationFunction(matrix) }
         case 'vectorOperation':
-          return { operation: 'vectorOperation', result: this.createVectorOperationFunction(matrix) }
+          return { operation: `vectorOperation(${targetIdx})`, result: this.createVectorOperationFunction(matrix) }
         case 'statisticalAnalysis':
-          return { operation: 'statisticalAnalysis', result: this.createStatisticalAnalysisFunction(matrix) }
+          return {
+            operation: `statisticalAnalysis(${targetIdx})`,
+            result: this.createStatisticalAnalysisFunction(matrix),
+          }
         case 'linearAlgebraOperation':
-          return { operation: 'linearAlgebraOperation', result: this.createLinearAlgebraFunction(matrix) }
+          return { operation: `linearAlgebraOperation(${targetIdx})`, result: this.createLinearAlgebraFunction(matrix) }
       }
     }
 

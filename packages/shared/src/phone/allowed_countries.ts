@@ -16,7 +16,7 @@ export interface CountryConfig {
 
 /**
  * List of allowed countries for phone number validation.
- * Currently limited to US only, but structured to support future expansion.
+ * Currently limited to a small subset (US, CA, GB), but structured to support future expansion.
  */
 export const ALLOWED_COUNTRIES: CountryConfig[] = [
   {
@@ -24,6 +24,18 @@ export const ALLOWED_COUNTRIES: CountryConfig[] = [
     name: 'United States',
     callingCode: '1',
     flag: '🇺🇸',
+  },
+  {
+    code: 'CA',
+    name: 'Canada',
+    callingCode: '1',
+    flag: '🇨🇦',
+  },
+  {
+    code: 'GB',
+    name: 'United Kingdom',
+    callingCode: '44',
+    flag: '🇬🇧',
   },
 ]
 

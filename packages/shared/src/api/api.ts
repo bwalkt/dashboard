@@ -160,6 +160,11 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
   // Construct the full URL (handle empty baseUrl for relative paths)
   const url = baseUrl ? `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}` : endpoint
 
+  console.log('🌐 API: Making request to:', url)
+  console.log('🌐 API: Request method:', fetchOptions.method || 'GET')
+  console.log('🌐 API: Request headers:', headers)
+  console.log('🌐 API: Request body:', body ? JSON.stringify(body, null, 2) : 'No body')
+
   // Prepare the request configuration
   const requestConfig: RequestInit = {
     ...defaultOptions,
@@ -187,10 +192,20 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
   }
 
   try {
+    console.log('🌐 API: Sending request...')
     const response = await fetch(url, requestConfig)
+
+    console.log('🌐 API: Received response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      contentType: response.headers.get('content-type'),
+      contentLength: response.headers.get('content-length'),
+    })
 
     // Handle non-OK responses
     if (!response.ok) {
+      console.log('🌐 API: Response not OK, handling error...')
       // Handle 401 Unauthorized with token refresh
       if (response.status === 401 && !skipRefresh && !url.includes('/auth/refresh')) {
         try {
@@ -264,6 +279,13 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
     // Return text response for non-JSON content
     return (await response.text()) as unknown as T
   } catch (error) {
+    console.error('🌐 API: Request failed with error:', error)
+    console.error('🌐 API: Error details:', {
+      type: typeof error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+    })
+
     if (error instanceof ApiError) {
       throw error
     }
