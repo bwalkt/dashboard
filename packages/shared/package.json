@@ -126,6 +126,9 @@
     "./api": {
       "import": "./dist/api/index.js",
       "types": "./dist/api/index.d.ts"
-    }
+    },
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./tsconfig.dev.json": "./tsconfig.dev.json", 
+    "./tsconfig.build.json": "./tsconfig.build.json"
   }
 }

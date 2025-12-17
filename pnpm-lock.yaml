@@ -33,6 +33,9 @@ catalogs:
     '@faker-js/faker':
       specifier: 10.1.0
       version: 10.1.0
+    '@fastify/cors':
+      specifier: 11.1.0
+      version: 11.1.0
     '@hookform/resolvers':
       specifier: 5.2.2
       version: 5.2.2
@@ -219,12 +222,18 @@ catalogs:
     date-fns:
       specifier: 4.1.0
       version: 4.1.0
+    fastify:
+      specifier: 5.6.2
+      version: 5.6.2
     idb-keyval:
       specifier: 6.2.2
       version: 6.2.2
     input-otp:
       specifier: 1.4.2
       version: 1.4.2
+    ioredis:
+      specifier: 5.8.2
+      version: 5.8.2
     jest:
       specifier: 30.2.0
       version: 30.2.0
@@ -746,17 +755,17 @@ importers:
   packages/authz-service:
     dependencies:
       '@fastify/cors':
-        specifier: ^11.1.0
+        specifier: 'catalog:'
         version: 11.1.0
+      '@pzero/shared':
+        specifier: workspace:*
+        version: link:../shared
       fastify:
-        specifier: ^5.6.2
+        specifier: 'catalog:'
         version: 5.6.2
       ioredis:
-        specifier: ^5.8.2
+        specifier: 'catalog:'
         version: 5.8.2
-      nanoid:
-        specifier: ^5.1.6
-        version: 5.1.6
     devDependencies:
       '@types/node':
         specifier: ^24.10.1
@@ -7128,11 +7137,6 @@ packages:
   nanoid@3.3.11:
     resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
-
-  nanoid@5.1.6:
-    resolution: {integrity: sha512-c7+7RQ+dMB5dPwwCp4ee1/iV/q2P6aK1mTZcfr1BTuVlyW9hJYiMPybJCcnBlQtuSmTIWNeazm/zqNoZSSElBg==}
-    engines: {node: ^18 || >=20}
     hasBin: true
 
   napi-build-utils@2.0.0:
@@ -15655,8 +15659,6 @@ snapshots:
     optional: true
 
   nanoid@3.3.11: {}
-
-  nanoid@5.1.6: {}
 
   napi-build-utils@2.0.0: {}
 
