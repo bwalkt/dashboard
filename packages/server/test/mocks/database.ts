@@ -4,14 +4,6 @@ import { vi } from "vitest";
 export const mockDb = {
   // Add query method at top level for direct db.query() calls
   query: vi.fn().mockImplementation((query: string) => {
-    // Handle proxy targets query
-    if (query.includes('proxy_targets')) {
-      return Promise.resolve({
-        rows: [],
-        rowCount: 0,
-      });
-    }
-    // Default response
     return Promise.resolve({ rows: [], rowCount: 0 });
   }),
   pool: {

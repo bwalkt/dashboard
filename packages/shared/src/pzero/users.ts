@@ -16,5 +16,5 @@ export { generateContactEmail, generateNameFromEmail } from '../utils/handles'
 export interface User extends BaseTable {
   email: string
   avatar?: string | null
-  email_verified?: Boolean
+  email_verified?: boolean
 }

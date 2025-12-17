@@ -3,9 +3,11 @@ import { type ReactNode } from 'react'
 import KBar from '@/components/kbar'
 import AppSidebar from '@/components/layout/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { cn } from '@/lib/utils'
 
 type DashboardLayoutProps = {
   children?: ReactNode
+  fullWidth?: boolean
 }
 
 /**
@@ -15,12 +17,14 @@ type DashboardLayoutProps = {
  *
  * @returns The rendered layout element containing `KBar`, `SidebarProvider` (with `AppSidebar`), `SidebarInset`, and the route `Outlet` or children.
  */
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, fullWidth = false }: DashboardLayoutProps) {
   return (
     <KBar>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className="h-screen overflow-hidden">{children || <Outlet />}</SidebarInset>
+        <SidebarInset className={cn('h-screen overflow-hidden', fullWidth && '!m-0')}>
+          {children || <Outlet />}
+        </SidebarInset>
       </SidebarProvider>
     </KBar>
   )

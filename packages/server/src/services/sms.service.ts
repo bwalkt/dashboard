@@ -102,9 +102,23 @@ class SMSService {
         });
 
       return verificationCheck.status === "approved";
-    } catch (error) {
-      console.error("❌ Failed to check verification code:", error);
-      return false;
+    } catch (error: any) {
+      // Check if it's an invalid code (user error) vs system error
+      if (error?.status === 404 || error?.code === 20404) {
+        // Invalid code, expired verification, or no verification found
+        console.log("Invalid or expired verification code");
+        return false;
+      }
+      
+      if (error?.status === 429 || error?.code === 20429) {
+        // Rate limit error - this should be surfaced to the caller
+        console.error("❌ Rate limit exceeded for verification checks");
+        throw new Error("Too many attempts. Please try again later.");
+      }
+      
+      // System error - throw to alert caller
+      console.error("❌ System error checking verification code:", error);
+      throw new Error("Failed to check verification code due to system error");
     }
   }
 

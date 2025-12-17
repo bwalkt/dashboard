@@ -8,6 +8,9 @@ export default defineConfig({
     testTimeout: 30000, // 30 seconds per test
     isolate: true, // Run tests in isolation to prevent hanging
     pool: 'forks', // Use forks pool for better isolation
+    typecheck: {
+      tsconfig: './tsconfig.test.json',
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

@@ -96,7 +96,7 @@ class OrgsService {
    * Update organization
    */
   async updateOrg(id: string, data: Partial<CreateOrgPayload>): Promise<Org> {
-    const response = await api.put<Org>(`/api/orgs/${id}`, data)
+    const response = await api.patch<Org>(`/api/orgs/${id}`, data)
     return response
   }
 

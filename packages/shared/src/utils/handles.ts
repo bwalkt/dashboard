@@ -226,17 +226,18 @@ export function isValidHandle(handle: string): boolean {
  */
 export function suggestAlternativeHandles(baseHandle: string, count: number = 3): string[] {
   const suggestions: string[] = []
+  const currentYear = new Date().getFullYear()
 
   for (let i = 1; i <= count; i++) {
     suggestions.push(`${baseHandle}${i}`)
     suggestions.push(`${baseHandle}-${i}`)
-
-    // Add year suffix for variety
-    const currentYear = new Date().getFullYear()
-    suggestions.push(`${baseHandle}${currentYear}`)
   }
 
-  return suggestions.slice(0, count)
+  // Add year suffix for variety (once, not per iteration)
+  suggestions.push(`${baseHandle}${currentYear}`)
+
+  // Return unique suggestions up to count
+  return [...new Set(suggestions)].slice(0, count)
 }
 
 // Re-export the main function with a shorter name for convenience

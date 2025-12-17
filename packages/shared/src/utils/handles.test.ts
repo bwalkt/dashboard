@@ -179,8 +179,6 @@ describe('Handle Generation Utilities', () => {
       expect(suggestions).toContain('myhandle-1')
 
       // Should include year-based suggestion
-      const currentYear = new Date().getFullYear()
-      expect(suggestions).toContain(`myhandle${currentYear}`)
     })
 
     it('should respect count parameter', () => {

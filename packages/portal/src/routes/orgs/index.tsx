@@ -24,7 +24,7 @@ function OrgsPageWithLayout() {
   // }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout fullWidth>
       <OrgsPage />
     </DashboardLayout>
   )

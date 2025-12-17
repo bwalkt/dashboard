@@ -5,13 +5,11 @@ import { toast } from 'sonner'
  */
 export const toastUtils = {
   /**
-   * Show a persistent error toast that stays until dismissed by user
+   * Show an error toast that auto-dismisses after 8 seconds
    */
   error: (message: string, options?: { description?: string }) => {
     return toast.error(message, {
-      duration: 8000, // 8 seconds instead of Infinity
-      dismissible: true,
-      closeButton: true,
+      duration: 8000, // 8 seconds
       description: options?.description,
     })
   },
