@@ -51,7 +51,7 @@ const processor = new BatchSpanProcessor(exporter)
 // Create and configure the WebTracerProvider
 const provider = new WebTracerProvider({
   resource: resource,
-  spanProcessors: [processor], // Add the span processor here
+  spanProcessors: [processor], // Add the span processor here,
 })
 
 // Register the tracer provider with the context manager
@@ -69,10 +69,12 @@ registerInstrumentations({
       '@opentelemetry/instrumentation-xml-http-request': {
         // Only propagate trace headers to configured backend/proxy URLs
         propagateTraceHeaderCorsUrls: corsUrls.length > 0 ? corsUrls : [/.+/g],
+        ignoreUrls: [otelExporterUrl],
       },
       '@opentelemetry/instrumentation-fetch': {
         // Only propagate trace headers to configured backend/proxy URLs
         propagateTraceHeaderCorsUrls: corsUrls.length > 0 ? corsUrls : [/.+/g],
+        ignoreUrls: [otelExporterUrl],
       },
     }),
   ],
