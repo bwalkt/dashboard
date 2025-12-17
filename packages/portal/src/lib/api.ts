@@ -40,7 +40,7 @@ export class ApiError extends Error {
  * @returns The backend base URL string, or empty string for relative URLs.
  */
 function getBackendUrl(): string {
-  const backendUrl = envs.getBackendUrl()
+  const backendUrl = envs.BASE_API_URL
   // If not set or empty, use relative URLs (proxied through Vite)
   console.log('Backend URL:', backendUrl)
   debugger

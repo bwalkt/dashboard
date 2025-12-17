@@ -118,10 +118,10 @@ export const columns: ColumnDef<Org>[] = [
     },
   },
   {
-    accessorKey: 'created_at',
+    accessorKey: 'c_at',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
     cell: ({ row }) => {
-      const createdAt = row.getValue('created_at') as string
+      const createdAt = row.getValue('c_at') as string
 
       return <span className="text-sm text-muted-foreground">{format(new Date(createdAt), 'MMM dd, yyyy')}</span>
     },
