@@ -57,6 +57,7 @@
     "@radix-ui/react-visually-hidden": "catalog:",
     "@sentry/react": "catalog:",
     "@tabler/icons-react": "catalog:",
+    "@tailwindcss/postcss": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "^1.139.14",
     "@tanstack/react-table": "catalog:",

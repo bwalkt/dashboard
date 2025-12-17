@@ -61,6 +61,7 @@
     "@radix-ui/react-tooltip": "catalog:",
     "@sentry/react": "catalog:",
     "@tabler/icons-react": "catalog:",
+    "@tailwindcss/postcss": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-table": "catalog:",
     "@tauri-apps/api": "catalog:",
