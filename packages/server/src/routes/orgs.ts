@@ -122,10 +122,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         // Start transaction
         await client.query('BEGIN');
         
-        const data = request.body as CreateOrganizationWithUserData & {
-          status: OrgStatus;
-          plan: OrgPlan;
-        };
+        const data = request.body as CreateOrganizationWithUserData;
         
         console.log('🔥 SERVER: Received request at /orgs/create-with-user')
         console.log('🔥 SERVER: Request headers:', JSON.stringify(request.headers, null, 2))

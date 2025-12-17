@@ -149,13 +149,15 @@ export type OrgStatus = (typeof baseFields.status.enum)[number]
 export type OrgPlan = (typeof baseFields.plan.enum)[number]
 
 export interface CreateOrganizationWithUserData extends CreateOrgData {
+  status: OrgStatus
+  plan: OrgPlan
   create_user?: {
     name: string
     email: string
     email_verified?: boolean
   }
   associate_users?: string[]
-  owner_id: string
+  owner_id?: string // Optional as server derives from authenticated user context
 }
 
 export type UpdateOrgData = Partial<Omit<CreateOrgData, 'handle'>> & {

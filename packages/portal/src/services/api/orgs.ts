@@ -1,5 +1,12 @@
 import { api } from '@pzero/shared/api'
-import type { CreateOrganizationWithUserData, CreateOrgData, Org, UpdateOrgData } from '@pzero/shared/pzero'
+import type {
+  CreateOrganizationWithUserData,
+  CreateOrgData,
+  Org,
+  OrgPlan,
+  OrgStatus,
+  UpdateOrgData,
+} from '@pzero/shared/pzero'
 
 // Using shared types from @pzero/shared/pzero/orgs
 // All interfaces are now imported from shared package
@@ -10,8 +17,8 @@ class OrgsService {
    */
   async createOrg(
     data: CreateOrgData & {
-      status: 'active' | 'inactive' | 'suspended'
-      plan: 'free' | 'starter' | 'pro' | 'enterprise'
+      status: OrgStatus
+      plan: OrgPlan
       email: string
     },
   ): Promise<Org> {
@@ -68,7 +75,7 @@ class OrgsService {
    * Update organization
    */
   async updateOrg(id: string, data: UpdateOrgData): Promise<Org> {
-    const response = await api.patch<Org>(`/api/orgs/${id}`, data)
+    const response = await api.put<Org>(`/api/orgs/${id}`, data)
     return response
   }
 
