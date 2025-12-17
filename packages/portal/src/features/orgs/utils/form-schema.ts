@@ -1,5 +1,5 @@
-import { createValidator } from '@boardwalk/shared/validator/ajv'
-import type { Org, OrgPlan, OrgStatus, validateCreateOrgData } from '@pzero/shared/pzero'
+import type { Org, OrgPlan, OrgStatus } from '@pzero/shared/pzero'
+import { validateCreateOrgData } from '@pzero/shared/pzero'
 import { FieldErrors, FieldValues, ResolverOptions } from 'react-hook-form'
 
 export interface OrgFormValues {
