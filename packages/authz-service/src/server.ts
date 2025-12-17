@@ -1,7 +1,7 @@
 import cors from '@fastify/cors'
+import { uuid } from '@pzero/shared/uuid'
 import { createHash } from 'crypto'
 import Fastify from 'fastify'
-import { uuid } from '@pzero/shared/uuid'
 import { getExpectedAnswer, refreshChallengeTTL, storeChallenge } from './redis.js'
 import type {
   AuthzResponse,
