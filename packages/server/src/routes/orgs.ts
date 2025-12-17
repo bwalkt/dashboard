@@ -1,48 +1,18 @@
+import type { 
+  CreateOrganizationWithUserData,
+  CreateOrgData, 
+  Org, 
+  OrgPlan, 
+  OrgStatus,
+  UpdateOrgData
+} from "@pzero/shared/pzero";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../config/database.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { userService } from "../services/user.service.js";
 
-export interface CreateOrgPayload {
-  name: string;
-  handle: string;
-  description?: string;
-  status: 'active' | 'inactive' | 'suspended';
-  plan: 'free' | 'starter' | 'pro' | 'enterprise';
-  email: string;
-  website?: string;
-  phone?: string;
-  address?: string;
-  settings?: Record<string, any>;
-  metadata?: Record<string, any>;
-}
-
-export interface CreateOrgWithUserPayload extends CreateOrgPayload {
-  create_user?: {
-    name: string;
-    email: string;
-    email_verified?: boolean;
-  };
-  associate_users?: string[];
-}
-
-export interface Org {
-  id: string;
-  name: string;
-  handle: string;
-  description?: string;
-  status: string;
-  plan: string;
-  email: string;
-  website?: string;
-  phone?: string;
-  address?: string;
-  data?: {
-    meta?: {
-      uid: string
-    }
-  }
-}
+// Using shared types from @pzero/shared/pzero/orgs
+// CreateOrgData, Org, CreateOrganizationWithUserData, UpdateOrgData are imported above
 
 export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   /**
@@ -56,7 +26,10 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const data = request.body as CreateOrgPayload;
+        const data = request.body as CreateOrgData & {
+          status: 'active' | 'inactive' | 'suspended';
+          plan: 'free' | 'starter' | 'pro' | 'enterprise';
+        };
 
         // Validate required fields
         if (!data.name || !data.handle || !data.email || !data.status || !data.plan) {
@@ -98,14 +71,13 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
               website: data.website || "",
               c_by: authenticatedUserId,
               data: {
-                description: data.description || "",
+                dscr: data.dscr || "",
                 status: data.status,
                 plan: data.plan,
                 email: data.email,
                 phone: data.phone || "",
                 address: data.address || "",
-                settings: data.settings || {},
-                metadata: data.metadata || {},
+                ...data.data,
                 meta: {
                   uid: authenticatedUserId
                 }
@@ -150,7 +122,10 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         // Start transaction
         await client.query('BEGIN');
         
-        const data = request.body as CreateOrgWithUserPayload;
+        const data = request.body as CreateOrganizationWithUserData & {
+          status: OrgStatus;
+          plan: OrgPlan;
+        };
         
         console.log('🔥 SERVER: Received request at /orgs/create-with-user')
         console.log('🔥 SERVER: Request headers:', JSON.stringify(request.headers, null, 2))
@@ -237,14 +212,13 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           website: data.website || "",
           c_by: authenticatedUserId,
           data: {
-            description: data.description || "",
+            dscr: data.dscr || "",
             status: data.status,
             plan: data.plan,
             email: data.email,
             phone: data.phone || "",
             address: data.address || "",
-            settings: data.settings || {},
-            metadata: data.metadata || {},
+            ...data.data,
             meta: {
               uid: authenticatedUserId
             }
@@ -403,7 +377,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string };
-        const data = request.body as Partial<CreateOrgPayload>;
+        const data = request.body as UpdateOrgData;
 
         const fields: string[] = [];
         const values: any[] = [];
@@ -417,9 +391,9 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           fields.push(`handle = $${paramCount++}`);
           values.push(data.handle);
         }
-        if (data.description !== undefined) {
-          fields.push(`description = $${paramCount++}`);
-          values.push(data.description);
+        if (data.dscr !== undefined) {
+          fields.push(`dscr = $${paramCount++}`);
+          values.push(data.dscr);
         }
         if (data.status !== undefined) {
           fields.push(`status = $${paramCount++}`);
@@ -445,13 +419,9 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           fields.push(`address = $${paramCount++}`);
           values.push(data.address);
         }
-        if (data.settings !== undefined) {
-          fields.push(`settings = $${paramCount++}`);
-          values.push(JSON.stringify(data.settings));
-        }
-        if (data.metadata !== undefined) {
-          fields.push(`metadata = $${paramCount++}`);
-          values.push(JSON.stringify(data.metadata));
+        if (data.data !== undefined) {
+          fields.push(`data = $${paramCount++}`);
+          values.push(JSON.stringify(data.data));
         }
 
         if (fields.length === 0) {

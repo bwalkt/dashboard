@@ -1,11 +1,11 @@
 import { createValidator } from '@boardwalk/shared/validator/ajv'
-import type { Org, OrgPlan, OrgStatus } from '@pzero/shared/pzero'
+import type { Org, OrgPlan, OrgStatus, validateCreateOrgData } from '@pzero/shared/pzero'
 import { FieldErrors, FieldValues, ResolverOptions } from 'react-hook-form'
 
 export interface OrgFormValues {
   name: string
   handle: string
-  description?: string
+  dscr?: string
   email?: string
   phone?: string
   website?: string
@@ -13,26 +13,12 @@ export interface OrgFormValues {
   plan: OrgPlan
 }
 
-export const orgSchema = {
-  type: 'object',
-  properties: {
-    name: { type: 'string', minLength: 1 },
-    handle: { type: 'string', minLength: 1, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
-    description: { type: 'string' },
-    email: { type: 'string', format: 'email' },
-    phone: { type: 'string' },
-    website: { type: 'string', format: 'uri' },
-    status: { type: 'string', enum: ['active', 'inactive', 'suspended'] },
-    plan: { type: 'string', enum: ['free', 'starter', 'pro', 'enterprise'] },
-  },
-  required: ['name', 'handle', 'status', 'plan'],
-  additionalProperties: false,
-}
-
-const validateOrg = createValidator<OrgFormValues>(orgSchema)
+// Use shared validator from @pzero/shared/pzero/orgs
+const validateOrg = validateCreateOrgData
 
 export const orgResolver = async (values: FieldValues, context: any, options: ResolverOptions<FieldValues>) => {
-  const result = validateOrg.validate(values)
+  const isValid = validateOrg(values)
+  const result = { success: isValid, errors: isValid ? [] : validateOrg.errors }
 
   if (result.success) {
     return {
@@ -105,7 +91,7 @@ export const orgResolver = async (values: FieldValues, context: any, options: Re
 export const defaultFormValues: Partial<OrgFormValues> = {
   name: '',
   handle: '',
-  description: '',
+  dscr: '',
   email: '',
   phone: '',
   website: '',

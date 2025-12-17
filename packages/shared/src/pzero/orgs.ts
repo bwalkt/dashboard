@@ -25,7 +25,11 @@ const baseFields = {
   id: { type: 'string' as const },
   name: { type: 'string' as const },
   handle: { type: 'string' as const },
-  description: { type: 'string' as const, nullable: true },
+  dscr: { type: 'string' as const, nullable: true },
+  c_at: { type: 'string' as const },
+  u_at: { type: 'string' as const, nullable: true },
+  data: { type: 'object' as const, nullable: true },
+  tags: { type: 'object' as const, nullable: true },
   logo_url: { type: 'string' as const, nullable: true, format: 'url' },
   website: { type: 'string' as const, nullable: true, format: 'url' },
   email: { type: 'string' as const, nullable: true, format: 'email' },
@@ -67,19 +71,35 @@ function createSchema<T extends keyof typeof baseFields>(
 
 // Core schemas
 export const OrgSchema = createSchema(
-  ['id', 'name', 'handle', 'description', 'logo_url', 'website', 'email', 'phone', 'status', 'plan', 'address'],
-  ['id', 'name', 'handle', 'status', 'plan'],
+  [
+    'id',
+    'name',
+    'handle',
+    'dscr',
+    'c_at',
+    'u_at',
+    'data',
+    'logo_url',
+    'website',
+    'email',
+    'phone',
+    'status',
+    'plan',
+    'address',
+    'tags',
+  ],
+  ['id', 'name', 'handle', 'c_at', 'status', 'plan'],
 )
 
 export const CreateOrgDataSchema = createSchema(
-  ['name', 'handle', 'description', 'logo_url', 'website', 'email', 'phone', 'address'],
+  ['name', 'handle', 'dscr', 'logo_url', 'website', 'email', 'phone', 'address', 'data', 'tags'],
   ['name', 'handle'],
 )
 
 export const UpdateOrgDataSchema = createSchema([
   'name',
   'handle',
-  'description',
+  'dscr',
   'logo_url',
   'website',
   'email',
@@ -87,6 +107,8 @@ export const UpdateOrgDataSchema = createSchema([
   'status',
   'plan',
   'address',
+  'data',
+  'tags',
 ])
 
 // API Response schemas
