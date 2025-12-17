@@ -1,7 +1,7 @@
 import { useIdle } from '@mantine/hooks'
 import type { User } from '@pzero/shared'
 import { api } from '@pzero/shared/api'
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { ZStorage } from './store'
@@ -89,8 +89,10 @@ const useAuthStoreBase = create<AuthState>()(
             },
           })
 
-          // Update activity
-          await get().updateLastActivity()
+          // Update activity - avoid recursion
+          const now = Date.now()
+          set({ lastActivity: now, lastActiveAt: now })
+          await storage.setItem({ key: 'lastActivity', data: now })
         } else {
           // Clear state
           set({
@@ -124,7 +126,6 @@ const useAuthStoreBase = create<AuthState>()(
       updateUserAfterRegistration: async (user: User) => {
         console.log('AuthStore: Updating user after registration:', user)
         await get().setUser(user)
-        await get().updateLastActivity()
       },
 
       logout: async () => {
@@ -250,7 +251,7 @@ const useAuthStoreBase = create<AuthState>()(
 // Initialize the store on first use
 let isInitialized = false
 
-// React hook for using AuthStore in components with idle detection
+// React hook for using AuthStore in components
 export function useAuthStore() {
   const authStore = useAuthStoreBase()
 
@@ -260,25 +261,38 @@ export function useAuthStore() {
       isInitialized = true
       authStore.initializeStore()
     }
-  }, [authStore])
+  }, [])
+
+  return authStore
+}
+
+// Separate hook for idle detection to avoid infinite loops
+export function useAuthStoreWithIdle() {
+  const authStore = useAuthStore()
 
   const idle = useIdle(INACTIVITY_TIMEOUT_MINUTES * 60 * 1000, {
     events: ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'],
     initialState: false,
   })
 
+  // Use refs to avoid dependency issues
+  const idleRef = useRef(idle)
+  const userRef = useRef(authStore.user)
+
+  idleRef.current = idle
+  userRef.current = authStore.user
+
   useEffect(() => {
-    if (idle && authStore.user) {
+    if (idleRef.current && userRef.current) {
       authStore.handleUserIdle()
     }
-  }, [idle, authStore])
+  }, [idle])
 
-  // Update last activity when user becomes active again
   useEffect(() => {
-    if (!idle && authStore.user) {
+    if (!idleRef.current && userRef.current) {
       authStore.updateLastActivity()
     }
-  }, [idle, authStore])
+  }, [idle])
 
   return authStore
 }

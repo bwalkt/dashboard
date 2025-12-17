@@ -43,7 +43,6 @@ function getBackendUrl(): string {
   const backendUrl = envs.BASE_API_URL
   // If not set or empty, use relative URLs (proxied through Vite)
   console.log('Backend URL:', backendUrl)
-  debugger
   return backendUrl || 'http://localhost:8090'
 }
 
