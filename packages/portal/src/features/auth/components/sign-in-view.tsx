@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Label } from '@/components/ui/label'
 import { useAuthStore } from '@/stores/auth'
-import GithubSignInButton from './github-auth-button'
 
 /**
  * Render the sign-in page with an email/password form and a GitHub OAuth option.

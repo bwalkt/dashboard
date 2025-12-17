@@ -35,11 +35,10 @@ import { useLocalStorage } from '@/hooks/use-local-storage'
 import { formatCompactNumber } from '@/lib/format'
 import { arrSome, inDateRange } from '@/lib/table/filterfns'
 import { cn } from '@/lib/utils'
-import { LiveButton } from './_components/live-button'
-import { RefreshButton } from './_components/refresh-button'
-import { BaseChartSchema } from './schema'
-import { searchParamsParser } from './search-params'
+import { LiveButton } from './live-button'
+import { RefreshButton } from './refresh-button'
 import { TimelineChart } from './timeline-chart'
+import type { BaseChartSchema } from './types'
 
 // TODO: add a possible chartGroupBy
 export interface DataTableInfiniteProps<TData, TValue, TMeta> {
@@ -65,6 +64,8 @@ export interface DataTableInfiniteProps<TData, TValue, TMeta> {
   meta: TMeta
   chartData?: BaseChartSchema[]
   chartDataColumnId: string
+  chartConfig?: import('@/components/ui/chart').ChartConfig
+  chartBarKeys?: string[]
   isFetching?: boolean
   isLoading?: boolean
   hasNextPage?: boolean
@@ -102,6 +103,8 @@ export function DataTableInfinite<TData, TValue, TMeta>({
   totalRowsFetched = 0,
   chartData = [],
   chartDataColumnId,
+  chartConfig,
+  chartBarKeys,
   getFacetedUniqueValues,
   getFacetedMinMaxValues,
   meta,
@@ -127,11 +130,11 @@ export function DataTableInfinite<TData, TValue, TMeta>({
       const onPageBottom =
         Math.ceil(e.currentTarget.scrollTop + e.currentTarget.clientHeight) >= e.currentTarget.scrollHeight
 
-      if (onPageBottom && !isFetching && totalRowsFetched < filterRows) {
+      if (onPageBottom && !isFetching && hasNextPage && totalRowsFetched < filterRows) {
         fetchNextPage()
       }
     },
-    [fetchNextPage, isFetching, filterRows, totalRowsFetched],
+    [fetchNextPage, isFetching, hasNextPage, filterRows, totalRowsFetched],
   )
 
   React.useEffect(() => {
@@ -344,11 +347,24 @@ export function DataTableInfinite<TData, TValue, TMeta>({
               searchParamsParser={searchParamsParser}
               renderActions={() => [
                 <RefreshButton key="refresh" onClick={refetch} />,
-                fetchPreviousPage ? <LiveButton key="live" fetchPreviousPage={fetchPreviousPage} /> : null,
+                fetchPreviousPage ? (
+                  <LiveButton
+                    key="live"
+                    fetchPreviousPage={fetchPreviousPage}
+                    searchParamsParser={searchParamsParser}
+                    dateColumnId={chartDataColumnId}
+                  />
+                ) : null,
               ]}
             />
             {/* TODO: move up to client component */}
-            <TimelineChart data={chartData} className="-mb-2" columnId={chartDataColumnId} />
+            <TimelineChart
+              data={chartData}
+              className="-mb-2"
+              columnId={chartDataColumnId}
+              chartConfig={chartConfig}
+              barKeys={chartBarKeys}
+            />
           </div>
           <div className="z-0">
             <Table
@@ -522,7 +538,7 @@ function Row<TData>({
       {row.getVisibleCells().map(cell => (
         <TableCell
           key={cell.id}
-          className={cn('truncate border-b border-border', cell.column.columnDef.meta?.cellClassName)}
+          className={cn('truncate px-2 border-b border-border', cell.column.columnDef.meta?.cellClassName)}
         >
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </TableCell>

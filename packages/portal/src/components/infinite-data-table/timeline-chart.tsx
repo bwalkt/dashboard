@@ -6,26 +6,10 @@ import { Bar, BarChart, CartesianGrid, ReferenceArea, XAxis } from 'recharts'
 import type { CategoricalChartFunc } from 'recharts/types/chart/generateCategoricalChart'
 import { useDataTable } from '@/components/data-table/data-table-provider'
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { getLevelLabel } from '@/lib/request/level'
 import { cn } from '@/lib/utils'
-import { BaseChartSchema, TimelineChartSchema } from './schema'
+import type { BaseChartSchema } from './types'
 
 export const description = 'A stacked bar chart'
-
-const chartConfig = {
-  success: {
-    label: <TooltipLabel level="success" />,
-    color: 'hsl(var(--success))',
-  },
-  warning: {
-    label: <TooltipLabel level="warning" />,
-    color: 'hsl(var(--warning))',
-  },
-  error: {
-    label: <TooltipLabel level="error" />,
-    color: 'hsl(var(--error))',
-  },
-} satisfies ChartConfig
 
 interface TimelineChartProps<TChart extends BaseChartSchema> {
   className?: string
@@ -38,17 +22,37 @@ interface TimelineChartProps<TChart extends BaseChartSchema> {
    * Same data as of the InfiniteQueryMeta.
    */
   data: TChart[]
+  /**
+   * Chart configuration for the bars. Keys should match the data keys (excluding timestamp).
+   * Example: { success: { label: 'Success', color: 'hsl(var(--success))' }, ... }
+   */
+  chartConfig?: ChartConfig
+  /**
+   * Array of data keys (excluding timestamp) to render as bars in order.
+   * Example: ['error', 'warning', 'success']
+   */
+  barKeys?: string[]
 }
 
 export function TimelineChart<TChart extends BaseChartSchema>({
   data,
   className,
   columnId,
+  chartConfig,
+  barKeys,
 }: TimelineChartProps<TChart>) {
   const { table } = useDataTable()
   const [refAreaLeft, setRefAreaLeft] = useState<string | null>(null)
   const [refAreaRight, setRefAreaRight] = useState<string | null>(null)
   const [isSelecting, setIsSelecting] = useState(false)
+
+  // Extract bar keys from data if not provided
+  const keys = useMemo(() => {
+    if (barKeys) return barKeys
+    if (data.length === 0) return []
+    const firstItem = data[0]
+    return Object.keys(firstItem).filter(key => key !== 'timestamp')
+  }, [data, barKeys])
 
   // REMINDER: date has to be a string for tooltip label to work - don't ask me why
   const chart = useMemo(
@@ -57,7 +61,7 @@ export function TimelineChart<TChart extends BaseChartSchema>({
         ...item,
         [columnId]: new Date(item.timestamp).toString(),
       })),
-    [data],
+    [data, columnId],
   )
 
   const timerange = useMemo(() => {
@@ -93,7 +97,7 @@ export function TimelineChart<TChart extends BaseChartSchema>({
 
   return (
     <ChartContainer
-      config={chartConfig}
+      config={chartConfig || {}}
       className={cn(
         'aspect-auto h-[60px] w-full',
         '[&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted/50', // otherwise same color as 200
@@ -145,10 +149,10 @@ export function TimelineChart<TChart extends BaseChartSchema>({
             />
           }
         />
-        {/* TODO: we could use the `{timestamp, ...rest} = data[0]` to dynamically create the bars but that would mean the order can be very much random */}
-        <Bar dataKey="error" stackId="a" fill="var(--color-error)" />
-        <Bar dataKey="warning" stackId="a" fill="var(--color-warning)" />
-        <Bar dataKey="success" stackId="a" fill="var(--color-success)" />
+        {/* Dynamically render bars based on keys */}
+        {keys.map(key => (
+          <Bar key={key} dataKey={key} stackId="a" fill={chartConfig?.[key]?.color || `hsl(var(--${key}))`} />
+        ))}
         {refAreaLeft && refAreaRight && (
           <ReferenceArea
             x1={refAreaLeft}
@@ -176,14 +180,4 @@ function calculatePeriod(interval: number): '10m' | '1d' | '1w' | '1mo' {
     return '1w'
   }
   return '1mo' // defaults to 1 month
-}
-
-// TODO: use a `formatTooltipLabel` function instead for composability
-function TooltipLabel({ level }: { level: keyof Omit<TimelineChartSchema, 'timestamp'> }) {
-  return (
-    <div className="mr-2 flex w-20 items-center justify-between gap-2 font-mono">
-      <div className="capitalize text-foreground/70">{level}</div>
-      <div className="text-xs text-muted-foreground/70">{getLevelLabel(level)}</div>
-    </div>
-  )
 }

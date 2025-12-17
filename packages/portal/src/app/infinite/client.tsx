@@ -1,206 +1,124 @@
-import { useQuery } from '@tanstack/react-query'
-import { useQueryStates } from 'nuqs'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import type { Table as TTable } from '@tanstack/react-table'
+import { useQueryState, useQueryStates } from 'nuqs'
 import * as React from 'react'
+import { DataTableInfinite } from '@/components/infinite-data-table'
 import { useHotKey } from '@/hooks/use-hot-key'
+import { getLevelRowClassName } from '@/lib/request/level'
+import { cn } from '@/lib/utils'
+import { LiveRow } from './_components/live-row'
 import { columns } from './columns'
 import { filterFields as defaultFilterFields, sheetFields } from './constants'
-import { DataTableInfinite } from './data-table-infinite'
 import { dataOptions } from './query-options'
-import type { SignozTraceSchema } from './schema'
+import type { FacetMetadataSchema } from './schema'
 import { searchParamsParser } from './search-params'
 
-const DEFAULT_LIMIT = 50
-
 export function Client() {
-  const [search, setSearch] = useQueryStates(searchParamsParser)
+  const [search] = useQueryStates(searchParamsParser)
+  const { data, isFetching, isLoading, fetchNextPage, hasNextPage, fetchPreviousPage, refetch } = useInfiniteQuery(
+    dataOptions(search),
+  )
   useResetFocus()
 
-  // Initialize default time range if not set
-  React.useEffect(() => {
-    if (!search.startTime || !search.endTime) {
-      const now = Date.now()
-      const oneHourAgo = now - 60 * 60 * 1000
-      setSearch({
-        startTime: oneHourAgo,
-        endTime: now,
+  const flatData = React.useMemo(() => data?.pages?.flatMap(page => page.data ?? []) ?? [], [data?.pages])
+
+  const liveMode = useLiveMode(flatData)
+
+  // REMINDER: meta data is always the same for all pages as filters do not change(!)
+  const lastPage = data?.pages?.[data?.pages.length - 1]
+  const totalDBRowCount = lastPage?.meta?.totalRowCount
+  const filterDBRowCount = lastPage?.meta?.filterRowCount
+  const metadata = lastPage?.meta?.metadata
+  const chartData = lastPage?.meta?.chartData
+  const facets = lastPage?.meta?.facets
+  const totalFetched = flatData?.length
+
+  // Memoize fetchPreviousPage to prevent unnecessary effect re-runs in LiveButton
+  const stableFetchPrevious = React.useCallback((opts?: any) => fetchPreviousPage?.(opts), [fetchPreviousPage])
+
+  const { sort, start, size, uuid, cursor, direction, live, ...filter } = search
+
+  // REMINDER: this is currently needed for the cmdk search
+  // TODO: auto search via API when the user changes the filter instead of hardcoded
+  const filterFields = React.useMemo(() => {
+    return defaultFilterFields.map(field => {
+      const facetsField = facets?.[field.value]
+      if (!facetsField) return field
+      if (field.options && field.options.length > 0) return field
+
+      // REMINDER: if no options are set, we need to set them via the API
+      const options = facetsField.rows.map(({ value }) => {
+        return {
+          label: `${value}`,
+          value,
+        }
       })
-    }
-  }, [search.startTime, search.endTime, setSearch])
 
-  // State for accumulated data across pages
-  const [allData, setAllData] = React.useState<SignozTraceSchema[]>([])
-  const [totalCount, setTotalCount] = React.useState<number>(0)
-  const [hasInitialQuery, setHasInitialQuery] = React.useState(false)
-
-  // Query current page
-  const { data, isFetching, isLoading, refetch } = useQuery(dataOptions(search))
-
-  // Mark as having initial query when data first arrives
-  React.useEffect(() => {
-    if (data && !hasInitialQuery) {
-      setHasInitialQuery(true)
-    }
-  }, [data, hasInitialQuery])
-
-  // Update accumulated data when new data arrives
-  React.useEffect(() => {
-    if (data && data.data) {
-      console.log('Setting allData:', {
-        dataLength: data.data.length,
-        total: data.total,
-        offset: search.offset,
-        firstItem: data.data[0],
-      })
-      if (search.offset === 0) {
-        // First page - replace data
-        setAllData(data.data)
-        setTotalCount(data.total)
-      } else {
-        // Subsequent pages - append data with deduplication
-        setAllData(prev => {
-          // Create a Set of existing trace_ids for fast lookup
-          const existingIds = new Set(prev.map(row => row.trace_id))
-          // Filter out duplicates from new data
-          const newData = data.data.filter(row => !existingIds.has(row.trace_id))
-          console.log('Appending data:', {
-            prevLength: prev.length,
-            newDataLength: data.data.length,
-            uniqueNewDataLength: newData.length,
-            duplicates: data.data.length - newData.length,
-          })
-          return [...prev, ...newData]
-        })
-        setTotalCount(data.total)
+      if (field.type === 'slider') {
+        return {
+          ...field,
+          min: facetsField.min ?? field.min,
+          max: facetsField.max ?? field.max,
+          options,
+        }
       }
-    } else {
-      console.log('No data to set:', { data, hasData: !!data, hasDataData: !!(data && data.data) })
-    }
-  }, [data, search.offset])
 
-  // Debug: log allData changes
-  React.useEffect(() => {
-    console.log('allData updated:', { length: allData.length, totalCount, firstItem: allData[0] })
-  }, [allData, totalCount])
-
-  // Handle load more - trigger refetch when offset changes (only if initial query was made)
-  React.useEffect(() => {
-    if (hasInitialQuery && search.offset > 0) {
-      refetch()
-    }
-  }, [search.offset, hasInitialQuery, refetch])
-
-  // Refetch when timerange (startTime/endTime) changes
-  React.useEffect(() => {
-    if (hasInitialQuery && search.startTime && search.endTime) {
-      // Reset offset to 0 when timerange changes
-      setSearch(prev => ({
-        ...prev,
-        offset: 0,
-      }))
-      setAllData([])
-      refetch()
-    }
-  }, [search.startTime, search.endTime, hasInitialQuery, refetch, setSearch])
-
-  // Handle initial query or filter change
-  const handleQuery = React.useCallback(() => {
-    setSearch({
-      ...search,
-      offset: 0,
+      return { ...field, options }
     })
-    setAllData([])
-    setHasInitialQuery(true)
-    refetch()
-  }, [search, setSearch, refetch])
-
-  // Handle load more button click
-  const handleLoadMore = React.useCallback(() => {
-    const newOffset = (search.offset || 0) + (search.limit || DEFAULT_LIMIT)
-    setSearch({
-      ...search,
-      offset: newOffset,
-    })
-  }, [search, setSearch])
-
-  // Check if there's more data to load
-  const hasMore = React.useMemo(() => {
-    return allData.length < totalCount
-  }, [allData.length, totalCount])
-
-  // Extract filter values for defaultColumnFilters
-  // Note: We don't add date filter here because we filter by startTime/endTime at the API level
-  // Adding it as a column filter would cause double-filtering and might filter out all rows
-  // Only include filters that correspond to actual table columns
-  const { sort, traceId, httpMethod, serviceName } = search
-
-  // Valid column IDs that exist in the table
-  const validColumnIds = new Set(['date', 'trace_id', 'serviceName', 'name', 'durationMs', 'responseStatusCode'])
-
-  const defaultColumnFilters = [
-    // Map httpMethod to 'name' column filter (API uses httpMethod, but table filters 'name' column)
-    ...(httpMethod
-      ? [
-          {
-            id: 'name',
-            value: [`HTTP ${httpMethod}`] as string[],
-          },
-        ]
-      : []),
-    // Add serviceName filter if it exists and is a valid column
-    ...(serviceName && validColumnIds.has('serviceName')
-      ? [
-          {
-            id: 'serviceName',
-            value: serviceName,
-          },
-        ]
-      : []),
-  ]
+  }, [facets])
 
   return (
     <DataTableInfinite
-      title="Traces"
-      description="Monitor and analyze distributed traces from SigNoz"
+      title="Logs"
+      description="Monitor and analyze system logs and API requests"
       columns={columns}
-      data={allData.filter(
-        (row): row is SignozTraceSchema => row != null && typeof row === 'object' && 'trace_id' in row,
-      )}
-      totalRows={totalCount}
-      filterRows={totalCount}
-      totalRowsFetched={allData.length}
-      defaultColumnFilters={defaultColumnFilters}
+      data={flatData}
+      totalRows={totalDBRowCount}
+      filterRows={filterDBRowCount}
+      totalRowsFetched={totalFetched}
+      defaultColumnFilters={Object.entries(filter)
+        .map(([key, value]) => ({
+          id: key,
+          value,
+        }))
+        .filter(({ value }) => value != null && (!Array.isArray(value) || value.length > 0))}
       defaultColumnSorting={sort ? [sort] : undefined}
-      defaultRowSelection={traceId ? { [traceId]: true } : undefined}
-      defaultColumnVisibility={{}}
-      meta={{}}
-      filterFields={defaultFilterFields}
+      defaultRowSelection={search.uuid ? { [search.uuid]: true } : undefined}
+      // FIXME: make it configurable - TODO: use `columnHidden: boolean` in `filterFields`
+      defaultColumnVisibility={{
+        uuid: false,
+        'timing.dns': false,
+        'timing.connection': false,
+        'timing.tls': false,
+        'timing.ttfb': false,
+        'timing.transfer': false,
+      }}
+      meta={metadata}
+      filterFields={filterFields}
       sheetFields={sheetFields}
-      isFetching={isFetching && search.offset > 0}
-      isLoading={isLoading && search.offset === 0}
-      fetchNextPage={async () => {
-        handleLoadMore()
-      }}
-      hasNextPage={hasMore}
-      fetchPreviousPage={undefined}
-      refetch={handleQuery}
-      chartData={[]}
+      isFetching={isFetching}
+      isLoading={isLoading}
+      fetchNextPage={fetchNextPage}
+      hasNextPage={hasNextPage}
+      fetchPreviousPage={stableFetchPrevious}
+      refetch={refetch}
+      chartData={chartData}
       chartDataColumnId="date"
-      getRowClassName={() => ''}
-      getRowId={row => {
-        if (!row) {
-          console.error('getRowId called with undefined/null row')
-          return `row-${Math.random()}`
-        }
-        const id = row.trace_id || row.span_id || `row-${Math.random()}`
-        if (!row.trace_id) {
-          console.warn('Row missing trace_id:', row)
-        }
-        return id
+      getRowClassName={row => {
+        const rowTimestamp = row.original.date.getTime()
+        const isPast = rowTimestamp <= (liveMode.timestamp || -1)
+        const levelClassName = getLevelRowClassName(row.original.level)
+        return cn(levelClassName, isPast ? 'opacity-50' : 'opacity-100')
       }}
-      getFacetedUniqueValues={() => new Map()}
-      getFacetedMinMaxValues={() => undefined}
-      renderLiveRow={() => null}
-      renderSheetTitle={props => props.row?.original.name || 'Trace'}
+      getRowId={row => row.uuid}
+      getFacetedUniqueValues={getFacetedUniqueValues(facets)}
+      getFacetedMinMaxValues={getFacetedMinMaxValues(facets)}
+      renderLiveRow={props => {
+        if (!liveMode.timestamp) return null
+        if (props?.row.original.uuid !== liveMode?.row?.uuid) return null
+        return <LiveRow />
+      }}
+      renderSheetTitle={props => props.row?.original.pathname}
       searchParamsParser={searchParamsParser}
     />
   )
@@ -215,4 +133,50 @@ function useResetFocus() {
     document.body.focus()
     document.body.removeAttribute('tabindex')
   }, '.')
+}
+
+// TODO: make a BaseObject (incl. date and uuid e.g. for every upcoming branch of infinite table)
+export function useLiveMode<TData extends { date: Date }>(data: TData[]) {
+  const [live] = useQueryState('live', searchParamsParser.live)
+  // REMINDER: used to capture the live mode on timestamp
+  const liveTimestamp = React.useRef<number | undefined>(live ? new Date().getTime() : undefined)
+
+  React.useEffect(() => {
+    if (live) liveTimestamp.current = new Date().getTime()
+    else liveTimestamp.current = undefined
+  }, [live])
+
+  const anchorRow = React.useMemo(() => {
+    if (!live) return undefined
+
+    const item = data.find(item => {
+      // return first item that is there if not liveTimestamp
+      if (!liveTimestamp.current) return true
+      // return first item that is after the liveTimestamp
+      if (item.date.getTime() > liveTimestamp.current) return false
+      return true
+      // return first item if no liveTimestamp
+    })
+
+    return item
+  }, [live, data])
+
+  return { row: anchorRow, timestamp: liveTimestamp.current }
+}
+
+export function getFacetedUniqueValues<TData>(facets?: Record<string, FacetMetadataSchema>) {
+  return (_: TTable<TData>, columnId: string): Map<string, number> => {
+    return new Map(facets?.[columnId]?.rows?.map(({ value, total }) => [value, total]) || [])
+  }
+}
+
+export function getFacetedMinMaxValues<TData>(facets?: Record<string, FacetMetadataSchema>) {
+  return (_: TTable<TData>, columnId: string): [number, number] | undefined => {
+    const min = facets?.[columnId]?.min
+    const max = facets?.[columnId]?.max
+    if (typeof min === 'number' && typeof max === 'number') return [min, max]
+    if (typeof min === 'number') return [min, min]
+    if (typeof max === 'number') return [max, max]
+    return undefined
+  }
 }

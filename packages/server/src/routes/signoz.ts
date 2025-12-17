@@ -75,5 +75,35 @@ export async function signozRoutes(fastify: FastifyInstance): Promise<void> {
       }
     },
   );
+  fastify.get<SigNozTracesRequest>(
+    "/signoz/traces/summary",
+    {
+      preHandler: [authenticateToken],
+    },
+    async (
+      _request: FastifyRequest<SigNozTracesRequest>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        
+
+
+        const result = await queryTraces({ filters:{
+          startTime: Date.now() - 1000 * 60 * 60 * 24 * 30, // 30 days ago
+          endTime: Date.now(),
+        }, pagination: { limit: 10000, offset: 0 } });
+        return reply.code(200).send(result);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        const statusCode = errorMessage.includes("not configured") ? 503 : 500;
+
+        return reply.code(statusCode).send({
+          error: "Failed to query SigNoz traces",
+          message: errorMessage,
+        });
+      }
+    },
+  );
 }
 

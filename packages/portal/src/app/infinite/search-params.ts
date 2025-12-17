@@ -1,16 +1,20 @@
-import type { HttpMethod } from '@pzero/shared/types'
 import {
   createParser,
   createSearchParamsCache,
   createSerializer,
   type inferParserType,
+  parseAsArrayOf,
   parseAsBoolean,
   parseAsInteger,
   parseAsString,
   parseAsStringLiteral,
+  parseAsTimestamp,
 } from 'nuqs/server'
+import { LEVELS } from '@/constants/levels'
+import { METHODS } from '@/constants/method'
+import { REGIONS } from '@/constants/region'
 // Note: import from 'nuqs/server' to avoid the "use client" directive
-import { SORT_DELIMITER } from '@/lib/delimiters'
+import { ARRAY_DELIMITER, RANGE_DELIMITER, SLIDER_DELIMITER, SORT_DELIMITER } from '@/lib/delimiters'
 
 // https://logs.run/i?sort=latency.desc
 
@@ -25,22 +29,31 @@ export const parseAsSort = createParser({
   },
 })
 
-const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
-
 export const searchParamsParser = {
-  // SIGNOZ FILTERS
-  serviceName: parseAsString,
-  httpMethod: parseAsStringLiteral(HTTP_METHODS),
-  startTime: parseAsInteger,
-  endTime: parseAsInteger,
-  // PAGINATION
-  limit: parseAsInteger.withDefault(50),
-  offset: parseAsInteger.withDefault(0),
-  // REQUIRED FOR SORTING
+  // CUSTOM FILTERS
+  level: parseAsArrayOf(parseAsStringLiteral(LEVELS), ARRAY_DELIMITER),
+  latency: parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  'timing.dns': parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  'timing.connection': parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  'timing.tls': parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  'timing.ttfb': parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  'timing.transfer': parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  status: parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  regions: parseAsArrayOf(parseAsStringLiteral(REGIONS), ARRAY_DELIMITER),
+  method: parseAsArrayOf(parseAsStringLiteral(METHODS), ARRAY_DELIMITER),
+  host: parseAsString,
+  pathname: parseAsString,
+  date: parseAsArrayOf(parseAsTimestamp, RANGE_DELIMITER),
+  // REQUIRED FOR SORTING & PAGINATION
   sort: parseAsSort,
+  size: parseAsInteger.withDefault(40),
+  start: parseAsInteger.withDefault(0),
+  // REQUIRED FOR INFINITE SCROLLING (Live Mode and Load More)
+  direction: parseAsStringLiteral(['prev', 'next']).withDefault('next'),
+  cursor: parseAsTimestamp.withDefault(new Date()),
+  live: parseAsBoolean.withDefault(false),
   // REQUIRED FOR SELECTION
-  traceId: parseAsString,
-  spanId: parseAsString,
+  uuid: parseAsString,
 }
 
 export const searchParamsCache = createSearchParamsCache(searchParamsParser)

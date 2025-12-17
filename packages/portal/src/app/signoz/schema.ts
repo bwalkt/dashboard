@@ -1,4 +1,4 @@
-import { createValidator } from '@boardwalk/shared/validator/ajv'
+import { createValidator } from '@pzero/shared/validator/ajv'
 import { LEVELS } from '@/constants/levels'
 import { METHODS } from '@/constants/method'
 import { REGIONS } from '@/constants/region'
@@ -54,7 +54,7 @@ export interface FacetMetadataSchema {
   max?: number
 }
 
-export type BaseChartSchema = { timestamp: number; [key: string]: number }
+import type { BaseChartSchema } from '@/components/infinite-data-table/types'
 
 export interface TimelineChartSchema extends BaseChartSchema {
   timestamp: number
@@ -62,11 +62,38 @@ export interface TimelineChartSchema extends BaseChartSchema {
 }
 
 // =============================================================================
+// SigNoz Trace Schema
+// =============================================================================
+
+export interface SignozTraceSchema {
+  trace_id: string
+  span_id: string
+  serviceName: string
+  name: string // span name/operation
+  durationMs: number
+  responseStatusCode?: number | string // Can be string from API, converted to number in transform
+  timestamp: number // epoch milliseconds
+  date: Date // converted from timestamp for table display
+  http_method?: string
+  http_host?: string
+  http_url?: string
+  // Additional fields that may come from Signoz API
+  [key: string]: any
+}
+
+export interface SignozTraceFilterSchema {
+  serviceName?: string
+  httpMethod?: string
+  startTime?: number
+  endTime?: number
+}
+
+// =============================================================================
 // Utility Functions for Complex Transformations
 // =============================================================================
 
 // Helper function for string to boolean conversion
-const stringToBoolean = (val: string): boolean | undefined => {
+export const stringToBoolean = (val: string): boolean | undefined => {
   try {
     return JSON.parse(val.toLowerCase())
   } catch (e) {
