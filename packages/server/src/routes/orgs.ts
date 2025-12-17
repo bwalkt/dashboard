@@ -143,7 +143,13 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
       preHandler: authenticateToken,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      // Get a database client for transaction support
+      const client = await db.pool.connect();
+      
       try {
+        // Start transaction
+        await client.query('BEGIN');
+        
         const data = request.body as CreateOrgWithUserPayload;
         
         console.log('🔥 SERVER: Received request at /orgs/create-with-user')
@@ -155,6 +161,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         const authenticatedUserId = (request as any).user?.id;
         if (!authenticatedUserId) {
           console.log('🔥 SERVER: Authentication failed - no user context')
+          await client.query('ROLLBACK');
           return reply.status(401).send({
             error: "Unauthorized",
             message: "Authentication required",
@@ -170,6 +177,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
             status: !data.status ? 'MISSING' : 'OK',
             plan: !data.plan ? 'MISSING' : 'OK'
           })
+          await client.query('ROLLBACK');
           return reply.status(400).send({
             error: "Bad Request",
             message: "Name, handle, email, status, and plan are required",
@@ -178,7 +186,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Check if handle is unique
         console.log('🔥 SERVER: Checking if handle is unique:', data.handle)
-        const existingOrg = await db.pool.query(
+        const existingOrg = await client.query(
           "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND deleted_at IS NULL",
           [data.handle]
         );
@@ -186,6 +194,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
         if (existingOrg.rows.length > 0) {
           console.log('🔥 SERVER: Handle conflict detected, returning 409')
+          await client.query('ROLLBACK');
           return reply.status(409).send({
             error: "Conflict",
             message: "Organization handle already exists",
@@ -197,20 +206,28 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         // Create new user if requested
         if (data.create_user && data.create_user.name && data.create_user.email) {
           // Check if user already exists
-          const existingUser = await userService.getUserByEmail(data.create_user.email);
-          if (existingUser) {
+          const existingUserCheck = await client.query(
+            "SELECT id FROM pzero.all_users WHERE email = $1 AND deleted_at IS NULL",
+            [data.create_user.email]
+          );
+          
+          if (existingUserCheck.rows.length > 0) {
+            await client.query('ROLLBACK');
             return reply.status(409).send({
               error: "Conflict",
               message: "User with this email already exists",
             });
           }
 
-          // Create user with email verified by default
-          createdUser = await userService.createUserFromEmail({
-            name: data.create_user.name,
-            email: data.create_user.email,
-            email_verified: data.create_user.email_verified ?? true, // Auto-verify for admin-created users
-          });
+          // Create user within the transaction
+          const userCreateResult = await client.query(
+            `INSERT INTO pzero.all_users (name, email, email_verified, c_at, u_at) 
+             VALUES ($1, $2, $3, NOW(), NOW()) 
+             RETURNING id, name, email, email_verified`,
+            [data.create_user.name, data.create_user.email, data.create_user.email_verified ?? true]
+          );
+          
+          createdUser = userCreateResult.rows[0];
         }
 
         // Create organization using the postgres function
@@ -235,7 +252,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         }
         console.log('🔥 SERVER: Creating organization with data:', JSON.stringify(orgCreateData, null, 2))
         
-        const createResult = await db.pool.query(
+        const createResult = await client.query(
           `SELECT pzero.create_org($1) as result`,
           [JSON.stringify(orgCreateData)],
         );
@@ -246,7 +263,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Associate created user with organization
         if (createdUser) {
-          await db.pool.query(
+          await client.query(
             `UPDATE pzero.all_users SET org_id = $1 WHERE id = $2`,
             [org_id, createdUser.id]
           );
@@ -255,7 +272,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         // Associate existing users with organization
         if (data.associate_users && data.associate_users.length > 0) {
           for (const userId of data.associate_users) {
-            await db.pool.query(
+            await client.query(
               `UPDATE pzero.all_users SET org_id = $1 WHERE id = $2`,
               [org_id, userId]
             );
@@ -263,7 +280,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         }
 
         // Fetch the complete organization record
-        const orgResult = await db.pool.query(
+        const orgResult = await client.query(
           `SELECT * FROM pzero.all_orgs WHERE id = $1`,
           [org_id]
         );
@@ -284,9 +301,15 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           };
         }
 
+        // Commit the transaction
+        await client.query('COMMIT');
+        
         console.log('🔥 SERVER: Sending successful response:', JSON.stringify(response, null, 2))
         return reply.send(response);
       } catch (error) {
+        // Rollback the transaction on error
+        await client.query('ROLLBACK');
+        
         console.error("❌ SERVER: Create organization with user error:", error);
         console.error("❌ SERVER: Error details:", {
           message: error instanceof Error ? error.message : 'Unknown error',
@@ -297,6 +320,9 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           error: "Internal Server Error",
           message: "Failed to create organization with user",
         });
+      } finally {
+        // Always release the client back to the pool
+        client.release();
       }
     },
   );

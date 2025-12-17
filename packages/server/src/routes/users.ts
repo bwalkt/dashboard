@@ -272,23 +272,31 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
         const { id } = request.params as { id: string };
         const { token } = request.body as { token: string };
 
-        // For now, just mark as verified (in production, validate the token)
-        const result = await db.pool.query(
-          `UPDATE pzero.all_auth 
-           SET email_verified = true 
-           WHERE id = $1
-           RETURNING *`,
-          [id]
-        );
+        // TODO: SECURITY CRITICAL - This endpoint is currently disabled until proper token validation is implemented
+        // The token parameter is extracted but not validated, allowing any authenticated user to verify any email
+        return reply.status(501).send({
+          error: "Not Implemented",
+          message: "Email verification endpoint is temporarily disabled due to security concerns. Please contact support for manual verification.",
+        });
 
-        if (result.rows.length === 0) {
-          return reply.status(404).send({
-            error: "Not Found",
-            message: "User not found",
-          });
-        }
+        // Commented out until proper token validation is implemented:
+        // const result = await db.pool.query(
+        //   `UPDATE pzero.all_auth 
+        //    SET email_verified = true 
+        //    WHERE id = $1
+        //    RETURNING *`,
+        //   [id]
+        // );
 
-        return reply.send(result.rows[0]);
+        // Commented out until proper token validation is implemented:
+        // if (result.rows.length === 0) {
+        //   return reply.status(404).send({
+        //     error: "Not Found",
+        //     message: "User not found",
+        //   });
+        // }
+
+        // return reply.send(result.rows[0]);
       } catch (error) {
         console.error("Verify email error:", error);
         return reply.status(500).send({
@@ -302,11 +310,16 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
   /**
    * POST /api/users/:id/mark-verified
    * Manually mark email as verified (admin action)
+   * 
+   * TODO: SECURITY - Add admin role verification
+   * Currently any authenticated user can mark any email as verified.
+   * Should be: preHandler: [authenticateToken, requireAdminRole]
+   * Waiting for requireAdminRole middleware implementation.
    */
   fastify.post(
     "/api/users/:id/mark-verified",
     {
-      preHandler: authenticateToken,
+      preHandler: authenticateToken, // TODO: Add requireAdminRole when available
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {

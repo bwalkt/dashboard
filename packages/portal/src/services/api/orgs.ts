@@ -109,6 +109,9 @@ class OrgsService {
 
   /**
    * Associate users with organization
+   *
+   * TODO: TBD - Server endpoint POST /api/orgs/:id/users not implemented yet
+   * This method will fail with 404 until the corresponding server route is added
    */
   async associateUsers(orgId: string, userIds: string[]): Promise<void> {
     await api.post(`/api/orgs/${orgId}/users`, { user_ids: userIds })
@@ -116,6 +119,9 @@ class OrgsService {
 
   /**
    * Remove user from organization
+   *
+   * TODO: TBD - Server endpoint DELETE /api/orgs/:id/users/:userId not implemented yet
+   * This method will fail with 404 until the corresponding server route is added
    */
   async removeUser(orgId: string, userId: string): Promise<void> {
     await api.delete(`/api/orgs/${orgId}/users/${userId}`)

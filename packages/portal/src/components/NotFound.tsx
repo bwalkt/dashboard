@@ -28,9 +28,9 @@ export function NotFound() {
           </Button>
 
           <Button variant="outline" asChild>
-            <Link to="/search">
+            <Link to="/dashboard">
               <Search className="mr-2 h-4 w-4" />
-              Search
+              Dashboard
             </Link>
           </Button>
         </div>
@@ -38,9 +38,9 @@ export function NotFound() {
         <div className="mt-12 pt-8 border-t border-border">
           <p className="text-sm text-muted-foreground">
             If you believe this is a mistake, please{' '}
-            <Link to="/support" className="text-primary hover:underline">
+            <a href="mailto:support@pzero.com" className="text-primary hover:underline">
               contact support
-            </Link>
+            </a>
           </p>
         </div>
       </div>
