@@ -164,8 +164,10 @@ export const createColumns = (): ColumnDef<Org>[] => {
                 name: `${org.name} (Copy)`,
                 handle: `${org.handle}-copy-${Date.now()}`,
                 website: org.website,
-                contact_email: org.contact_email,
-                avatar_url: org.avatar_url,
+                email: org.email,
+                logo_url: org.logo_url,
+                status: org.status,
+                plan: org.plan,
               }
               await orgsStore.createOrg(duplicate)
               toast.success(`Organization "${org.name}" duplicated successfully`)
