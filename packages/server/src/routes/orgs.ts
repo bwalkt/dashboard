@@ -27,8 +27,8 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = request.body as CreateOrgData & {
-          status: 'active' | 'inactive' | 'suspended';
-          plan: 'free' | 'starter' | 'pro' | 'enterprise';
+          status: OrgStatus;
+          plan: OrgPlan;
         };
 
         // Validate required fields
