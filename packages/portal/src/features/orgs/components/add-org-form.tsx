@@ -1,4 +1,5 @@
 import { ALLOWED_COUNTRIES, DEFAULT_COUNTRY, validatePhoneNumber } from '@pzero/shared/phone'
+import type { Org } from '@pzero/shared/pzero'
 import { generateOrgHandle } from '@pzero/shared/utils/handles'
 import { createValidator } from '@pzero/shared/validator/ajv'
 import * as React from 'react'
@@ -25,8 +26,8 @@ import { toastUtils } from '@/lib/toast'
 import { orgsService } from '@/services/api/orgs'
 import { useAuthStore } from '@/stores/auth'
 import { useOrgsStore } from '@/stores/orgs'
-import type { Org } from '@pzero/shared/pzero'
-interface OrgFormValues extends Omit<Org, 'id' | 'c_by' | 'u_by' > {
+
+interface OrgFormValues extends Omit<Org, 'id' | 'c_by' | 'u_by'> {
   new_user: {
     name: string
     email: string
@@ -279,7 +280,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
               email: data.email,
               email_verified: true, // Auto-verify email for admin-created users
             }
-          : undefined
+          : undefined,
       }
 
       console.log('🚀 CLIENT: Sending org creation request with payload:', JSON.stringify(orgData, null, 2))
