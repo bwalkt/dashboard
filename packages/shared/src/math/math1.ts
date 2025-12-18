@@ -236,7 +236,7 @@ export class Math1 {
     }
 
     const targetIndex = Math.max(0, Math.min(index ?? Math.floor(this.getRandom() * (maxIndex + 1)), maxIndex))
-    
+
     // Decide chaining at function creation time, not execution time
     const shouldChain = this.getRandom() < 0.2 && enableChaining
 
@@ -374,11 +374,11 @@ export class Math1 {
   createChainFunction(matrix: number[][], defaultIndex?: number): Function {
     const operations = ['sumRow', 'avgRow', 'maxRow', 'minRow', 'stdDevRow']
     const chainLength = Math.floor(this.getRandom() * 3) + 2 // 2-4 operations
-    
+
     // Pre-determine the operations and initial index at function creation time
-    const preSelectedOps = Array(chainLength).fill(null).map(() => 
-      operations[Math.floor(this.getRandom() * operations.length)]
-    )
+    const preSelectedOps = Array(chainLength)
+      .fill(null)
+      .map(() => operations[Math.floor(this.getRandom() * operations.length)])
     const randomInitialIndex = Math.floor(this.getRandom() * matrix.length)
 
     return (inputMatrix?: number[][], startIndex?: number) => {
@@ -424,7 +424,7 @@ export class Math1 {
 
   createCompositeFunction(matrix: number[][], defaultIndex?: number): Function {
     const operations = ['sinCol', 'cosCol', 'tanCol', 'sqrtSumCol', 'hypotCol']
-    
+
     // Pre-determine random choices at function creation time
     const randomTargetCol = Math.floor(this.getRandom() * (matrix[0]?.length || 1))
     const primaryOp = operations[Math.floor(this.getRandom() * operations.length)]
@@ -1653,7 +1653,7 @@ export class Math1 {
     ]
 
     const randomOp = operations[Math.floor(this.getRandom() * operations.length)]
-    
+
     // Decide chaining at function creation time
     const shouldChainStats = this.getRandom() < 0.25
 
@@ -1734,11 +1734,11 @@ export class Math1 {
   createStatsChainFunction(numbers: number[]): Function {
     const operations = ['average', 'median', 'standardDeviation', 'variance', 'range']
     const chainLength = Math.floor(this.getRandom() * 4) + 2 // 2-5 operations
-    
+
     // Pre-determine the operations at function creation time
-    const preSelectedOps = Array(chainLength).fill(null).map(() => 
-      operations[Math.floor(this.getRandom() * operations.length)]
-    )
+    const preSelectedOps = Array(chainLength)
+      .fill(null)
+      .map(() => operations[Math.floor(this.getRandom() * operations.length)])
 
     return (inputNumbers?: number[]) => {
       const workNumbers = inputNumbers || numbers
