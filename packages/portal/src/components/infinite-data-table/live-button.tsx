@@ -2,21 +2,22 @@
 
 import type { FetchPreviousPageOptions } from '@tanstack/react-query'
 import { CirclePause, CirclePlay } from 'lucide-react'
-import { useQueryStates } from 'nuqs'
+import { type ParserBuilder, useQueryStates } from 'nuqs'
 import * as React from 'react'
 import { useDataTable } from '@/components/data-table/data-table-provider'
 import { Button } from '@/components/ui/button'
 import { useHotKey } from '@/hooks/use-hot-key'
 import { cn } from '@/lib/utils'
-import { searchParamsParser } from '../search-params'
 
 const REFRESH_INTERVAL = 4_000
 
 interface LiveButtonProps {
   fetchPreviousPage?: (options?: FetchPreviousPageOptions | undefined) => Promise<unknown>
+  searchParamsParser: Record<string, ParserBuilder<any>>
+  dateColumnId?: string
 }
 
-export function LiveButton({ fetchPreviousPage }: LiveButtonProps) {
+export function LiveButton({ fetchPreviousPage, searchParamsParser, dateColumnId = 'date' }: LiveButtonProps) {
   const [{ live, date, sort }, setSearch] = useQueryStates(searchParamsParser)
   const { table } = useDataTable()
 
@@ -27,9 +28,9 @@ export function LiveButton({ fetchPreviousPage }: LiveButtonProps) {
       date: null,
       sort: null,
     }))
-    table.getColumn('date')?.setFilterValue(undefined)
+    table.getColumn(dateColumnId)?.setFilterValue(undefined)
     table.resetSorting()
-  }, [setSearch, table])
+  }, [setSearch, table, dateColumnId])
 
   useHotKey(handleClick, 'j')
 
@@ -72,3 +73,4 @@ export function LiveButton({ fetchPreviousPage }: LiveButtonProps) {
     </Button>
   )
 }
+

@@ -15,6 +15,14 @@ export async function queryTraces(options: SigNozQueryOptions): Promise<RawDataR
     body: options,
   })
 }
+/**
+ * Query SigNoz API for traces via server endpoint
+ */
+export async function queryTracesSummary(): Promise<RawDataResponse> {
+  return apiRequest<RawDataResponse>('/signoz/traces/summary', {
+    method: 'GET',
+  })
+}
 
 /**
  * Get available service names (for autocomplete)

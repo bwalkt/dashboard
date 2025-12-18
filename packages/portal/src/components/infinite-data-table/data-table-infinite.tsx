@@ -13,14 +13,13 @@ import {
   flexRender,
   getCoreRowModel,
   getFacetedRowModel,
-  getFilteredRowModel,
   getSortedRowModel,
   getFacetedMinMaxValues as getTTableFacetedMinMaxValues,
   getFacetedUniqueValues as getTTableFacetedUniqueValues,
   useReactTable,
 } from '@tanstack/react-table'
 import { LoaderCircle } from 'lucide-react'
-import { type ParserBuilder, useQueryState, useQueryStates } from 'nuqs'
+import { type ParserBuilder, useQueryStates } from 'nuqs'
 import * as React from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/custom/table'
 import { DataTableFilterCommand } from '@/components/data-table/data-table-filter-command'
@@ -36,11 +35,10 @@ import { useLocalStorage } from '@/hooks/use-local-storage'
 import { formatCompactNumber } from '@/lib/format'
 import { arrSome, inDateRange } from '@/lib/table/filterfns'
 import { cn } from '@/lib/utils'
-import { LiveButton } from './_components/live-button'
-import { RefreshButton } from './_components/refresh-button'
-import { BaseChartSchema } from './schema'
-import { searchParamsParser } from './search-params'
+import { LiveButton } from './live-button'
+import { RefreshButton } from './refresh-button'
 import { TimelineChart } from './timeline-chart'
+import type { BaseChartSchema } from './types'
 
 // TODO: add a possible chartGroupBy
 export interface DataTableInfiniteProps<TData, TValue, TMeta> {
@@ -66,6 +64,8 @@ export interface DataTableInfiniteProps<TData, TValue, TMeta> {
   meta: TMeta
   chartData?: BaseChartSchema[]
   chartDataColumnId: string
+  chartConfig?: import('@/components/ui/chart').ChartConfig
+  chartBarKeys?: string[]
   isFetching?: boolean
   isLoading?: boolean
   hasNextPage?: boolean
@@ -103,6 +103,8 @@ export function DataTableInfinite<TData, TValue, TMeta>({
   totalRowsFetched = 0,
   chartData = [],
   chartDataColumnId,
+  chartConfig,
+  chartBarKeys,
   getFacetedUniqueValues,
   getFacetedMinMaxValues,
   meta,
@@ -128,11 +130,11 @@ export function DataTableInfinite<TData, TValue, TMeta>({
       const onPageBottom =
         Math.ceil(e.currentTarget.scrollTop + e.currentTarget.clientHeight) >= e.currentTarget.scrollHeight
 
-      if (onPageBottom && !isFetching && totalRowsFetched < filterRows) {
+      if (onPageBottom && !isFetching && hasNextPage && totalRowsFetched < filterRows) {
         fetchNextPage()
       }
     },
-    [fetchNextPage, isFetching, filterRows, totalRowsFetched],
+    [fetchNextPage, isFetching, hasNextPage, filterRows, totalRowsFetched],
   )
 
   React.useEffect(() => {
@@ -150,11 +152,29 @@ export function DataTableInfinite<TData, TValue, TMeta>({
     return () => observer.unobserve(topBar)
   }, [topBarRef])
 
+  // Debug: log data passed to table
+  React.useEffect(() => {
+    console.log('Table data:', {
+      dataLength: data.length,
+      columnsLength: columns.length,
+      firstRow: data[0],
+      columnFilters,
+    })
+  }, [data, columns, columnFilters])
+
+  // Disable client-side filtering - we only use server-side filtering
+  // Keep columnFilters state for UI purposes (to show filter values in the UI)
+  // but don't apply them to the table data
+  // Filter out any null/undefined entries to prevent getRowId errors
+  const validData = React.useMemo(() => {
+    return data.filter((row): row is TData => row != null && typeof row === 'object')
+  }, [data])
+
   const table = useReactTable({
-    data,
+    data: validData,
     columns,
     state: {
-      columnFilters,
+      columnFilters: [], // Empty array - no client-side filtering
       sorting,
       columnVisibility,
       rowSelection,
@@ -164,13 +184,13 @@ export function DataTableInfinite<TData, TValue, TMeta>({
     columnResizeMode: 'onChange',
     getRowId,
     onColumnVisibilityChange: setColumnVisibility,
-    onColumnFiltersChange: setColumnFilters,
+    onColumnFiltersChange: setColumnFilters, // Still update state for UI, but don't use for filtering
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnOrderChange: setColumnOrder,
     getSortedRowModel: getSortedRowModel(),
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    // Removed getFilteredRowModel - no client-side filtering
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getTTableFacetedUniqueValues(),
     getFacetedMinMaxValues: getTTableFacetedMinMaxValues(),
@@ -178,6 +198,21 @@ export function DataTableInfinite<TData, TValue, TMeta>({
     debugAll: import.meta.env.VITE_TABLE_DEBUG === 'true',
     meta: { getRowClassName },
   })
+
+  // Debug: log row model after table is created
+  React.useEffect(() => {
+    const rows = table.getCoreRowModel().rows // Use core row model since filtering is disabled
+    console.log('Table row model:', {
+      dataLength: data.length,
+      validDataLength: validData.length,
+      coreRowsLength: rows.length,
+      hasRows: rows.length > 0,
+      firstRowId: rows[0]?.id,
+      columnFilters,
+      firstDataItem: validData[0],
+      getRowIdResult: getRowId && validData[0] ? getRowId(validData[0] as any, 0) : 'no getRowId or no data',
+    })
+  }, [table, data, validData, columnFilters, getRowId])
 
   React.useEffect(() => {
     const columnFiltersWithNullable = filterFields.map(field => {
@@ -188,7 +223,36 @@ export function DataTableInfinite<TData, TValue, TMeta>({
 
     const search = columnFiltersWithNullable.reduce(
       (prev, curr) => {
-        prev[curr.id as string] = curr.value
+        // Special handling for timerange filter - convert to startTime/endTime
+        if (curr.id === 'date' && Array.isArray(curr.value) && curr.value.length >= 2) {
+          const dates = curr.value as Date[]
+          if (dates[0] && dates[1]) {
+            prev.startTime = dates[0].getTime()
+            prev.endTime = dates[1].getTime()
+          }
+        } else if (curr.id === 'date' && Array.isArray(curr.value) && curr.value.length === 1) {
+          const date = curr.value[0] as Date
+          if (date) {
+            prev.startTime = date.getTime()
+            prev.endTime = date.getTime()
+          }
+        } else if (curr.id === 'name' && Array.isArray(curr.value)) {
+          // Extract HTTP method from name values (e.g., "HTTP POST" -> "POST")
+          const methods = (curr.value as string[])
+            .map(val => {
+              if (typeof val === 'string' && val.startsWith('HTTP ')) {
+                return val.replace('HTTP ', '') as string
+              }
+              return val as string
+            })
+            .filter(Boolean)
+          if (methods.length > 0) {
+            prev.httpMethod = methods[0] // API expects single method, take first
+          }
+        } else if (curr.id !== 'date' && curr.id !== 'name') {
+          // For other filters, add them normally
+          prev[curr.id as string] = curr.value
+        }
         return prev
       },
       {} as Record<string, unknown>,
@@ -283,11 +347,24 @@ export function DataTableInfinite<TData, TValue, TMeta>({
               searchParamsParser={searchParamsParser}
               renderActions={() => [
                 <RefreshButton key="refresh" onClick={refetch} />,
-                fetchPreviousPage ? <LiveButton key="live" fetchPreviousPage={fetchPreviousPage} /> : null,
+                fetchPreviousPage ? (
+                  <LiveButton
+                    key="live"
+                    fetchPreviousPage={fetchPreviousPage}
+                    searchParamsParser={searchParamsParser}
+                    dateColumnId={chartDataColumnId}
+                  />
+                ) : null,
               ]}
             />
             {/* TODO: move up to client component */}
-            <TimelineChart data={chartData} className="-mb-2" columnId={chartDataColumnId} />
+            <TimelineChart
+              data={chartData}
+              className="-mb-2"
+              columnId={chartDataColumnId}
+              chartConfig={chartConfig}
+              barKeys={chartBarKeys}
+            />
           </div>
           <div className="z-0">
             <Table
@@ -303,8 +380,9 @@ export function DataTableInfinite<TData, TValue, TMeta>({
                     key={headerGroup.id}
                     className={cn('bg-muted/50 hover:bg-muted/50', '[&>*]:border-t [&>:not(:last-child)]:border-r')}
                   >
-                    {headerGroup.headers.map(header => {
-                      return (
+                    {headerGroup.headers
+                      .filter(header => header.column.getIsVisible())
+                      .map(header => (
                         <TableHead
                           key={header.id}
                           className={cn(
@@ -334,8 +412,7 @@ export function DataTableInfinite<TData, TValue, TMeta>({
                             />
                           )}
                         </TableHead>
-                      )
-                    })}
+                      ))}
                   </TableRow>
                 ))}
               </TableHeader>
@@ -348,24 +425,35 @@ export function DataTableInfinite<TData, TValue, TMeta>({
                   scrollMarginTop: 'calc(var(--top-bar-height) + 40px)',
                 }}
               >
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map(row => (
-                    // REMINDER: if we want to add arrow navigation https://github.com/TanStack/table/discussions/2752#discussioncomment-192558
-                    <React.Fragment key={row.id}>
-                      {renderLiveRow?.({ row })}
-                      <MemoizedRow row={row} table={table} selected={row.getIsSelected()} />
+                {(() => {
+                  // Use core row model directly since we disabled client-side filtering
+                  const rows = table.getCoreRowModel().rows
+                  console.log('Rendering table body:', {
+                    dataLength: data.length,
+                    validDataLength: validData.length,
+                    rowsLength: rows.length,
+                    columnFilters,
+                  })
+
+                  return rows?.length ? (
+                    rows.map(row => (
+                      // REMINDER: if we want to add arrow navigation https://github.com/TanStack/table/discussions/2752#discussioncomment-192558
+                      <React.Fragment key={row.id}>
+                        {renderLiveRow?.({ row })}
+                        <MemoizedRow row={row} table={table} selected={row.getIsSelected()} />
+                      </React.Fragment>
+                    ))
+                  ) : (
+                    <React.Fragment>
+                      {renderLiveRow?.()}
+                      <TableRow>
+                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                          No results.
+                        </TableCell>
+                      </TableRow>
                     </React.Fragment>
-                  ))
-                ) : (
-                  <React.Fragment>
-                    {renderLiveRow?.()}
-                    <TableRow>
-                      <TableCell colSpan={columns.length} className="h-24 text-center">
-                        No results.
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                )}
+                  )
+                })()}
                 <TableRow className="hover:bg-transparent data-[state=selected]:bg-transparent">
                   <TableCell colSpan={columns.length} className="text-center">
                     {hasNextPage || isFetching || isLoading ? (
@@ -429,9 +517,6 @@ function Row<TData>({
   // REMINDER: row.getIsSelected(); - just for memoization
   selected?: boolean
 }) {
-  // REMINDER: rerender the row when live mode is toggled - used to opacity the row
-  // via the `getRowClassName` prop - but for some reasons it wil render the row on data fetch
-  useQueryState('live', searchParamsParser.live)
   return (
     <TableRow
       id={row.id}
@@ -447,13 +532,13 @@ function Row<TData>({
       className={cn(
         '[&>:not(:last-child)]:border-r',
         'outline-1 -outline-offset-1 outline-primary transition-colors focus-visible:bg-muted/50 focus-visible:outline data-[state=selected]:outline',
-        table.options.meta?.getRowClassName?.(row),
+        (table.options.meta as { getRowClassName?: (row: Row<TData>) => string })?.getRowClassName?.(row),
       )}
     >
       {row.getVisibleCells().map(cell => (
         <TableCell
           key={cell.id}
-          className={cn('truncate border-b border-border', cell.column.columnDef.meta?.cellClassName)}
+          className={cn('truncate px-2 border-b border-border', cell.column.columnDef.meta?.cellClassName)}
         >
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </TableCell>
@@ -462,7 +547,16 @@ function Row<TData>({
   )
 }
 
-const MemoizedRow = React.memo(
-  Row,
-  (prev, next) => prev.row.id === next.row.id && prev.selected === next.selected,
-) as typeof Row
+const MemoizedRow = React.memo(Row, (prev, next) => {
+  // Re-render if row ID or selection changes
+  if (prev.row.id !== next.row.id || prev.selected !== next.selected) {
+    return false
+  }
+  // Also re-render if column visibility changes (check visible cells count)
+  const prevVisibleCount = prev.row.getVisibleCells().length
+  const nextVisibleCount = next.row.getVisibleCells().length
+  if (prevVisibleCount !== nextVisibleCount) {
+    return false
+  }
+  return true
+}) as typeof Row

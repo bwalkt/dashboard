@@ -1,0 +1,156 @@
+'use client'
+
+import type { HttpMethod } from '@pzero/shared/types'
+import { format } from 'date-fns'
+import type { DataTableFilterField, Option, SheetField } from '@/components/data-table/types'
+import { formatMilliseconds } from '@/lib/format'
+import { getStatusColor } from '@/lib/request/status-code'
+import { cn } from '@/lib/utils'
+import type { SignozTraceSchema } from './schema'
+
+const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
+
+export const filterFields = [
+  {
+    label: 'Time Range',
+    value: 'date',
+    type: 'timerange',
+    defaultOpen: true,
+    commandDisabled: true,
+  },
+  {
+    label: 'Service Name',
+    value: 'serviceName',
+    type: 'input',
+  },
+  {
+    label: 'HTTP Method',
+    value: 'http_method',
+    type: 'checkbox',
+    options: HTTP_METHODS.map(method => ({ label: method, value: `HTTP ${method}` })),
+    component: (props: Option) => {
+      return <span className="font-mono">{props.value}</span>
+    },
+  },
+  {
+    label: 'HTTP Host',
+    value: 'http_host',
+    type: 'input',
+  },
+  {
+    label: 'HTTP URL',
+    value: 'http_url',
+    type: 'input',
+  },
+  {
+    label: 'Status Code',
+    value: 'responseStatusCode',
+    type: 'checkbox',
+    options: [
+      { label: '200', value: 200 },
+      { label: '201', value: 201 },
+      { label: '400', value: 400 },
+      { label: '401', value: 401 },
+      { label: '403', value: 403 },
+      { label: '404', value: 404 },
+      { label: '500', value: 500 },
+      { label: '502', value: 502 },
+      { label: '503', value: 503 },
+    ],
+    component: (props: Option) => {
+      if (typeof props.value === 'boolean') return null
+      if (typeof props.value === 'undefined') return null
+      if (typeof props.value === 'string') return null
+      return <span className={cn('font-mono', getStatusColor(props.value).text)}>{props.value}</span>
+    },
+  },
+  {
+    label: 'Duration',
+    value: 'durationMs',
+    type: 'slider',
+    min: 0,
+    max: 60000, // 60 seconds
+  },
+] satisfies DataTableFilterField<SignozTraceSchema>[]
+
+export const sheetFields = [
+  {
+    id: 'trace_id',
+    label: 'Trace ID',
+    type: 'readonly',
+    skeletonClassName: 'w-64',
+  },
+  {
+    id: 'span_id',
+    label: 'Span ID',
+    type: 'readonly',
+    skeletonClassName: 'w-64',
+  },
+  {
+    id: 'date',
+    label: 'Timestamp',
+    type: 'timerange',
+    component: (props: SignozTraceSchema) => format(new Date(props.date), 'LLL dd, y HH:mm:ss'),
+    skeletonClassName: 'w-36',
+  },
+  {
+    id: 'serviceName',
+    label: 'Service Name',
+    type: 'input',
+    skeletonClassName: 'w-48',
+  },
+  {
+    id: 'name',
+    label: 'Span Name',
+    type: 'input',
+    skeletonClassName: 'w-56',
+  },
+  {
+    id: 'http_method',
+    label: 'HTTP Method',
+    type: 'input',
+    skeletonClassName: 'w-56',
+  },
+  {
+    id: 'http_host',
+    label: 'HTTP Host',
+    type: 'input',
+    skeletonClassName: 'w-48',
+  },
+  {
+    id: 'http_url',
+    label: 'HTTP URL',
+    type: 'input',
+    skeletonClassName: 'w-48',
+  },
+  {
+    id: 'responseStatusCode',
+    label: 'Status Code',
+    type: 'checkbox',
+    component: (props: SignozTraceSchema) => {
+      const statusCode = props.responseStatusCode
+      if (statusCode === undefined || statusCode === null) {
+        return <span className="text-muted-foreground">-</span>
+      }
+      // Handle both string and number status codes
+      const code = typeof statusCode === 'string' ? parseInt(statusCode, 10) : statusCode
+      if (isNaN(code)) {
+        return <span className="text-muted-foreground">{statusCode}</span>
+      }
+      return <span className={cn('font-mono', getStatusColor(code).text)}>{code}</span>
+    },
+    skeletonClassName: 'w-12',
+  },
+  {
+    id: 'durationMs',
+    label: 'Duration',
+    type: 'slider',
+    component: (props: SignozTraceSchema) => (
+      <>
+        {formatMilliseconds(props.durationMs)}
+        <span className="text-muted-foreground">ms</span>
+      </>
+    ),
+    skeletonClassName: 'w-16',
+  },
+] satisfies SheetField<SignozTraceSchema, Record<string, unknown>>[]

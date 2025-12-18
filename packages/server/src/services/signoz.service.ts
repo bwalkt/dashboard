@@ -83,6 +83,9 @@ function getDefaultTraceSelectFields(): SelectField[] {
     { name: "span_id" },
     { name: "trace_id" },
     { name: "timestamp" },
+    { name: "http_method" },
+    { name: "http_host" },
+    { name: "http_url" },
   ];
 }
 
@@ -102,6 +105,12 @@ function buildTraceQueryPayload(
     selectFields,
     limit: pagination.limit,
     offset: pagination.offset,
+    order: [{
+      "key": {
+        "name": "timestamp"
+    },
+    "direction": "desc"
+    }]
   };
 
   if (filterExpression) {

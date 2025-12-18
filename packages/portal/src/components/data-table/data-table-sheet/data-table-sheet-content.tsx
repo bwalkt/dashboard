@@ -33,6 +33,7 @@ export function DataTableSheetContent<TData, TMeta>({
 }: DataTableSheetContentProps<TData, TMeta>) {
   if (!data) return <SheetDetailsContentSkeleton fields={fields} />
 
+  console.log('sheet fields', fields, data)
   return (
     <dl className={cn('divide-y', className)} {...props}>
       {fields.map(field => {
@@ -40,7 +41,6 @@ export function DataTableSheetContent<TData, TMeta>({
 
         const Component = field.component
         const value = String(data[field.id])
-
         return (
           <div key={field.id.toString()}>
             {field.type === 'readonly' ? (
