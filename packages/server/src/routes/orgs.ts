@@ -50,7 +50,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Check if handle is unique
         const existingOrg = await db.pool.query(
-          "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND deleted_at IS NULL",
+          "SELECT id FROM pzero.orgs WHERE handle = $1",
           [data.handle]
         );
 
@@ -120,7 +120,6 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
       
       try {
         // Start transaction
-        await client.query('BEGIN');
         
         const data = request.body as CreateOrganizationWithUserData;
         
@@ -149,7 +148,6 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
             status: !data.status ? 'MISSING' : 'OK',
             plan: !data.plan ? 'MISSING' : 'OK'
           })
-          await client.query('ROLLBACK');
           return reply.status(400).send({
             error: "Bad Request",
             message: "Name, handle, email, status, and plan are required",
@@ -158,8 +156,9 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Check if handle is unique
         console.log('🔥 SERVER: Checking if handle is unique:', data.handle)
+        
         const existingOrg = await client.query(
-          "SELECT id FROM pzero.all_orgs WHERE handle = $1 AND deleted_at IS NULL",
+          "SELECT id FROM pzero.orgs WHERE handle = $1",
           [data.handle]
         );
         console.log('🔥 SERVER: Handle check result:', { found: existingOrg.rows.length > 0, rowCount: existingOrg.rows.length })
@@ -179,7 +178,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         if (data.create_user && data.create_user.name && data.create_user.email) {
           // Check if user already exists
           const existingUserCheck = await client.query(
-            "SELECT id FROM pzero.all_users WHERE email = $1 AND deleted_at IS NULL",
+            "SELECT id FROM pzero.auth WHERE email = $1",
             [data.create_user.email]
           );
           
@@ -193,10 +192,10 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
           // Create user within the transaction
           const userCreateResult = await client.query(
-            `INSERT INTO pzero.all_users (name, email, email_verified, c_at, u_at) 
-             VALUES ($1, $2, $3, NOW(), NOW()) 
-             RETURNING id, name, email, email_verified`,
-            [data.create_user.name, data.create_user.email, data.create_user.email_verified ?? true]
+            `INSERT INTO pzero.all_auth (name, email, email_verified, phone) 
+             VALUES ($1, $2, $3, $4) 
+             RETURNING id, name, email, email_verified, phone`,
+            [data.create_user.name, data.create_user.email, data.create_user.email_verified ?? true, data.create_user.phone ?? null]
           );
           
           createdUser = userCreateResult.rows[0];
@@ -208,16 +207,13 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           handle: data.handle,
           website: data.website || "",
           c_by: authenticatedUserId,
+          dscr: data.dscr || "",
+          status: data.status,
+          plan: data.plan,
+          address: data.address || "",
           data: {
-            dscr: data.dscr || "",
-            status: data.status,
-            plan: data.plan,
-            email: data.email,
-            phone: data.phone || "",
-            address: data.address || "",
-            ...data.data,
             meta: {
-              uid: authenticatedUserId
+              c_by: authenticatedUserId
             }
           }
         }
@@ -234,20 +230,15 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Associate created user with organization
         if (createdUser) {
+
           await client.query(
-            `UPDATE pzero.all_users SET org_id = $1 WHERE id = $2`,
+            `INSERT INTO pzero.all_users (id, org_id, is_act) VALUES ($1, $2)`,
+            [createdUser.id, org_id, true]
+          );
+          await client.query(
+            `INSERT INTO pzero.all_relations (uuid1, uuid2) VALUES ($1, $2)`,
             [org_id, createdUser.id]
           );
-        }
-
-        // Associate existing users with organization
-        if (data.associate_users && data.associate_users.length > 0) {
-          for (const userId of data.associate_users) {
-            await client.query(
-              `UPDATE pzero.all_users SET org_id = $1 WHERE id = $2`,
-              [org_id, userId]
-            );
-          }
         }
 
         // Fetch the complete organization record
@@ -310,9 +301,8 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await db.pool.query(`
-          SELECT * FROM pzero.all_orgs 
-          WHERE deleted_at IS NULL
-          ORDER BY created_at DESC
+          SELECT * FROM pzero.orgs 
+          ORDER BY c_at DESC
         `);
 
         return reply.send(result.rows);
@@ -340,7 +330,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         const { id } = request.params as { id: string };
 
         const result = await db.pool.query(
-          `SELECT * FROM pzero.all_orgs WHERE id = $1 AND deleted_at IS NULL`,
+          `SELECT * FROM pzero.orgs WHERE id = $1`,
           [id]
         );
 
@@ -432,9 +422,9 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         values.push(id);
 
         const result = await db.pool.query(
-          `UPDATE pzero.all_orgs
+          `UPDATE pzero.orgs
            SET ${fields.join(", ")}
-           WHERE id = $${paramCount} AND deleted_at IS NULL
+           WHERE id = $${paramCount}
            RETURNING *`,
           values,
         );
@@ -470,11 +460,11 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
       try {
         const { id } = request.params as { id: string };
 
-        // Soft delete by setting deleted_at timestamp
+        // Soft delete by setting is_del to true and is_act to false
         const result = await db.pool.query(
           `UPDATE pzero.all_orgs 
-           SET deleted_at = CURRENT_TIMESTAMP 
-           WHERE id = $1 AND deleted_at IS NULL
+           SET is_del = true, is_act = false
+           WHERE id = $1 AND is_del = false
            RETURNING id`,
           [id]
         );
@@ -512,10 +502,10 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
 
         const result = await db.pool.query(`
           SELECT u.*, a.email, a.email_verified
-          FROM pzero.all_users u
-          JOIN pzero.all_auth a ON u.id = a.id
-          WHERE u.org_id = $1 AND u.deleted_at IS NULL
-          ORDER BY u.created_at DESC
+          FROM pzero.users u
+          JOIN pzero.auth a ON u.id = a.id
+          WHERE u.org_id = $1
+          ORDER BY u.c_at DESC
         `, [id]);
 
         return reply.send(result.rows);

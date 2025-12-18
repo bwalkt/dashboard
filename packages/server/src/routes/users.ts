@@ -15,9 +15,9 @@ export interface CreateUserPayload {
   email_verified?: boolean;
   phone_verified?: boolean;
   org_id?: string;
-  metadata?: Record<string, any>;
+  tags?: Record<string, any>;
+  data?: Record<string, any>;
 }
-
 
 export interface UserWithVerification extends User {
   verification_token?: string;
@@ -231,7 +231,6 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       try {
         const { id } = request.params as { id: string };
 
-        // Soft delete by setting deleted_at timestamp
         const result = await db.pool.query(
           `UPDATE pzero.all_users 
            SET is_del = true

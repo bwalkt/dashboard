@@ -1,5 +1,5 @@
 import { api } from '@pzero/shared/api'
-
+import type { User } from '@pzero/shared/pzero'
 export interface CreateUserPayload {
   name: string
   email: string
@@ -8,7 +8,6 @@ export interface CreateUserPayload {
   email_verified?: boolean
   phone_verified?: boolean
   org_id?: string
-  metadata?: Record<string, any>
 }
 
 export interface User {

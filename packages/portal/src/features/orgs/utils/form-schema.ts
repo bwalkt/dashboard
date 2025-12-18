@@ -16,7 +16,7 @@ export interface OrgFormValues {
 // Use shared validator from @pzero/shared/pzero/orgs
 const validateOrg = validateCreateOrgData
 
-export const orgResolver = async (values: FieldValues, context: any, options: ResolverOptions<FieldValues>) => {
+export const orgResolver = async (values: OrgFormValues, context: any, options: ResolverOptions<OrgFormValues>) => {
   const isValid = validateOrg(values)
   const result = { success: isValid, errors: isValid ? [] : validateOrg.errors }
 

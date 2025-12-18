@@ -20,25 +20,13 @@ import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { userData } from '@/features/users/data'
 import { createAjvResolver } from '@/lib/ajv-resolver'
 import { toastUtils } from '@/lib/toast'
 import { orgsService } from '@/services/api/orgs'
-import { usersService } from '@/services/api/users'
 import { useAuthStore } from '@/stores/auth'
 import { useOrgsStore } from '@/stores/orgs'
-
-interface OrgFormValues {
-  website: string
-  name: string
-  handle: string
-  description: string
-  contact_name: string
-  status: 'active' | 'inactive' | 'suspended'
-  plan: 'free' | 'starter' | 'pro' | 'enterprise'
-  email: string
-  phone: string
-  address: string
+import type { Org } from '@pzero/shared/pzero'
+interface OrgFormValues extends Omit<Org, 'id' | 'c_by' | 'u_by' > {
   new_user: {
     name: string
     email: string
@@ -61,7 +49,7 @@ const orgFormSchema = {
       minLength: 1,
       pattern: '^[a-z0-9-]+$',
     },
-    description: { type: 'string' },
+    descr: { type: 'string' },
     contact_name: { type: 'string', minLength: 1 },
     status: {
       type: 'string',
@@ -133,7 +121,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       website: '',
       name: '',
       handle: '',
-      description: '',
+      descr: '',
       contact_name: '',
       status: 'active' as const,
       plan: 'starter' as const,
@@ -278,23 +266,20 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       const orgData = {
         name: data.name,
         handle: data.handle,
-        description: data.description,
+        descr: data.descr,
         status: data.status,
         plan: data.plan,
         email: data.email,
         website: data.website,
         phone: data.phone,
         address: data.address,
-        settings: {},
-        metadata: {},
         create_user: data.create_new_user
           ? {
               name: data.contact_name,
               email: data.email,
               email_verified: true, // Auto-verify email for admin-created users
             }
-          : undefined,
-        associate_users: data.user_ids || [],
+          : undefined
       }
 
       console.log('🚀 CLIENT: Sending org creation request with payload:', JSON.stringify(orgData, null, 2))
@@ -381,7 +366,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
 
       <FormField
         control={form.control}
-        name="description"
+        name="descr"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Description</FormLabel>
