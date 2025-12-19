@@ -154,91 +154,48 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
 
-        // Check if handle is unique
-        console.log('🔥 SERVER: Checking if handle is unique:', data.handle)
-        
-        const existingOrg = await client.query(
-          "SELECT id FROM pzero.orgs WHERE handle = $1",
-          [data.handle]
-        );
-        console.log('🔥 SERVER: Handle check result:', { found: existingOrg.rows.length > 0, rowCount: existingOrg.rows.length })
-
-        if (existingOrg.rows.length > 0) {
-          console.log('🔥 SERVER: Handle conflict detected, returning 409')
-          await client.query('ROLLBACK');
-          return reply.status(409).send({
-            error: "Conflict",
-            message: "Organization handle already exists",
-          });
-        }
-
-        let createdUser = null;
-
-        // Create new user if requested
-        if (data.create_user && data.create_user.name && data.create_user.email) {
-          // Check if user already exists
-          const existingUserCheck = await client.query(
-            "SELECT id FROM pzero.auth WHERE email = $1",
-            [data.create_user.email]
-          );
-          
-          if (existingUserCheck.rows.length > 0) {
-            await client.query('ROLLBACK');
-            return reply.status(409).send({
-              error: "Conflict",
-              message: "User with this email already exists",
-            });
-          }
-
-          // Create user within the transaction
-          const userCreateResult = await client.query(
-            `INSERT INTO pzero.all_auth (name, email, email_verified, phone) 
-             VALUES ($1, $2, $3, $4) 
-             RETURNING id, name, email, email_verified, phone`,
-            [data.create_user.name, data.create_user.email, data.create_user.email_verified ?? true, data.create_user.phone ?? null]
-          );
-          
-          createdUser = userCreateResult.rows[0];
-        }
-
-        // Create organization using the postgres function
-        const orgCreateData = {
+        // Prepare the complete payload for the PostgreSQL function
+        const requestPayload = {
           name: data.name,
           handle: data.handle,
-          website: data.website || "",
-          c_by: authenticatedUserId,
           dscr: data.dscr || "",
           status: data.status,
           plan: data.plan,
+          email: data.email || "",
+          website: data.website || "",
+          phone: data.phone || "",
           address: data.address || "",
-          data: {
-            meta: {
-              c_by: authenticatedUserId
-            }
-          }
-        }
-        console.log('🔥 SERVER: Creating organization with data:', JSON.stringify(orgCreateData, null, 2))
+          part_by: data.part_by || [],
+          create_user: data.create_user ? {
+            name: data.create_user.name,
+            email: data.create_user.email,
+            email_verified: data.create_user.email_verified ?? true
+          } : undefined
+        };
         
-        const createResult = await client.query(
-          `SELECT pzero.create_org($1) as result`,
-          [JSON.stringify(orgCreateData)],
+        console.log('🔥 SERVER: Sending payload to pzero.create_user_with_auth:', JSON.stringify(requestPayload, null, 2))
+        
+        // Send the request payload to the PostgreSQL function
+        const createOrgResult = await client.query(
+          `SELECT pzero.create_user_with_auth($1::jsonb) as result`,
+          [JSON.stringify(requestPayload)],
         );
-        console.log('🔥 SERVER: Organization creation result:', JSON.stringify(createResult.rows, null, 2))
-
-        const { org_id } = createResult.rows[0].result;
+        
+        if (!createOrgResult.rows[0].result) {
+          await client.query('ROLLBACK');
+          return reply.status(500).send({
+            error: "Internal Server Error",
+            message: "Failed to create organization",
+          });
+        }
+        
+        const resultData = JSON.parse(createOrgResult.rows[0].result);
+        const org_id = resultData.org_id;
+        const createdUser = resultData.user || null;
+        
         console.log('🔥 SERVER: Created organization with ID:', org_id)
-
-        // Associate created user with organization
         if (createdUser) {
-
-          await client.query(
-            `INSERT INTO pzero.all_users (id, org_id, is_act) VALUES ($1, $2)`,
-            [createdUser.id, org_id, true]
-          );
-          await client.query(
-            `INSERT INTO pzero.all_relations (uuid1, uuid2) VALUES ($1, $2)`,
-            [org_id, createdUser.id]
-          );
+          console.log('🔥 SERVER: Created user:', createdUser)
         }
 
         // Fetch the complete organization record
@@ -257,7 +214,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         // Include created user details in response
         if (createdUser) {
           response.user = {
-            id: createdUser.id,
+            id: createdUser.user_id || createdUser.id || createdUser.auth_id,
             email: createdUser.email,
             name: createdUser.name,
           };

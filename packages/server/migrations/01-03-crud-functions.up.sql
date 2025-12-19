@@ -299,7 +299,6 @@ import json
 def dev_notice(msg):
     plpy.execute("SELECT pzero.dev_notice(%s)" % plpy.quote_literal(msg))
 
-
 # Parse input
 try:
     user_input = json.loads(p_user) if isinstance(p_user, str) else p_user
@@ -319,10 +318,16 @@ if not email:
     plpy.error('email is required')
 
 # Extract optional fields
-org_id = user_input.get('org_id', '').strip() if user_input.get('org_id') else None
-part = user_input.get('part', 'pzero').strip()
+orgs = user_input.get('orgs', []) if user_input.get('orgs') else []
+part = user_input.get('part', 'pzero').strip() if user_input.get('part') else 'pzero'
 avatar = user_input.get('avatar', '').strip() if user_input.get('avatar') else None
 email_verified = user_input.get('email_verified', False)
+phone = user_input.get('phone', '').strip() if user_input.get('phone') else None
+phone_verified = user_input.get('phone_verified', False)
+handle = user_input.get('handle','').strip() if user_input.get('handle') else None
+# TBD has to be phone_verified and email_verified for
+is_act = phone_verified or email_verified
+name = user_input.get('name', '').strip() if user_input.get('name') else None
 c_by = user_input.get('c_by', '').strip() if user_input.get('c_by') else None
 user_data = user_input.get('data', {}) if isinstance(user_input.get('data'), dict) else {}
 device_data = user_input.get('device', {}) if isinstance(user_input.get('device'), dict) else {}
@@ -335,31 +340,128 @@ if not c_by and isinstance(user_data.get('meta'), dict):
     c_by = user_data['meta'].get('c_by', '').strip() if user_data['meta'].get('c_by') else None
 
 # Get default org_id if not provided
-if not org_id:
-    default_org_query = "SELECT id::text, part_by::text FROM pzero.all_orgs WHERE handle = 'pzero'"
-    default_org_result = plpy.execute(default_org_query)
-    if default_org_result and len(default_org_result) > 0:
-        org_id = default_org_result[0]['id']
-        part = default_org_result[0]['part_by']
-        if not part:
-            part = 'pzero'
-    else:
-        plpy.error('org_id is required (no default org found)')
+create_auth = True
+if len(orgs) == 0:
+    orgs.append(0)
+try:
+    for org_id in orgs:
+        step = 'fetch org'
+        if org_id == 0:
+            org_query = "SELECT id::uuid, name, part_by FROM pzero.all_orgs order by c_at desc limit 1"
+            org_result = plpy.execute(org_query)
+            create_auth = True
+        else:
+            org_query = "SELECT id::uuid, name, part_by:text from pzero.all_orgs where id = $1"
+            org_stmt = plpy.prepare(org_query, "text")
+            org_result = plpy.execute(org_stmt, [org_id])
+        if org_result and len(org_result) > 0:
+            org_id = org_result[0]['id']
+            part = org_result[0]['part_by']
+            name = org_result[0]['name']
+            if not part:
+                part = 'pzero'
+        org_rec = {
+            'id': org_id,
+            'part': part,
+            'name': name
+        }
+        if create_auth:
+            step = 'create auth'
+            auth_sql = """SELECT id::uuid from pzero.all_auth where email $1"""
+            auth_stmt = plpy.prepare(auth_sql, ["text"])
+            auth_result = plpy.execute(auth_stmt, [email])
+            if auth_result and len(auth_result) == 1:
+                auth_id = str(auth_result[0]['id'])
+                plpy.notice("Auth record already exists")
+                if not c_by:
+                    auth_id = c_by
+                auth_sql = """SELECT handle, name, avatar"""
+                continue
+            else:
+                auth_sql = "INSERT INTO pzero.all_auth (email, email_verified, phone, phone_verified, is_act) VALUES ($1, $2, $3, $4, $5) RETURNING id"
+                auth_stmt = plpy.prepare(auth_sql, ["text", "boolean", "text","boolean", "boolean"])
+                auth_result = plpy.execute(auth_stmt, [email, email_verified, phone, phone_verified, is_act])
+
+                if not auth_result or len(auth_result) == 0:
+                    plpy.error('Failed to create auth record')
+
+                auth_id = str(auth_result[0]['id'])
+                if not c_by:
+                    c_by = auth_id
+                dev_notice("Auth record created: {}".format(auth_id))
+                create_auth = False
+                 if not handle:
+                    step = "generate handle"
+                    # Generate unique handle from name using standalone function
+                    handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
+                    handle_result = plpy.execute(handle_stmt, [name])
+                    handle = handle_result[0]['handle']
+                    dev_notice("Generated handle: {}".format(handle))
+        step = 'create user'
+        if not handle:
+            plpy.error("Handle not found")
+        user_sql = """
+            INSERT INTO pzero.all_users (id, name, handle, org_id, part, avatar, data)
+            VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7::jsonb)
+            RETURNING id
+        """
+        user_stmt = plpy.prepare(user_sql, ["text", "text", "text", "text", "text", "text", "text"])
+        user_result = plpy.execute(user_stmt, [
+            auth_id,
+            name,
+            handle,
+            org_id,
+            part,
+            avatar,
+            json.dumps(user_data)
+        ])
+        if not user_result or len(user_result) == 0:
+            plpy.error('Failed to create user record')
+
+except Exception as e:
+    # 
+    plpy.error('Unexpected error fetching org ' + step)
+    raise
+
 
 dev_notice("Creating user: {} ({})".format(name, email))
 
 # Step 1: Create auth record with email
+orgs = []
 try:
-    auth_sql = "INSERT INTO pzero.all_auth (email, email_verified) VALUES ($1, $2) RETURNING id"
-    auth_stmt = plpy.prepare(auth_sql, ["text", "boolean"])
-    auth_result = plpy.execute(auth_stmt, [email, email_verified])
+    auth_sql = """SELECT id::uuid from pzero.all_auth where email $1"""
+    auth_stmt = plpy.prepare(auth_sql, ["text"])
+    auth_result = plpy.execute(auth_stmt, [email])
+    if auth_result and len(auth_result) == 1:
+        auth_id = str(auth_result[0]['id'])
+        auth_sql = "SELECT name, handle"
+    else:
+        auth_sql = "INSERT INTO pzero.all_auth (email, email_verified, phone, phone_verified, is_act) VALUES ($1, $2) RETURNING id"
+        auth_stmt = plpy.prepare(auth_sql, ["text", "boolean", "text","boolean", "boolean"])
+        auth_result = plpy.execute(auth_stmt, [email, email_verified, phone, phone_verified, is_act])
 
-    if not auth_result or len(auth_result) == 0:
-        plpy.error('Failed to create auth record')
+        if not auth_result or len(auth_result) == 0:
+            plpy.error('Failed to create auth record')
 
-    auth_id = str(auth_result[0]['id'])
-    dev_notice("Auth record created: {}".format(auth_id))
-
+        auth_id = str(auth_result[0]['id'])
+        dev_notice("Auth record created: {}".format(auth_id))
+        if not handle:
+            step = "generate handle"
+            # Generate unique handle from name using standalone function
+            handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
+            handle_result = plpy.execute(handle_stmt, [name])
+            handle = handle_result[0]['handle']
+            dev_notice("Generated handle: {}".format(handle))
+    if org_id:
+        orgs.append(org_id)
+    for org in orgs:
+        org_sql = "SELECT part_by from pzero.all_orgs where id = $1::uuid"
+        org_stmt = plpy.prepare(org_sql, ["text"])
+        org_result = plpy.execute(org_stmt, [org])
+        if not org_result or len(org_result) == 0:
+            plpy.error("Unable to get org record")
+        
+    
 except plpy.SPIError as e:
     # Check SQLSTATE for unique_violation (23505)
     if hasattr(e, 'sqlstate') and e.sqlstate == '23505':
@@ -382,20 +484,31 @@ if not isinstance(user_data['meta'], dict):
 user_data['meta']['c_by'] = c_by if c_by else auth_id
 
 # Step 3: Generate unique handle and create user record
+if not handle:
+    try:
+        # Generate unique handle from name using standalone function
+        handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
+        handle_result = plpy.execute(handle_stmt, [name])
+        handle = handle_result[0]['handle']
+        dev_notice("Generated handle: {}".format(handle))
+    
+        user_sql = """
+            INSERT INTO pzero.all_users (id, name, handle, org_id, part, avatar, data)
+            VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7::jsonb)
+            RETURNING id
+        """
+        user_stmt = plpy.prepare(user_sql, ["text", "text", "text", "text", "text", "text", "text"])
+
+    except plpy.SPIError as e:
+        # Just re-raise the exception without calling plpy.error
+        raise
+        plpy.error("Unable to create handle")
+    except Exception as e:
+        # Just re-raise the exception without calling plpy.error
+        raise
+        plpy.error("Unable to create handle")
 try:
-    # Generate unique handle from name using standalone function
-    handle_stmt = plpy.prepare("SELECT pzero.generate_unique_handle($1) as handle", ["text"])
-    handle_result = plpy.execute(handle_stmt, [name])
-    user_handle = handle_result[0]['handle']
-    dev_notice("Generated handle: {}".format(user_handle))
-    
-    user_sql = """
-        INSERT INTO pzero.all_users (id, name, handle, org_id, part, avatar, data)
-        VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7::jsonb)
-        RETURNING id
-    """
-    user_stmt = plpy.prepare(user_sql, ["text", "text", "text", "text", "text", "text", "text"])
-    
+    user_insert_stmt = """INSERT INTO """
     # Debug the parameters being passed
     dev_notice("User creation parameters:")
     dev_notice("auth_id: {}".format(auth_id))
@@ -531,7 +644,7 @@ return json.dumps(result)
 $$ language plpython3u;
 
 
-CREATE OR REPLACE FUNCTION pzero.create_user_with_auth (p_user jsonb) returns jsonb AS $$
+CREATE OR REPLACE FUNCTION pzero.create_org_with_auth (p_org jsonb) returns jsonb AS $$
 import plpy
 import json
 
@@ -542,71 +655,196 @@ def dev_notice(msg):
 
 # Parse input
 try:
-    user_input = json.loads(p_user) if isinstance(p_user, str) else p_user
+    org_input = json.loads(p_org) if isinstance(p_org, str) else p_org
 except Exception as e:
-    plpy.error('Invalid JSON input for user creation: {}'.format(str(e)))
+    plpy.error('Invalid JSON input for organization creation: {}'.format(str(e)))
 
 if not isinstance(user_input, dict):
     plpy.error('Input must be a JSON object')
 
-# Extract required fields
-org_id  = user_input.get('org_id', '').strip() if user_input.get('org_id') else None
-uid = user_input.get('uid', '').strip() if user_input.get('uid') else None
-c_by = user_input.get('c_by', '').strip() if user_input.get('c_by') else None
-avatar = user_input.get('avatar', '').strip() if user_input.get('avatar') else None
-user_data = user_input.get('data', {}) if isinstance(user_input.get('data'), dict) else {}
+# Check if this is an org creation request with optional user
+if 'handle' in org_input and 'name' in org_input and 'status' in org_input and 'plan' in org_input:
+    # This is an organization creation request
+    dev_notice("Creating organization with optional user")
+    
+    # Extract org fields
+    org_name = user_input.get('name', '').strip()
+    org_handle = user_input.get('handle', '').strip()
+    org_status = user_input.get('status', '').strip()
+    org_plan = user_input.get('plan', '').strip()
+    org_email = user_input.get('email', '').strip()
+    org_website = user_input.get('website', '').strip()
+    org_phone = org_input.get('phone', '').strip()
+    org_address = org_input.get('address', '').strip()
+    org_dscr = org_input.get('desc', '').strip()
+    
+    # First create the organization
+    org_data = {
+        'name': org_name,
+        'handle': org_handle,
+        'status': org_status,
+        'plan': org_plan,
+        'email': org_email,
+        'website': org_website,
+        'phone': org_phone,
+        'address': org_address,
+        'dscr': org_dscr
+    }
+    
+    # Call create_org function
+    create_org_query = "SELECT pzero.create_org($1::jsonb) as result"
+    org_result = plpy.execute(create_org_query, [json.dumps(org_data)])
+    
+    if not org_result or len(org_result) == 0:
+        plpy.error('Failed to create organization')
+    
+    org_data_result = json.loads(org_result[0]['result'])
+    org_id = org_data_result.get('org_id')
+    
+    dev_notice("Created organization with ID: {}".format(org_id))
+    
+    # Check if we need to create a user
+    create_user_data = org_input.get('create_user')
+    user_result = None
+    
+    if create_user_data and isinstance(create_user_data, dict):
+        user_name = create_user_data.get('name', '').strip()
+        user_email = create_user_data.get('email', '').strip()
+        user_email_verified = create_user_data.get('email_verified', True)
+        
+        if user_name and user_email:
+            # Create the user with the new org
+            user_data = {
+                'name': user_name,
+                'email': user_email,
+                'email_verified': user_email_verified,
+                'org_id': 'pzero' # Use 'pzero' org for initial creation
+            }
+            # check if user exists in pzero.all_auth
+            check_user_query = "SELECT id::text FROM pzero.all_auth WHERE email = $1"
+            check_user_result = plpy.execute(check_user_query, [user_email])
+            if check_user_result and len(check_user_result) > 0:
+                dev_notice("User with email {} already exists skipping user creation".format(user_email))
+                check_user_query = "SELECT id, name, handle FROM pzero.all_users WHERE id = $1::uuid ORDER BY c_at DESC LIMIT 1"
+                user_result_raw = plpy.execute(check_user_query, [check_user_result[0]['id']])
+                if user_result_raw and len(user_result_raw) > 0:
+                    user_data['org_id'] = org_id
+                    user_data['id'] = user_result_raw[0]['id']
+                    user_data['handle'] = user_result_raw[0]['handle']
+                    user_data['name'] = user_result_raw[0]['name']
+            else:
+                # Call create_user function
+                create_user_query = "SELECT pzero.create_user($1::jsonb) as result"
+                user_result_raw = plpy.execute(create_user_query, [json.dumps(user_data)])
+            
+                if user_result_raw and len(user_result_raw) > 0:
+                    user_result = json.loads(user_result_raw[0]['result'])
+                    dev_notice("Created user: {} ({})".format(user_name, user_email))
+                    user_data['org_id'] = org_id
+                    user_data['id'] = user_result.get('id')
+                    user_data['handle'] = user_result.get('handle')
+                    user_data['name'] = user_result.get('name')
+                else:
+                    dev_notice("Insufficient data to create user") 
+                    plpy.error('Failed to create user')
+                
+            create_org_user= 'INSERT INTO pzero.all_users (id, org_id, handle, name) VALUES ($1::uuid, $2::uuid, $3, $4)'
+            create_org_user_stmt = plpy.prepare(create_org_user, ["text", "text", "text", "text"])
+            plpy.execute(create_org_user_stmt, [user_data.get('id'), org_id, user_data.get('handle'), user_data.get('name')])
+    # Return combined result
+    result = {
+        'org_id': org_id,
+        'org_name': org_name,
+        'org_handle': org_handle
+        'id': user_data.get('id') if user_result else None,
+        'handle': user_data.get('handle') if user_result else None
+            
+    }
+    
+    
+    return json.dumps(result)
 
-if not org_id:
-    plpy.error('org_id is required')
-if not uid:
-    plpy.error('uid is required')
-
-if not c_by and isinstance(user_data.get('meta'), dict):
-    c_by = user_data['meta'].get('c_by', '').strip() if user_data['meta'].get('c_by') else None
-if not c_by:
-    plpy.error('c_by is required')
-# Get default org_id if not provided
-query = "SELECT id::text, part_by::text FROM pzero.all_orgs where id = $1"
-result = plpy.execute(default_org_query, [org_id])
-if not result or len(result) == 0:
-    plpy.error('org_id not found')
-part = result[0]['part_by']
-if not part:
-    part = 'pzero'
-query = "SELECT id::text, handle, name FROM pzero.users WHERE id = $1  order by c_at desc limit 1"
-result = plpy.execute(query, [uid])
-if not result or len(result) == 0:
-    plpy.error('uid not found')
-name = result[0]['name']
-handle = result[0]['handle']
-dev_notice("Creating user: {} ({})".format(name, handle))
-
-sql = "INSERT INTO pzero.all_users (id, name, handle, org_id, part, status, online_status, last_seen, avatar, data) VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7, $8, $9, $10::jsonb) RETURNING id"    
-# Step 1: Create auth record with email
-try:
-    stmt = plpy.prepare(sql, ["text", "text", "text", "text", "text", "text", "text"])
-    result = plpy.execute(stmt, [uid, name, handle, org_id, part, 'ACTIVE', 'ONLINE', NOW(), avatar, json.dumps(user_data)])
-
+else:
+    # Extract required fields
+    dscr = org_input.get('dscr', '').strip() if org_input.get('dscr') else None
+    c_by = org_input.get('c_by', '').strip() if org_input.get('c_by') else None
+    website = org_input.get('website', '').strip() if org_input.get('website') else None
+    phone = org_input.get('phone', '').strip() if org_input.get('phone') else None
+    address = org_input.get('address', '').strip() if org_input.get('address') else None
+    avatar = org_input.get('avatar', '').strip() if org_input.get('avatar') else None
+    org_data = org_input.get('data', {}) if isinstance(org_input.get('data'), dict) else {}
+    create_user_data = org_input.get('create_user', {}) if isinstance(org_input.get('create_user'), dict) else {}
+    if not org_data.get('meta'):
+        org_data['meta'] = {}
+    if not isinstance(org_data['meta'], dict):
+        org_data['meta'] = {}
+    org_data['meta']['c_by'] = c_by if c_by else None
+  
+    if not create_user_data.get('name') or not create_user_data.get('email'):
+        plpy.error('create_user.name and create_user.email are required to create user')
+    user_name = create_user_data.get('name', '').strip()
+    user_email = create_user_data.get('email', '').strip()
+    user_avatar = create_user_data.get('avatar', '').strip() if create_user_data.get('avatar') else None
+    user_phone = create_user_data.get('phone', '').strip() if create_user_data.get('phone') else None
+    user_data = create_user_data.get('data', {}) if isinstance(create_user_data.get('data'), dict) else {}
+      if not c_by:
+        # create user if not c_by provided
+        create_sql = "SELECT pzero.create_user($1::jsonb) as result"
+        create_user_input = {
+            'name': user_name,
+            'email': user_email,
+            'avatar': user_avatar,
+            'phone': user_phone,
+            'data': user_data
+        }
+        create_user_result = plpy.execute(create_sql, [json.dumps(create_user_input)])
+        if not create_user_result or len(create_user_result) == 0:
+            plpy.error('Failed to create user for organization creation')
+        user_result = json.loads(create_user_result[0]['result'])
+        c_by = user_result.get('user_id')
+    else:
+    # Get default org_id if not provided
+    query = "SELECT id::text, part_by::text FROM pzero.all_orgs where id = $1"
+    result = plpy.execute(query, [org_id])
     if not result or len(result) == 0:
-        plpy.error('Failed to create user record')
+        plpy.error('org_id not found')
+    part = result[0]['part_by']
+    if not part:
+        part = 'pzero'
+    query = "SELECT id::text, handle, name FROM pzero.users WHERE id = $1  order by c_at desc limit 1"
+    result = plpy.execute(query, [uid])
+    if not result or len(result) == 0:
+        plpy.error('uid not found')
+    name = result[0]['name']
+    handle = result[0]['handle']
+    dev_notice("Creating user: {} ({})".format(name, handle))
 
-    if uid != str(auth_result[0]['id']):
-        plpy.error('UID not equal')
-    dev_notice("User record created: {}".format(Uid))
+    sql = "INSERT INTO pzero.all_users (id, name, handle, org_id, part, status, online_status, last_seen, avatar, data) VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7, NOW(), $8, $9::jsonb) RETURNING id"    
+    # Step 1: Create auth record with email
+    try:
+        stmt = plpy.prepare(sql, ["text", "text", "text", "text", "text", "text", "text", "text", "text"])
+        result = plpy.execute(stmt, [uid, name, handle, org_id, part, 'ACTIVE', 'ONLINE', avatar, json.dumps(user_data)])
 
-except Exception as e:
-    # plpy.error('Unexpected error creating auth record')
-    raise
+        if not result or len(result) == 0:
+            plpy.error('Failed to create user record')
 
-result = {
-    'user_id': uid,
-    'name': name,
-    'org_id': org_id,
-    'part': part,
-    'handle': handle
-}
+        if uid != str(result[0]['id']):
+            plpy.error('UID not equal')
+        dev_notice("User record created: {}".format(uid))
 
-return json.dumps(result)
+    except Exception as e:
+        # plpy.error('Unexpected error creating auth record')
+        raise
+
+    result = {
+        'user_id': uid,
+        'name': name,
+        'org_id': org_id,
+        'part': part,
+        'handle': handle
+    }
+
+    return json.dumps(result)
 
 $$ language plpython3u;
 -- More examples:

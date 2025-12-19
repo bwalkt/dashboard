@@ -368,12 +368,12 @@ BEGIN
             bit_value := 2;
             WHILE bit_value <= 8192 LOOP
                 BEGIN
-                    bitwise_index_sql := format('CREATE INDEX IF NOT EXISTS idx_%s_%s_%s ON %s.%s (relation) WHERE (relation & %s) = %s', 
+                  bitwise_index_sql := format('CREATE INDEX IF NOT EXISTS idx_%s_%s_%s ON %s.%s (relation) WHERE (relation & %s) = %s', 
                                         v_schema_name, partition_table_name, bit_value, v_schema_name, partition_table_name, bit_value, bit_value);
-                    EXECUTE bitwise_index_sql;
-                    RAISE NOTICE 'Created bitwise index for relation & % on %.%', bit_value, v_schema_name, partition_table_name;
+                  EXECUTE bitwise_index_sql;
+                  RAISE NOTICE 'Created bitwise index for relation & % on %.%', bit_value, v_schema_name, partition_table_name;
                 EXCEPTION WHEN others THEN
-                    RAISE WARNING 'Error creating bitwise index for % on %.%: %', bit_value, v_schema_name, partition_table_name, SQLERRM;
+                  RAISE WARNING 'Error creating bitwise index for % on %.%: %', bit_value, v_schema_name, partition_table_name, SQLERRM;
                 END;
                 bit_value := bit_value * 2;
             END LOOP;
@@ -549,6 +549,7 @@ CREATE TABLE pzero.all_relations (
   uuid1 text NOT NULL,
   uuid2 text NOT NULL,
   data pzero.data,
+  relation smallint NOT NULL,
   PRIMARY KEY (part, is_act, uuid1, uuid2)
 )
 PARTITION BY
