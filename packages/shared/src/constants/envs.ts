@@ -3,7 +3,6 @@ export function getEnvs(CONFIG: any, prefix = 'REACT_APP') {
   const env = CONFIG[`${prefix}_NODE_ENV`] ?? 'dev'
   const isDevelopment = env === 'dev'
   const isSimulator = CONFIG[`${prefix}_IS_SIMULATOR`] === 'true'
-
   return {
     APP_NAME: CONFIG[`${prefix}_APP_NAME`] ?? 'pzero',
     APP_VERSION: CONFIG[`${prefix}_APP_VERSION`] ?? '0.1.0',

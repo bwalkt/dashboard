@@ -1,6 +1,6 @@
 'use client'
 
-import { createValidator } from '@boardwalk/shared/validator/ajv'
+import { createValidator } from '@pzero/shared/validator/ajv'
 import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'

@@ -13,7 +13,7 @@ export default function AuthCallback() {
     queryClient.invalidateQueries({ queryKey: ['user'] })
 
     // Navigate to dashboard
-    navigate({ to: '/dashboard/overview', replace: true })
+    navigate({ to: '/overview', replace: true })
   }, [navigate, queryClient])
 
   return (

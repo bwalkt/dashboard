@@ -1,7 +1,7 @@
 import cors from '@fastify/cors'
+import { uuid } from '@pzero/shared/uuid'
 import { createHash } from 'crypto'
 import Fastify from 'fastify'
-import { nanoid } from 'nanoid'
 import { getExpectedAnswer, refreshChallengeTTL, storeChallenge } from './redis.js'
 import type {
   AuthzResponse,
@@ -25,7 +25,7 @@ const fastify = Fastify({
  * Client needs to compute: SHA256(challengeId + CHALLENGE_SECRET)
  */
 function generateChallenge(): { challengeId: string; challenge: string; expectedAnswer: string } {
-  const challengeId = nanoid()
+  const challengeId = uuid()
   const expectedAnswer = createHash('sha256')
     .update(challengeId + CHALLENGE_SECRET)
     .digest('hex')

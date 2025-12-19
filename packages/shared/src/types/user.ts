@@ -3,17 +3,19 @@ import addFormats from 'ajv-formats'
 
 const ajv = new Ajv()
 addFormats(ajv)
-
+export const User = {
+  github_id: { type: ['string', 'null'] },
+  name: { type: 'string' },
+  email: { type: 'string', format: 'email' },
+  avatar: { type: ['string', 'null'], format: 'url' },
+  email_verified: { type: 'boolean', default: false },
+}
 // AJV schemas
 export const UserSchema = {
   type: 'object',
   properties: {
     id: { type: 'string' },
-    github_id: { type: ['string', 'null'] },
-    name: { type: 'string' },
-    email: { type: 'string', format: 'email' },
-    avatar: { type: ['string', 'null'], format: 'url' },
-    email_verified: { type: 'boolean', default: false },
+    ...User,
     created_at: { type: 'string' },
     updated_at: { type: 'string' },
   },
@@ -24,11 +26,7 @@ export const UserSchema = {
 export const CreateUserDataSchema = {
   type: 'object',
   properties: {
-    github_id: { type: ['string', 'null'] },
-    name: { type: 'string' },
-    email: { type: 'string', format: 'email' },
-    avatar: { type: ['string', 'null'], format: 'url' },
-    email_verified: { type: 'boolean', default: false },
+    ...User,
     device: { type: 'object' },
   },
   required: ['name', 'email'],

@@ -106,10 +106,9 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@types/uuid": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "tw-animate-css": "catalog:",
-    "vite": "catalog:"
+    "vite": "^7.2.6"
   },
   "overrides": {
     "@types/react": "catalog:",

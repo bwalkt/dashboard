@@ -74,7 +74,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
   const location = useLocation()
   const pathname = location.pathname
   const isMobile = useMediaQuery('(max-width: 768px)')
-  const { user: authUser, signOut } = useAuthStore()
+  const { user: authUser, logout } = useAuthStore()
   const { setOpenMobile } = useSidebar()
   const navigate = useNavigate()
 
@@ -109,13 +109,8 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
 
   const handleSignOut = async () => {
     try {
-      const { error } = await signOut()
-      if (error) {
-        toast.error('Failed to sign out: ' + error.message)
-      } else {
-        toast.success('Signed out successfully')
-        navigate({ to: '/auth/sign-in' })
-      }
+      await logout()
+      toast.success('Signed out successfully')
     } catch (error) {
       toast.error('An unexpected error occurred')
       console.error('Sign out error:', error)

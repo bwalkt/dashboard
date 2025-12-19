@@ -106,7 +106,7 @@ export class UserService {
        WHERE u.id = $1`,
       [user_id],
     );
-
+    console.log('🔥 SERVER: Created user ', userResult.rows[0]);
     return userResult.rows[0];
   }
 

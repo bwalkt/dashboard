@@ -28,7 +28,7 @@ export default function SignUpViewPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (authStore.user && !authStore.loading) {
-      navigate({ to: '/dashboard/overview', replace: true })
+      navigate({ to: '/overview', replace: true })
     }
   }, [authStore.user, authStore.loading, navigate])
 

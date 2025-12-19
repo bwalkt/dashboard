@@ -24,7 +24,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.3.8",
     "@types/node": "catalog:",
-    "turbo": "^2.6.1",
+    "turbo": "^2.6.3",
     "typescript": "catalog:"
   },
   "engines": {
@@ -36,12 +36,20 @@
     "overrides": {
       "esbuild": "^0.25.0",
       "glob": ">=11.1.0",
+      "rimraf": ">=6.0.1",
+      "text-encoding": "npm:text-encoding-utf-8@^1.0.2",
       "metro-config": "0.82.5",
       "vite": ">=7.1.11",
-      "react": "19.1.1",
-      "react-dom": "19.1.1",
-      "react-test-renderer": "19.1.1",
-      "react-native-renderer": "19.1.1"
+      "react": "19.2.1",
+      "react-dom": "19.2.1",
+      "react-test-renderer": "19.2.1",
+      "react-native-renderer": "19.2.1",
+      "eslint": "^9.20.0",
+      "@humanwhocodes/config-array": "^0.14.0",
+      "@humanwhocodes/object-schema": "^2.1.0",
+      "npmlog": "^7.0.1",
+      "gauge": "^5.0.2",
+      "are-we-there-yet": "^4.0.2"
     },
     "peerDependencyRules": {
       "allowedVersions": {

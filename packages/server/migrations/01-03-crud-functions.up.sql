@@ -57,6 +57,20 @@ return generate_unique_handle(p_name.strip())
 
 $$ LANGUAGE plpython3u;
 
+-- Reusable helper function for development notices
+CREATE OR REPLACE FUNCTION pzero.dev_notice(p_message text) RETURNS void AS $$
+import plpy
+
+try:
+    env_result = plpy.execute("SHOW app.environment")
+    environment = env_result[0]['app.environment'] if env_result else 'production'
+    if environment == 'development':
+        plpy.notice(p_message)
+except:
+    pass  # Silently ignore if environment check fails
+
+$$ LANGUAGE plpython3u;
+
 -- CRUD Functions for pzero schema
 -- Insert function that automatically handles meta.c_by injection
 -- Parameters:
@@ -74,15 +88,9 @@ CREATE OR REPLACE FUNCTION pzero.insert_into_table (
 import plpy
 import json
 
-# Helper function to print notices only in development mode
+# Use reusable dev_notice function
 def dev_notice(msg):
-    try:
-        env_result = plpy.execute("SHOW app.environment")
-        environment = env_result[0]['app.environment'] if env_result else 'production'
-        if environment == 'development':
-            plpy.notice(msg)
-    except:
-        pass  # Silently ignore if environment check fails
+    plpy.execute("SELECT pzero.dev_notice(%s)" % plpy.quote_literal(msg))
 
 # Validate inputs
 if not p_table_name:
@@ -287,15 +295,9 @@ CREATE OR REPLACE FUNCTION pzero.create_user (p_user jsonb) returns jsonb AS $$
 import plpy
 import json
 
-# Helper function to print notices only in development mode
+# Use reusable dev_notice function
 def dev_notice(msg):
-    try:
-        env_result = plpy.execute("SHOW app.environment")
-        environment = env_result[0]['app.environment'] if env_result else 'production'
-        if environment == 'development':
-            plpy.notice(msg)
-    except:
-        pass  # Silently ignore if environment check fails
+    plpy.execute("SELECT pzero.dev_notice(%s)" % plpy.quote_literal(msg))
 
 
 # Parse input
@@ -528,6 +530,85 @@ return json.dumps(result)
 
 $$ language plpython3u;
 
+
+CREATE OR REPLACE FUNCTION pzero.create_user_with_auth (p_user jsonb) returns jsonb AS $$
+import plpy
+import json
+
+# Use reusable dev_notice function
+def dev_notice(msg):
+    plpy.execute("SELECT pzero.dev_notice(%s)" % plpy.quote_literal(msg))
+
+
+# Parse input
+try:
+    user_input = json.loads(p_user) if isinstance(p_user, str) else p_user
+except Exception as e:
+    plpy.error('Invalid JSON input for user creation: {}'.format(str(e)))
+
+if not isinstance(user_input, dict):
+    plpy.error('Input must be a JSON object')
+
+# Extract required fields
+org_id  = user_input.get('org_id', '').strip() if user_input.get('org_id') else None
+uid = user_input.get('uid', '').strip() if user_input.get('uid') else None
+c_by = user_input.get('c_by', '').strip() if user_input.get('c_by') else None
+avatar = user_input.get('avatar', '').strip() if user_input.get('avatar') else None
+user_data = user_input.get('data', {}) if isinstance(user_input.get('data'), dict) else {}
+
+if not org_id:
+    plpy.error('org_id is required')
+if not uid:
+    plpy.error('uid is required')
+
+if not c_by and isinstance(user_data.get('meta'), dict):
+    c_by = user_data['meta'].get('c_by', '').strip() if user_data['meta'].get('c_by') else None
+if not c_by:
+    plpy.error('c_by is required')
+# Get default org_id if not provided
+query = "SELECT id::text, part_by::text FROM pzero.all_orgs where id = $1"
+result = plpy.execute(default_org_query, [org_id])
+if not result or len(result) == 0:
+    plpy.error('org_id not found')
+part = result[0]['part_by']
+if not part:
+    part = 'pzero'
+query = "SELECT id::text, handle, name FROM pzero.users WHERE id = $1  order by c_at desc limit 1"
+result = plpy.execute(query, [uid])
+if not result or len(result) == 0:
+    plpy.error('uid not found')
+name = result[0]['name']
+handle = result[0]['handle']
+dev_notice("Creating user: {} ({})".format(name, handle))
+
+sql = "INSERT INTO pzero.all_users (id, name, handle, org_id, part, status, online_status, last_seen, avatar, data) VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7, $8, $9, $10::jsonb) RETURNING id"    
+# Step 1: Create auth record with email
+try:
+    stmt = plpy.prepare(sql, ["text", "text", "text", "text", "text", "text", "text"])
+    result = plpy.execute(stmt, [uid, name, handle, org_id, part, 'ACTIVE', 'ONLINE', NOW(), avatar, json.dumps(user_data)])
+
+    if not result or len(result) == 0:
+        plpy.error('Failed to create user record')
+
+    if uid != str(auth_result[0]['id']):
+        plpy.error('UID not equal')
+    dev_notice("User record created: {}".format(Uid))
+
+except Exception as e:
+    # plpy.error('Unexpected error creating auth record')
+    raise
+
+result = {
+    'user_id': uid,
+    'name': name,
+    'org_id': org_id,
+    'part': part,
+    'handle': handle
+}
+
+return json.dumps(result)
+
+$$ language plpython3u;
 -- More examples:
 -- Minimal (only required fields):
 -- SELECT pzero.create_user(jsonb_build_object(
@@ -586,15 +667,9 @@ CREATE OR REPLACE FUNCTION pzero.create_org (p_org jsonb) returns text AS $$
 import plpy
 import json
 
-# Helper function to print notices only in development mode
+# Use reusable dev_notice function
 def dev_notice(msg):
-    try:
-        env_result = plpy.execute("SHOW app.environment")
-        environment = env_result[0]['app.environment'] if env_result else 'production'
-        if environment == 'development':
-            plpy.notice(msg)
-    except:
-        pass  # Silently ignore if environment check fails
+    plpy.execute("SELECT pzero.dev_notice(%s)" % plpy.quote_literal(msg))
 
 # Parse input
 try:
@@ -610,13 +685,10 @@ if not isinstance(org_input, dict):
 handle = org_input.get('handle', '').strip() if org_input.get('handle') else None
 name = org_input.get('name', '').strip() if org_input.get('name') else None
 c_by = org_input.get('c_by', '').strip() if org_input.get('c_by') else None
-
 if not handle:
     plpy.error('handle is required')
 if not name:
     plpy.error('name is required')
-if not c_by:
-    plpy.error('c_by is required')
 
 # Extract optional fields
 website = org_input.get('website', '').strip() if org_input.get('website') else None
@@ -710,15 +782,9 @@ CREATE OR REPLACE FUNCTION pzero.create_device (p_device jsonb) returns text AS 
 import plpy
 import json
 
-# Helper function to print notices only in development mode
+# Use reusable dev_notice function
 def dev_notice(msg):
-    try:
-        env_result = plpy.execute("SHOW app.environment")
-        environment = env_result[0]['app.environment'] if env_result else 'production'
-        if environment == 'development':
-            plpy.notice(msg)
-    except:
-        pass  # Silently ignore if environment check fails
+    plpy.execute("SELECT pzero.dev_notice(%s)" % plpy.quote_literal(msg))
 
 # Parse input
 try:
