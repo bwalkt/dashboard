@@ -83,7 +83,13 @@ export function SignozClient() {
       defaultColumnFilters={defaultColumnFilters}
       defaultColumnSorting={sort ? [sort] : undefined}
       defaultRowSelection={traceId ? { [traceId]: true } : undefined}
-      defaultColumnVisibility={{}}
+      defaultColumnVisibility={{
+        'timingPhases.dns': false,
+        'timingPhases.connection': false,
+        'timingPhases.tls': false,
+        'timingPhases.ttfb': false,
+        'timingPhases.transfer': false,
+      }}
       meta={{}}
       filterFields={defaultFilterFields}
       sheetFields={sheetFields}

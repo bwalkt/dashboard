@@ -51,7 +51,7 @@ function escapeSingleQuotes(value: string): string {
  * Build filter expression from filters
  */
 function buildFilterExpression(filters: SigNozFilters): string | undefined {
-  const conditions: string[] = [];
+  const conditions: string[] = ['isRoot = true'];
 
   if (filters.serviceName) {
     const escapedServiceName = escapeSingleQuotes(filters.serviceName);
@@ -86,6 +86,7 @@ function getDefaultTraceSelectFields(): SelectField[] {
     { name: "http_method" },
     { name: "http_host" },
     { name: "http_url" },
+    { name: "events" },
   ];
 }
 
@@ -136,6 +137,42 @@ function buildTraceQueryPayload(
 }
 
 /**
+ * Calculates network timing phases from SigNoz API event strings.
+ * Returns durations in milliseconds (ms).
+ */
+function calculateTimingPhases(eventStrings: string[]) {
+  // 1. Parse the JSON strings into a usable Map
+  const events = new Map<string, number>();
+  
+  eventStrings.forEach(str => {
+    try {
+      const parsed = JSON.parse(str);
+      // Convert nanoseconds (BigInt) to milliseconds (Number)
+      events.set(parsed.name, Number(parsed.timeUnixNano) / 1_000_000);
+    } catch (e) {
+      console.error("Failed to parse event string:", str);
+    }
+  });
+
+  // Helper to get duration between two events
+  const getDuration = (start: string, end: string) => {
+    const s = events.get(start);
+    const e = events.get(end);
+    return (s !== undefined && e !== undefined) ? (e - s) : 0;
+  };
+
+  // 2. Calculate the specific phases
+  return {
+    'timing.dns': getDuration('domainLookupStart', 'domainLookupEnd'),
+    'timing.connection': getDuration('connectStart', 'connectEnd'),
+    // Note: If you have TLS events, use those. 
+    // Otherwise, Connection usually includes TLS in these browser metrics.
+    'timing.ttfb': getDuration('requestStart', 'responseStart'),
+    'timing.transfer': getDuration('responseStart', 'responseEnd'),
+  };
+}
+
+/**
  * Transform SigNoz API response to RawDataResponse format
  */
 function transformSigNozResponse(
@@ -153,9 +190,11 @@ function transformSigNozResponse(
     // Convert durationNano from nanoseconds to milliseconds and rename to durationMs
     if (item.durationNano !== undefined && item.durationNano !== null) {
       const { durationNano, ...rest } = item;
+      const timingPhases = calculateTimingPhases(item.events);
       return {
         ...rest,
         durationMs: durationNano / 1000000, // Convert nanoseconds to milliseconds
+        timingPhases,
       };
     }
     return item;
@@ -183,7 +222,9 @@ export async function queryTraces(
   const apiUrl = getSigNozApiUrl();
   const apiKey = getSigNozApiKey();
   const payload = buildTraceQueryPayload(options.filters, options.pagination);
- 
+  if(config.NODE_ENV === 'development') {
+    console.log('queryTraces payload', JSON.stringify(payload, null, 2))
+  }
   try {
     const response = await fetch(`${apiUrl}/api/v5/query_range`, {
       method: "POST",

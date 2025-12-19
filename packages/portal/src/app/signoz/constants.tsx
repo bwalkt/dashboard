@@ -6,6 +6,7 @@ import type { DataTableFilterField, Option, SheetField } from '@/components/data
 import { formatMilliseconds } from '@/lib/format'
 import { getStatusColor } from '@/lib/request/status-code'
 import { cn } from '@/lib/utils'
+import { SheetTimingPhases } from './_components/sheet-timing-phases'
 import type { SignozTraceSchema } from './schema'
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
@@ -70,6 +71,41 @@ export const filterFields = [
     type: 'slider',
     min: 0,
     max: 60000, // 60 seconds
+  },
+  {
+    label: 'DNS',
+    value: 'timingPhases.dns',
+    type: 'slider',
+    min: 0,
+    max: 5000,
+  },
+  {
+    label: 'Connection',
+    value: 'timingPhases.connection',
+    type: 'slider',
+    min: 0,
+    max: 5000,
+  },
+  {
+    label: 'TLS',
+    value: 'timingPhases.tls',
+    type: 'slider',
+    min: 0,
+    max: 5000,
+  },
+  {
+    label: 'TTFB',
+    value: 'timingPhases.ttfb',
+    type: 'slider',
+    min: 0,
+    max: 5000,
+  },
+  {
+    label: 'Transfer',
+    value: 'timingPhases.transfer',
+    type: 'slider',
+    min: 0,
+    max: 5000,
   },
 ] satisfies DataTableFilterField<SignozTraceSchema>[]
 
@@ -152,5 +188,12 @@ export const sheetFields = [
       </>
     ),
     skeletonClassName: 'w-16',
+  },
+  {
+    id: 'timingPhases.dns', // REMINDER: cannot be 'timing' as it is a property of the object
+    label: 'Timing Phases',
+    type: 'readonly',
+    component: props => <SheetTimingPhases latency={props.durationMs} timing={props.timingPhases} />,
+    className: 'flex-col items-start w-full gap-1',
   },
 ] satisfies SheetField<SignozTraceSchema, Record<string, unknown>>[]

@@ -1,13 +1,17 @@
 'use client'
 
+import { HoverCardPortal } from '@radix-ui/react-hover-card'
 import type { ColumnDef } from '@tanstack/react-table'
 import { TextWithTooltip } from '@/components/custom/text-with-tooltip'
 import { DataTableColumnLatency } from '@/components/data-table/data-table-column/data-table-column-latency'
 import { DataTableColumnStatusCode } from '@/components/data-table/data-table-column/data-table-column-status-code'
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { getTimingColor, getTimingLabel, getTimingPercentage, TimingPhase, timingPhases } from '@/lib/request/timing'
+import { cn } from '@/lib/utils'
 import { HoverCardTimestamp } from './_components/hover-card-timestamp'
+import { SheetTimingPhases } from './_components/sheet-timing-phases'
 import type { SignozTraceSchema } from './schema'
-
 export const columns: ColumnDef<SignozTraceSchema>[] = [
   {
     id: 'date',
@@ -110,6 +114,123 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
       const value = row.getValue<SignozTraceSchema['http_url']>('http_url')
       if (!value) return <span className="text-muted-foreground">-</span>
       return <TextWithTooltip text={value} />
+    },
+  },
+  {
+    id: 'timingPhases.dns',
+    accessorKey: 'timing.dns',
+    header: 'DNS',
+    cell: ({ row }) => {
+      const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.dns']
+      return <DataTableColumnLatency value={value} />
+    },
+    enableResizing: false,
+    size: 110,
+    minSize: 110,
+    meta: {
+      label: 'DNS',
+      headerClassName: 'w-[--header-timing-dns-size] max-w-[--header-timing-dns-size] min-w-[--header-timing-dns-size]',
+      cellClassName: 'font-mono w-[--col-timing-dns-size] max-w-[--col-timing-dns-size] min-w-[--col-timing-dns-size]',
+    },
+  },
+  {
+    id: 'timingPhases.connection',
+    accessorKey: 'timing.connection',
+    header: 'Connection',
+    cell: ({ row }) => {
+      const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.connection']
+      return <DataTableColumnLatency value={value} />
+    },
+  },
+  {
+    id: 'timingPhases.tls',
+    accessorKey: 'timing.tls',
+    header: 'TLS',
+    cell: ({ row }) => {
+      const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.tls']
+      return <DataTableColumnLatency value={value} />
+    },
+  },
+  {
+    id: 'timingPhases.ttfb',
+    accessorKey: 'timing.ttfb',
+    header: 'TTFB',
+    cell: ({ row }) => {
+      const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.ttfb']
+      return <DataTableColumnLatency value={value} />
+    },
+  },
+  {
+    id: 'timingPhases.transfer',
+    accessorKey: 'timing.transfer',
+    header: 'Transfer',
+    cell: ({ row }) => {
+      const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.transfer']
+      return <DataTableColumnLatency value={value} />
+    },
+  },
+  {
+    id: 'timingPhases',
+    accessorKey: 'timingPhases',
+    header: () => <div className="whitespace-nowrap">Timing Phases</div>,
+    cell: ({ row }) => {
+      const timing = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases') as Record<TimingPhase, number>
+      const latency = row.getValue<SignozTraceSchema['durationMs']>('durationMs')
+      const percentage = getTimingPercentage(timing, latency)
+      // TODO: create a separate component for this in _components
+      return (
+        <HoverCard openDelay={50} closeDelay={50}>
+          <HoverCardTrigger className="opacity-70 hover:opacity-100 data-[state=open]:opacity-100" asChild>
+            <div className="flex">
+              {Object.entries(timing).map(([key, value]) => (
+                <div
+                  key={key}
+                  className={cn(getTimingColor(key as keyof typeof timing), 'h-4')}
+                  style={{ width: isNaN(value) ? 0 : `${(value / latency) * 100}%` }}
+                />
+              ))}
+            </div>
+          </HoverCardTrigger>
+          {/* REMINDER: allows us to port the content to the document.body, which is helpful when using opacity-50 on the row element */}
+          <HoverCardPortal>
+            <HoverCardContent side="bottom" align="end" className="z-10 w-auto p-2">
+              <div className="flex flex-col gap-1">
+                {timingPhases.map(phase => {
+                  const color = getTimingColor(phase)
+                  const percentageValue = percentage[phase]
+                  const value = timing[phase]
+                  const formattedValue = new Intl.NumberFormat('en-US', {
+                    maximumFractionDigits: 3,
+                  }).format(timing[phase])
+                  return (
+                    <div key={phase} className="grid grid-cols-2 gap-4 text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className={cn(color, 'h-2 w-2 rounded-full')} />
+                        <div className="font-mono uppercase text-accent-foreground">{getTimingLabel(phase)}</div>
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="font-mono text-muted-foreground">{percentageValue}</div>
+                        <div className="font-mono">
+                          {isNaN(value) ? <span className="text-muted-foreground">-</span> : formattedValue}
+                          {isNaN(value) ? null : <span className="text-muted-foreground">ms</span>}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </HoverCardContent>
+          </HoverCardPortal>
+        </HoverCard>
+      )
+    },
+    enableResizing: false,
+    size: 130,
+    minSize: 130,
+    meta: {
+      label: 'Timing Phases',
+      headerClassName: 'w-[--header-timing-size] max-w-[--header-timing-size] min-w-[--header-timing-size]',
+      cellClassName: 'font-mono w-[--col-timing-size] max-w-[--col-timing-size] min-w-[--col-timing-size]',
     },
   },
   {

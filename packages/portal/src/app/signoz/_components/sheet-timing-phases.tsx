@@ -21,8 +21,12 @@ export function SheetTimingPhases({
             <div className="font-mono text-muted-foreground mr-8">{timingPercentage[phase]}</div>
             <div className="flex flex-1 gap-2 items-center justify-end">
               <div className="font-mono">
-                {formatMilliseconds(timing[phase])}
-                <span className="text-muted-foreground">ms</span>
+                {isNaN(timing[phase]) ? (
+                  <span className="text-muted-foreground">-</span>
+                ) : (
+                  formatMilliseconds(timing[phase])
+                )}
+                {isNaN(timing[phase]) ? null : <span className="text-muted-foreground">ms</span>}
               </div>
             </div>
             <div

@@ -30,6 +30,9 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:1420}
       # Authz Service Configuration
       - AUTHZ_SERVICE_URL=${AUTHZ_SERVICE_URL:-http://authz-service:3000}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-sfdc-server-vanilla}
+      - OTEL_SERVICE_VERSION=${OTEL_SERVICE_VERSION:-1.0.0}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     restart: "no"
     volumes:
       - "../../../files/keys:/app/examples/b2b/packages/sfdc-server-vanilla/dist/keys"
