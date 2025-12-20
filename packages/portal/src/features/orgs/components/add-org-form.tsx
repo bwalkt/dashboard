@@ -50,7 +50,7 @@ const orgFormSchema = {
       minLength: 1,
       pattern: '^[a-z0-9-]+$',
     },
-    descr: { type: 'string' },
+    dscr: { type: 'string' },
     contact_name: { type: 'string', minLength: 1 },
     status: {
       type: 'string',
@@ -122,7 +122,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       website: '',
       name: '',
       handle: '',
-      descr: '',
+      dscr: '',
       contact_name: '',
       status: 'active' as const,
       plan: 'starter' as const,
@@ -267,7 +267,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       const orgData = {
         name: data.name,
         handle: data.handle,
-        descr: data.descr,
+        dscr: data.dscr,
         status: data.status,
         plan: data.plan,
         email: data.email,
@@ -276,7 +276,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         address: data.address,
         create_user: data.create_new_user
           ? {
-              name: data.contact_name,
+              name: data.name,
               email: data.email,
               email_verified: true, // Auto-verify email for admin-created users
             }
@@ -367,7 +367,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
 
       <FormField
         control={form.control}
-        name="descr"
+        name="dscr"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Description</FormLabel>
