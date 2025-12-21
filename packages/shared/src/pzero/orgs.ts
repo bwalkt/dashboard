@@ -1,10 +1,10 @@
 import type { JSONSchemaType } from 'ajv'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
-import { extractCompanyInfoFromDomain, generateOrgHandle } from '../utils/handles'
-import { type PaginationListResponse, PaginationListResponseSchema } from './pagination'
-import type { BaseLocTable } from './type'
-import { generateContactEmail, UserSchema } from './users'
+import { extractCompanyInfoFromDomain, generateOrgHandle } from '../utils/handles.js'
+import { type PaginationListResponse, PaginationListResponseSchema } from './pagination.js'
+import type { BaseLocTable } from './type.js'
+import { generateContactEmail, UserSchema } from './users.js'
 
 const ajv = new Ajv()
 addFormats(ajv)
@@ -168,7 +168,7 @@ export const validateOrgWithUserResponse = ajv.compile(OrgWithUserResponseSchema
 export const validateOrgsListResponse = ajv.compile(OrgsListResponseSchema)
 
 // Re-export organization-related utilities for convenience
-export { extractCompanyInfoFromDomain, generateOrgHandle } from '../utils/handles'
+export { extractCompanyInfoFromDomain, generateOrgHandle } from '../utils/handles.js'
 
 export function generateOrgDefaults(website: string): Partial<CreateOrgData> {
   const { domain, companyName, handle } = extractCompanyInfoFromDomain(website)
@@ -210,4 +210,4 @@ export function isValidPlan(plan: string): plan is OrgPlan {
 export {
   generateContactEmail,
   generateNameFromEmail,
-} from '../utils/handles'
+} from '../utils/handles.js'
