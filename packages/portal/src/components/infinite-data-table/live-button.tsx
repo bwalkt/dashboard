@@ -73,4 +73,3 @@ export function LiveButton({ fetchPreviousPage, searchParamsParser, dateColumnId
     </Button>
   )
 }
-
