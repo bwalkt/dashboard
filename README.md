@@ -33,6 +33,8 @@ React Native mobile application with features including:
 - State management with Zustand
 - UI components from React Native UI Lib
 
+### `@pzero/verifier` 
+
 ### `@pzero/sfdc-server-vanilla`
 Node.js backend server built with:
 - Fastify web framework
