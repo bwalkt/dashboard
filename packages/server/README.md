@@ -13,7 +13,7 @@ A Fastify-based Node.js server that provides REST API endpoints for Salesforce i
 
 ## 📋 Prerequisites
 
-- Node.js (v18 or higher)
+- Node.js (v22 or higher)
 - pnpm (recommended) or npm
 - Docker and Docker Compose (for PostgreSQL and Redis)
 
