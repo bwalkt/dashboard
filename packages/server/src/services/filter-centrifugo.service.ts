@@ -1,6 +1,6 @@
 import { centrifugeServer } from "../centrifuge/server.js";
-import { headerInfoCache } from "./header-info-cache.service.js";
 import { FilterAuthService } from "./filter-auth.service.js";
+import { headerInfoCache } from "./header-info-cache.service.js";
 
 export interface FilterMessage {
   type: 'challenge_validation' | 'header_info_request' | 'filter_heartbeat' | 'filter_register' | 'filter_status';
