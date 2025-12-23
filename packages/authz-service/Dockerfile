@@ -14,6 +14,12 @@ RUN npm install -g pnpm@10.18.3
 # Copy workspace configuration files
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 
+# Copy shared package files (needed for authz-service)
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/shared/tsconfig.json ./packages/shared/
+COPY packages/shared/tsconfig.*.json ./packages/shared/
+COPY packages/shared/src ./packages/shared/src
+
 # Copy authz-service package.json
 COPY packages/authz-service/package.json ./packages/authz-service/
 COPY packages/authz-service/tsconfig.json ./packages/authz-service/
@@ -21,8 +27,12 @@ COPY packages/authz-service/tsconfig.json ./packages/authz-service/
 # Install all dependencies (including dev dependencies for building)
 RUN pnpm install --frozen-lockfile
 
+# Build shared package first
+WORKDIR /app/packages/shared
+RUN pnpm run build
+
 # Copy authz-service source code
-COPY packages/authz-service/src ./packages/authz-service/src
+COPY packages/authz-service/src /app/packages/authz-service/src
 
 # Build TypeScript to JavaScript
 WORKDIR /app/packages/authz-service
@@ -43,6 +53,10 @@ RUN npm install -g pnpm@10.18.3
 
 # Copy workspace configuration files
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
+
+# Copy shared package.json and built dist directory
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 
 # Copy authz-service package.json and built dist directory (not source files)
 COPY --from=builder /app/packages/authz-service/package.json ./packages/authz-service/

@@ -4,7 +4,7 @@
  */
 
 // Using plain JSON Schema objects instead of JSONSchemaType for better compatibility
-import { createValidator, ValidationResult } from '../validator/ajv'
+import { createValidator, ValidationResult } from '../validator/ajv.js'
 
 // =============================================================================
 // Core User Interface with Dynamic Field Support

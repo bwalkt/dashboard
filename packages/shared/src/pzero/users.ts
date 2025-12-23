@@ -1,5 +1,5 @@
 // Internal schema used by orgs.ts - not exported to avoid conflict with types/user.ts
-import type { BaseTable } from './type'
+import type { BaseTable } from './type.js'
 export const UserSchema = {
   type: 'object' as const,
   properties: {
@@ -12,7 +12,7 @@ export const UserSchema = {
 } as const
 
 // Re-export user-related utilities
-export { generateContactEmail, generateNameFromEmail } from '../utils/handles'
+export { generateContactEmail, generateNameFromEmail } from '../utils/handles.js'
 export interface User extends BaseTable {
   email: string
   avatar?: string | null
