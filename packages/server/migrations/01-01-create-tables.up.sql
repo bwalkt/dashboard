@@ -441,6 +441,14 @@ VALUES
 INSERT INTO
   pzero.mmn (table_name, mmn)
 VALUES
+  ('all_phones', 'P');
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
+  ('all_emails', 'M');
+INSERT INTO
+  pzero.mmn (table_name, mmn)
+VALUES
   ('all_endpoints', 'E');
 
 INSERT INTO
@@ -505,11 +513,30 @@ CREATE TABLE pzero.all_auth (
   UNIQUE (id, is_act),
   UNIQUE (email, is_act),
   UNIQUE (phone, is_act)
-)
-PARTITION BY
-  list (is_act);
-
+)PARTITION BY  list (is_act);
 CREATE INDEX idx_pzero_auth_email ON pzero.auth USING gin (email gin_trgm_ops);
+
+CREATE TABLE pzero.all_emails (
+  id uuid NOT NULL,
+  email pzero.email NOT NULL,
+  is_verified boolean NOT NULL DEFAULT FALSE,
+  is_del boolean NOT NULL DEFAULT FALSE,
+  is_act boolean NOT NULL DEFAULT TRUE,
+  primary KEY (email, is_act),
+  FOREIGN KEY (id, is_act) REFERENCES pzero.all_auth (id, is_act) ON DELETE CASCADE
+) PARTITION BY list (is_act);
+CREATE INDEX idx_pzero_email_email ON pzero.all_emails USING gin (email gin_trgm_ops);
+
+CREATE TABLE pzero.all_phones (
+  id uuid NOT NULL,
+  phone text NOT NULL,
+  is_verified boolean NOT NULL DEFAULT FALSE,
+  is_del boolean NOT NULL DEFAULT FALSE,
+  is_act boolean NOT NULL DEFAULT TRUE,
+  primary KEY (phone, is_act),
+  FOREIGN KEY (id, is_act) REFERENCES pzero.all_auth(id,is_act)
+)PARTITION BY list (is_act);
+CREATE INDEX idx_pzero_phone_phone ON pzero.all_phones USING gin (phone gin_trgm_ops);
 
 CREATE TABLE pzero.all_orgs (
   LIKE uuid_base_loc_table including ALL,
@@ -527,10 +554,7 @@ CREATE TABLE pzero.all_orgs (
   UNIQUE (handle, is_act),
   UNIQUE (part_by, id, is_act),
   trial_period pzero.from_to
-)
-PARTITION BY
-  list (is_act);
-
+)PARTITION BY list (is_act);
 CREATE INDEX org_part_by_idx ON pzero.all_orgs (part_by);
 
 CREATE TABLE pzero.base_part (

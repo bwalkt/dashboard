@@ -165,7 +165,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           website: data.website || "",
           phone: data.phone || "",
           address: data.address || "",
-          part_by: data.part_by || [],
+          part_by: data.part_by || "pzero",
           create_user: data.create_user ? {
             name: data.create_user.name,
             email: data.create_user.email,

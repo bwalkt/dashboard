@@ -14,6 +14,7 @@ export interface CreateOrgData extends BaseLocTable {
   website?: string | null
   email?: string | null
   phone?: string | null
+  part_by?: string
 }
 export interface Org extends CreateOrgData {
   status: OrgStatus
@@ -202,6 +203,7 @@ export function generateOrgDefaults(website: string): Partial<CreateOrgData> {
     name: companyName,
     handle,
     email: generateContactEmail(domain),
+
   }
 }
 
