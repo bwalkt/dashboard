@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useQueryStates } from 'nuqs'
 import * as React from 'react'
+import type { DataTableFilterField } from '@/components/data-table/types'
 import { DataTableInfinite } from '@/components/infinite-data-table/data-table-infinite'
 import { useHotKey } from '@/hooks/use-hot-key'
 import { columns } from './columns'
@@ -55,7 +56,7 @@ export function SignozClient() {
     ...(httpMethod
       ? [
           {
-            id: 'name',
+            id: 'http_method',
             value: [`HTTP ${httpMethod}`] as string[],
           },
         ]
@@ -93,7 +94,7 @@ export function SignozClient() {
         'timingPhases.transfer': false,
       }}
       meta={{}}
-      filterFields={defaultFilterFields}
+      filterFields={defaultFilterFields as DataTableFilterField<SignozTraceSchema>[]}
       sheetFields={sheetFields}
       isFetching={isFetching}
       isLoading={isLoading}

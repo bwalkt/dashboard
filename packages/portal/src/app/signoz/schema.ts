@@ -82,7 +82,7 @@ export interface SignozTraceSchema {
   responseHeaders?: Record<string, string>
 }
 
-export interface ColumnFilterSchema {
+export interface SignozColumnFilterSchema {
   trace_id: string
   span_id: string
   serviceName: string

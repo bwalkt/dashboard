@@ -8,7 +8,7 @@ import { formatMilliseconds } from '@/lib/format'
 import { getStatusColor } from '@/lib/request/status-code'
 import { cn } from '@/lib/utils'
 import { SheetTimingPhases } from './_components/sheet-timing-phases'
-import type { ColumnFilterSchema, SignozTraceSchema } from './schema'
+import type { SignozColumnFilterSchema, SignozTraceSchema } from './schema'
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
 
@@ -108,7 +108,7 @@ export const filterFields = [
     min: 0,
     max: 5000,
   },
-] satisfies DataTableFilterField<ColumnFilterSchema>[]
+] satisfies DataTableFilterField<SignozColumnFilterSchema>[]
 
 export const sheetFields = [
   {
