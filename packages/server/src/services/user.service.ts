@@ -1,6 +1,6 @@
 import type { CreateUserData, GitHubUser, User } from "@pzero/shared";
-import { db } from "../config/database.js";
 import { generateHandleFromEmail } from '@pzero/shared/pzero'
+import { db } from "../config/database.js";
 export class UserService {
   /**
    * Get user by GitHub ID

@@ -12,7 +12,7 @@ export const UserSchema = {
 } as const
 
 // Re-export user-related utilities
-export { generateContactEmail, generateNameFromEmail, generateHandleFromEmail } from '../utils/handles.js'
+export { generateContactEmail, generateHandleFromEmail, generateNameFromEmail } from '../utils/handles.js'
 export interface User extends BaseTable {
   email: string
   avatar?: string | null

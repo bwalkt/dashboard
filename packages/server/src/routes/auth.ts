@@ -1,8 +1,8 @@
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import {
-  generateHandleFromEmail,
   type AuthenticatedRequest,
   type ErrorResponse,
+  generateHandleFromEmail,
   type UserResponse
 } from "@pzero/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";

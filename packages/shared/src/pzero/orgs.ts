@@ -203,7 +203,6 @@ export function generateOrgDefaults(website: string): Partial<CreateOrgData> {
     name: companyName,
     handle,
     email: generateContactEmail(domain),
-
   }
 }
 
