@@ -10,7 +10,6 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/h
 import { getTimingColor, getTimingLabel, getTimingPercentage, TimingPhase, timingPhases } from '@/lib/request/timing'
 import { cn } from '@/lib/utils'
 import { HoverCardTimestamp } from './_components/hover-card-timestamp'
-import { SheetTimingPhases } from './_components/sheet-timing-phases'
 import type { SignozTraceSchema } from './schema'
 export const columns: ColumnDef<SignozTraceSchema>[] = [
   {

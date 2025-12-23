@@ -2,6 +2,7 @@
 
 import type { HttpMethod } from '@pzero/shared/types'
 import { format } from 'date-fns'
+import { KVTabs } from '@/components/custom/kv-tabs'
 import type { DataTableFilterField, Option, SheetField } from '@/components/data-table/types'
 import { formatMilliseconds } from '@/lib/format'
 import { getStatusColor } from '@/lib/request/status-code'
@@ -194,6 +195,16 @@ export const sheetFields = [
     label: 'Timing Phases',
     type: 'readonly',
     component: props => <SheetTimingPhases latency={props.durationMs} timing={props.timingPhases} />,
+    className: 'flex-col items-start w-full gap-1',
+  },
+  {
+    id: 'responseHeaders',
+    label: 'Headers',
+    type: 'readonly',
+    component: props => (
+      // REMINDER: negative margin to make it look like the header is on the same level of the tab triggers
+      <KVTabs data={props.responseHeaders} className="-mt-[22px]" />
+    ),
     className: 'flex-col items-start w-full gap-1',
   },
 ] satisfies SheetField<SignozTraceSchema, Record<string, unknown>>[]

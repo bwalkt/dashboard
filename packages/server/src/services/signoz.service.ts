@@ -51,7 +51,7 @@ function escapeSingleQuotes(value: string): string {
  * Build filter expression from filters
  */
 function buildFilterExpression(filters: SigNozFilters): string | undefined {
-  const conditions: string[] = ['isRoot = true'];
+  const conditions: string[] = ['isRoot = true',"httpMethod IN ['POST', 'PUT', 'GET', 'DELETE']"];
 
   if (filters.serviceName) {
     const escapedServiceName = escapeSingleQuotes(filters.serviceName);
@@ -87,6 +87,11 @@ function getDefaultTraceSelectFields(): SelectField[] {
     { name: "http_host" },
     { name: "http_url" },
     { name: "events" },
+    { "name": "req_headers.x-challenge-answer" },
+    { "name": "req_headers.x-challenge-id" },
+    { "name": "res_headers.content-length" },
+    { "name": "res_headers.content-type" },
+    { "name": "res_headers.timing-allow-origin" }
   ];
 }
 
@@ -136,42 +141,71 @@ function buildTraceQueryPayload(
   };
 }
 
+type TimingPhases = {
+  'timing.dns': number
+  'timing.connection': number
+  'timing.tls': number
+  'timing.ttfb': number
+  'timing.transfer': number
+  'timing.stalling': number
+}
+
+type EventNames = "fetchStart"|"domainLookupEnd" | "domainLookupStart" | "connectEnd" | "connectStart"| "secureConnectionStart" | "responseStart" | "requestStart" | "responseEnd"
+
 /**
  * Calculates network timing phases from SigNoz API event strings.
  * Returns durations in milliseconds (ms).
  */
-function calculateTimingPhases(eventStrings: string[]) {
-  // 1. Parse the JSON strings into a usable Map
-  const events = new Map<string, number>();
+function getTimingObject(eventStrings: string[]): TimingPhases {
+  const events: Record<EventNames, number> = {
+    fetchStart: 0,
+    domainLookupEnd: 0,
+    domainLookupStart: 0,
+    connectEnd: 0,
+    connectStart: 0,
+    secureConnectionStart: 0,
+    responseStart: 0,
+    requestStart: 0,
+    responseEnd: 0,
+  };
   
+  // Parse strings and convert nanoseconds to milliseconds
   eventStrings.forEach(str => {
-    try {
-      const parsed = JSON.parse(str);
-      // Convert nanoseconds (BigInt) to milliseconds (Number)
-      events.set(parsed.name, Number(parsed.timeUnixNano) / 1_000_000);
-    } catch (e) {
-      console.error("Failed to parse event string:", str);
-    }
+    const parsed = JSON.parse(str) as { name: EventNames; timeUnixNano: string };
+    events[parsed.name] = Number((parsed.timeUnixNano)) / 1_000_000;
   });
 
-  // Helper to get duration between two events
-  const getDuration = (start: string, end: string) => {
-    const s = events.get(start);
-    const e = events.get(end);
-    return (s !== undefined && e !== undefined) ? (e - s) : 0;
-  };
+  const tlsStart = events['secureConnectionStart'];
+  const tlsDuration = (tlsStart && tlsStart > 0) 
+    ? (events['connectEnd'] - tlsStart) 
+    : 0;
 
-  // 2. Calculate the specific phases
-  return {
-    'timing.dns': getDuration('domainLookupStart', 'domainLookupEnd'),
-    'timing.connection': getDuration('connectStart', 'connectEnd'),
-    // Note: If you have TLS events, use those. 
-    // Otherwise, Connection usually includes TLS in these browser metrics.
-    'timing.ttfb': getDuration('requestStart', 'responseStart'),
-    'timing.transfer': getDuration('responseStart', 'responseEnd'),
-  };
+  let stalling = 0
+if(events.domainLookupStart&&events.fetchStart&&events.requestStart&&events.connectEnd){
+  stalling = (events.domainLookupStart - events.fetchStart) + (events.requestStart - events.connectEnd)
 }
 
+  return {
+    // 1. DNS: domainLookupEnd - domainLookupStart
+    'timing.dns': events.domainLookupEnd - events.domainLookupStart,
+    
+    // 2. Connection: connectEnd - connectStart
+    'timing.connection': events.connectEnd - events.connectStart,
+
+    // 3. TLS: connectEnd - secureConnectionStart
+    'timing.tls': tlsDuration, 
+    
+    // 3. TTFB: responseStart - requestStart
+    'timing.ttfb': events.responseStart - events.requestStart,
+    
+    // 4. Transfer: responseEnd - responseStart
+    'timing.transfer': events.responseEnd -( events.responseStart || events.fetchStart),
+    
+    // Extra: Stalling (Internal browser/SDK overhead)
+    // Use this to explain why the phases don't match the total latency
+    'timing.stalling':stalling
+  };
+}
 /**
  * Transform SigNoz API response to RawDataResponse format
  */
@@ -187,22 +221,64 @@ function transformSigNozResponse(
   // Extract the actual data from each row and transform durationNano to durationMs (milliseconds)
   const items = rows.map((row: any) => {
     const item = row.data || row;
-    // Convert durationNano from nanoseconds to milliseconds and rename to durationMs
-    if (item.durationNano !== undefined && item.durationNano !== null) {
-      const { durationNano, ...rest } = item;
-      const timingPhases = calculateTimingPhases(item.events);
-      return {
-        ...rest,
-        durationMs: durationNano / 1000000, // Convert nanoseconds to milliseconds
-        timingPhases,
-      };
+    
+    // Extract request and response headers if they exist
+    const requestHeaders: Record<string, string> = {};
+    const responseHeaders: Record<string, string> = {};
+    
+    // Check and extract request headers (only if non-empty)
+    if (item["req_headers.x-challenge-answer"] !== undefined && item["req_headers.x-challenge-answer"] !== null && item["req_headers.x-challenge-answer"] !== "") {
+      requestHeaders["x-challenge-answer"] = item["req_headers.x-challenge-answer"];
     }
-    return item;
+    if (item["req_headers.x-challenge-id"] !== undefined && item["req_headers.x-challenge-id"] !== null && item["req_headers.x-challenge-id"] !== "") {
+      requestHeaders["x-challenge-id"] = item["req_headers.x-challenge-id"];
+    }
+    
+    // Check and extract response headers (only if non-empty)
+    if (item["res_headers.content-length"] !== undefined && item["res_headers.content-length"] !== null && item["res_headers.content-length"] !== "") {
+      responseHeaders["content-length"] = item["res_headers.content-length"];
+    }
+    if (item["res_headers.content-type"] !== undefined && item["res_headers.content-type"] !== null && item["res_headers.content-type"] !== "") {
+      responseHeaders["content-type"] = item["res_headers.content-type"];
+    }
+    if (item["res_headers.timing-allow-origin"] !== undefined && item["res_headers.timing-allow-origin"] !== null && item["res_headers.timing-allow-origin"] !== "") {
+      responseHeaders["timing-allow-origin"] = item["res_headers.timing-allow-origin"];
+    }
+    
+    // Remove header attributes and durationNano from item
+    const {
+      "req_headers.x-challenge-answer": _reqChallengeAnswer,
+      "req_headers.x-challenge-id": _reqChallengeId,
+      "res_headers.content-length": _resContentLength,
+      "res_headers.content-type": _resContentType,
+      "res_headers.timing-allow-origin": _resTimingAllowOrigin,
+      durationNano,
+      ...rest
+    } = item;
+    
+    // Build result object
+    const result: any = { ...rest };
+    
+    // Convert durationNano from nanoseconds to milliseconds and rename to durationMs
+    if (durationNano !== undefined && durationNano !== null) {
+      result.durationMs = durationNano / 1000000; // Convert nanoseconds to milliseconds
+      result.timingPhases = getTimingObject(item.events);
+    }
+    
+    // Add headers only if they have values
+    if (Object.keys(requestHeaders).length > 0) {
+      result.requestHeaders = requestHeaders;
+    }
+    if (Object.keys(responseHeaders).length > 0) {
+      result.responseHeaders = responseHeaders;
+    }
+    
+    return result;
   });
   
   // Get total count from meta if available, otherwise use items length
   // Ensure the value is a number before returning it
-  const metaTotal = apiResponse?.data?.meta?.total;
+  const metaTotal = apiResponse?.data?.meta?.rowsScanned;
   const total = typeof metaTotal === 'number' ? metaTotal : items.length;
   
   return {

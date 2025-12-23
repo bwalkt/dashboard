@@ -1,4 +1,11 @@
-export const timingPhases = ['timing.dns', 'timing.connection', 'timing.tls', 'timing.ttfb', 'timing.transfer'] as const
+export const timingPhases = [
+  'timing.dns',
+  'timing.connection',
+  'timing.tls',
+  'timing.ttfb',
+  'timing.transfer',
+  'timing.stalling',
+] as const
 
 export type TimingPhase = (typeof timingPhases)[number]
 
@@ -14,6 +21,8 @@ export function getTimingColor(timing: TimingPhase) {
       return 'bg-violet-500'
     case 'timing.transfer':
       return 'bg-purple-500'
+    case 'timing.stalling':
+      return 'bg-gray-500'
     default:
       return 'bg-gray-500'
   }
@@ -31,6 +40,8 @@ export function getTimingLabel(timing: TimingPhase) {
       return 'TTFB'
     case 'timing.transfer':
       return 'Transfer'
+    case 'timing.stalling':
+      return 'Waiting'
     default:
       return 'Unknown'
   }

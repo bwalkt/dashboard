@@ -1,7 +1,7 @@
-import { getWebAutoInstrumentations } from '@opentelemetry/auto-instrumentations-web'
 import { ZoneContextManager } from '@opentelemetry/context-zone'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { registerInstrumentations } from '@opentelemetry/instrumentation'
+import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch'
 import { defaultResource, resourceFromAttributes } from '@opentelemetry/resources'
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
@@ -65,16 +65,25 @@ console.log('[OpenTelemetry] Tracing initialized successfully')
 // Set up automatic instrumentation for web APIs
 registerInstrumentations({
   instrumentations: [
-    getWebAutoInstrumentations({
-      '@opentelemetry/instrumentation-xml-http-request': {
-        // Only propagate trace headers to configured backend/proxy URLs
-        propagateTraceHeaderCorsUrls: corsUrls.length > 0 ? corsUrls : [/.+/g],
-        ignoreUrls: [otelExporterUrl],
-      },
-      '@opentelemetry/instrumentation-fetch': {
-        // Only propagate trace headers to configured backend/proxy URLs
-        propagateTraceHeaderCorsUrls: corsUrls.length > 0 ? corsUrls : [/.+/g],
-        ignoreUrls: [otelExporterUrl],
+    new FetchInstrumentation({
+      // Only propagate trace headers to configured backend/proxy URLs
+      propagateTraceHeaderCorsUrls: corsUrls.length > 0 ? corsUrls : [/.+/g],
+      ignoreUrls: [otelExporterUrl],
+      applyCustomAttributesOnSpan: (span, request, response) => {
+        const requestHeaders = request.headers
+        if (requestHeaders && typeof requestHeaders === 'object') {
+          for (const [key, value] of Object.entries(requestHeaders)) {
+            span.setAttribute(`req_headers.${key}`, value)
+          }
+        }
+        if (!(response instanceof Response)) return span
+        const resHeaders = response.headers
+        if (resHeaders) {
+          for (const [key, value] of resHeaders.entries()) {
+            span.setAttribute(`res_headers.${key}`, value)
+          }
+        }
+        return span
       },
     }),
   ],

@@ -79,11 +79,13 @@ export interface SignozTraceSchema {
   http_host?: string
   http_url?: string
   timingPhases: Record<TimingPhase, number>
+  responseHeaders: Record<string, string>
   'timingPhases.dns': number
   'timingPhases.connection': number
   'timingPhases.tls': number
   'timingPhases.ttfb': number
   'timingPhases.transfer': number
+  'timingPhases.stalling': number
 }
 
 export interface SignozTraceFilterSchema {

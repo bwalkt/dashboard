@@ -1,6 +1,7 @@
 import type { RawDataResponse, SigNozFilters, SigNozPagination } from '@pzero/shared/types'
-import { infiniteQueryOptions, keepPreviousData, queryOptions } from '@tanstack/react-query'
-import { queryTraces, queryTracesSummary } from '@/services/signoz.service'
+import { infiniteQueryOptions, keepPreviousData } from '@tanstack/react-query'
+import { BaseChartSchema } from '@/components/infinite-data-table'
+import { queryTraces } from '@/services/signoz.service'
 import type { SignozTraceSchema } from './schema'
 import { type SearchParamsType, searchParamsSerializer } from './search-params'
 
@@ -64,7 +65,15 @@ export const dataOptions = (search: SearchParamsType) => {
     queryKey: ['signoz-traces', searchParamsSerializer({ ...search, offset: null, traceId: null })], // Remove offset and traceId from queryKey to avoid unnecessary refetches
     queryFn: async ({
       pageParam = 0,
-    }): Promise<{ data: SignozTraceSchema[]; total: number; limit: number; offset: number }> => {
+    }): Promise<{
+      data: {
+        traces: SignozTraceSchema[]
+        summary: BaseChartSchema[]
+      }
+      total: number
+      limit: number
+      offset: number
+    }> => {
       const filters = buildSignozFilters(search)
       const pagination: SigNozPagination = {
         limit: DEFAULT_LIMIT,
@@ -83,8 +92,10 @@ export const dataOptions = (search: SearchParamsType) => {
         sampleItem: transformedData[0],
       })
 
+      const summaryData = transformTraceDataToSummary(transformedData)
+
       return {
-        data: transformedData,
+        data: { traces: transformedData, summary: summaryData },
         total: response.total || 0,
         limit: response.limit || pagination.limit,
         offset: response.offset || pagination.offset,
@@ -201,20 +212,20 @@ function transformTraceDataToSummary(
   return Array.from(groupMap.values()).sort((a, b) => a.timestamp - b.timestamp)
 }
 
-/**
- * Query options for Signoz traces summary
- */
-export const summaryOptions = () => {
-  return queryOptions({
-    queryKey: ['signoz-traces-summary'],
-    queryFn: async (): Promise<{ data: { timestamp: number; success: number; warning: number; error: number }[] }> => {
-      const response = await queryTracesSummary()
-      const transformedData = transformTraceDataToSummary(response.data || [])
-      return {
-        data: transformedData,
-      }
-    },
-    refetchOnWindowFocus: false,
-    enabled: true,
-  })
-}
+// /**
+//  * Query options for Signoz traces summary
+//  */
+// export const summaryOptions = () => {
+//   return queryOptions({
+//     queryKey: ['signoz-traces-summary'],
+//     queryFn: async (): Promise<{ data: { timestamp: number; success: number; warning: number; error: number }[] }> => {
+//       const response = await queryTracesSummary()
+//       const transformedData = transformTraceDataToSummary(response.data || [])
+//       return {
+//         data: transformedData,
+//       }
+//     },
+//     refetchOnWindowFocus: false,
+//     enabled: true,
+//   })
+// }
