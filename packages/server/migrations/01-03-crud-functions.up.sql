@@ -684,49 +684,54 @@ else:
             plpy.error('Failed to create user for organization creation')
         user_result = json.loads(create_user_result[0]['result'])
         c_by = user_result.get('user_id')
-    else:
-    # Get default org_id if not provided
-    query = "SELECT id::text, part_by::text FROM pzero.all_orgs where id = $1"
-    result = plpy.execute(query, [org_id])
-    if not result or len(result) == 0:
-        plpy.error('org_id not found')
-    part = result[0]['part_by']
-    if not part:
-        part = 'pzero'
-    query = "SELECT id::text, handle, name FROM pzero.users WHERE id = $1  order by c_at desc limit 1"
-    result = plpy.execute(query, [uid])
-    if not result or len(result) == 0:
-        plpy.error('uid not found')
-    name = result[0]['name']
-    handle = result[0]['handle']
-    dev_notice("Creating user: {} ({})".format(name, handle))
+        
+        # Return the user creation result
+        return json.dumps(user_result)
+        
+    # else:
+    #     # TODO: This else block is incomplete and references undefined variables (org_id, uid)
+    #     # Get default org_id if not provided
+    #     query = "SELECT id::text, part_by::text FROM pzero.all_orgs where id = $1"
+    #     result = plpy.execute(query, [org_id])
+    #     if not result or len(result) == 0:
+    #         plpy.error('org_id not found')
+    #     part = result[0]['part_by']
+    #     if not part:
+    #         part = 'pzero'
+    #     query = "SELECT id::text, handle, name FROM pzero.users WHERE id = $1  order by c_at desc limit 1"
+    #     result = plpy.execute(query, [uid])
+    #     if not result or len(result) == 0:
+    #         plpy.error('uid not found')
+    #     name = result[0]['name']
+    #     handle = result[0]['handle']
+    #     dev_notice("Creating user: {} ({})".format(name, handle))
 
-    sql = "INSERT INTO pzero.all_users (id, name, handle, org_id, part, status, online_status, last_seen, avatar, data) VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7, NOW(), $8, $9::jsonb) RETURNING id"    
-    # Step 1: Create auth record with email
-    try:
-        stmt = plpy.prepare(sql, ["text", "text", "text", "text", "text", "text", "text", "text", "text"])
-        result = plpy.execute(stmt, [uid, name, handle, org_id, part, 'ACTIVE', 'ONLINE', avatar, json.dumps(user_data)])
+    #     sql = "INSERT INTO pzero.all_users (id, name, handle, org_id, part, status, online_status, last_seen, avatar, data) VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7, NOW(), $8, $9::jsonb) RETURNING id"    
+    #     # Step 1: Create auth record with email
+    #     try:
+    #         stmt = plpy.prepare(sql, ["text", "text", "text", "text", "text", "text", "text", "text", "text"])
+    #         result = plpy.execute(stmt, [uid, name, handle, org_id, part, 'ACTIVE', 'ONLINE', avatar, json.dumps(user_data)])
 
-        if not result or len(result) == 0:
-            plpy.error('Failed to create user record')
+    #         if not result or len(result) == 0:
+    #             plpy.error('Failed to create user record')
 
-        if uid != str(result[0]['id']):
-            plpy.error('UID not equal')
-        dev_notice("User record created: {}".format(uid))
+    #         if uid != str(result[0]['id']):
+    #             plpy.error('UID not equal')
+    #         dev_notice("User record created: {}".format(uid))
 
-    except Exception as e:
-        # plpy.error('Unexpected error creating auth record')
-        raise
+    #     except Exception as e:
+    #         # plpy.error('Unexpected error creating auth record')
+    #         raise
 
-    result = {
-        'user_id': uid,
-        'name': name,
-        'org_id': org_id,
-        'part': part,
-        'handle': handle
-    }
+    #     result = {
+    #         'user_id': uid,
+    #         'name': name,
+    #         'org_id': org_id,
+    #         'part': part,
+    #         'handle': handle
+    #     }
 
-    return json.dumps(result)
+    #     return json.dumps(result)
 
 $$ language plpython3u;
 -- More examples:
