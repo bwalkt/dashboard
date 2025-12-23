@@ -62,27 +62,65 @@ provider.register({
 // Log successful initialization
 console.log('[OpenTelemetry] Tracing initialized successfully')
 
+// Sensitive headers that should be masked or omitted
+const SENSITIVE_HEADERS = new Set([
+  'authorization',
+  'cookie',
+  'set-cookie',
+  'api-key',
+  'x-api-key',
+  'x-authorization',
+  'x-session',
+  'token',
+  'access-token',
+])
+
+// Normalize header name to lowercase
+const normalizeHeaderName = (name: string): string => name.toLowerCase()
+
+// Mask sensitive header value (show first 4 chars + "***")
+const maskSensitiveValue = (value: string): string => {
+  if (value.length <= 4) return '***'
+  return value.slice(0, 4) + '***'
+}
+
+// Process headers and set attributes with filtering and masking
+const processHeaders = (span: any, headers: Headers | HeadersInit, prefix: 'req_headers' | 'res_headers'): void => {
+  // Convert HeadersInit to Headers for consistent handling
+  const headersObj = headers instanceof Headers ? headers : new Headers(headers)
+  const entries = Array.from(headersObj.entries())
+
+  for (const [key, value] of entries) {
+    const normalizedKey = normalizeHeaderName(key)
+    const stringValue = typeof value === 'string' ? value : String(value)
+
+    // Mask sensitive headers instead of omitting completely
+    if (SENSITIVE_HEADERS.has(normalizedKey)) {
+      span.setAttribute(`${prefix}.${normalizedKey}`, maskSensitiveValue(stringValue))
+    } else {
+      span.setAttribute(`${prefix}.${normalizedKey}`, stringValue)
+    }
+  }
+}
+
 // Set up automatic instrumentation for web APIs
 registerInstrumentations({
   instrumentations: [
     new FetchInstrumentation({
       // Only propagate trace headers to configured backend/proxy URLs
-      propagateTraceHeaderCorsUrls: corsUrls.length > 0 ? corsUrls : [/.+/g],
+      propagateTraceHeaderCorsUrls: corsUrls,
       ignoreUrls: [otelExporterUrl],
       applyCustomAttributesOnSpan: (span, request, response) => {
-        const requestHeaders = request.headers
-        if (requestHeaders && typeof requestHeaders === 'object') {
-          for (const [key, value] of Object.entries(requestHeaders)) {
-            span.setAttribute(`req_headers.${key}`, value)
-          }
+        // Process request headers
+        if (request.headers) {
+          processHeaders(span, request.headers, 'req_headers')
         }
-        if (!(response instanceof Response)) return span
-        const resHeaders = response.headers
-        if (resHeaders) {
-          for (const [key, value] of resHeaders.entries()) {
-            span.setAttribute(`res_headers.${key}`, value)
-          }
+
+        // Process response headers
+        if (response instanceof Response && response.headers) {
+          processHeaders(span, response.headers, 'res_headers')
         }
+
         return span
       },
     }),

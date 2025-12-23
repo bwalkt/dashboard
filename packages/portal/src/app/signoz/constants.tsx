@@ -8,7 +8,7 @@ import { formatMilliseconds } from '@/lib/format'
 import { getStatusColor } from '@/lib/request/status-code'
 import { cn } from '@/lib/utils'
 import { SheetTimingPhases } from './_components/sheet-timing-phases'
-import type { SignozTraceSchema } from './schema'
+import type { ColumnFilterSchema, SignozTraceSchema } from './schema'
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
 
@@ -108,7 +108,7 @@ export const filterFields = [
     min: 0,
     max: 5000,
   },
-] satisfies DataTableFilterField<SignozTraceSchema>[]
+] satisfies DataTableFilterField<ColumnFilterSchema>[]
 
 export const sheetFields = [
   {
@@ -191,7 +191,7 @@ export const sheetFields = [
     skeletonClassName: 'w-16',
   },
   {
-    id: 'timingPhases.dns', // REMINDER: cannot be 'timing' as it is a property of the object
+    id: 'timingPhases', // REMINDER: cannot be 'timing' as it is a property of the object
     label: 'Timing Phases',
     type: 'readonly',
     component: props => <SheetTimingPhases latency={props.durationMs} timing={props.timingPhases} />,
@@ -201,10 +201,11 @@ export const sheetFields = [
     id: 'responseHeaders',
     label: 'Headers',
     type: 'readonly',
-    component: props => (
+    component: props => {
+      if (props.responseHeaders && Object.keys(props.responseHeaders).length === 0) return null
       // REMINDER: negative margin to make it look like the header is on the same level of the tab triggers
-      <KVTabs data={props.responseHeaders} className="-mt-[22px]" />
-    ),
+      return <KVTabs data={props.responseHeaders ?? {}} className="-mt-[22px]" />
+    },
     className: 'flex-col items-start w-full gap-1',
   },
 ] satisfies SheetField<SignozTraceSchema, Record<string, unknown>>[]

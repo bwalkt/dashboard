@@ -117,7 +117,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
   },
   {
     id: 'timingPhases.dns',
-    accessorKey: 'timing.dns',
+    accessorKey: 'timingPhases',
     header: 'DNS',
     cell: ({ row }) => {
       const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.dns']
@@ -134,7 +134,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
   },
   {
     id: 'timingPhases.connection',
-    accessorKey: 'timing.connection',
+    accessorKey: 'timingPhases',
     header: 'Connection',
     cell: ({ row }) => {
       const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.connection']
@@ -143,7 +143,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
   },
   {
     id: 'timingPhases.tls',
-    accessorKey: 'timing.tls',
+    accessorKey: 'timingPhases',
     header: 'TLS',
     cell: ({ row }) => {
       const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.tls']
@@ -152,7 +152,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
   },
   {
     id: 'timingPhases.ttfb',
-    accessorKey: 'timing.ttfb',
+    accessorKey: 'timingPhases',
     header: 'TTFB',
     cell: ({ row }) => {
       const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.ttfb']
@@ -161,7 +161,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
   },
   {
     id: 'timingPhases.transfer',
-    accessorKey: 'timing.transfer',
+    accessorKey: 'timingPhases',
     header: 'Transfer',
     cell: ({ row }) => {
       const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.transfer']

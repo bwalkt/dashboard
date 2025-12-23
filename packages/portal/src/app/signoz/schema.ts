@@ -79,7 +79,21 @@ export interface SignozTraceSchema {
   http_host?: string
   http_url?: string
   timingPhases: Record<TimingPhase, number>
-  responseHeaders: Record<string, string>
+  responseHeaders?: Record<string, string>
+}
+
+export interface ColumnFilterSchema {
+  trace_id: string
+  span_id: string
+  serviceName: string
+  name: string // span name/operation
+  durationMs: number
+  date: Date // converted from timestamp for table display
+  responseStatusCode?: number | string // Can be string from API, converted to number in transform
+  timestamp: number // epoch milliseconds
+  http_method?: string
+  http_host?: string
+  http_url?: string
   'timingPhases.dns': number
   'timingPhases.connection': number
   'timingPhases.tls': number
