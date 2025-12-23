@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { headerInfoCache, HeaderInfoCacheService } from "../services/header-info-cache.service.js";
+import { HeaderInfoCacheService, headerInfoCache } from "../services/header-info-cache.service.js";
 
 export async function headerInfoRoutes(
   fastify: FastifyInstance,
