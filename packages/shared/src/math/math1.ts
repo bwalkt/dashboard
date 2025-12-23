@@ -25,8 +25,9 @@ export class Math1 {
     if (this.rngState === undefined) {
       return Math.random()
     }
-    // Linear congruential generator
-    this.rngState = (this.rngState * 1664525 + 1013904223) % 2147483647
+    // Linear congruential generator with parameters for m=2^31-1
+    // Using Park and Miller parameters: a=16807, c=0, m=2147483647
+    this.rngState = (this.rngState * 16807) % 2147483647
     return this.rngState / 2147483647
   }
 

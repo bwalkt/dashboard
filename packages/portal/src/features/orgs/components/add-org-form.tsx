@@ -276,7 +276,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         address: data.address,
         create_user: data.create_new_user
           ? {
-              name: data.name,
+              name: data.contact_name,
               email: data.email,
               email_verified: true, // Auto-verify email for admin-created users
             }

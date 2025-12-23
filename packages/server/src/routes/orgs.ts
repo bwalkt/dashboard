@@ -189,7 +189,9 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
         
-        const resultData = JSON.parse(createOrgResult.rows[0].result);
+        const resultData = typeof createOrgResult.rows[0].result === 'string' 
+          ? JSON.parse(createOrgResult.rows[0].result) 
+          : createOrgResult.rows[0].result;
         const org_id = resultData.org_id;
         const createdUser = resultData.user || null;
         

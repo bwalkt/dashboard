@@ -637,7 +637,7 @@ if 'handle' in org_input and 'name' in org_input and 'status' in org_input and '
     result = {
         'org_id': org_id,
         'org_name': org_name,
-        'org_handle': org_handle
+        'org_handle': org_handle,
         'id': user_data.get('id') if user_result else None,
         'handle': user_data.get('handle') if user_result else None
             
@@ -669,7 +669,7 @@ else:
     user_avatar = create_user_data.get('avatar', '').strip() if create_user_data.get('avatar') else None
     user_phone = create_user_data.get('phone', '').strip() if create_user_data.get('phone') else None
     user_data = create_user_data.get('data', {}) if isinstance(create_user_data.get('data'), dict) else {}
-      if not c_by:
+    if not c_by:
         # create user if not c_by provided
         create_sql = "SELECT pzero.create_user($1::jsonb) as result"
         create_user_input = {
