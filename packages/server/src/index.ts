@@ -15,6 +15,7 @@ import { deviceRoutes } from "./routes/devices.js";
 import { emailRoutes } from "./routes/email.js";
 import { faqRoutes } from "./routes/faq.js";
 import { gatewayRoutes } from "./routes/gateway.js";
+import { headerInfoRoutes } from "./routes/header-info.js";
 import { orgRoutes } from "./routes/orgs.js";
 import { privacyRoutes } from "./routes/privacy.js";
 import { proxyRoutes } from "./routes/proxy.js";
@@ -170,6 +171,7 @@ export default async function (
   await fastify.register(emailRoutes);
   await fastify.register(faqRoutes);
   await fastify.register(gatewayRoutes);
+  await fastify.register(headerInfoRoutes);
   await fastify.register(orgRoutes);
   await fastify.register(proxyRoutes);
   await fastify.register(proxyTargetsRoutes);
