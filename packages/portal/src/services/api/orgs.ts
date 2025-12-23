@@ -1,48 +1,27 @@
 import { api } from '@pzero/shared/api'
+import type {
+  CreateOrganizationWithUserData,
+  CreateOrgData,
+  Org,
+  OrgPlan,
+  OrgStatus,
+  UpdateOrgData,
+} from '@pzero/shared/pzero'
 
-export interface CreateOrgPayload {
-  name: string
-  handle: string
-  dscr?: string
-  status: 'active' | 'inactive' | 'suspended'
-  plan: 'free' | 'starter' | 'pro' | 'enterprise'
-  email: string
-  website?: string
-  phone?: string
-  address?: string
-}
-
-export interface CreateOrgWithUserPayload extends CreateOrgPayload {
-  create_user?: {
-    name: string
-    email: string
-    password?: string
-    email_verified?: boolean
-  }
-  associate_users?: string[]
-}
-
-export interface Org {
-  id: string
-  name: string
-  handle: string
-  description?: string
-  status: 'active' | 'inactive' | 'suspended'
-  plan: 'free' | 'starter' | 'pro' | 'enterprise'
-  email: string
-  website?: string
-  phone?: string
-  address?: string
-  logo_url?: string
-  c_at: string
-  u_at: string
-}
+// Using shared types from @pzero/shared/pzero/orgs
+// All interfaces are now imported from shared package
 
 class OrgsService {
   /**
    * Create a new organization
    */
-  async createOrg(data: CreateOrgPayload): Promise<Org> {
+  async createOrg(
+    data: CreateOrgData & {
+      status: OrgStatus
+      plan: OrgPlan
+      email: string
+    },
+  ): Promise<Org> {
     const response = await api.post<Org>('/api/orgs', data)
     return response
   }
@@ -50,7 +29,7 @@ class OrgsService {
   /**
    * Create an organization with optional user creation
    */
-  async createOrgWithUser(data: CreateOrgWithUserPayload): Promise<{
+  async createOrgWithUser(data: CreateOrganizationWithUserData): Promise<{
     organization: Org
     user?: { id: string; email: string; name: string }
   }> {
@@ -95,8 +74,8 @@ class OrgsService {
   /**
    * Update organization
    */
-  async updateOrg(id: string, data: Partial<CreateOrgPayload>): Promise<Org> {
-    const response = await api.patch<Org>(`/api/orgs/${id}`, data)
+  async updateOrg(id: string, data: UpdateOrgData): Promise<Org> {
+    const response = await api.put<Org>(`/api/orgs/${id}`, data)
     return response
   }
 

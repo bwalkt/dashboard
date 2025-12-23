@@ -8,7 +8,8 @@ describe('Math1', () => {
   let utils: Utils
 
   beforeEach(() => {
-    math1 = new Math1()
+    // Use a fixed seed for deterministic behavior in tests
+    math1 = new Math1(12345)
     utils = new Utils()
   })
 

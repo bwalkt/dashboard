@@ -1,5 +1,5 @@
 
-import { type User } from "@pzero/shared/pzero";
+import { generateHandleFromEmail, type User } from "@pzero/shared/pzero";
 
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -10,14 +10,14 @@ import { userService } from "../services/user.service.js";
 export interface CreateUserPayload {
   name: string;
   email: string;
-  password?: string;
+  handle?: string
   phone?: string;
   email_verified?: boolean;
   phone_verified?: boolean;
   org_id?: string;
-  metadata?: Record<string, any>;
+  tags?: Record<string, any>;
+  data?: Record<string, any>;
 }
-
 
 export interface UserWithVerification extends User {
   verification_token?: string;
@@ -60,6 +60,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
           name: data.name,
           email: data.email,
           email_verified: data.email_verified || false,
+          handle: data.handle ?? generateHandleFromEmail(data.email),
         });
 
         return reply.send(user);
@@ -110,6 +111,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
           name: data.name,
           email: data.email,
           email_verified: true, // Auto-verify for admin-created users
+          handle: data.handle ?? generateHandleFromEmail(data.email)
         });
 
         return reply.send(user);
@@ -231,7 +233,6 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       try {
         const { id } = request.params as { id: string };
 
-        // Soft delete by setting deleted_at timestamp
         const result = await db.pool.query(
           `UPDATE pzero.all_users 
            SET is_del = true

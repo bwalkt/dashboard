@@ -1,6 +1,6 @@
 import type { CreateUserData, GitHubUser, User } from "@pzero/shared";
+import { generateHandleFromEmail } from '@pzero/shared/pzero'
 import { db } from "../config/database.js";
-
 export class UserService {
   /**
    * Get user by GitHub ID
@@ -48,28 +48,21 @@ export class UserService {
     email: string;
     name: string;
     email_verified?: boolean;
+    handle?: string
   }): Promise<User> {
     const createData: CreateUserData = {
       name: userData.name,
       email: userData.email,
       github_id: null,
       avatar: null,
+      handle: userData.handle?? generateHandleFromEmail(userData.email),
       email_verified: userData.email_verified ?? false,
     };
 
     return this.createUser(createData);
   }
 
-  /**
-   * Generate a unique handle from email (username part, max 10 chars)
-   */
-  private generateHandle(email: string): string {
-    // Extract username part from email and sanitize
-    const username = email.split("@")[0];
-    // Remove invalid characters and truncate to 10 chars
-    const handle = username?.replace(/[^A-Za-z0-9._-]/g, "").substring(0, 10);
-    return handle || "user";
-  }
+  
 
   /**
    * Create a new user
@@ -79,11 +72,11 @@ export class UserService {
     schema: string = "pzero",
   ): Promise<User> {
     // Generate handle from email
-    const handle = this.generateHandle(userData.email);
+    const handle = userData.handle ?? generateHandleFromEmail(userData.email);
 
     // Use the create_user postgres function
     const createResult = await db.pool.query(
-      `SELECT ${schema}.create_user($1) as result`,
+      `SELECT ${schema}.create_user($1::jsonb) as result`,
       [
         JSON.stringify({
           name: userData.name,

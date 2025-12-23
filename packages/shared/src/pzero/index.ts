@@ -1,4 +1,3 @@
-export * from './actor.js'
 export * from './devices.js'
 export * from './endpoints.js'
 export * from './history.js'

@@ -224,8 +224,14 @@ function main() {
           if (typeof r === 'string') {
             return r === '∞' || r === '-∞' || r === 'NaN'
           }
-          // Check for numeric infinity/NaN
-          return typeof r === 'number' && !isFinite(r)
+          // Check for numeric infinity/NaN or trivial values
+          if (typeof r === 'number') {
+            // Regenerate for infinity/NaN
+            if (!isFinite(r)) return true
+            // Regenerate for trivial values (0, 1, -1)
+            if (r === 0 || r === 1 || r === -1) return true
+          }
+          return false
         }
 
         // Limit regeneration attempts to prevent infinite loops

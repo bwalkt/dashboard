@@ -1,8 +1,9 @@
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
-import type {
-  AuthenticatedRequest,
-  ErrorResponse,
-  UserResponse,
+import {
+  type AuthenticatedRequest,
+  type ErrorResponse,
+  generateHandleFromEmail,
+  type UserResponse
 } from "@pzero/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { config } from "../config/env.js";
@@ -380,15 +381,17 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     "/auth/register",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { email, name, device } = request.body as {
+        const { email, name, device, handle } = request.body as {
           email: string;
           name?: string;
           device?: any
+          handle?: string
         };
 
         console.log('Registration request received:', {
           email,
           name,
+          handle: handle ?? generateHandleFromEmail(email),
           deviceInfo: device ? {
             id: device.id,
             deviceId: device.deviceId,
@@ -528,11 +531,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
-        const { code: storedCode, name, device } = JSON.parse(registrationData);
+        const { code: storedCode, handle, name, device } = JSON.parse(registrationData);
 
         console.log('Registration verification attempt:', {
           email,
           name,
+          handle: handle ?? generateHandleFromEmail(email),
           hasDevice: !!device,
           deviceDetails: device ? {
             id: device.id,
@@ -560,6 +564,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           email,
           name: name || email.split("@")[0],
           email_verified: true,
+          handle
         });
 
         if (!user) {
