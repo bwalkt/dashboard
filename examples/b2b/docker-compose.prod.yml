@@ -21,15 +21,18 @@ services:
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       # Redis Configuration
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - REDIS_URL=${REDIS_URL}
       # JWT Configuration
       - JWT_SECRET=${JWT_SECRET}
       # Database Configuration
       - DATABASE_PATH=${DATABASE_PATH:-./database.db}
       # OAuth Callback URL
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:1420}
+      - FRONTEND_URL=${FRONTEND_URL:-https://sfdc-example.incmix.com}
       # Authz Service Configuration
       - AUTHZ_SERVICE_URL=${AUTHZ_SERVICE_URL:-http://authz-service:3000}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-sfdc-server-vanilla-prod}
+      - OTEL_SERVICE_VERSION=${OTEL_SERVICE_VERSION:-1.0.0}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     restart: "no"
     volumes:
       - "../../../files/keys:/app/examples/b2b/packages/sfdc-server-vanilla/dist/keys"

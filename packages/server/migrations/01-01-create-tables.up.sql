@@ -627,7 +627,7 @@ CREATE TABLE pzero.all_users (
   LIKE pzero.base_part including ALL,
   avatar text,
   status pzero.user_status DEFAULT 'ACTIVE',
-  online_status pzero.user_online_status DEFAULT 'ACTIVE',
+  online_status pzero.user_online_status DEFAULT 'ONLINE',
   last_seen timestamptz default now(),
   PRIMARY KEY (part, is_act, org_id, id),
   FOREIGN key (id, is_act) REFERENCES pzero.all_auth (id, is_act) ON DELETE CASCADE

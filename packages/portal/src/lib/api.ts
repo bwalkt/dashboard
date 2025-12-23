@@ -82,7 +82,7 @@ async function refreshToken(): Promise<void> {
   refreshPromise = (async () => {
     try {
       const backendUrl = getBackendUrl()
-      debugger
+
       const refreshUrl = backendUrl ? `${backendUrl}/auth/refresh` : '/auth/refresh'
       const response = await fetch(refreshUrl, {
         method: 'POST',
@@ -118,7 +118,6 @@ async function refreshToken(): Promise<void> {
  * @throws ApiError when the request fails due to an HTTP error or network failure
  */
 export async function apiRequest<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
-  debugger
   const backendUrl = getBackendUrl()
   const { baseUrl = backendUrl, body, headers = {}, skipRefresh = false, ...fetchOptions } = options
 

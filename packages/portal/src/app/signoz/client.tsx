@@ -1,11 +1,12 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useQueryStates } from 'nuqs'
 import * as React from 'react'
+import type { DataTableFilterField } from '@/components/data-table/types'
 import { DataTableInfinite } from '@/components/infinite-data-table/data-table-infinite'
 import { useHotKey } from '@/hooks/use-hot-key'
 import { columns } from './columns'
 import { filterFields as defaultFilterFields, sheetFields } from './constants'
-import { dataOptions, summaryOptions } from './query-options'
+import { dataOptions } from './query-options'
 import type { SignozTraceSchema } from './schema'
 import { searchParamsParser } from './search-params'
 
@@ -27,11 +28,13 @@ export function SignozClient() {
 
   // Use infinite query for pagination
   const { data, isFetching, isLoading, fetchNextPage, hasNextPage, refetch } = useInfiniteQuery(dataOptions(search))
-  const { data: summaryData } = useQuery(summaryOptions())
-  console.log('summaryData', summaryData)
   // Flatten all pages into a single array
   const flatData = React.useMemo(() => {
-    return data?.pages?.flatMap(page => page.data ?? []) ?? []
+    return data?.pages?.flatMap(page => page.data.traces ?? []) ?? []
+  }, [data?.pages])
+
+  const summaryData = React.useMemo(() => {
+    return data?.pages?.flatMap(page => page.data.summary ?? []) ?? []
   }, [data?.pages])
 
   // Get metadata from the last page (all pages should have the same total)
@@ -53,7 +56,7 @@ export function SignozClient() {
     ...(httpMethod
       ? [
           {
-            id: 'name',
+            id: 'http_method',
             value: [`HTTP ${httpMethod}`] as string[],
           },
         ]
@@ -83,9 +86,15 @@ export function SignozClient() {
       defaultColumnFilters={defaultColumnFilters}
       defaultColumnSorting={sort ? [sort] : undefined}
       defaultRowSelection={traceId ? { [traceId]: true } : undefined}
-      defaultColumnVisibility={{}}
+      defaultColumnVisibility={{
+        'timingPhases.dns': false,
+        'timingPhases.connection': false,
+        'timingPhases.tls': false,
+        'timingPhases.ttfb': false,
+        'timingPhases.transfer': false,
+      }}
       meta={{}}
-      filterFields={defaultFilterFields}
+      filterFields={defaultFilterFields as DataTableFilterField<SignozTraceSchema>[]}
       sheetFields={sheetFields}
       isFetching={isFetching}
       isLoading={isLoading}
@@ -93,7 +102,7 @@ export function SignozClient() {
       hasNextPage={hasNextPage ?? false}
       fetchPreviousPage={undefined}
       refetch={refetch}
-      chartData={summaryData?.data ?? []}
+      chartData={summaryData ?? []}
       chartDataColumnId="date"
       getRowClassName={() => ''}
       getRowId={row => {

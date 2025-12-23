@@ -33,7 +33,6 @@ export function DataTableSheetContent<TData, TMeta>({
 }: DataTableSheetContentProps<TData, TMeta>) {
   if (!data) return <SheetDetailsContentSkeleton fields={fields} />
 
-  console.log('sheet fields', fields, data)
   return (
     <dl className={cn('divide-y', className)} {...props}>
       {fields.map(field => {

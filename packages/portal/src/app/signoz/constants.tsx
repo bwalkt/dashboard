@@ -2,11 +2,13 @@
 
 import type { HttpMethod } from '@pzero/shared/types'
 import { format } from 'date-fns'
+import { KVTabs } from '@/components/custom/kv-tabs'
 import type { DataTableFilterField, Option, SheetField } from '@/components/data-table/types'
 import { formatMilliseconds } from '@/lib/format'
 import { getStatusColor } from '@/lib/request/status-code'
 import { cn } from '@/lib/utils'
-import type { SignozTraceSchema } from './schema'
+import { SheetTimingPhases } from './_components/sheet-timing-phases'
+import type { SignozColumnFilterSchema, SignozTraceSchema } from './schema'
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
 
@@ -71,7 +73,42 @@ export const filterFields = [
     min: 0,
     max: 60000, // 60 seconds
   },
-] satisfies DataTableFilterField<SignozTraceSchema>[]
+  {
+    label: 'DNS',
+    value: 'timingPhases.dns',
+    type: 'slider',
+    min: 0,
+    max: 5000,
+  },
+  {
+    label: 'Connection',
+    value: 'timingPhases.connection',
+    type: 'slider',
+    min: 0,
+    max: 5000,
+  },
+  {
+    label: 'TLS',
+    value: 'timingPhases.tls',
+    type: 'slider',
+    min: 0,
+    max: 5000,
+  },
+  {
+    label: 'TTFB',
+    value: 'timingPhases.ttfb',
+    type: 'slider',
+    min: 0,
+    max: 5000,
+  },
+  {
+    label: 'Transfer',
+    value: 'timingPhases.transfer',
+    type: 'slider',
+    min: 0,
+    max: 5000,
+  },
+] satisfies DataTableFilterField<SignozColumnFilterSchema>[]
 
 export const sheetFields = [
   {
@@ -152,5 +189,23 @@ export const sheetFields = [
       </>
     ),
     skeletonClassName: 'w-16',
+  },
+  {
+    id: 'timingPhases', // REMINDER: cannot be 'timing' as it is a property of the object
+    label: 'Timing Phases',
+    type: 'readonly',
+    component: props => <SheetTimingPhases latency={props.durationMs} timing={props.timingPhases} />,
+    className: 'flex-col items-start w-full gap-1',
+  },
+  {
+    id: 'responseHeaders',
+    label: 'Headers',
+    type: 'readonly',
+    component: props => {
+      if (props.responseHeaders && Object.keys(props.responseHeaders).length === 0) return null
+      // REMINDER: negative margin to make it look like the header is on the same level of the tab triggers
+      return <KVTabs data={props.responseHeaders ?? {}} className="-mt-[22px]" />
+    },
+    className: 'flex-col items-start w-full gap-1',
   },
 ] satisfies SheetField<SignozTraceSchema, Record<string, unknown>>[]

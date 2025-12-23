@@ -2,7 +2,8 @@ import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import { VALIDATION_HEADER_NAME } from './config/constants.js'
-import { validateEnvironment } from './config/env.js'
+import { config, validateEnvironment } from './config/env.js'
+import { fastifyOtelInstrumentation } from './config/otel.js'
 import { redis } from './config/redis.js'
 import { authRoutes } from './routes/auth.js'
 import { salesforceRoutes } from './routes/salesforce.js'
@@ -11,6 +12,9 @@ import { salesforceRoutes } from './routes/salesforce.js'
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   // Validate environment variables
   validateEnvironment()
+
+  // Remove this - FastifyOtelInstrumentation is now handled by NodeSDK
+  // await fastify.register(fastifyOtelInstrumentation.plugin())
 
   // Initialize Redis with timeout and error handling
   try {
@@ -53,10 +57,27 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
       // Challenge headers sent in responses
       'x-challenge-id',
       'x-challenge',
+      'timing-allow-origin',
     ],
     maxAge: 86400, // Cache preflight response for 1 day
     preflightContinue: false,
     optionsSuccessStatus: 204,
+  })
+
+  // Use the onSend hook to add the Timing-Allow-Origin header
+  fastify.addHook('onSend', (request, reply, payload, done) => {
+    // Check if the request is a cross-origin request and if a specific origin was allowed
+    const origin = request.headers.origin
+    const allowedOrigin = config.FRONTEND_URL // Your specific allowed origin
+
+    if (origin && origin === allowedOrigin) {
+      reply.header('Timing-Allow-Origin', allowedOrigin)
+    }
+
+    // If using a wildcard for Access-Control-Allow-Origin
+    // reply.header('Timing-Allow-Origin', '*');
+
+    done()
   })
 
   // Register cookie plugin for OAuth state management

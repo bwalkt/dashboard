@@ -55,6 +55,7 @@ export interface FacetMetadataSchema {
 }
 
 import type { BaseChartSchema } from '@/components/infinite-data-table/types'
+import { TimingPhase } from '@/lib/request/timing'
 
 export interface TimelineChartSchema extends BaseChartSchema {
   timestamp: number
@@ -77,8 +78,28 @@ export interface SignozTraceSchema {
   http_method?: string
   http_host?: string
   http_url?: string
-  // Additional fields that may come from Signoz API
-  [key: string]: any
+  timingPhases: Record<TimingPhase, number>
+  responseHeaders?: Record<string, string>
+}
+
+export interface SignozColumnFilterSchema {
+  trace_id: string
+  span_id: string
+  serviceName: string
+  name: string // span name/operation
+  durationMs: number
+  date: Date // converted from timestamp for table display
+  responseStatusCode?: number | string // Can be string from API, converted to number in transform
+  timestamp: number // epoch milliseconds
+  http_method?: string
+  http_host?: string
+  http_url?: string
+  'timingPhases.dns': number
+  'timingPhases.connection': number
+  'timingPhases.tls': number
+  'timingPhases.ttfb': number
+  'timingPhases.transfer': number
+  'timingPhases.stalling': number
 }
 
 export interface SignozTraceFilterSchema {

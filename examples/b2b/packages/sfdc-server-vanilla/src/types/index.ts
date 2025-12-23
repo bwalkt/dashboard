@@ -27,4 +27,11 @@ export interface EnvironmentConfig {
   PORT?: number
   FRONTEND_URL: string
   REDIS_URL: string
+  // OpenTelemetry/SigNoz configuration (optional)
+  OTEL_SERVICE_NAME?: string
+  OTEL_SERVICE_VERSION?: string
+  OTEL_EXPORTER_OTLP_ENDPOINT?: string
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT?: string
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT?: string
+  OTEL_RESOURCE_ATTRIBUTES?: string
 }
