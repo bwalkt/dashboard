@@ -13,8 +13,8 @@ export class Math1 {
   private rngState?: number
 
   constructor(seed?: number) {
-    if (seed !== undefined && (!Number.isFinite(seed) || seed < 0)) {
-      throw new Error('Seed must be a non-negative finite number')
+    if (seed !== undefined && (!Number.isFinite(seed) || seed < 1)) {
+      throw new Error('Seed must be a positive finite number (>= 1)')
     }
     this.seed = seed
     this.rngState = seed
