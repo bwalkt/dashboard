@@ -383,7 +383,7 @@ user_data['meta']['c_by'] = c_by if c_by else auth_id
 
 # Step 3: Generate unique handle and create user record
 try:
-    v_notice("Generated handle: {}".format(user_handle))
+    dev_notice("Generated handle: {}".format(user_handle))
     user_sql = """
         INSERT INTO pzero.all_users (id, name, handle, org_id, part, avatar, data)
         VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7::jsonb)
@@ -517,6 +517,7 @@ result = {
     'user_id': user_id,
     'email': email,
     'name': name,
+    'handle': user_handle,
     'org_id': org_id,
     'part': part
 }

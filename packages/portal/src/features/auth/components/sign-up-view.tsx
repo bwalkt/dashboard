@@ -12,7 +12,7 @@ import { useAuthStore } from '@/stores/auth'
 /**
  * Render the sign-up page with a local form and a GitHub OAuth sign-in option.
  *
- * If an authenticated user is present (and auth is not loading), navigates to the previous location or `/dashboard/overview`. Submitting the form prevents default submission and shows an informational toast instructing the user to use GitHub OAuth; no account creation is performed by the form.
+ * If an authenticated user is present (and auth is not loading), navigates to the previous location or `/overview`. Submitting the form prevents default submission and shows an informational toast instructing the user to use GitHub OAuth; no account creation is performed by the form.
  *
  * @returns The sign-up page as a JSX element.
  */
@@ -70,7 +70,7 @@ export default function SignUpViewPage() {
         }
 
         toast.success('Registration successful!')
-        navigate({ to: '/dashboard/overview', replace: true })
+        navigate({ to: '/overview', replace: true })
       } catch (error: any) {
         console.error('Verification error:', error)
         // Extract the error message from the API error

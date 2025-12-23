@@ -105,7 +105,7 @@ export function generateEmailHandle(email: string): string {
   const localPart = email.split('@')[0]
 
   return generateHandle(localPart, {
-    maxLength: 20,
+    maxLength: 10,
     preserveDots: true,
     separator: '_',
   })

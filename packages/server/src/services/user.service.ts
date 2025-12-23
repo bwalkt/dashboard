@@ -76,7 +76,7 @@ export class UserService {
 
     // Use the create_user postgres function
     const createResult = await db.pool.query(
-      `SELECT ${schema}.create_user($1) as result`,
+      `SELECT ${schema}.create_user($1::jsonb) as result`,
       [
         JSON.stringify({
           name: userData.name,

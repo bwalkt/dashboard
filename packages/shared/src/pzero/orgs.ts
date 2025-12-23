@@ -157,8 +157,6 @@ export interface CreateOrganizationWithUserData extends CreateOrgData {
     email: string
     email_verified?: boolean
   }
-  associate_users?: string[]
-  owner_id?: string // Optional as server derives from authenticated user context
 }
 
 export type UpdateOrgData = Partial<Omit<CreateOrgData, 'handle'>> & {
