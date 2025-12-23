@@ -1,5 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { authService } from "../services/auth.service.js";
+import { FilterAuthService } from "../services/filter-auth.service.js";
+import { filterCentrifugoService } from "../services/filter-centrifugo.service.js";
 
 // Centrifugo proxy endpoints for authentication and authorization
 export async function centrifugoRoutes(
@@ -207,6 +209,112 @@ export async function centrifugoRoutes(
       }
     },
   );
+
+  // Special connect proxy for filter authentication
+  fastify.post(
+    "/centrifugo/filter-connect",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as any;
+        const authToken = body.token; // Filter auth token
+        
+        if (!authToken || typeof authToken !== 'object') {
+          return reply.status(200).send({
+            disconnect: {
+              code: 5001,
+              reason: "Filter authentication required",
+            },
+          });
+        }
+
+        // Validate filter authentication token
+        const authResult = await FilterAuthService.validateAuthToken(authToken);
+
+        if (!authResult.valid) {
+          return reply.status(200).send({
+            disconnect: {
+              code: 5002,
+              reason: `Filter authentication failed: ${authResult.reason}`,
+            },
+          });
+        }
+
+        // Generate filter user ID for Centrifugo
+        const filterUserId = `filter:${authToken.filterId}:${Date.now()}`;
+
+        // Allow connection with filter context
+        return reply.status(200).send({
+          result: {
+            user: filterUserId,
+            data: {
+              type: "envoy-wasm-filter",
+              filterId: authToken.filterId,
+              authenticatedAt: Date.now(),
+            },
+          },
+        });
+      } catch (error) {
+        console.error("Filter Centrifugo connect error:", error);
+        return reply.status(200).send({
+          disconnect: {
+            code: 5003,
+            reason: "Filter authentication service error",
+          },
+        });
+      }
+    },
+  );
+
+  // Handle filter messages received via Centrifugo
+  fastify.post(
+    "/centrifugo/filter-message",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as any;
+        const { message, channel, user } = body;
+        
+        if (!message || !channel || !user) {
+          return reply.status(400).send({ error: "Missing required fields" });
+        }
+
+        // Validate that this is from a filter user
+        if (!user.startsWith("filter:")) {
+          return reply.status(403).send({ error: "Unauthorized: not a filter user" });
+        }
+
+        // Validate signed message
+        const validationResult = await FilterAuthService.validateSignedMessage(message);
+        
+        if (!validationResult.valid) {
+          console.warn(`Invalid filter message: ${validationResult.reason}`);
+          return reply.status(400).send({ error: `Invalid message: ${validationResult.reason}` });
+        }
+
+        // Extract filter info from validated message
+        const { filterId, instanceId } = message;
+        
+        // Handle the message
+        await filterCentrifugoService.handleFilterRequest(filterId, instanceId, validationResult.data);
+
+        return reply.status(200).send({ success: true });
+      } catch (error) {
+        console.error("Filter message handling error:", error);
+        return reply.status(500).send({ error: "Message processing failed" });
+      }
+    },
+  );
+
+  // Get filter statistics endpoint
+  fastify.get("/centrifugo/filter-stats", async (request, reply) => {
+    try {
+      const stats = await filterCentrifugoService.getFilterStatistics();
+      return { success: true, stats };
+    } catch (error) {
+      console.error("Error getting filter stats:", error);
+      reply.code(500);
+      return { error: "Failed to get filter statistics" };
+    }
+  });
 }
 
 // Channel authorization helper
@@ -241,11 +349,41 @@ async function authorizeChannelAccess(
       return false;
     }
 
+    // Filter channels (special handling for envoy-wasm-filter)
+    if (channel.startsWith("filter:")) {
+      // Only allow filter communication if it's from authenticated filter
+      return await isAuthenticatedFilter(userId);
+    }
+
     // Default deny for unknown channels
     console.warn(`Unknown channel pattern: ${channel}`);
     return false;
   } catch (error) {
     console.error(`Error authorizing ${action} on channel ${channel}:`, error);
+    return false;
+  }
+}
+
+// Helper function to check if userId represents an authenticated filter
+async function isAuthenticatedFilter(userId: string): Promise<boolean> {
+  try {
+    // Filter user IDs follow pattern: "filter:filterId:timestamp"
+    if (!userId.startsWith("filter:")) {
+      return false;
+    }
+
+    const parts = userId.split(":");
+    if (parts.length < 2) {
+      return false;
+    }
+
+    const filterId = parts[1];
+    
+    // Check if this filter ID is registered and active
+    const activeFilters = await FilterAuthService.getActiveFilters();
+    return activeFilters.some(filter => filter.filterId === filterId && filter.isActive);
+  } catch (error) {
+    console.error("Error checking filter authentication:", error);
     return false;
   }
 }

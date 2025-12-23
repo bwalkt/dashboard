@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+	
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
@@ -28,6 +30,17 @@ func (*pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 	return &httpContext{
 		contextID: contextID,
 	}
+}
+
+func (*pluginContext) OnPluginStart(rootContextID uint32) types.OnPluginStartStatus {
+	// Register this filter instance with the server
+	if err := RegisterFilter(); err != nil {
+		proxywasm.LogErrorf("[WASM Filter] Failed to register filter: %v", err)
+		return types.OnPluginStartStatusFailed
+	}
+	
+	proxywasm.LogInfof("[WASM Filter] Plugin started and registered successfully")
+	return types.OnPluginStartStatusOK
 }
 
 type httpContext struct {
@@ -92,15 +105,15 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 		return types.ActionPause
 	}
 
-	// Not found in cache, make async HTTP call to authz-service
+	// Not found in cache, make async request via Centrifugo
 	// Store challenge headers in context for callback
 	ctx.challengeID = challengeHeaders.ChallengeID
 	ctx.challengeAnswer = challengeHeaders.ChallengeAnswer
 
-	proxywasm.LogInfof("[WASM Filter] Challenge not in cache, validating via authz-service: %s", challengeHeaders.ChallengeID)
-	err = DispatchValidateRequest(challengeHeaders.ChallengeID, challengeHeaders.ChallengeAnswer)
+	proxywasm.LogInfof("[WASM Filter] Challenge not in cache, validating via Centrifugo: %s", challengeHeaders.ChallengeID)
+	err = RequestChallengeValidation(challengeHeaders.ChallengeID, challengeHeaders.ChallengeAnswer)
 	if err != nil {
-		proxywasm.LogErrorf("[WASM Filter] Failed to dispatch validation request: %v", err)
+		proxywasm.LogErrorf("[WASM Filter] Failed to send validation request: %v", err)
 		proxywasm.SendHttpResponse(500, nil, []byte("{\"error\":\"validation service error\"}"), -1)
 		return types.ActionPause
 	}
