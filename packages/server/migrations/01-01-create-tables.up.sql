@@ -91,8 +91,19 @@ CREATE TYPE pzero.org_status AS enum(
   'SUSPENDED',
   'DELETED'
 );
-
-CREATE TYPE pzero.subscriber_tier_level AS enum('FREE', 'PAID-BASIC', 'PAID-ENTERPRISE');
+CREATE TYPE pzero.org_status AS enum(
+  'ACTIVE',
+  'INACTIVE',
+  'DEPRECATED',
+  'PENDING',
+  'REMOVED',
+  'VERIFIED',
+  'UNVERIFIED',
+  'BLOCKED',
+  'SUSPENDED',
+  'DELETED'
+);
+CREATE TYPE pzero.plan AS enum('FREE', 'STARTER', 'PRO','ENTERPRISE');
 
 CREATE DOMAIN pzero.url AS text CHECK (
   value ~ '^(https?|ftp)://(-\.)?([^\s/?\.#-]+\.?)+(/[^\s]*)?$'
@@ -117,6 +128,7 @@ CREATE TYPE pzero.relation_type AS enum(
 CREATE TYPE pzero.billing_freq AS enum(
   'U', -- Usage
   'M', -- Monthly
+  'Q', -- Quarterly
   'Y' -- Yearly
 );
 
@@ -173,11 +185,11 @@ CREATE TABLE pzero.base_table (
   handle pzero.valid_handle NOT NULL
 );
 
-CREATE TABLE uuid_base_table (id uuid NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.base_table);
+CREATE TABLE pzero.uuid_base_table (id uuid NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.base_table);
 
 CREATE TABLE pzero.base_loc_table (loc pzero.location) inherits (pzero.base_table);
 
-CREATE TABLE uuid_base_loc_table (id uuid NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.base_loc_table);
+CREATE TABLE pzero.uuid_base_loc_table (id uuid NOT NULL DEFAULT pzero.gen_id ()) inherits (pzero.base_loc_table);
 
 CREATE TABLE pzero.base_effective_table (eff_from timestamptz, eff_to timestamptz);
 
@@ -539,12 +551,12 @@ CREATE TABLE pzero.all_phones (
 CREATE INDEX idx_pzero_phone_phone ON pzero.all_phones USING gin (phone gin_trgm_ops);
 
 CREATE TABLE pzero.all_orgs (
-  LIKE uuid_base_loc_table including ALL,
+  LIKE pzero.uuid_base_loc_table including ALL,
   LIKE pzero.domain_base including ALL,
   website pzero.domain,
   favicon text,
-  subscriber_tier_level pzero.subscriber_tier_level DEFAULT 'FREE',
-  subscriber_tier_expiry timestamptz,
+  plan pzero.plan DEFAULT 'FREE',
+  plan_expiry timestamptz,
   multi_tenant boolean DEFAULT TRUE,
   part_by pzero.valid_part,
   near_verification boolean DEFAULT FALSE,
@@ -623,7 +635,7 @@ CREATE INDEX idx_pzero_audits_cno ON pzero.audits (part, mmn, cno);
 -- will search for org specific user profile
 -- if not found, then get pzero user
 CREATE TABLE pzero.all_users (
-  LIKE uuid_base_loc_table including ALL,
+  LIKE pzero.uuid_base_loc_table including ALL,
   LIKE pzero.base_part including ALL,
   avatar text,
   status pzero.user_status DEFAULT 'ACTIVE',
@@ -636,7 +648,7 @@ CREATE TABLE pzero.all_users (
 -- Indexes will be created automatically by event trigger
 -- orgs, device and auth are global and not entities part of org
 CREATE TABLE pzero.all_groups (
-  LIKE uuid_base_loc_table including ALL,
+  LIKE pzero.uuid_base_loc_table including ALL,
   LIKE pzero.base_part including ALL,
   PRIMARY KEY (part, is_act, org_id, id),
   FOREIGN key (part, org_id, is_act) REFERENCES pzero.all_orgs (part_by, id, is_act),
@@ -646,7 +658,7 @@ PARTITION BY
   list (is_act);
 
 CREATE TABLE pzero.all_nhs (
-  LIKE uuid_base_loc_table including ALL,
+  LIKE pzero.uuid_base_loc_table including ALL,
   LIKE pzero.base_part including ALL,
   LIKE pzero.domain_base including ALL,
   level smallint NOT NULL DEFAULT 0,
@@ -658,7 +670,7 @@ PARTITION BY
   list (is_act);
 
 CREATE TABLE pzero.all_devices (
-  LIKE uuid_base_loc_table including ALL,
+  LIKE pzero.uuid_base_loc_table including ALL,
   is_primary boolean DEFAULT FALSE,
   type pzero.device_type DEFAULT 'OTHER',
   is_verifier boolean DEFAULT FALSE,
@@ -672,7 +684,7 @@ PARTITION BY
   list (is_act);
 
 CREATE TABLE pzero.all_endpoints (
-  LIKE uuid_base_loc_table including ALL,
+  LIKE pzero.uuid_base_loc_table including ALL,
   LIKE pzero.domain_base including ALL,
   part pzero.valid_part,
   url pzero.domain NOT NULL,
@@ -683,7 +695,7 @@ PARTITION BY
   list (is_act);
 
 CREATE TABLE pzero.all_dirs (
-  LIKE uuid_base_table including ALL,
+  LIKE pzero.uuid_base_table including ALL,
   LIKE pzero.base_part including ALL,
   public boolean NOT NULL DEFAULT FALSE,
   status pzero.dir_status,

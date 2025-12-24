@@ -18,7 +18,7 @@ export interface HandleOptions {
  * This is the main function that other utilities should use
  */
 export function generateHandle(text: string, options: HandleOptions = {}): string {
-  const { maxLength = 50, preserveDots = false, separator = '-', trimSeparators = true } = options
+  const { maxLength = 10, preserveDots = false, separator = '-', trimSeparators = true } = options
 
   if (!text || text.trim() === '') {
     return ''
@@ -54,7 +54,7 @@ export function generateHandle(text: string, options: HandleOptions = {}): strin
     let truncateAt = maxLength
     if (trimSeparators) {
       const lastSeparatorIndex = handle.lastIndexOf(separator, maxLength - 1)
-      if (lastSeparatorIndex > 0 && lastSeparatorIndex > maxLength - 20) {
+      if (lastSeparatorIndex > 0 && lastSeparatorIndex > maxLength - 5) {
         // Only if reasonably close to the end (within 20 chars)
         truncateAt = lastSeparatorIndex
       }
@@ -76,7 +76,7 @@ export function generateHandle(text: string, options: HandleOptions = {}): strin
  */
 export function generateOrgHandle(name: string): string {
   return generateHandle(name, {
-    maxLength: 50,
+    maxLength: 10,
     preserveDots: false,
     separator: '-',
   })
@@ -87,7 +87,7 @@ export function generateOrgHandle(name: string): string {
  */
 export function generateUserHandle(name: string): string {
   return generateHandle(name, {
-    maxLength: 30,
+    maxLength: 10,
     preserveDots: false,
     separator: '-',
   })

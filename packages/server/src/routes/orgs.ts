@@ -1,10 +1,12 @@
-import type { 
-  CreateOrganizationWithUserData,
-  CreateOrgData, 
-  Org, 
-  OrgPlan, 
-  OrgStatus,
-  UpdateOrgData
+import { 
+  type CreateOrganizationWithUserData,
+  type CreateOrgData, 
+  generateHandleFromEmail,
+  generateHandleFromName, 
+  type Org, 
+  type OrgPlan, 
+  type OrgStatus,
+  type UpdateOrgData
 } from "@pzero/shared/pzero";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../config/database.js";
@@ -67,19 +69,19 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           [
             JSON.stringify({
               name: data.name,
-              handle: data.handle,
+              handle: data.handle || generateHandleFromName(data.name),
               website: data.website || "",
               c_by: authenticatedUserId,
+              dscr: data.dscr || "",
+              status: data.status || "ACTIVE",
+              plan: data.plan || "STARTER",
+              email: data.email,
+              phone: data.phone || "",
+              address: data.address || "",
               data: {
-                dscr: data.dscr || "",
-                status: data.status,
-                plan: data.plan,
-                email: data.email,
-                phone: data.phone || "",
-                address: data.address || "",
                 ...data.data,
                 meta: {
-                  uid: authenticatedUserId
+                  c_by: authenticatedUserId
                 }
               }
             }),
@@ -116,7 +118,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // Get a database client for transaction support
-      const client = await db.pool.connect();
+      let client;
       
       try {
         // Start transaction
@@ -132,7 +134,6 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         const authenticatedUserId = (request as any).user?.id;
         if (!authenticatedUserId) {
           console.log('🔥 SERVER: Authentication failed - no user context')
-          await client.query('ROLLBACK');
           return reply.status(401).send({
             error: "Unauthorized",
             message: "Authentication required",
@@ -157,27 +158,35 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         // Prepare the complete payload for the PostgreSQL function
         const requestPayload = {
           name: data.name,
-          handle: data.handle,
+            handle: data.handle || generateHandleFromName(data.name),
           dscr: data.dscr || "",
-          status: data.status,
-          plan: data.plan,
+          status: data.status || "ACTIVE",
+          plan: data.plan || "STARTER",
+          c_by: authenticatedUserId,
           email: data.email || "",
           website: data.website || "",
           phone: data.phone || "",
-          address: data.address || "",
+          address: data.address || "", 
           part_by: data.part_by || "pzero",
+          data: {
+            ...data.data,
+            meta: {
+              c_by: authenticatedUserId
+            }
+          },
           create_user: data.create_user ? {
             name: data.create_user.name,
             email: data.create_user.email,
-            email_verified: data.create_user.email_verified ?? true
+            email_verified: data.create_user.email_verified ?? true,    
+            handle: data.create_user.handle || generateHandleFromEmail(data.create_user.email)
           } : undefined
         };
-        
+        client = await db.pool.connect()
         console.log('🔥 SERVER: Sending payload to pzero.create_user_with_auth:', JSON.stringify(requestPayload, null, 2))
         
         // Send the request payload to the PostgreSQL function
         const createOrgResult = await client.query(
-          `SELECT pzero.create_user_with_auth($1::jsonb) as result`,
+          `SELECT pzero.create_org_with_auth($1::jsonb) as result`,
           [JSON.stringify(requestPayload)],
         );
         
@@ -229,7 +238,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.send(response);
       } catch (error) {
         // Rollback the transaction on error
-        await client.query('ROLLBACK');
+        if (client) await client.query('ROLLBACK');
         
         console.error("❌ SERVER: Create organization with user error:", error);
         console.error("❌ SERVER: Error details:", {
@@ -243,7 +252,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         });
       } finally {
         // Always release the client back to the pool
-        client.release();
+        if (client) client.release();
       }
     },
   );

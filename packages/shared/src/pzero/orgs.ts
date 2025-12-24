@@ -38,13 +38,23 @@ const baseFields = {
   address: { type: 'string' as const, nullable: true },
   status: {
     type: 'string' as const,
-    enum: ['active', 'inactive', 'suspended'] as const,
-    default: 'active',
+    enum: [
+      'ACTIVE',
+      'INACTIVE',
+      'DEPRECATED',
+      'PENDING',
+      'REMOVED',
+      'VERIFIED',
+      'BLOCKED',
+      'SUSPENDED',
+      'DELETED',
+    ] as const,
+    default: 'ACTIVE',
   },
   plan: {
     type: 'string' as const,
-    enum: ['free', 'starter', 'pro', 'enterprise'] as const,
-    default: 'starter',
+    enum: ['FREE', 'STARTER', 'PRO', 'ENTERPRISE'] as const,
+    default: 'STARTER',
   },
 }
 
@@ -77,8 +87,6 @@ export const OrgSchema = createSchema(
     'name',
     'handle',
     'dscr',
-    'c_at',
-    'u_at',
     'data',
     'logo_url',
     'website',
@@ -89,7 +97,7 @@ export const OrgSchema = createSchema(
     'address',
     'tags',
   ],
-  ['id', 'name', 'handle', 'c_at', 'status', 'plan'],
+  ['id', 'name', 'handle', 'website', 'dscr', 'status', 'plan'],
 )
 
 export const CreateOrgDataSchema = createSchema(
@@ -156,6 +164,7 @@ export interface CreateOrganizationWithUserData extends CreateOrgData {
     name: string
     email: string
     email_verified?: boolean
+    handle?: string
   }
 }
 
@@ -175,6 +184,7 @@ export interface OrgWithUserResponse {
     id: string
     email: string
     name: string
+    handle: string
   }
 }
 
@@ -191,7 +201,12 @@ export const validateOrgWithUserResponse = ajv.compile(OrgWithUserResponseSchema
 export const validateOrgsListResponse = ajv.compile(OrgsListResponseSchema)
 
 // Re-export organization-related utilities for convenience
-export { extractCompanyInfoFromDomain, generateOrgHandle } from '../utils/handles.js'
+export {
+  extractCompanyInfoFromDomain,
+  generateHandleFromEmail,
+  generateHandleFromName,
+  generateOrgHandle,
+} from '../utils/handles.js'
 
 export function generateOrgDefaults(website: string): Partial<CreateOrgData> {
   const { domain, companyName, handle } = extractCompanyInfoFromDomain(website)
