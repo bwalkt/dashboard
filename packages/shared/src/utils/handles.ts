@@ -18,7 +18,7 @@ export interface HandleOptions {
  * This is the main function that other utilities should use
  */
 export function generateHandle(text: string, options: HandleOptions = {}): string {
-  const { maxLength = 10, preserveDots = false, separator = '-', trimSeparators = true } = options
+  const { maxLength = 50, preserveDots = false, separator = '-', trimSeparators = true } = options
 
   if (!text || text.trim() === '') {
     return ''
@@ -76,7 +76,7 @@ export function generateHandle(text: string, options: HandleOptions = {}): strin
  */
 export function generateOrgHandle(name: string): string {
   return generateHandle(name, {
-    maxLength: 10,
+    maxLength: 50,
     preserveDots: false,
     separator: '-',
   })
@@ -87,7 +87,7 @@ export function generateOrgHandle(name: string): string {
  */
 export function generateUserHandle(name: string): string {
   return generateHandle(name, {
-    maxLength: 10,
+    maxLength: 30,
     preserveDots: false,
     separator: '-',
   })
@@ -105,7 +105,7 @@ export function generateEmailHandle(email: string): string {
   const localPart = email.split('@')[0]
 
   return generateHandle(localPart, {
-    maxLength: 10,
+    maxLength: 50,
     preserveDots: true,
     separator: '_',
   })
