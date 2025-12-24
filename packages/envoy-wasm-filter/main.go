@@ -33,13 +33,18 @@ func (*pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 }
 
 func (*pluginContext) OnPluginStart(rootContextID uint32) types.OnPluginStartStatus {
-	// Register this filter instance with the server
-	if err := RegisterFilter(); err != nil {
-		proxywasm.LogErrorf("[WASM Filter] Failed to register filter: %v", err)
-		return types.OnPluginStartStatusFailed
+	// Register filter in Redis
+	if err := RegisterFilterInRedis(); err != nil {
+		proxywasm.LogErrorf("[WASM Filter] Failed to register filter in Redis: %v", err)
+		// Continue anyway, registration is not critical
 	}
 	
-	proxywasm.LogInfof("[WASM Filter] Plugin started and registered successfully")
+	// Send initial heartbeat
+	if err := SendHeartbeatToRedis(); err != nil {
+		proxywasm.LogWarnf("[WASM Filter] Failed to send initial heartbeat: %v", err)
+	}
+	
+	proxywasm.LogInfof("[WASM Filter] Plugin started and registered with Redis")
 	return types.OnPluginStartStatusOK
 }
 
@@ -105,15 +110,15 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 		return types.ActionPause
 	}
 
-	// Not found in cache, make async request via Centrifugo
+	// Not found in cache, validate via Redis
 	// Store challenge headers in context for callback
 	ctx.challengeID = challengeHeaders.ChallengeID
 	ctx.challengeAnswer = challengeHeaders.ChallengeAnswer
 
-	proxywasm.LogInfof("[WASM Filter] Challenge not in cache, validating via Centrifugo: %s", challengeHeaders.ChallengeID)
-	err = RequestChallengeValidation(challengeHeaders.ChallengeID, challengeHeaders.ChallengeAnswer)
+	proxywasm.LogInfof("[WASM Filter] Challenge not in cache, validating via Redis: %s", challengeHeaders.ChallengeID)
+	err = ValidateChallengeViaRedis(challengeHeaders.ChallengeID, challengeHeaders.ChallengeAnswer)
 	if err != nil {
-		proxywasm.LogErrorf("[WASM Filter] Failed to send validation request: %v", err)
+		proxywasm.LogErrorf("[WASM Filter] Failed to validate via Redis: %v", err)
 		proxywasm.SendHttpResponse(500, nil, []byte("{\"error\":\"validation service error\"}"), -1)
 		return types.ActionPause
 	}

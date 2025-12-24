@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
+import { filterRedisService } from "../services/filter-redis.service.js";
 import { HeaderInfoCacheService, headerInfoCache } from "../services/header-info-cache.service.js";
 
 export async function headerInfoRoutes(
@@ -14,6 +15,11 @@ export async function headerInfoRoutes(
         is_act: true,
         last_active: Date.now()
       });
+      
+      // Sync to Redis for filter access
+      const activeUsers = await headerInfoCache.getAllActiveUsers();
+      await filterRedisService.updateHeaderInfo('users', activeUsers);
+      
       return { success: true, message: `User ${uid} activated` };
     } catch (error) {
       console.error("Error activating user:", error);
@@ -63,6 +69,10 @@ export async function headerInfoRoutes(
         is_act: true,
         last_active: Date.now()
       });
+      
+      // Sync to Redis for filter access
+      const activeEndpoints = await headerInfoCache.getAllActiveEndpoints();
+      await filterRedisService.updateHeaderInfo('endpoints', activeEndpoints);
 
       return { 
         success: true, 
@@ -121,6 +131,10 @@ export async function headerInfoRoutes(
 
       // Link it to the endpoint
       await headerInfoCache.setEndpointNextFunction(endpointId, functionId);
+      
+      // Sync to Redis for filter access
+      const nextFunctions = await headerInfoCache.getAllNextFunctions();
+      await filterRedisService.updateHeaderInfo('functions', nextFunctions);
 
       return { 
         success: true, 
