@@ -27,7 +27,7 @@ function decodeCoordinates(org: any): any {
 // Geocoding function using Geoapify
 async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
   try {
-    const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || process.env.REACT_APP_GEOAPIFY_API_KEY;
+    const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY;
     
     if (!GEOAPIFY_API_KEY) {
       console.error('GEOAPIFY_API_KEY environment variable is required for geocoding');
@@ -36,14 +36,11 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lon: numb
     
     const params = new URLSearchParams({
       text: address.trim(),
-      limit: '1'
+      limit: '1',
+      apiKey: GEOAPIFY_API_KEY
     });
     
-    const response = await fetch(`https://api.geoapify.com/v1/geocode/search?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${GEOAPIFY_API_KEY}`
-      }
-    });
+    const response = await fetch(`https://api.geoapify.com/v1/geocode/search?${params}`);
     
     if (!response.ok) {
       console.warn('Geoapify geocoding service unavailable:', response.status);
@@ -234,9 +231,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           website: data.website || "",
           phone: data.phone || "",
           part_by: data.part_by || "pzero",
-          // Skip address field for now to test
-          // ...(data.address && { address: data.address }),
-          // Add coordinates if geocoding was successful
+          ...(data.address && { address: data.address }),
           ...(coordinates && {
             lat: coordinates.lat,
             lon: coordinates.lon,
