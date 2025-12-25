@@ -40,7 +40,12 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lon: numb
       apiKey: GEOAPIFY_API_KEY
     });
     
-    const response = await fetch(`https://api.geoapify.com/v1/geocode/search?${params}`);
+    const response = await fetch(`https://api.geoapify.com/v1/geocode/search?${params}`,
+      {
+      headers: {
+        'Authorization': `Bearer ${GEOAPIFY_API_KEY}`
+      }
+    });
     
     if (!response.ok) {
       console.warn('Geoapify geocoding service unavailable:', response.status);
@@ -191,7 +196,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
             message: "Authentication required",
           });
         }
-
+        data.handle = data.handle || generateHandleFromName(data.name);
         // Validate required fields
         if (!data.name || !data.handle || !data.email || !data.status || !data.plan) {
           console.log('🔥 SERVER: Validation failed - missing required fields:', {
