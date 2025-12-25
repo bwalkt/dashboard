@@ -168,6 +168,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           phone: data.phone || "",
           address: data.address || "", 
           part_by: data.part_by || "pzero",
+          c_by: authenticatedUserId,
           data: {
             ...data.data,
             meta: {

@@ -572,8 +572,8 @@ else:
     create_user['data']['meta'] = meta
 
 # Create the organization
-create_org_query = "SELECT pzero.create_org($1::jsonb) as result"
-org_result = plpy.execute(create_org_query, [json.dumps(org_data)])
+create_org_stmt = plpy.prepare("SELECT pzero.create_org($1::jsonb) as result", ["text"])
+org_result = plpy.execute(create_org_stmt, [json.dumps(org_data)])
 if not org_result or len(org_result) == 0:
     plpy.error('Failed to create organization')
 
@@ -581,8 +581,8 @@ org_data_result = json.loads(org_result[0]['result'])
 org_id = org_data_result.get('org_id')
 
 # Create the user
-create_sql = "SELECT pzero.create_user($1::jsonb) as result"
-create_user_result = plpy.execute(create_sql, [json.dumps(create_user)])
+create_user_stmt = plpy.prepare("SELECT pzero.create_user($1::jsonb) as result", ["text"])
+create_user_result = plpy.execute(create_user_stmt, [json.dumps(create_user)])
 if not create_user_result or len(create_user_result) == 0:
     plpy.error('Failed to create user for organization creation')
 user_result = json.loads(create_user_result[0]['result'])
