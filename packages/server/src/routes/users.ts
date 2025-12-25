@@ -141,7 +141,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
           FROM pzero.all_users u
           JOIN pzero.all_auth a ON u.id = a.id
           WHERE u.is_del = false
-          ORDER BY u.created_at DESC
+          ORDER BY u.c_at DESC
         `);
 
         return reply.send(result.rows);
@@ -232,6 +232,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string };
+        
 
         const result = await db.pool.query(
           `UPDATE pzero.all_users 

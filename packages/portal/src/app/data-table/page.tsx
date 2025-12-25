@@ -1,9 +1,9 @@
 import * as React from 'react'
-import { DataTable } from '.'
+import { DataTable } from '@/components/data-table/data-table'
 import { columns } from './columns'
 import { filterFields } from './constants'
 import { data } from './data'
-import { searchParamsCache } from './search-params'
+import { searchParamsCache, searchParamsParser } from './search-params'
 import { Skeleton } from './skeleton'
 
 function PageContent({ search, title, description }: { search: any; title?: string; description?: string }) {
@@ -20,6 +20,7 @@ function PageContent({ search, title, description }: { search: any; title?: stri
           value,
         }))
         .filter(({ value }) => value !== undefined)}
+      searchParamsParser={searchParamsParser}
     />
   )
 }

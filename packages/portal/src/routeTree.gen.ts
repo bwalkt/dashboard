@@ -25,6 +25,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrgsIndexRouteImport } from './routes/orgs/index'
 import { Route as OrgsNewRouteImport } from './routes/orgs/new'
 import { Route as DataTableTreeRouteImport } from './routes/data-table.tree'
+import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
 import { Route as DashboardSignozRouteImport } from './routes/dashboard/signoz'
 import { Route as DashboardProxyTargetsRouteImport } from './routes/dashboard/proxy-targets'
 import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
@@ -114,6 +115,11 @@ const DataTableTreeRoute = DataTableTreeRouteImport.update({
   path: '/data-table/tree',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardUsersRoute = DashboardUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardSignozRoute = DashboardSignozRouteImport.update({
   id: '/signoz',
   path: '/signoz',
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
+  '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/orgs/new': typeof OrgsNewRoute
   '/orgs': typeof OrgsIndexRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByTo {
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
+  '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/orgs/new': typeof OrgsNewRoute
   '/orgs': typeof OrgsIndexRoute
@@ -227,6 +235,7 @@ export interface FileRoutesById {
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
+  '/dashboard/users': typeof DashboardUsersRoute
   '/data-table/tree': typeof DataTableTreeRoute
   '/orgs/new': typeof OrgsNewRoute
   '/orgs/': typeof OrgsIndexRoute
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
     | '/dashboard/logs'
     | '/dashboard/proxy-targets'
     | '/dashboard/signoz'
+    | '/dashboard/users'
     | '/data-table/tree'
     | '/orgs/new'
     | '/orgs'
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/auth/sign-up'
     | '/dashboard/logs'
     | '/dashboard/proxy-targets'
+    | '/dashboard/users'
     | '/data-table/tree'
     | '/orgs/new'
     | '/orgs'
@@ -306,6 +317,7 @@ export interface FileRouteTypes {
     | '/dashboard/logs'
     | '/dashboard/proxy-targets'
     | '/dashboard/signoz'
+    | '/dashboard/users'
     | '/data-table/tree'
     | '/orgs/new'
     | '/orgs/'
@@ -449,6 +461,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DataTableTreeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/users': {
+      id: '/dashboard/users'
+      path: '/users'
+      fullPath: '/dashboard/users'
+      preLoaderRoute: typeof DashboardUsersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/signoz': {
       id: '/dashboard/signoz'
       path: '/signoz'
@@ -526,12 +545,14 @@ interface DashboardRouteChildren {
   DashboardLogsRoute: typeof DashboardLogsRoute
   DashboardProxyTargetsRoute: typeof DashboardProxyTargetsRoute
   DashboardSignozRoute: typeof DashboardSignozRouteWithChildren
+  DashboardUsersRoute: typeof DashboardUsersRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLogsRoute: DashboardLogsRoute,
   DashboardProxyTargetsRoute: DashboardProxyTargetsRoute,
   DashboardSignozRoute: DashboardSignozRouteWithChildren,
+  DashboardUsersRoute: DashboardUsersRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

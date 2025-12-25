@@ -463,7 +463,7 @@ except Exception as e:
 if new_row and new_row.get('is_del') == True:
     # If the is_del column is set to true, log a deletion
     plpy.execute(f"INSERT INTO {schema_name}.all_audits (txn_id, mmn, row_id, is_del) VALUES ({txid}, '{mmn}', '{old_row['id']}', TRUE)")
-    return new_row
+    return "MODIFY"
 
 # Batch audit inserts for better performance
 audit_inserts = []

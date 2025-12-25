@@ -21,7 +21,7 @@ export class UserService {
     schema: string = "pzero",
   ): Promise<User | null> {
     const result = await db.pool.query(
-      `SELECT * FROM ${schema}.auth WHERE id = $1`,
+      `SELECT * FROM ${schema}.all_auth WHERE id = $1`,
       [id],
     );
     return result.rows[0] || null;
@@ -153,14 +153,13 @@ export class UserService {
       fields.push(`name = $${paramCount++}`);
       values.push(userData.name);
     }
-    if (userData.email !== undefined) {
-      fields.push(`email = $${paramCount++}`);
-      values.push(userData.email);
-    }
+   
     if (userData.avatar !== undefined) {
       fields.push(`avatar = $${paramCount++}`);
       values.push(userData.avatar);
     }
+
+    
 
     if (fields.length === 0) {
       // Nothing to update
@@ -170,12 +169,22 @@ export class UserService {
     values.push(id);
 
     const result = await db.pool.query(
-      `UPDATE ${schema}.auth
+      `UPDATE ${schema}.all_users
        SET ${fields.join(", ")}
        WHERE id = $${paramCount}
        RETURNING *`,
       values,
     );
+
+    if(userData.email?.length){
+      const result = await db.pool.query(
+        `UPDATE ${schema}.all_auth
+         SET email = $1
+         WHERE id = $2
+         RETURNING *`,
+        [userData.email, id],
+      );
+    }
 
     return result.rows[0] || null;
   }

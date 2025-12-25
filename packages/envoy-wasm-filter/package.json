@@ -6,7 +6,8 @@
   "scripts": {
     "build": "make build",
     "clean": "make clean",
-    "deps": "go mod download && go mod tidy"
+    "deps": "go mod download && go mod tidy",
+    "postinstall": "pnpm deps"
   },
   "keywords": [
     "envoy",

@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
-import DefaultPage from "@/app/data-table/page";
-import DashboardLayout from "@/pages/dashboard/Layout";
+import DefaultPage from "@/app/users/page";
 
-export const Route = createFileRoute("/users")({
+export const Route = createFileRoute("/dashboard/users")({
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>) => search,
 });
@@ -27,14 +26,12 @@ function RouteComponent() {
   // }
 
   return (
-    <DashboardLayout>
-      <Suspense fallback={<div>Loading...</div>}>
-        <DefaultPage
-          searchParams={Promise.resolve(search as { [key: string]: string | string[] | undefined })}
-          title="Users"
-          description="Manage and monitor user accounts and their activity"
-        />
-      </Suspense>
-    </DashboardLayout>
+    <Suspense fallback={<div>Loading...</div>}>
+      <DefaultPage
+        searchParams={search as { [key: string]: string | string[] | undefined }}
+        title="Users"
+        description="Manage and monitor user accounts and their activity"
+      />
+    </Suspense>
   );
 }

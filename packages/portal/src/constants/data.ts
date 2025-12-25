@@ -47,6 +47,12 @@ export const navItems: NavItem[] = [
     items: [], // Empty array as there are no child items for Organizations
   },
   {
+    title: 'Users Table',
+    url: '/dashboard/users',
+    icon: 'users',
+    shortcut: ['u', 's'],
+  },
+  {
     title: 'Tables',
     url: '#',
     icon: 'table',
