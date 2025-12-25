@@ -95,6 +95,6 @@ export const defaultFormValues: Partial<OrgFormValues> = {
   email: '',
   phone: '',
   website: '',
-  status: 'active',
-  plan: 'starter',
+  status: 'ACTIVE',
+  plan: 'STARTER',
 }

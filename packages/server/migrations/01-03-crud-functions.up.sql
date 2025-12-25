@@ -750,10 +750,10 @@ if org_address or (org_lat is not None and org_lon is not None):
             lon = float(org_lon)
             alt = float(org_alt) if org_alt is not None else 0
             
-            # Store lat/lon as integers (original format) and create WKT for geometry
-            org_location_data['lat'] = int(lat)
-            org_location_data['lon'] = int(lon)
-            org_location_data['alt'] = int(alt)
+            # Store lat/lon with precision (multiply by 10000 to preserve 4 decimal places)
+            org_location_data['lat'] = int(lat * 10000)
+            org_location_data['lon'] = int(lon * 10000)
+            org_location_data['alt'] = int(alt * 10000)
             
             # Create a 3D point with SRID 4326 (WGS84) - always use POINTZ since column expects Z dimension
             org_location_data['geom'] = "SRID=4326;POINTZ({} {} {})".format(lon, lat, alt)

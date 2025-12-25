@@ -45,6 +45,7 @@ const baseFields = {
       'PENDING',
       'REMOVED',
       'VERIFIED',
+      'UNVERIFIED',
       'BLOCKED',
       'SUSPENDED',
       'DELETED',
