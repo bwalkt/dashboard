@@ -16,6 +16,14 @@ import { userService } from "../services/user.service.js";
 // Using shared types from @pzero/shared/pzero/orgs
 // CreateOrgData, Org, CreateOrganizationWithUserData, UpdateOrgData are imported above
 
+// Helper function to decode coordinates stored as fixed-point integers
+function decodeCoordinates(org: any): any {
+  if (org.lat !== null) org.lat = org.lat / 10000;
+  if (org.lon !== null) org.lon = org.lon / 10000;
+  if (org.alt !== null) org.alt = org.alt / 10000;
+  return org;
+}
+
 // Geocoding function using Geoapify
 async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
   try {
@@ -140,7 +148,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           [org_id]
         );
 
-        return reply.send(orgResult.rows[0]);
+        return reply.send(decodeCoordinates(orgResult.rows[0]));
       } catch (error) {
         console.error("Create organization error:", error);
         return reply.status(500).send({
@@ -283,7 +291,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           org: Org;
           user?: { id: string; email: string; name: string };
         } = {
-          org: orgResult.rows[0],
+          org: decodeCoordinates(orgResult.rows[0]),
         };
 
         // Include created user details in response
@@ -337,7 +345,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           ORDER BY c_at DESC
         `);
 
-        return reply.send(result.rows);
+        return reply.send(result.rows.map(decodeCoordinates));
       } catch (error) {
         console.error("Get organizations error:", error);
         return reply.status(500).send({
@@ -373,7 +381,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
 
-        return reply.send(result.rows[0]);
+        return reply.send(decodeCoordinates(result.rows[0]));
       } catch (error) {
         console.error("Get organization error:", error);
         return reply.status(500).send({
@@ -468,7 +476,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
 
-        return reply.send(result.rows[0]);
+        return reply.send(decodeCoordinates(result.rows[0]));
       } catch (error) {
         console.error("Update organization error:", error);
         return reply.status(500).send({
