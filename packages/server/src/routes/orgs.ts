@@ -26,14 +26,16 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lon: numb
       throw new Error('Geoapify API key not configured');
     }
     
-    const encodedAddress = encodeURIComponent(address.trim());
     const params = new URLSearchParams({
       text: address.trim(),
-      limit: '1',
-      apiKey: GEOAPIFY_API_KEY
+      limit: '1'
     });
     
-    const response = await fetch(`https://api.geoapify.com/v1/geocode/search?${params}`);
+    const response = await fetch(`https://api.geoapify.com/v1/geocode/search?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${GEOAPIFY_API_KEY}`
+      }
+    });
     
     if (!response.ok) {
       console.warn('Geoapify geocoding service unavailable:', response.status);
