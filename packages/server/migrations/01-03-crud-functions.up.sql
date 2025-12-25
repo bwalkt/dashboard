@@ -537,43 +537,48 @@ def dev_notice(msg):
 # Parse input
 try:
     org_input = json.loads(p_org) if isinstance(p_org, str) else p_org
-    create_user = org_input.get('create_user', {}) if isinstance(org_input.get('create_user'), dict) else {}
-    c_by = org_input.get('c_by', '').strip() if org_input.get('c_by') else None
-    meta = org_input.get('data', {}).get('meta', {}) if isinstance(org_input.get('data'), dict) else {}
-    if not c_by:
-        data = org_input.get('data', {}) if isinstance(org_input.get('data'), dict) else {}
-        if data and isinstance(data.get('meta'), dict):
-            c_by = data['meta'].get('c_by', '').strip() if data['meta'].get('c_by') else None
-        if not c_by:
-            plpy.error('c_by is required to create organization with user')
-    else:
-        meta['c_by'] = c_by
-    org_data  = org_input.copy()
-    if 'create_user' in org_data:
-        del org_data['create_user']
-    if 'c_by' in org_data:
-        del org_data['c_by']
-    org_data['data'] = org_data.get('data', {}) if isinstance(org_data.get('data'), dict) else {}
-    org_data['data']['meta'] = meta
-    part_by = org_data.get('part_by', '').strip() if org_data.get('part_by') else 'pzero'   
-    if not create_user or not isinstance(create_user, dict):
-        plpy.error('create_user data is required to create organization with user')
-    else:
-        if not create_user.get('name') or not create_user.get('email'):
-            plpy.error('create_user.name and create_user.email are required to create user')
-        if not create_user.get('data'):
-            create_user['data'] = {}
-        create_user['data']['meta'] = meta
-    
-    create_org_query = "SELECT pzero.create_org($1::jsonb) as result"
-    org_result = plpy.execute(create_org_query, [json.dumps(org_data)])
-    if not org_result or len(org_result) == 0:
-        plpy.error('Failed to create organization')
-    
-    org_data_result = json.loads(org_result[0]['result'])
-    org_id = org_data_result.get('org_id')
 except Exception as e:
-    plpy.error('Invalid JSON input for organization creation: {}'.format(str(e)))
+    plpy.error('Invalid JSON input: {}'.format(str(e)))
+
+# Extract and validate inputs
+create_user = org_input.get('create_user', {}) if isinstance(org_input.get('create_user'), dict) else {}
+c_by = org_input.get('c_by', '').strip() if org_input.get('c_by') else None
+meta = org_input.get('data', {}).get('meta', {}) if isinstance(org_input.get('data'), dict) else {}
+if not c_by:
+    data = org_input.get('data', {}) if isinstance(org_input.get('data'), dict) else {}
+    if data and isinstance(data.get('meta'), dict):
+        c_by = data['meta'].get('c_by', '').strip() if data['meta'].get('c_by') else None
+    if not c_by:
+        plpy.error('c_by is required to create organization with user')
+else:
+    meta['c_by'] = c_by
+
+org_data  = org_input.copy()
+if 'create_user' in org_data:
+    del org_data['create_user']
+if 'c_by' in org_data:
+    del org_data['c_by']
+org_data['data'] = org_data.get('data', {}) if isinstance(org_data.get('data'), dict) else {}
+org_data['data']['meta'] = meta
+part_by = org_data.get('part_by', '').strip() if org_data.get('part_by') else 'pzero'
+
+if not create_user or not isinstance(create_user, dict):
+    plpy.error('create_user data is required to create organization with user')
+else:
+    if not create_user.get('name') or not create_user.get('email'):
+        plpy.error('create_user.name and create_user.email are required to create user')
+    if not create_user.get('data'):
+        create_user['data'] = {}
+    create_user['data']['meta'] = meta
+
+# Create the organization
+create_org_query = "SELECT pzero.create_org($1::jsonb) as result"
+org_result = plpy.execute(create_org_query, [json.dumps(org_data)])
+if not org_result or len(org_result) == 0:
+    plpy.error('Failed to create organization')
+
+org_data_result = json.loads(org_result[0]['result'])
+org_id = org_data_result.get('org_id')
 
 # Create the user
 create_sql = "SELECT pzero.create_user($1::jsonb) as result"
