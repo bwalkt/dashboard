@@ -295,7 +295,8 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       console.log('✅ CLIENT: Received successful response from server:', JSON.stringify(result, null, 2))
 
       // Update local store with the created organization
-      await orgsStore.createOrg(result.organization)
+      // The store will be refreshed when the orgs list is fetched again
+      console.log('✅ CLIENT: Organization created successfully:', result.org)
 
       const successMessage = data.create_new_user
         ? `Org created successfully with new user`

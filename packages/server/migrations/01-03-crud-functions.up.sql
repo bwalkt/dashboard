@@ -136,12 +136,18 @@ param_types.append('jsonb')
 # Get column types for the table to handle type casting properly
 try:
     type_query = plpy.prepare("""
-        SELECT column_name, udt_name, data_type
+        SELECT column_name, udt_name, data_type, udt_schema
         FROM information_schema.columns
         WHERE table_schema = 'pzero' AND table_name = $1
     """, ["text"])
-    column_types = {row['column_name']: (row['data_type'], row['udt_name'])
-                    for row in plpy.execute(type_query, [table_name])}
+    column_types = {}
+    for row in plpy.execute(type_query, [table_name]):
+        # For USER-DEFINED types, include schema if present
+        if row['data_type'] == 'USER-DEFINED' and row['udt_schema']:
+            full_type = '{}.{}'.format(row['udt_schema'], row['udt_name'])
+        else:
+            full_type = row['udt_name']
+        column_types[row['column_name']] = (row['data_type'], full_type)
 except Exception as e:
     plpy.warning('Could not fetch column types: {}'.format(str(e)))
     column_types = {}
@@ -152,6 +158,11 @@ if fields and isinstance(fields, dict):
         # Validate column name
         if not key or not isinstance(key, str):
             plpy.warning('Skipping invalid field key: {}'.format(key))
+            continue
+            
+        # Skip fields that don't exist in the table
+        if key not in column_types:
+            dev_notice('Skipping field "{}" - not found in table schema'.format(key))
             continue
 
         # Escape column name immediately to prevent SQL injection
@@ -171,13 +182,22 @@ if fields and isinstance(fields, dict):
             param_types.append('text')
         elif isinstance(value, (dict, list)):
             # For complex types, serialize as JSONB
+            dev_notice("Adding complex field '{}' with value: {}".format(key, json.dumps(value)))
             values.append(json.dumps(value))
             param_types.append('jsonb')
         else:
             # For UUID/id types, pass as text with explicit cast
-            if udt_name in ('id', 'uuid') or data_type == 'USER-DEFINED':
+            if udt_name in ('id', 'uuid'):
                 values.append(str(value))
-                param_types.append(udt_name)
+                param_types.append('text')  # Use text, will be cast in placeholder
+            elif data_type == 'USER-DEFINED':
+                # Handle composite types like location
+                if 'location' in udt_name.lower() and isinstance(value, dict):
+                    values.append(json.dumps(value))
+                    param_types.append('jsonb')
+                else:
+                    values.append(str(value))
+                    param_types.append('text')  # Use text for other USER-DEFINED types, will be cast
             else:
                 # For simple types, pass as text and let PostgreSQL handle casting
                 values.append(str(value))
@@ -190,20 +210,28 @@ safe_table = plpy.execute(safe_table_query, [table_name])[0]['quote_ident']
 # Build SQL with parameter placeholders (columns are already escaped)
 col_str = ', '.join(columns)
 placeholders = []
-for i, (col_key, ptype) in enumerate(zip(column_keys, param_types), 1):
-    if ptype == 'jsonb':
+for i, col_key in enumerate(column_keys, 1):
+    if col_key == 'data':
         placeholders.append('${}::jsonb'.format(i))
-    elif ptype in ('id', 'uuid'):
-        # Get the full type name from column_types using original key
+    else:
+        # Get the column type info
         col_info = column_types.get(col_key, ('text', 'text'))
-        if col_info[1] == 'id':
-            placeholders.append('${}::uuid'.format(i))
-        elif col_info[1] == 'uuid':
+        data_type, full_type = col_info
+        
+        if data_type == 'USER-DEFINED':
+            # Handle geometry types specially
+            if 'geometry' in full_type.lower():
+                placeholders.append('ST_GeomFromText(${}::text)'.format(i))
+            elif 'location' in full_type.lower():
+                # Handle composite types like location - use jsonb_populate_record
+                placeholders.append('jsonb_populate_record(NULL::{}, ${}::jsonb)'.format(full_type, i))
+            else:
+                # Cast to the full type name (includes schema)
+                placeholders.append('${}::{}'.format(i, full_type))
+        elif full_type in ('id', 'uuid'):
             placeholders.append('${}::uuid'.format(i))
         else:
             placeholders.append('${}'.format(i))
-    else:
-        placeholders.append('${}'.format(i))
 
 sql = "INSERT INTO pzero.{} ({}) VALUES ({}) RETURNING id".format(safe_table, col_str, ', '.join(placeholders))
 
@@ -559,6 +587,11 @@ if 'create_user' in org_data:
     del org_data['create_user']
 # Keep c_by in org_data for create_org function
 org_data['c_by'] = c_by
+# Normalize enum values to uppercase
+if 'plan' in org_data and org_data['plan']:
+    org_data['plan'] = org_data['plan'].strip().upper()
+if 'status' in org_data and org_data['status']:
+    org_data['status'] = org_data['status'].strip().upper()
 org_data['data'] = org_data.get('data', {}) if isinstance(org_data.get('data'), dict) else {}
 org_data['data']['meta'] = meta
 part_by = org_data.get('part_by', '').strip() if org_data.get('part_by') else 'pzero'
@@ -688,9 +721,49 @@ if not c_by:
 org_website = org_input.get('website', '').strip() if org_input.get('website') else None
 org_data = org_input.get('data', {}) if isinstance(org_input.get('data'), dict) else {}
 org_part_by = org_input.get('part_by', '').strip() if org_input.get('part_by') else None
-org_status = org_input.get('status','').strip() if org_input.get('status') else 'ACTIVE'
-org_plan = org_input.get('plan','').strip() if org_input.get('plan') else 'STARTER'
+org_status = org_input.get('status','').strip().upper() if org_input.get('status') else 'ACTIVE'
+org_plan = org_input.get('plan','').strip().upper() if org_input.get('plan') else 'STARTER'
 org_address = org_input.get('address', '').strip() if org_input.get('address') else None
+
+# Handle location with PostGIS
+org_location_data = None
+
+# Extract coordinates if provided
+org_lat = org_input.get('lat')
+org_lon = org_input.get('lon')
+org_alt = org_input.get('alt')
+
+# Build location object if we have address or coordinates
+if org_address or (org_lat is not None and org_lon is not None):
+    org_location_data = {
+        'address': org_address,
+        'lat': None,
+        'lon': None,
+        'alt': None,
+        'geom': None
+    }
+    
+    # Create PostGIS point if coordinates are provided
+    if org_lat is not None and org_lon is not None:
+        try:
+            lat = float(org_lat)
+            lon = float(org_lon)
+            alt = float(org_alt) if org_alt is not None else 0
+            
+            # Store lat/lon as integers (original format) and create WKT for geometry
+            org_location_data['lat'] = int(lat)
+            org_location_data['lon'] = int(lon)
+            org_location_data['alt'] = int(alt)
+            
+            # Create a 3D point with SRID 4326 (WGS84) - always use POINTZ since column expects Z dimension
+            org_location_data['geom'] = "SRID=4326;POINTZ({} {} {})".format(lon, lat, alt)
+                
+            dev_notice("Created PostGIS point for coordinates: lat={}, lon={}, alt={}".format(lat, lon, alt))
+        except (ValueError, TypeError):
+            dev_notice("Invalid coordinates provided, skipping geometry")
+    elif org_address:
+        # Address provided without coordinates - geocoding should be handled by the client/API layer
+        dev_notice("Address provided without coordinates: {}".format(org_address))
 
 dev_notice("Creating organization: {} ({})".format(org_name, org_handle))
 
@@ -701,10 +774,16 @@ fields = {
     'status': org_status,
     'plan': org_plan,
     'website': org_website,
-    'address': org_address,
     'dscr': org_dscr,
     'part_by': org_part_by
 }
+
+# Add location if provided (either address or coordinates or both)
+if org_location_data:
+    dev_notice("Location data being added to fields: {}".format(json.dumps(org_location_data)))
+    fields['loc'] = org_location_data
+else:
+    dev_notice("No location data to add")
 org_data = {
         'meta': {
             'c_by': c_by
@@ -731,7 +810,8 @@ try:
     if result and len(result) > 0:
         org_id = result[0]['insert_into_table']
         dev_notice("Organization created: {}".format(org_id))
-        return org_id
+        # Return JSON object instead of just the ID
+        return json.dumps({'org_id': org_id})
     else:
         plpy.error('Failed to create organization')
 

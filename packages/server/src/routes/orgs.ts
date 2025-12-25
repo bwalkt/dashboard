@@ -16,6 +16,48 @@ import { userService } from "../services/user.service.js";
 // Using shared types from @pzero/shared/pzero/orgs
 // CreateOrgData, Org, CreateOrganizationWithUserData, UpdateOrgData are imported above
 
+// Geocoding function using Geoapify
+async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
+  try {
+    const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || process.env.REACT_APP_GEOAPIFY_API_KEY;
+    
+    if (!GEOAPIFY_API_KEY) {
+      console.error('GEOAPIFY_API_KEY environment variable is required for geocoding');
+      throw new Error('Geoapify API key not configured');
+    }
+    
+    const encodedAddress = encodeURIComponent(address.trim());
+    const params = new URLSearchParams({
+      text: address.trim(),
+      limit: '1',
+      apiKey: GEOAPIFY_API_KEY
+    });
+    
+    const response = await fetch(`https://api.geoapify.com/v1/geocode/search?${params}`);
+    
+    if (!response.ok) {
+      console.warn('Geoapify geocoding service unavailable:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    if (data?.features && data.features.length > 0) {
+      const feature = data.features[0];
+      const [lon, lat] = feature.geometry.coordinates;
+      
+      return {
+        lat: parseFloat(lat),
+        lon: parseFloat(lon)
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('Geoapify geocoding failed:', error);
+    return null;
+  }
+}
+
 export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   /**
    * POST /api/orgs
@@ -155,6 +197,18 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
 
+        // Geocode address if provided
+        let coordinates = null;
+        if (data.address && data.address.trim()) {
+          console.log('🔥 SERVER: Geocoding address:', data.address);
+          coordinates = await geocodeAddress(data.address);
+          if (coordinates) {
+            console.log('🔥 SERVER: Geocoded coordinates:', coordinates);
+          } else {
+            console.log('🔥 SERVER: Geocoding failed for address:', data.address);
+          }
+        }
+
         // Prepare the complete payload for the PostgreSQL function
         const requestPayload = {
           name: data.name,
@@ -166,8 +220,15 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           email: data.email || "",
           website: data.website || "",
           phone: data.phone || "",
-          address: data.address || "", 
           part_by: data.part_by || "pzero",
+          // Skip address field for now to test
+          // ...(data.address && { address: data.address }),
+          // Add coordinates if geocoding was successful
+          ...(coordinates && {
+            lat: coordinates.lat,
+            lon: coordinates.lon,
+            alt: 0  // Default altitude
+          }),
           data: {
             ...data.data,
             meta: {
@@ -183,7 +244,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           } : undefined
         };
         client = await db.pool.connect()
-        console.log('🔥 SERVER: Sending payload to pzero.create_user_with_auth:', JSON.stringify(requestPayload, null, 2))
+        console.log('🔥 SERVER: Sending payload to pzero.create_org_with_auth:', JSON.stringify(requestPayload, null, 2))
         
         // Send the request payload to the PostgreSQL function
         const createOrgResult = await client.query(
@@ -217,10 +278,10 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         );
 
         const response: {
-          organization: Org;
+          org: Org;
           user?: { id: string; email: string; name: string };
         } = {
-          organization: orgResult.rows[0],
+          org: orgResult.rows[0],
         };
 
         // Include created user details in response
