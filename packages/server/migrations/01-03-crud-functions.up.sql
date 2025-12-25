@@ -550,14 +550,15 @@ if not c_by:
         c_by = data['meta'].get('c_by', '').strip() if data['meta'].get('c_by') else None
     if not c_by:
         plpy.error('c_by is required to create organization with user')
-else:
-    meta['c_by'] = c_by
+
+# Ensure c_by is in meta
+meta['c_by'] = c_by
 
 org_data  = org_input.copy()
 if 'create_user' in org_data:
     del org_data['create_user']
-if 'c_by' in org_data:
-    del org_data['c_by']
+# Keep c_by in org_data for create_org function
+org_data['c_by'] = c_by
 org_data['data'] = org_data.get('data', {}) if isinstance(org_data.get('data'), dict) else {}
 org_data['data']['meta'] = meta
 part_by = org_data.get('part_by', '').strip() if org_data.get('part_by') else 'pzero'
@@ -680,6 +681,8 @@ if not org_handle:
     plpy.error('handle is required')
 if not org_name:
     plpy.error('name is required')
+if not c_by:
+    plpy.error('c_by is required')
 
 # Extract optional fields
 org_website = org_input.get('website', '').strip() if org_input.get('website') else None
