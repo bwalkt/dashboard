@@ -623,7 +623,7 @@ user_result = json.loads(create_user_result[0]['result'])
 create_sql = "insert into pzero.all_relations (part, uuid1, uuid2, relation) values ($1, $2,  $3, $4)"
 relation_stmt = plpy.prepare(create_sql, ["text", "text", "text", "smallint"])
 relation = create_user.get('relation', 14)  # Default relation value
-plpy.execute(relation_stmt, [part_by, 'O'+org_id, 'U'+user_result.get('user_id'), relation])
+plpy.execute(relation_stmt, [part_by, 'O-'+org_id, 'U-'+user_result.get('user_id'), relation])
 result = {
     'org_id': org_id,
     'user': user_result,
