@@ -587,9 +587,7 @@ CREATE TABLE pzero.all_relations (
   data pzero.data,
   relation smallint NOT NULL,
   PRIMARY KEY (part, is_act, uuid1, uuid2)
-)
-PARTITION BY
-  list (is_act);
+) PARTITION BY list (is_act);
 
 CREATE INDEX idx_pzero_relations_uuid2 ON pzero.relations (part, uuid2);
 
