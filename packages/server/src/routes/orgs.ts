@@ -1,10 +1,12 @@
-import type { 
-  CreateOrganizationWithUserData,
-  CreateOrgData, 
-  Org, 
-  OrgPlan, 
-  OrgStatus,
-  UpdateOrgData
+import { 
+  type CreateOrganizationWithUserData,
+  type CreateOrgData, 
+  generateHandleFromEmail,
+  generateHandleFromName, 
+  type Org, 
+  type OrgPlan, 
+  type OrgStatus,
+  type UpdateOrgData
 } from "@pzero/shared/pzero";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../config/database.js";
@@ -13,6 +15,60 @@ import { userService } from "../services/user.service.js";
 
 // Using shared types from @pzero/shared/pzero/orgs
 // CreateOrgData, Org, CreateOrganizationWithUserData, UpdateOrgData are imported above
+
+// Helper function to decode coordinates stored as fixed-point integers
+function decodeCoordinates(org: any): any {
+  if (org.lat !== null) org.lat = org.lat / 10000;
+  if (org.lon !== null) org.lon = org.lon / 10000;
+  if (org.alt !== null) org.alt = org.alt / 10000;
+  return org;
+}
+
+// Geocoding function using Geoapify
+async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
+  try {
+    const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY;
+    
+    if (!GEOAPIFY_API_KEY) {
+      console.error('GEOAPIFY_API_KEY environment variable is required for geocoding');
+      throw new Error('Geoapify API key not configured');
+    }
+    
+    const params = new URLSearchParams({
+      text: address.trim(),
+      limit: '1',
+      apiKey: GEOAPIFY_API_KEY
+    });
+    
+    const response = await fetch(`https://api.geoapify.com/v1/geocode/search?${params}`,
+      {
+      headers: {
+        'Authorization': `Bearer ${GEOAPIFY_API_KEY}`
+      }
+    });
+    
+    if (!response.ok) {
+      console.warn('Geoapify geocoding service unavailable:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    if (data?.features && data.features.length > 0) {
+      const feature = data.features[0];
+      const [lon, lat] = feature.geometry.coordinates;
+      
+      return {
+        lat: parseFloat(lat),
+        lon: parseFloat(lon)
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('Geoapify geocoding failed:', error);
+    return null;
+  }
+}
 
 export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
   /**
@@ -30,9 +86,12 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           status: OrgStatus;
           plan: OrgPlan;
         };
+        if (!data.handle) {
+          data.handle = generateHandleFromName(data.name);
+        }
 
         // Validate required fields
-        if (!data.name || !data.handle || !data.email || !data.status || !data.plan) {
+        if (!data.name || !data.email || !data.status || !data.plan) {
           return reply.status(400).send({
             error: "Bad Request",
             message: "Name, handle, email, status, and plan are required",
@@ -70,16 +129,16 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
               handle: data.handle,
               website: data.website || "",
               c_by: authenticatedUserId,
+              dscr: data.dscr || "",
+              status: data.status || "ACTIVE",
+              plan: data.plan || "STARTER",
+              email: data.email,
+              phone: data.phone || "",
+              address: data.address || "",
               data: {
-                dscr: data.dscr || "",
-                status: data.status,
-                plan: data.plan,
-                email: data.email,
-                phone: data.phone || "",
-                address: data.address || "",
                 ...data.data,
                 meta: {
-                  uid: authenticatedUserId
+                  c_by: authenticatedUserId
                 }
               }
             }),
@@ -94,7 +153,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           [org_id]
         );
 
-        return reply.send(orgResult.rows[0]);
+        return reply.send(decodeCoordinates(orgResult.rows[0]));
       } catch (error) {
         console.error("Create organization error:", error);
         return reply.status(500).send({
@@ -116,7 +175,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // Get a database client for transaction support
-      const client = await db.pool.connect();
+      let client;
       
       try {
         // Start transaction
@@ -132,13 +191,12 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         const authenticatedUserId = (request as any).user?.id;
         if (!authenticatedUserId) {
           console.log('🔥 SERVER: Authentication failed - no user context')
-          await client.query('ROLLBACK');
           return reply.status(401).send({
             error: "Unauthorized",
             message: "Authentication required",
           });
         }
-
+        data.handle = data.handle || generateHandleFromName(data.name);
         // Validate required fields
         if (!data.name || !data.handle || !data.email || !data.status || !data.plan) {
           console.log('🔥 SERVER: Validation failed - missing required fields:', {
@@ -154,30 +212,57 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
 
+        // Geocode address if provided
+        let coordinates = null;
+        if (data.address && data.address.trim()) {
+          console.log('🔥 SERVER: Geocoding address:', data.address);
+          coordinates = await geocodeAddress(data.address);
+          if (coordinates) {
+            console.log('🔥 SERVER: Geocoded coordinates:', coordinates);
+          } else {
+            console.log('🔥 SERVER: Geocoding failed for address:', data.address);
+          }
+        }
+
         // Prepare the complete payload for the PostgreSQL function
         const requestPayload = {
           name: data.name,
-          handle: data.handle,
+            handle: data.handle || generateHandleFromName(data.name),
           dscr: data.dscr || "",
-          status: data.status,
-          plan: data.plan,
+          status: data.status || "ACTIVE",
+          plan: data.plan || "STARTER",
+          c_by: authenticatedUserId,
           email: data.email || "",
           website: data.website || "",
           phone: data.phone || "",
-          address: data.address || "",
           part_by: data.part_by || "pzero",
+          ...(data.address && { address: data.address }),
+          ...(coordinates && {
+            lat: coordinates.lat,
+            lon: coordinates.lon,
+            alt: 0  // Default altitude
+          }),
+          data: {
+            ...data.data,
+            meta: {
+              c_by: authenticatedUserId
+            }
+          },
           create_user: data.create_user ? {
             name: data.create_user.name,
             email: data.create_user.email,
-            email_verified: data.create_user.email_verified ?? true
+            email_verified: data.create_user.email_verified ?? true,    
+            handle: data.create_user.handle || generateHandleFromEmail(data.create_user.email),
+            relation: data.create_user.relation || 32766,
           } : undefined
         };
-        
-        console.log('🔥 SERVER: Sending payload to pzero.create_user_with_auth:', JSON.stringify(requestPayload, null, 2))
+        client = await db.pool.connect()
+        await client.query('BEGIN')
+        console.log('🔥 SERVER: Sending payload to pzero.create_org_with_auth:', JSON.stringify(requestPayload, null, 2))
         
         // Send the request payload to the PostgreSQL function
         const createOrgResult = await client.query(
-          `SELECT pzero.create_user_with_auth($1::jsonb) as result`,
+          `SELECT pzero.create_org_with_auth($1::jsonb) as result`,
           [JSON.stringify(requestPayload)],
         );
         
@@ -207,10 +292,10 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         );
 
         const response: {
-          organization: Org;
+          org: Org;
           user?: { id: string; email: string; name: string };
         } = {
-          organization: orgResult.rows[0],
+          org: decodeCoordinates(orgResult.rows[0]),
         };
 
         // Include created user details in response
@@ -229,7 +314,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.send(response);
       } catch (error) {
         // Rollback the transaction on error
-        await client.query('ROLLBACK');
+        if (client) await client.query('ROLLBACK');
         
         console.error("❌ SERVER: Create organization with user error:", error);
         console.error("❌ SERVER: Error details:", {
@@ -243,7 +328,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
         });
       } finally {
         // Always release the client back to the pool
-        client.release();
+        if (client) client.release();
       }
     },
   );
@@ -264,7 +349,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           ORDER BY c_at DESC
         `);
 
-        return reply.send(result.rows);
+        return reply.send(result.rows.map(decodeCoordinates));
       } catch (error) {
         console.error("Get organizations error:", error);
         return reply.status(500).send({
@@ -300,7 +385,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
 
-        return reply.send(result.rows[0]);
+        return reply.send(decodeCoordinates(result.rows[0]));
       } catch (error) {
         console.error("Get organization error:", error);
         return reply.status(500).send({
@@ -395,7 +480,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
 
-        return reply.send(result.rows[0]);
+        return reply.send(decodeCoordinates(result.rows[0]));
       } catch (error) {
         console.error("Update organization error:", error);
         return reply.status(500).send({

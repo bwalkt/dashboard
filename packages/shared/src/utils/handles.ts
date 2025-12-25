@@ -54,7 +54,7 @@ export function generateHandle(text: string, options: HandleOptions = {}): strin
     let truncateAt = maxLength
     if (trimSeparators) {
       const lastSeparatorIndex = handle.lastIndexOf(separator, maxLength - 1)
-      if (lastSeparatorIndex > 0 && lastSeparatorIndex > maxLength - 20) {
+      if (lastSeparatorIndex > 0 && lastSeparatorIndex > maxLength - 5) {
         // Only if reasonably close to the end (within 20 chars)
         truncateAt = lastSeparatorIndex
       }
@@ -105,7 +105,7 @@ export function generateEmailHandle(email: string): string {
   const localPart = email.split('@')[0]
 
   return generateHandle(localPart, {
-    maxLength: 10,
+    maxLength: 50,
     preserveDots: true,
     separator: '_',
   })
