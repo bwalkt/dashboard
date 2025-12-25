@@ -84,9 +84,12 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           status: OrgStatus;
           plan: OrgPlan;
         };
+        if (!data.handle) {
+          data.handle = generateHandleFromName(data.name);
+        }
 
         // Validate required fields
-        if (!data.name || !data.handle || !data.email || !data.status || !data.plan) {
+        if (!data.name || !data.email || !data.status || !data.plan) {
           return reply.status(400).send({
             error: "Bad Request",
             message: "Name, handle, email, status, and plan are required",
@@ -121,7 +124,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           [
             JSON.stringify({
               name: data.name,
-              handle: data.handle || generateHandleFromName(data.name),
+              handle: data.handle,
               website: data.website || "",
               c_by: authenticatedUserId,
               dscr: data.dscr || "",
@@ -254,6 +257,7 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
           } : undefined
         };
         client = await db.pool.connect()
+        await client.query('BEGIN')
         console.log('🔥 SERVER: Sending payload to pzero.create_org_with_auth:', JSON.stringify(requestPayload, null, 2))
         
         // Send the request payload to the PostgreSQL function
