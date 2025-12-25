@@ -178,7 +178,8 @@ export async function orgRoutes(fastify: FastifyInstance): Promise<void> {
             name: data.create_user.name,
             email: data.create_user.email,
             email_verified: data.create_user.email_verified ?? true,    
-            handle: data.create_user.handle || generateHandleFromEmail(data.create_user.email)
+            handle: data.create_user.handle || generateHandleFromEmail(data.create_user.email),
+            relation: data.create_user.relation || 32766,
           } : undefined
         };
         client = await db.pool.connect()

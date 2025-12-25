@@ -548,9 +548,11 @@ try:
             plpy.error('c_by is required to create organization with user')
     else:
         meta['c_by'] = c_by
-    org_data  = org_input
-    delete org_input['create_user']
-    delete org_input['c_by']
+    org_data  = org_input.copy()
+    if 'create_user' in org_data:
+        del org_data['create_user']
+    if 'c_by' in org_data:
+        del org_data['c_by']
     org_data['data'] = org_data.get('data', {}) if isinstance(org_data.get('data'), dict) else {}
     org_data['data']['meta'] = meta
     part_by = org_data.get('part_by', '').strip() if org_data.get('part_by') else 'pzero'   
@@ -563,6 +565,7 @@ try:
             create_user['data'] = {}
         create_user['data']['meta'] = meta
     
+    create_org_query = "SELECT pzero.create_org($1::jsonb) as result"
     org_result = plpy.execute(create_org_query, [json.dumps(org_data)])
     if not org_result or len(org_result) == 0:
         plpy.error('Failed to create organization')
@@ -572,23 +575,16 @@ try:
 except Exception as e:
     plpy.error('Invalid JSON input for organization creation: {}'.format(str(e)))
 
-if not isinstance(user_input, dict):
-    plpy.error('Input must be a JSON object')
-
-# Check if this is an org creation request with optional user
-
-if not create_user.get('name') or not create_user.get('email'):
-    plpy.error('create_user.name and create_user.email are required to create user')
-    
+# Create the user
 create_sql = "SELECT pzero.create_user($1::jsonb) as result"
-create_user_result = plpy.execute(create_sql, [json.dumps(create_user_input)])
+create_user_result = plpy.execute(create_sql, [json.dumps(create_user)])
 if not create_user_result or len(create_user_result) == 0:
     plpy.error('Failed to create user for organization creation')
 user_result = json.loads(create_user_result[0]['result'])
 create_sql = "insert into pzero.all_relations (part, uuid1, uuid2, relation) values ($1, $2,  $3, $4)"
 relation_stmt = plpy.prepare(create_sql, ["text", "text", "text", "smallint"])
 relation = create_user.get('relation', 14)  # Default relation value
-plpy.execute(relation_stmt, [part_by, 'O'+org_id, 'U'+user_result.get('user_id'), ])
+plpy.execute(relation_stmt, [part_by, 'O'+org_id, 'U'+user_result.get('user_id'), relation])
 result = {
     'org_id': org_id,
     'user': user_result,

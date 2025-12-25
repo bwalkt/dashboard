@@ -165,6 +165,7 @@ export interface CreateOrganizationWithUserData extends CreateOrgData {
     email: string
     email_verified?: boolean
     handle?: string
+    relation?: number
   }
 }
 
@@ -185,6 +186,7 @@ export interface OrgWithUserResponse {
     email: string
     name: string
     handle: string
+    relation: number
   }
 }
 
