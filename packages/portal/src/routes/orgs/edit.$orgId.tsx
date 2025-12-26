@@ -1,6 +1,7 @@
 import type { Org } from '@pzero/shared/pzero'
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { OrgDrawer } from '@/features/orgs/components/org-drawer'
 import { orgData } from '@/features/orgs/data'
@@ -60,13 +61,16 @@ function EditOrgPageWithLayout() {
     navigate({ to: '/orgs' })
   }
 
-  const handleUpdate = (updatedOrg: Org) => {
+  const handleUpdate = async (updatedOrg: Org) => {
     setOrg(updatedOrg)
     // Only refresh from API if not using fallback data
     if (!useFallback) {
-      orgsStore.fetchOrgs().catch(error => {
+      try {
+        await orgsStore.fetchOrgs()
+      } catch (error) {
         console.error('Failed to refresh orgs list:', error)
-      })
+        toast.error('Failed to refresh organizations list')
+      }
     }
     navigate({ to: '/orgs' })
   }

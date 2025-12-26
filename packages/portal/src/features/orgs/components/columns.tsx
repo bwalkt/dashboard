@@ -40,7 +40,9 @@ function ActionsCell({ row }: { row: Row<Org> }) {
         logo_url: org.logo_url,
         status: org.status,
         plan: org.plan,
+        dscr: org.dscr,
       }
+      // @ts-ignore
       await orgsStore.createOrg(duplicate)
       toast.success(`Organization "${org.name}" duplicated successfully`)
       await orgsStore.fetchOrgs()

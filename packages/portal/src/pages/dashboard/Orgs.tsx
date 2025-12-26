@@ -11,7 +11,8 @@ import { useOrgsStore } from '@/stores/orgs'
 export default function OrgsPage() {
   const navigate = useNavigate()
   const columns = createColumns()
-  const orgsStore = useOrgsStore()
+  const orgs = useOrgsStore(state => state.orgs)
+  const fetchOrgs = useOrgsStore(state => state.fetchOrgs)
   const [useFallback, setUseFallback] = React.useState(false)
   const [isInitialized, setIsInitialized] = React.useState(false)
   const initialized = React.useRef(false)
@@ -22,21 +23,20 @@ export default function OrgsPage() {
     initialized.current = true
 
     // Set fallback immediately if there's no valid orgs array
-    if (!Array.isArray(orgsStore.orgs)) {
+    if (!Array.isArray(orgs)) {
       setUseFallback(true)
       setIsInitialized(true)
       return
     }
 
-    orgsStore
-      .fetchOrgs()
+    fetchOrgs()
       .then(() => setIsInitialized(true))
       .catch(error => {
         console.error('Failed to fetch orgs from API, using mock data:', error)
         setUseFallback(true)
         setIsInitialized(true)
       })
-  }, [orgsStore])
+  }, [orgs, fetchOrgs])
 
   const AddOrgButton = () => (
     <Button onClick={() => navigate({ to: '/orgs/new' })}>
@@ -47,7 +47,7 @@ export default function OrgsPage() {
 
   // Use API data if available, otherwise fallback to mock data
   // Always ensure data is an array to prevent DataTable crashes
-  const data = useFallback ? orgData : orgsStore.orgs || []
+  const data = useFallback ? orgData : orgs || []
 
   // Show loading state until we have valid data
   if (!isInitialized) {
