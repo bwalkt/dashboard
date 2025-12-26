@@ -2,6 +2,7 @@ import type { Org } from '@pzero/shared/pzero'
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { OrgDrawer } from '@/features/orgs/components/org-drawer'
 import { orgData } from '@/features/orgs/data'
 import DashboardLayout from '@/pages/dashboard/Layout'
@@ -73,9 +74,7 @@ function EditOrgPageWithLayout() {
     return (
       <ProtectedRoute>
         <DashboardLayout>
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
+          <LoadingSpinner />
         </DashboardLayout>
       </ProtectedRoute>
     )

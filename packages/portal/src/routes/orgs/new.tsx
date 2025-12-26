@@ -18,8 +18,12 @@ function NewOrgPageWithLayout() {
     navigate({ to: '/orgs' })
   }
 
-  const handleAdd = (newOrg: Org) => {
-    orgsStore.fetchOrgs() // Refresh the list
+  const handleAdd = async (_newOrg: Org) => {
+    try {
+      await orgsStore.fetchOrgs() // Refresh the list
+    } catch (error) {
+      console.error('Failed to refresh orgs list:', error)
+    }
     navigate({ to: '/orgs' })
   }
 

@@ -2,8 +2,8 @@ import { useNavigate } from '@tanstack/react-router'
 import { PlusIcon } from 'lucide-react'
 import React from 'react'
 import { DataTable } from '@/app/data-table'
-import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { createColumns } from '@/features/orgs/components/columns'
 import { filterFields } from '@/features/orgs/constants'
 import { orgData } from '@/features/orgs/data'
@@ -15,9 +15,13 @@ export default function OrgsPage() {
   const orgsStore = useOrgsStore()
   const [useFallback, setUseFallback] = React.useState(false)
   const [isInitialized, setIsInitialized] = React.useState(false)
+  const initialized = React.useRef(false)
 
   // Fetch orgs when component mounts
   React.useEffect(() => {
+    if (initialized.current) return
+    initialized.current = true
+
     // Set fallback immediately if there's no valid orgs array
     if (!Array.isArray(orgsStore.orgs)) {
       setUseFallback(true)
@@ -33,7 +37,7 @@ export default function OrgsPage() {
         setUseFallback(true)
         setIsInitialized(true)
       })
-  }, []) // Remove orgsStore dependency to prevent infinite loop
+  }, [orgsStore])
 
   const AddOrgButton = () => (
     <Button onClick={() => navigate({ to: '/orgs/new' })}>
@@ -48,11 +52,7 @@ export default function OrgsPage() {
 
   // Show loading state until we have valid data
   if (!isInitialized) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (

@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { OrgFormValues } from '../utils/form-schema'
 import { SimpleEditForm } from './simple-edit-form'
 
 interface EditOrgDialogProps {
@@ -30,12 +31,12 @@ export function EditOrgDialog({ org, onUpdate, trigger, open: externalOpen, onOp
   const open = externalOpen !== undefined ? externalOpen : internalOpen
   const setOpen = onOpenChange || setInternalOpen
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: OrgFormValues) => {
     setLoading(true)
     try {
       const updateData: UpdateOrgData = {
         name: values.name,
-        handle: values.handle,
+        // handle is omitted - immutable after creation
         dscr: values.dscr,
         email: values.email,
         phone: values.phone,
