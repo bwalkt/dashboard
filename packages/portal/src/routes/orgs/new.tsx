@@ -15,7 +15,8 @@ function NewOrgPageWithLayout() {
   const navigate = useNavigate()
   const orgsStore = useOrgsStore()
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    await orgsStore.fetchOrgs() // Refresh the list
     navigate({ to: '/orgs' })
   }
 
