@@ -4,6 +4,7 @@ import { DataTable } from '@/app/data-table'
 import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { createColumns } from '@/features/orgs/components/columns'
+import { OrgDrawer } from '@/features/orgs/components/org-drawer'
 import { filterFields } from '@/features/orgs/constants'
 import { orgData } from '@/features/orgs/data'
 import { useOrgsStore } from '@/stores/orgs'
@@ -23,10 +24,14 @@ export default function OrgsPage() {
   }, []) // Remove orgsStore dependency to prevent infinite loop
 
   const AddOrgButton = () => (
-    <Button onClick={() => navigate({ to: '/orgs/new' })}>
-      <Icons.add className="mr-2 h-4 w-4" />
-      Add Organization
-    </Button>
+    <OrgDrawer
+      onAdd={newOrg => {
+        // Refresh the org list
+        if (!useFallback) {
+          orgsStore.fetchOrgs()
+        }
+      }}
+    />
   )
 
   // Use API data if available, otherwise fallback to mock data

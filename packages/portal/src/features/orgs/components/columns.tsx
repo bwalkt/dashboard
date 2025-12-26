@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useOrgsStore } from '@/stores/orgs'
-import { EditOrgDialog } from './edit-org-dialog'
+import { OrgDrawer } from './org-drawer'
 
 export const createColumns = (): ColumnDef<Org>[] => {
   const navigate = useNavigate()
@@ -146,7 +146,7 @@ export const createColumns = (): ColumnDef<Org>[] => {
 
         return (
           <div className="flex items-center gap-2">
-            <EditOrgDialog
+            <OrgDrawer
               org={org}
               open={editDialogOpen}
               onOpenChange={setEditDialogOpen}
