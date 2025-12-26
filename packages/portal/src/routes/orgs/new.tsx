@@ -1,11 +1,9 @@
 import type { Org } from '@pzero/shared/pzero'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { toast } from 'sonner'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { OrgDrawer } from '@/features/orgs/components/org-drawer'
 import DashboardLayout from '@/pages/dashboard/Layout'
 import OrgsPage from '@/pages/dashboard/Orgs'
-import { useOrgsStore } from '@/stores/orgs'
 
 export const Route = createFileRoute('/orgs/new')({
   component: NewOrgPageWithLayout,
@@ -13,20 +11,12 @@ export const Route = createFileRoute('/orgs/new')({
 
 function NewOrgPageWithLayout() {
   const navigate = useNavigate()
-  const orgsStore = useOrgsStore()
 
-  const handleClose = async () => {
-    await orgsStore.fetchOrgs() // Refresh the list
+  const handleClose = () => {
     navigate({ to: '/orgs' })
   }
 
-  const handleAdd = async (_newOrg: Org) => {
-    try {
-      await orgsStore.fetchOrgs() // Refresh the list
-    } catch (error) {
-      console.error('Failed to refresh orgs list:', error)
-      toast.error('List may be outdated. Try refreshing the page.')
-    }
+  const handleAdd = (_newOrg: Org) => {
     navigate({ to: '/orgs' })
   }
 

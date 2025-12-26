@@ -87,9 +87,6 @@ function ActionsCell({ row }: { row: Row<Org> }) {
 }
 
 export const createColumns = (): ColumnDef<Org>[] => {
-  const navigate = useNavigate()
-  const orgsStore = useOrgsStore()
-
   return [
     {
       id: 'select',
