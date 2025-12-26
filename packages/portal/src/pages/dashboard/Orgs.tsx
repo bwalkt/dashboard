@@ -3,7 +3,6 @@ import { PlusIcon } from 'lucide-react'
 import React from 'react'
 import { DataTable } from '@/app/data-table'
 import { Button } from '@/components/ui/button'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { createColumns } from '@/features/orgs/components/columns'
 import { filterFields } from '@/features/orgs/constants'
 import { orgData } from '@/features/orgs/data'
@@ -52,7 +51,11 @@ export default function OrgsPage() {
 
   // Show loading state until we have valid data
   if (!isInitialized) {
-    return <LoadingSpinner />
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    )
   }
 
   return (

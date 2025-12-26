@@ -44,6 +44,7 @@ export function ConfirmationDialog({
       onOpenChange(false)
     } catch (error) {
       console.error('Confirmation action failed:', error)
+      throw error
     } finally {
       setIsLoading(false)
     }
