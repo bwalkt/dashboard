@@ -8,6 +8,16 @@ import { filterFields } from '@/features/orgs/constants'
 import { orgData } from '@/features/orgs/data'
 import { useOrgsStore } from '@/stores/orgs'
 
+const AddOrgButton = () => {
+  const navigate = useNavigate()
+  return (
+    <Button onClick={() => navigate({ to: '/orgs/new' })}>
+      <PlusIcon className="mr-2 h-4 w-4" />
+      Add Organization
+    </Button>
+  )
+}
+
 export default function OrgsPage() {
   const navigate = useNavigate()
   const columns = createColumns()
@@ -27,13 +37,6 @@ export default function OrgsPage() {
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const AddOrgButton = () => (
-    <Button onClick={() => navigate({ to: '/orgs/new' })}>
-      <PlusIcon className="mr-2 h-4 w-4" />
-      Add Organization
-    </Button>
-  )
 
   // Use API data if available, otherwise fallback to mock data
   // Always ensure data is an array to prevent DataTable crashes
