@@ -1,6 +1,7 @@
+import type { Org } from '@pzero/shared/pzero'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
-import { AddOrgForm } from '@/features/orgs/components/add-org-form'
+import { OrgDrawer } from '@/features/orgs/components/org-drawer'
 import DashboardLayout from '@/pages/dashboard/Layout'
 import OrgsPage from '@/pages/dashboard/Orgs'
 
@@ -15,11 +16,21 @@ function NewOrgPageWithLayout() {
     navigate({ to: '/orgs' })
   }
 
+  const handleAdd = (_newOrg: Org) => {
+    navigate({ to: '/orgs' })
+  }
+
   return (
     <ProtectedRoute>
       <DashboardLayout>
         <OrgsPage />
-        <AddOrgForm open={true} onOpenChange={handleClose} asPage={false} />
+        <OrgDrawer
+          open={true}
+          onOpenChange={open => {
+            if (!open) handleClose()
+          }}
+          onAdd={handleAdd}
+        />
       </DashboardLayout>
     </ProtectedRoute>
   )

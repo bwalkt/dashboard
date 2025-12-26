@@ -16,75 +16,47 @@ export interface OrgFormValues {
 // Use shared validator from @pzero/shared/pzero/orgs
 const validateOrg = validateCreateOrgData
 
-export const orgResolver = async (values: OrgFormValues, context: any, options: ResolverOptions<OrgFormValues>) => {
-  const isValid = validateOrg(values)
-  const result = { success: isValid, errors: isValid ? [] : validateOrg.errors }
+export const orgResolver = (values: OrgFormValues, context: any, options: ResolverOptions<OrgFormValues>) => {
+  try {
+    // Simple validation for required fields
+    const errors: FieldErrors = {}
 
-  if (result.success) {
+    if (!values.name || values.name.trim() === '') {
+      errors.name = { type: 'required', message: 'Org name is required' }
+    }
+
+    if (!values.handle || values.handle.trim() === '') {
+      errors.handle = { type: 'required', message: 'Handle is required' }
+    }
+
+    if (!values.status) {
+      errors.status = { type: 'required', message: 'Status is required' }
+    }
+
+    if (!values.plan) {
+      errors.plan = { type: 'required', message: 'Plan is required' }
+    }
+
+    if (values.email && !values.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      errors.email = { type: 'format', message: 'Please enter a valid email address' }
+    }
+
+    if (values.website && !values.website.match(/^https?:\/\/.+/)) {
+      errors.website = { type: 'format', message: 'Please enter a valid URL' }
+    }
+
+    const hasErrors = Object.keys(errors).length > 0
+
     return {
-      values,
-      errors: {},
+      values: hasErrors ? {} : values,
+      errors,
     }
-  }
-
-  const errors: FieldErrors = {}
-
-  if (result.errors) {
-    for (const error of result.errors) {
-      const fieldPath = error.field.replace(/^\//g, '').replace(/\//g, '.')
-
-      let message = 'Invalid value'
-
-      if (fieldPath === 'name') {
-        if (error.code === 'minLength') {
-          message = 'Org name is required'
-        }
-      } else if (fieldPath === 'handle') {
-        if (error.code === 'minLength') {
-          message = 'Handle is required'
-        } else if (error.code === 'pattern') {
-          message = 'Handle must contain only lowercase letters, numbers, and hyphens'
-        }
-      } else if (fieldPath === 'email') {
-        if (error.code === 'format') {
-          message = 'Please enter a valid email address'
-        }
-      } else if (fieldPath === 'website') {
-        if (error.code === 'format') {
-          message = 'Please enter a valid URL'
-        }
-      } else if (fieldPath === 'status') {
-        if (error.code === 'enum') {
-          message = 'Please select a valid status'
-        }
-      } else if (fieldPath === 'plan') {
-        if (error.code === 'enum') {
-          message = 'Please select a valid plan'
-        }
-      }
-
-      const pathParts = fieldPath.split('.')
-      let current = errors
-
-      for (let i = 0; i < pathParts.length - 1; i++) {
-        const part = pathParts[i]
-        if (!current[part]) {
-          current[part] = {}
-        }
-        current = current[part] as any
-      }
-
-      const lastPart = pathParts[pathParts.length - 1]
-      current[lastPart] = {
-        type: error.code || 'validation',
-        message,
-      }
+  } catch (error) {
+    console.error('Form validation error:', error)
+    return {
+      values: {},
+      errors: { root: { type: 'validation', message: 'Form validation failed' } },
     }
-  }
-
-  return {
-    values: {},
-    errors,
   }
 }
 
