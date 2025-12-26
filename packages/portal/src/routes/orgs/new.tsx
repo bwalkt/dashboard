@@ -1,5 +1,6 @@
 import type { Org } from '@pzero/shared/pzero'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { OrgDrawer } from '@/features/orgs/components/org-drawer'
 import DashboardLayout from '@/pages/dashboard/Layout'
@@ -23,6 +24,7 @@ function NewOrgPageWithLayout() {
       await orgsStore.fetchOrgs() // Refresh the list
     } catch (error) {
       console.error('Failed to refresh orgs list:', error)
+      toast.error('List may be outdated. Try refreshing the page.')
     }
     navigate({ to: '/orgs' })
   }

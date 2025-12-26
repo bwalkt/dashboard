@@ -17,6 +17,7 @@ function ActionsCell({ row }: { row: Row<Org> }) {
   const navigate = useNavigate()
   const orgsStore = useOrgsStore()
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = React.useState(false)
   const org = row.original
 
   const handleDelete = async () => {
@@ -64,13 +65,22 @@ function ActionsCell({ row }: { row: Row<Org> }) {
         variant="destructive"
         onConfirm={handleDelete}
       />
+      <ConfirmationDialog
+        open={duplicateDialogOpen}
+        onOpenChange={setDuplicateDialogOpen}
+        title="Duplicate Organization"
+        description={`Create a copy of "${org.name}"?`}
+        confirmText="Duplicate"
+        cancelText="Cancel"
+        onConfirm={handleCopy}
+      />
       <DataTableRowActions
         row={row}
         onEdit={() => {
           navigate({ to: '/orgs/edit/$orgId', params: { orgId: org.id } })
         }}
         onDelete={() => setDeleteDialogOpen(true)}
-        onCopy={handleCopy}
+        onCopy={() => setDuplicateDialogOpen(true)}
       />
     </div>
   )

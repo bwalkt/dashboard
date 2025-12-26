@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { cn } from '@/lib/utils'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,9 +70,9 @@ export function ConfirmationDialog({
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={isLoading}
-            className={
-              variant === 'destructive' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''
-            }
+            className={cn(
+              variant === 'destructive' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+            )}
           >
             {isLoading ? 'Processing...' : confirmText}
           </AlertDialogAction>

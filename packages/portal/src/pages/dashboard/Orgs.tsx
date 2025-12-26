@@ -15,20 +15,9 @@ export default function OrgsPage() {
   const fetchOrgs = useOrgsStore(state => state.fetchOrgs)
   const [useFallback, setUseFallback] = React.useState(false)
   const [isInitialized, setIsInitialized] = React.useState(false)
-  const initialized = React.useRef(false)
 
   // Fetch orgs when component mounts
   React.useEffect(() => {
-    if (initialized.current) return
-    initialized.current = true
-
-    // Set fallback immediately if there's no valid orgs array
-    if (!Array.isArray(orgs)) {
-      setUseFallback(true)
-      setIsInitialized(true)
-      return
-    }
-
     fetchOrgs()
       .then(() => setIsInitialized(true))
       .catch(error => {
@@ -36,7 +25,8 @@ export default function OrgsPage() {
         setUseFallback(true)
         setIsInitialized(true)
       })
-  }, [orgs, fetchOrgs])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const AddOrgButton = () => (
     <Button onClick={() => navigate({ to: '/orgs/new' })}>
