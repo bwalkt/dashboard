@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useOrgsStore } from '@/stores/orgs'
-import { OrgDrawer } from './org-drawer'
 
 export const createColumns = (): ColumnDef<Org>[] => {
   const navigate = useNavigate()
@@ -141,24 +140,12 @@ export const createColumns = (): ColumnDef<Org>[] => {
       id: 'actions',
       header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => {
-        const [org, setOrg] = React.useState(row.original)
-        const [editDialogOpen, setEditDialogOpen] = React.useState(false)
-
         return (
           <div className="flex items-center gap-2">
-            <OrgDrawer
-              org={org}
-              open={editDialogOpen}
-              onOpenChange={setEditDialogOpen}
-              onUpdate={updatedOrg => {
-                setOrg(updatedOrg)
-                orgsStore.fetchOrgs() // Refresh the list
-              }}
-            />
             <DataTableRowActions
               row={row}
               onEdit={org => {
-                setEditDialogOpen(true)
+                navigate({ to: '/orgs/edit/$orgId', params: { orgId: org.id } })
               }}
               onDelete={async org => {
                 // Confirm deletion

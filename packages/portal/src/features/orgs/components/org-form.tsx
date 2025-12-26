@@ -55,6 +55,7 @@ export function OrgForm({ org, onSubmit, onCancel, loading }: OrgFormProps) {
   const form = useForm<OrgFormValues>({
     mode: 'onBlur',
     defaultValues: initialValues,
+    resolver: orgResolver,
   })
 
   console.log('OrgForm render:', { org: !!org, formState: form.formState, initialValues })

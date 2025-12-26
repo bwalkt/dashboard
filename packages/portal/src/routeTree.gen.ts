@@ -32,6 +32,7 @@ import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as DashboardSignozIndexRouteImport } from './routes/dashboard/signoz/index'
+import { Route as OrgsEditOrgIdRouteImport } from './routes/orgs/edit.$orgId'
 import { Route as DashboardSignozTracesRouteImport } from './routes/dashboard/signoz/traces'
 
 const UsersRoute = UsersRouteImport.update({
@@ -149,6 +150,11 @@ const DashboardSignozIndexRoute = DashboardSignozIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardSignozRoute,
 } as any)
+const OrgsEditOrgIdRoute = OrgsEditOrgIdRouteImport.update({
+  id: '/orgs/edit/$orgId',
+  path: '/orgs/edit/$orgId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardSignozTracesRoute = DashboardSignozTracesRouteImport.update({
   id: '/traces',
   path: '/traces',
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/orgs/new': typeof OrgsNewRoute
   '/orgs': typeof OrgsIndexRoute
   '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
+  '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
   '/dashboard/signoz/': typeof DashboardSignozIndexRoute
 }
 export interface FileRoutesByTo {
@@ -204,6 +211,7 @@ export interface FileRoutesByTo {
   '/orgs/new': typeof OrgsNewRoute
   '/orgs': typeof OrgsIndexRoute
   '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
+  '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
   '/dashboard/signoz': typeof DashboardSignozIndexRoute
 }
 export interface FileRoutesById {
@@ -231,6 +239,7 @@ export interface FileRoutesById {
   '/orgs/new': typeof OrgsNewRoute
   '/orgs/': typeof OrgsIndexRoute
   '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
+  '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
   '/dashboard/signoz/': typeof DashboardSignozIndexRoute
 }
 export interface FileRouteTypes {
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
     | '/orgs/new'
     | '/orgs'
     | '/dashboard/signoz/traces'
+    | '/orgs/edit/$orgId'
     | '/dashboard/signoz/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/orgs/new'
     | '/orgs'
     | '/dashboard/signoz/traces'
+    | '/orgs/edit/$orgId'
     | '/dashboard/signoz'
   id:
     | '__root__'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/orgs/new'
     | '/orgs/'
     | '/dashboard/signoz/traces'
+    | '/orgs/edit/$orgId'
     | '/dashboard/signoz/'
   fileRoutesById: FileRoutesById
 }
@@ -333,6 +345,7 @@ export interface RootRouteChildren {
   DataTableTreeRoute: typeof DataTableTreeRoute
   OrgsNewRoute: typeof OrgsNewRoute
   OrgsIndexRoute: typeof OrgsIndexRoute
+  OrgsEditOrgIdRoute: typeof OrgsEditOrgIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -498,6 +511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardSignozIndexRouteImport
       parentRoute: typeof DashboardSignozRoute
     }
+    '/orgs/edit/$orgId': {
+      id: '/orgs/edit/$orgId'
+      path: '/orgs/edit/$orgId'
+      fullPath: '/orgs/edit/$orgId'
+      preLoaderRoute: typeof OrgsEditOrgIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/signoz/traces': {
       id: '/dashboard/signoz/traces'
       path: '/traces'
@@ -558,6 +578,7 @@ const rootRouteChildren: RootRouteChildren = {
   DataTableTreeRoute: DataTableTreeRoute,
   OrgsNewRoute: OrgsNewRoute,
   OrgsIndexRoute: OrgsIndexRoute,
+  OrgsEditOrgIdRoute: OrgsEditOrgIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
