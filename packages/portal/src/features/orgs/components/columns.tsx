@@ -2,6 +2,7 @@ import type { Org } from '@pzero/shared/pzero'
 import { useNavigate } from '@tanstack/react-router'
 import type { ColumnDef } from '@tanstack/react-table'
 import { format } from 'date-fns'
+import React from 'react'
 import { toast } from 'sonner'
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header'
 import { DataTableRowActions } from '@/components/data-table/data-table-row-actions'
@@ -9,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useOrgsStore } from '@/stores/orgs'
+import { EditOrgDialog } from './edit-org-dialog'
 
 export const createColumns = (): ColumnDef<Org>[] => {
   const navigate = useNavigate()
@@ -70,8 +72,15 @@ export const createColumns = (): ColumnDef<Org>[] => {
 
         return (
           <Badge
-            variant={status === 'active' ? 'default' : status === 'inactive' ? 'secondary' : 'destructive'}
-            className="capitalize"
+            variant={
+              status === 'ACTIVE'
+                ? 'default'
+                : status === 'INACTIVE'
+                  ? 'secondary'
+                  : status === 'SUSPENDED' || status === 'BLOCKED'
+                    ? 'destructive'
+                    : 'outline'
+            }
           >
             {status}
           </Badge>
@@ -88,12 +97,7 @@ export const createColumns = (): ColumnDef<Org>[] => {
         const plan = row.getValue('plan') as string
 
         return (
-          <Badge
-            variant={plan === 'enterprise' ? 'default' : plan === 'pro' ? 'secondary' : 'outline'}
-            className="capitalize"
-          >
-            {plan}
-          </Badge>
+          <Badge variant={plan === 'ENTERPRISE' ? 'default' : plan === 'PRO' ? 'secondary' : 'outline'}>{plan}</Badge>
         )
       },
       filterFn: (row, id, value) => {
@@ -136,50 +140,65 @@ export const createColumns = (): ColumnDef<Org>[] => {
     {
       id: 'actions',
       header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => (
-        <DataTableRowActions
-          row={row}
-          onEdit={org => {
-            // Navigate to edit page
-            navigate({ to: `/dashboard/orgs/${org.id}/edit` })
-          }}
-          onDelete={async org => {
-            // Confirm deletion
-            if (confirm(`Are you sure you want to delete organization "${org.name}"?`)) {
-              try {
-                await orgsStore.deleteOrg(org.id)
-                toast.success(`Organization "${org.name}" deleted successfully`)
-                // Refresh the list
-                await orgsStore.fetchOrgs()
-              } catch (error) {
-                console.error('Failed to delete org:', error)
-                toast.error('Failed to delete organization')
-              }
-            }
-          }}
-          onCopy={async org => {
-            // Create a duplicate organization
-            try {
-              const duplicate = {
-                name: `${org.name} (Copy)`,
-                handle: `${org.handle}-copy-${Date.now()}`,
-                website: org.website,
-                email: org.email,
-                logo_url: org.logo_url,
-                status: org.status,
-                plan: org.plan,
-              }
-              await orgsStore.createOrg(duplicate)
-              toast.success(`Organization "${org.name}" duplicated successfully`)
-              // Refresh the list
-              await orgsStore.fetchOrgs()
-            } catch (error) {
-              console.error('Failed to duplicate org:', error)
-              toast.error('Failed to duplicate organization')
-            }
-          }}
-        />
-      ),
+      cell: ({ row }) => {
+        const [org, setOrg] = React.useState(row.original)
+        const [editDialogOpen, setEditDialogOpen] = React.useState(false)
+
+        return (
+          <div className="flex items-center gap-2">
+            <EditOrgDialog
+              org={org}
+              open={editDialogOpen}
+              onOpenChange={setEditDialogOpen}
+              onUpdate={updatedOrg => {
+                setOrg(updatedOrg)
+                orgsStore.fetchOrgs() // Refresh the list
+              }}
+            />
+            <DataTableRowActions
+              row={row}
+              onEdit={org => {
+                setEditDialogOpen(true)
+              }}
+              onDelete={async org => {
+                // Confirm deletion
+                if (confirm(`Are you sure you want to delete organization "${org.name}"?`)) {
+                  try {
+                    await orgsStore.deleteOrg(org.id)
+                    toast.success(`Organization "${org.name}" deleted successfully`)
+                    // Refresh the list
+                    await orgsStore.fetchOrgs()
+                  } catch (error) {
+                    console.error('Failed to delete org:', error)
+                    toast.error('Failed to delete organization')
+                  }
+                }
+              }}
+              onCopy={async org => {
+                // Create a duplicate organization
+                try {
+                  const duplicate = {
+                    name: `${org.name} (Copy)`,
+                    handle: `${org.handle}-copy-${Date.now()}`,
+                    website: org.website,
+                    email: org.email,
+                    logo_url: org.logo_url,
+                    status: org.status,
+                    plan: org.plan,
+                  }
+                  await orgsStore.createOrg(duplicate)
+                  toast.success(`Organization "${org.name}" duplicated successfully`)
+                  // Refresh the list
+                  await orgsStore.fetchOrgs()
+                } catch (error) {
+                  console.error('Failed to duplicate org:', error)
+                  toast.error('Failed to duplicate organization')
+                }
+              }}
+            />
+          </div>
+        )
+      },
       enableSorting: false,
       enableHiding: false,
     },
