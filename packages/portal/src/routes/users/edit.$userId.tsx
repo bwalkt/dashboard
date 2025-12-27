@@ -1,14 +1,36 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import { UserDrawer } from '@/features/users/components'
 import { getUser, updateUser } from '@/services/users.service'
+import { AuthStore } from '@/stores/auth'
 import type { User } from '@/types/users'
 
 export const Route = createFileRoute('/users/edit/$userId')({
+  beforeLoad: async ({ location }) => {
+    // Wait for auth check if loading
+    let attempts = 0
+    const maxAttempts = 50 // 5 seconds max wait
+
+    while (AuthStore.loading && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      attempts++
+    }
+
+    // Check if user is authenticated
+    if (!AuthStore.user) {
+      throw redirect({
+        to: '/auth/sign-in',
+        search: {
+          redirect: location.href,
+        },
+      })
+    }
+  },
   component: EditUserPage,
 })
 
@@ -79,7 +101,14 @@ function EditUserPage() {
   }
 
   if (!user) {
-    return <div>User not found</div>
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <p className="text-muted-foreground">User not found</p>
+        <Button variant="outline" onClick={() => navigate({ to: '/users' })}>
+          Back to Users
+        </Button>
+      </div>
+    )
   }
 
   return (
