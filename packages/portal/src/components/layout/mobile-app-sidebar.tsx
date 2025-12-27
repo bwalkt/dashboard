@@ -77,7 +77,7 @@ export default function MobileAppSidebar() {
     if (!orgs || orgs.length === 0) {
       fetchOrgs().catch(console.error)
     }
-  }, [])
+  }, [orgs, fetchOrgs])
 
   // Map orgs to tenant format
   const tenants = React.useMemo(() => {
@@ -89,7 +89,7 @@ export default function MobileAppSidebar() {
     )
   }, [orgs])
 
-  const defaultTenant = currentOrg ? { id: currentOrg.id, name: currentOrg.name } : tenants[0]
+  const defaultTenant = currentOrg ? { id: currentOrg.id, name: currentOrg.name } : (tenants[0] ?? null)
 
   // Tab state management - default to 'filter' and persist in localStorage
   const [activeTab, setActiveTab] = React.useState<'filter' | 'menu'>(() => {
@@ -111,7 +111,7 @@ export default function MobileAppSidebar() {
     }
   }
 
-  const activeTenant = defaultTenant || tenants[0]
+  const activeTenant = defaultTenant || tenants[0] || null
 
   React.useEffect(() => {
     // Side effects based on sidebar state changes
