@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
 import { createAjvResolver } from '@/lib/ajv-resolver'
-import type { CreateProxyTargetRequest, ProxyTarget, UpdateProxyTargetRequest } from '@/types/proxy-targets'
+import type { CreateEndpointRequest, Endpoint, UpdateEndpointRequest } from '@/types/endpoints'
 
-interface ProxyTargetFormData {
+interface EndpointFormData {
   name: string
   url: string
   port?: number
@@ -37,32 +37,32 @@ const updateFormSchema = {
   additionalProperties: false,
 }
 
-const validateCreateForm = createValidator<ProxyTargetFormData>(createFormSchema)
-const validateUpdateForm = createValidator<Partial<ProxyTargetFormData>>(updateFormSchema)
+const validateCreateForm = createValidator<EndpointFormData>(createFormSchema)
+const validateUpdateForm = createValidator<Partial<EndpointFormData>>(updateFormSchema)
 
 // Separate handlers for create and update to fix type issues
-interface ProxyTargetFormPropsCreate {
+interface EndpointFormPropsCreate {
   target?: never
-  onSubmit: (data: CreateProxyTargetRequest) => Promise<void>
+  onSubmit: (data: CreateEndpointRequest) => Promise<void>
   onCancel: () => void
   isLoading?: boolean
 }
 
-interface ProxyTargetFormPropsUpdate {
-  target: ProxyTarget
-  onSubmit: (data: UpdateProxyTargetRequest) => Promise<void>
+interface EndpointFormPropsUpdate {
+  target: Endpoint
+  onSubmit: (data: UpdateEndpointRequest) => Promise<void>
   onCancel: () => void
   isLoading?: boolean
 }
 
-export function ProxyTargetForm({
+export function EndpointForm({
   target,
   onSubmit,
   onCancel,
   isLoading,
-}: ProxyTargetFormPropsCreate | ProxyTargetFormPropsUpdate) {
+}: EndpointFormPropsCreate | EndpointFormPropsUpdate) {
   const isEditMode = !!target
-  const form = useForm<ProxyTargetFormData>({
+  const form = useForm<EndpointFormData>({
     resolver: isEditMode
       ? (createAjvResolver(validateUpdateForm) as any)
       : (createAjvResolver(validateCreateForm) as any),
@@ -79,14 +79,14 @@ export function ProxyTargetForm({
         },
   })
 
-  const handleSubmit = async (data: ProxyTargetFormData) => {
+  const handleSubmit = async (data: EndpointFormData) => {
     await onSubmit(data)
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isEditMode ? 'Edit Proxy Target' : 'Create Proxy Target'}</CardTitle>
+        <CardTitle>{isEditMode ? 'Edit Endpoint' : 'Create Endpoint'}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form form={form as any} onSubmit={form.handleSubmit(handleSubmit)}>
@@ -98,7 +98,7 @@ export function ProxyTargetForm({
               name="url"
               label="URL"
               placeholder="e.g., pzero-sfdc-server"
-              description="Hostname or URL of the proxy target (must be unique)"
+              description="Hostname or URL of the endpoint (must be unique)"
               required
             />
 

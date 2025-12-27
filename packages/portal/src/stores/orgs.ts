@@ -58,17 +58,39 @@ export const useOrgsStore = create<OrgsState>()(
             ...(query && { q: query }),
           })
 
-          const response = await api.get<OrgsListResponse>(`/orgs?${params}`)
+          const response = await api.get<Org[] | OrgsListResponse>(`/api/orgs?${params}`)
+
+          console.log('📝 Orgs API Response:', response)
+
+          // Handle both array response and paginated response formats
+          let orgsData: Org[] = []
+          let totalCount = 0
+
+          if (Array.isArray(response)) {
+            // Backend returns array directly
+            orgsData = response
+            totalCount = response.length
+          } else if (response && typeof response === 'object' && 'orgs' in response) {
+            // Backend returns paginated format
+            orgsData = response.orgs || []
+            totalCount = response.total || 0
+          }
 
           set({
-            orgs: response.orgs,
-            totalCount: response.total,
-            currentPage: response.page,
-            pageSize: response.limit,
+            orgs: orgsData,
+            totalCount: totalCount,
+            currentPage: page,
+            pageSize: limit,
             loading: false,
           })
 
-          return response
+          // Return in expected format
+          return {
+            orgs: orgsData,
+            total: totalCount,
+            page: page,
+            limit: limit,
+          } as OrgsListResponse
         } catch (error: any) {
           const errorMessage = error?.message || 'Failed to fetch orgs'
           set({ error: errorMessage, loading: false })
@@ -80,7 +102,7 @@ export const useOrgsStore = create<OrgsState>()(
         set({ loading: true, error: null })
 
         try {
-          const response = await api.get<{ org: Org }>(`/orgs/${id}`)
+          const response = await api.get<{ org: Org }>(`/api/orgs/${id}`)
           set({ loading: false })
           return response.org
         } catch (error: any) {
@@ -94,7 +116,7 @@ export const useOrgsStore = create<OrgsState>()(
         set({ loading: true, error: null })
 
         try {
-          const response = await api.post<{ org: Org }>('/orgs', orgData)
+          const response = await api.post<{ org: Org }>('/api/orgs', orgData)
           const newOrg = response.org
 
           set(state => ({
@@ -114,7 +136,7 @@ export const useOrgsStore = create<OrgsState>()(
         set({ loading: true, error: null })
 
         try {
-          const response = await api.put<{ org: Org }>(`/orgs/${id}`, orgData)
+          const response = await api.put<{ org: Org }>(`/api/orgs/${id}`, orgData)
           const updatedOrg = response.org
 
           set(state => ({
@@ -135,7 +157,7 @@ export const useOrgsStore = create<OrgsState>()(
         set({ loading: true, error: null })
 
         try {
-          await api.delete(`/orgs/${id}`)
+          await api.delete(`/api/orgs/${id}`)
 
           set(state => ({
             orgs: state.orgs.filter(org => org.id !== id),

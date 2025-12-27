@@ -1,4 +1,7 @@
 import type { NavItem } from '@/types'
+
+// Check if we're in development mode
+const isDev = import.meta.env.MODE === 'development' || import.meta.env.DEV
 export type Product = {
   Id: string
   Name: string
@@ -29,7 +32,7 @@ export type Product = {
 }
 
 //Info: The following data is used for the sidebar navigation and Cmd K bar.
-export const navItems: NavItem[] = [
+const allNavItems: NavItem[] = [
   {
     title: 'Overview',
     url: '/overview',
@@ -54,13 +57,13 @@ export const navItems: NavItem[] = [
     items: [
       {
         title: 'Users Table',
-        url: '/users',
+        url: '/data-table/users',
         icon: 'users',
         shortcut: ['u', 's'],
       },
       {
         title: 'Avatar Table',
-        url: '/table',
+        url: '/data-table/table',
         icon: 'user',
         shortcut: ['a', 'v'],
       },
@@ -72,22 +75,25 @@ export const navItems: NavItem[] = [
       },
       {
         title: 'Logs',
-        url: '/logs',
+        url: '/data-table/logs',
         icon: 'infinity',
         shortcut: ['l', 'g'],
       },
     ],
   },
   {
-    title: 'Proxy Targets',
-    url: '/dashboard/proxy-targets',
+    title: 'Endpoints',
+    url: '/endpoints',
     icon: 'network',
     shortcut: ['p', 't'],
   },
   {
-    title: 'SigNoz',
-    url: '/dashboard/signoz/traces',
+    title: 'Logs',
+    url: '/logs',
     icon: 'activity',
-    shortcut: ['s', 'z'],
+    shortcut: ['l', 'o'],
   },
 ]
+
+// Filter navigation items - exclude Tables menu in production
+export const navItems: NavItem[] = isDev ? allNavItems : allNavItems.filter(item => item.title !== 'Tables')

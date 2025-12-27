@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import InfinitePage from '@/app/infinite/page'
 import { type SearchParamsType, searchParamsCache } from '@/app/infinite/search-params'
+import DashboardLayout from '@/pages/dashboard/Layout'
 
-export const Route = createFileRoute('/dashboard/logs')({
+export const Route = createFileRoute('/data-table/logs')({
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>) => {
     // If there are no search params, return empty object to avoid defaults
@@ -32,5 +33,24 @@ export const Route = createFileRoute('/dashboard/logs')({
 function RouteComponent() {
   const search = Route.useSearch()
 
-  return <InfinitePage searchParams={search} />
+  // Temporarily bypass auth for development
+  // const { user, loading } = useAuthStore()
+
+  // if (loading) {
+  //   return (
+  //     <div className="flex items-center justify-center min-h-screen">
+  //       <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+  //     </div>
+  //   )
+  // }
+
+  // if (!user) {
+  //   throw redirect({ to: '/auth/sign-in' })
+  // }
+
+  return (
+    <DashboardLayout>
+      <InfinitePage searchParams={search} />
+    </DashboardLayout>
+  )
 }

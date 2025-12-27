@@ -10,7 +10,7 @@ import AppSidebar from '@/components/layout/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { useAuthStore } from '@/stores/auth'
 
-export const Route = createFileRoute('/table')({
+export const Route = createFileRoute('/data-table/table')({
   component: TablePage,
 })
 

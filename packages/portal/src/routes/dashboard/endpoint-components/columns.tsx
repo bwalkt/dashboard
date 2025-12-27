@@ -1,5 +1,6 @@
 'use client'
 
+import { Link } from '@tanstack/react-router'
 import type { ColumnDef } from '@tanstack/react-table'
 import { format } from 'date-fns'
 import { Copy, Pencil, Trash2 } from 'lucide-react'
@@ -7,14 +8,13 @@ import { toast } from 'sonner'
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import type { ProxyTarget } from '@/types/proxy-targets'
+import type { Endpoint } from '@/types/endpoints'
 
 interface ColumnsProps {
-  onEdit: (target: ProxyTarget) => void
-  onDelete: (target: ProxyTarget) => void
+  onDelete: (target: Endpoint) => void
 }
 
-export const createColumns = ({ onEdit, onDelete }: ColumnsProps): ColumnDef<ProxyTarget>[] => [
+export const createColumns = ({ onDelete }: ColumnsProps): ColumnDef<Endpoint>[] => [
   {
     accessorKey: 'id',
     header: ({ column }) => <DataTableColumnHeader column={column} title="ID" />,
@@ -93,9 +93,11 @@ export const createColumns = ({ onEdit, onDelete }: ColumnsProps): ColumnDef<Pro
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(target)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
+            <DropdownMenuItem asChild>
+              <Link to="/endpoints/edit/$endpointId" params={{ endpointId: target.id }}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onDelete(target)} className="text-destructive">
               <Trash2 className="mr-2 h-4 w-4" />

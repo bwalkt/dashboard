@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { PlusIcon } from 'lucide-react'
 import React from 'react'
-import { DataTable } from '@/app/data-table'
+import { CrudShell } from '@/components/crud-shell'
 import { Button } from '@/components/ui/button'
 import { createColumns } from '@/features/orgs/components/columns'
 import { filterFields } from '@/features/orgs/constants'
@@ -19,12 +19,12 @@ const AddOrgButton = () => {
 }
 
 export default function OrgsPage() {
-  const navigate = useNavigate()
   const columns = createColumns()
   const orgs = useOrgsStore(state => state.orgs)
   const fetchOrgs = useOrgsStore(state => state.fetchOrgs)
   const [useFallback, setUseFallback] = React.useState(false)
   const [isInitialized, setIsInitialized] = React.useState(false)
+  const [error, setError] = React.useState<Error | null>(null)
 
   // Fetch orgs when component mounts
   React.useEffect(() => {
@@ -34,33 +34,40 @@ export default function OrgsPage() {
         console.error('Failed to fetch orgs from API, using mock data:', error)
         setUseFallback(true)
         setIsInitialized(true)
+        setError(error)
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const handleRetry = () => {
+    setError(null)
+    setIsInitialized(false)
+    setUseFallback(false)
+    fetchOrgs()
+      .then(() => setIsInitialized(true))
+      .catch(error => {
+        console.error('Failed to fetch orgs from API, using mock data:', error)
+        setUseFallback(true)
+        setIsInitialized(true)
+        setError(error)
+      })
+  }
 
   // Use API data if available, otherwise fallback to mock data
   // Always ensure data is an array to prevent DataTable crashes
   const data = useFallback ? orgData : orgs || []
 
-  // Show loading state until we have valid data
-  if (!isInitialized) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    )
-  }
-
   return (
-    <DataTable
+    <CrudShell
+      title="Organizations"
+      description="Manage your organization accounts and settings."
       columns={columns}
       data={data}
       filterFields={filterFields}
-      title="Organizations"
-      description="Manage your organization accounts and settings."
-      containerPadding={false}
-      cellPadding="sm"
-      groupByComponent={<AddOrgButton />}
+      addButton={<AddOrgButton />}
+      isLoading={!isInitialized}
+      error={useFallback ? null : error}
+      onRetry={handleRetry}
     />
   )
 }

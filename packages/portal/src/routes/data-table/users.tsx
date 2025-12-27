@@ -2,9 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Suspense } from 'react'
 import DefaultPage from '@/app/data-table/page'
 import DashboardLayout from '@/pages/dashboard/Layout'
-import { useAuthStore } from '@/stores/auth'
 
-export const Route = createFileRoute('/users')({
+export const Route = createFileRoute('/data-table/users')({
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>) => search,
 })
