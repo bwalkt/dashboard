@@ -88,10 +88,10 @@ const allNavItems: NavItem[] = [
     shortcut: ['p', 't'],
   },
   {
-    title: 'SigNoz',
-    url: '/dashboard/signoz/traces',
+    title: 'Logs',
+    url: '/logs',
     icon: 'activity',
-    shortcut: ['s', 'z'],
+    shortcut: ['l', 'o'],
   },
 ]
 

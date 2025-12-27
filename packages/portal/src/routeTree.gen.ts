@@ -14,6 +14,7 @@ import { Route as QrTestRouteImport } from './routes/qr-test'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OverviewRouteImport } from './routes/overview'
+import { Route as LogsRouteImport } from './routes/logs'
 import { Route as DevicePairingRouteImport } from './routes/device-pairing'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthPromptRouteImport } from './routes/auth-prompt'
@@ -27,15 +28,11 @@ import { Route as DataTableUsersRouteImport } from './routes/data-table/users'
 import { Route as DataTableTreeRouteImport } from './routes/data-table/tree'
 import { Route as DataTableTableRouteImport } from './routes/data-table/table'
 import { Route as DataTableLogsRouteImport } from './routes/data-table/logs'
-import { Route as DashboardSignozRouteImport } from './routes/dashboard/signoz'
-import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
-import { Route as DashboardSignozIndexRouteImport } from './routes/dashboard/signoz/index'
 import { Route as OrgsEditOrgIdRouteImport } from './routes/orgs/edit.$orgId'
 import { Route as EndpointsEditEndpointIdRouteImport } from './routes/endpoints/edit.$endpointId'
-import { Route as DashboardSignozTracesRouteImport } from './routes/dashboard/signoz/traces'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -60,6 +57,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const OverviewRoute = OverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogsRoute = LogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevicePairingRoute = DevicePairingRouteImport.update({
@@ -127,16 +129,6 @@ const DataTableLogsRoute = DataTableLogsRouteImport.update({
   path: '/data-table/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardSignozRoute = DashboardSignozRouteImport.update({
-  id: '/signoz',
-  path: '/signoz',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardLogsRoute = DashboardLogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
-  getParentRoute: () => DashboardRoute,
-} as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
   id: '/auth/sign-up',
   path: '/auth/sign-up',
@@ -152,11 +144,6 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardSignozIndexRoute = DashboardSignozIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DashboardSignozRoute,
-} as any)
 const OrgsEditOrgIdRoute = OrgsEditOrgIdRouteImport.update({
   id: '/orgs/edit/$orgId',
   path: '/orgs/edit/$orgId',
@@ -167,18 +154,14 @@ const EndpointsEditEndpointIdRoute = EndpointsEditEndpointIdRouteImport.update({
   path: '/endpoints/edit/$endpointId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardSignozTracesRoute = DashboardSignozTracesRouteImport.update({
-  id: '/traces',
-  path: '/traces',
-  getParentRoute: () => DashboardSignozRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/auth-prompt': typeof AuthPromptRoute
-  '/dashboard': typeof DashboardRouteWithChildren
+  '/dashboard': typeof DashboardRoute
   '/device-pairing': typeof DevicePairingRoute
+  '/logs': typeof LogsRoute
   '/overview': typeof OverviewRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -187,8 +170,6 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
-  '/dashboard/logs': typeof DashboardLogsRoute
-  '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
   '/data-table/logs': typeof DataTableLogsRoute
   '/data-table/table': typeof DataTableTableRoute
   '/data-table/tree': typeof DataTableTreeRoute
@@ -197,17 +178,16 @@ export interface FileRoutesByFullPath {
   '/orgs/new': typeof OrgsNewRoute
   '/endpoints': typeof EndpointsIndexRoute
   '/orgs': typeof OrgsIndexRoute
-  '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
   '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
-  '/dashboard/signoz/': typeof DashboardSignozIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/auth-prompt': typeof AuthPromptRoute
-  '/dashboard': typeof DashboardRouteWithChildren
+  '/dashboard': typeof DashboardRoute
   '/device-pairing': typeof DevicePairingRoute
+  '/logs': typeof LogsRoute
   '/overview': typeof OverviewRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -216,7 +196,6 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
-  '/dashboard/logs': typeof DashboardLogsRoute
   '/data-table/logs': typeof DataTableLogsRoute
   '/data-table/table': typeof DataTableTableRoute
   '/data-table/tree': typeof DataTableTreeRoute
@@ -225,18 +204,17 @@ export interface FileRoutesByTo {
   '/orgs/new': typeof OrgsNewRoute
   '/endpoints': typeof EndpointsIndexRoute
   '/orgs': typeof OrgsIndexRoute
-  '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
   '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
-  '/dashboard/signoz': typeof DashboardSignozIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/auth-prompt': typeof AuthPromptRoute
-  '/dashboard': typeof DashboardRouteWithChildren
+  '/dashboard': typeof DashboardRoute
   '/device-pairing': typeof DevicePairingRoute
+  '/logs': typeof LogsRoute
   '/overview': typeof OverviewRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -245,8 +223,6 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
-  '/dashboard/logs': typeof DashboardLogsRoute
-  '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
   '/data-table/logs': typeof DataTableLogsRoute
   '/data-table/table': typeof DataTableTableRoute
   '/data-table/tree': typeof DataTableTreeRoute
@@ -255,10 +231,8 @@ export interface FileRoutesById {
   '/orgs/new': typeof OrgsNewRoute
   '/endpoints/': typeof EndpointsIndexRoute
   '/orgs/': typeof OrgsIndexRoute
-  '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
   '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
-  '/dashboard/signoz/': typeof DashboardSignozIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -268,6 +242,7 @@ export interface FileRouteTypes {
     | '/auth-prompt'
     | '/dashboard'
     | '/device-pairing'
+    | '/logs'
     | '/overview'
     | '/privacy'
     | '/profile'
@@ -276,8 +251,6 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
-    | '/dashboard/logs'
-    | '/dashboard/signoz'
     | '/data-table/logs'
     | '/data-table/table'
     | '/data-table/tree'
@@ -286,10 +259,8 @@ export interface FileRouteTypes {
     | '/orgs/new'
     | '/endpoints'
     | '/orgs'
-    | '/dashboard/signoz/traces'
     | '/endpoints/edit/$endpointId'
     | '/orgs/edit/$orgId'
-    | '/dashboard/signoz/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -297,6 +268,7 @@ export interface FileRouteTypes {
     | '/auth-prompt'
     | '/dashboard'
     | '/device-pairing'
+    | '/logs'
     | '/overview'
     | '/privacy'
     | '/profile'
@@ -305,7 +277,6 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
-    | '/dashboard/logs'
     | '/data-table/logs'
     | '/data-table/table'
     | '/data-table/tree'
@@ -314,10 +285,8 @@ export interface FileRouteTypes {
     | '/orgs/new'
     | '/endpoints'
     | '/orgs'
-    | '/dashboard/signoz/traces'
     | '/endpoints/edit/$endpointId'
     | '/orgs/edit/$orgId'
-    | '/dashboard/signoz'
   id:
     | '__root__'
     | '/'
@@ -325,6 +294,7 @@ export interface FileRouteTypes {
     | '/auth-prompt'
     | '/dashboard'
     | '/device-pairing'
+    | '/logs'
     | '/overview'
     | '/privacy'
     | '/profile'
@@ -333,8 +303,6 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
-    | '/dashboard/logs'
-    | '/dashboard/signoz'
     | '/data-table/logs'
     | '/data-table/table'
     | '/data-table/tree'
@@ -343,18 +311,17 @@ export interface FileRouteTypes {
     | '/orgs/new'
     | '/endpoints/'
     | '/orgs/'
-    | '/dashboard/signoz/traces'
     | '/endpoints/edit/$endpointId'
     | '/orgs/edit/$orgId'
-    | '/dashboard/signoz/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
   AuthPromptRoute: typeof AuthPromptRoute
-  DashboardRoute: typeof DashboardRouteWithChildren
+  DashboardRoute: typeof DashboardRoute
   DevicePairingRoute: typeof DevicePairingRoute
+  LogsRoute: typeof LogsRoute
   OverviewRoute: typeof OverviewRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -410,6 +377,13 @@ declare module '@tanstack/react-router' {
       path: '/overview'
       fullPath: '/overview'
       preLoaderRoute: typeof OverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logs': {
+      id: '/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof LogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/device-pairing': {
@@ -503,20 +477,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DataTableLogsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard/signoz': {
-      id: '/dashboard/signoz'
-      path: '/signoz'
-      fullPath: '/dashboard/signoz'
-      preLoaderRoute: typeof DashboardSignozRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard/logs': {
-      id: '/dashboard/logs'
-      path: '/logs'
-      fullPath: '/dashboard/logs'
-      preLoaderRoute: typeof DashboardLogsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/auth/sign-up': {
       id: '/auth/sign-up'
       path: '/auth/sign-up'
@@ -538,13 +498,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard/signoz/': {
-      id: '/dashboard/signoz/'
-      path: '/'
-      fullPath: '/dashboard/signoz/'
-      preLoaderRoute: typeof DashboardSignozIndexRouteImport
-      parentRoute: typeof DashboardSignozRoute
-    }
     '/orgs/edit/$orgId': {
       id: '/orgs/edit/$orgId'
       path: '/orgs/edit/$orgId'
@@ -559,50 +512,16 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EndpointsEditEndpointIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard/signoz/traces': {
-      id: '/dashboard/signoz/traces'
-      path: '/traces'
-      fullPath: '/dashboard/signoz/traces'
-      preLoaderRoute: typeof DashboardSignozTracesRouteImport
-      parentRoute: typeof DashboardSignozRoute
-    }
   }
 }
-
-interface DashboardSignozRouteChildren {
-  DashboardSignozTracesRoute: typeof DashboardSignozTracesRoute
-  DashboardSignozIndexRoute: typeof DashboardSignozIndexRoute
-}
-
-const DashboardSignozRouteChildren: DashboardSignozRouteChildren = {
-  DashboardSignozTracesRoute: DashboardSignozTracesRoute,
-  DashboardSignozIndexRoute: DashboardSignozIndexRoute,
-}
-
-const DashboardSignozRouteWithChildren = DashboardSignozRoute._addFileChildren(
-  DashboardSignozRouteChildren,
-)
-
-interface DashboardRouteChildren {
-  DashboardLogsRoute: typeof DashboardLogsRoute
-  DashboardSignozRoute: typeof DashboardSignozRouteWithChildren
-}
-
-const DashboardRouteChildren: DashboardRouteChildren = {
-  DashboardLogsRoute: DashboardLogsRoute,
-  DashboardSignozRoute: DashboardSignozRouteWithChildren,
-}
-
-const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
-  DashboardRouteChildren,
-)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
   AuthPromptRoute: AuthPromptRoute,
-  DashboardRoute: DashboardRouteWithChildren,
+  DashboardRoute: DashboardRoute,
   DevicePairingRoute: DevicePairingRoute,
+  LogsRoute: LogsRoute,
   OverviewRoute: OverviewRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
