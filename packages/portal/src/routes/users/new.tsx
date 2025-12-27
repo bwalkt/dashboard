@@ -19,10 +19,7 @@ function NewUserPage() {
         name: userData.name!,
         email: userData.email!,
         phone: userData.phone || undefined,
-        role: userData.role || 'USER',
-        status: userData.status || 'ACTIVE',
-        department: userData.department || undefined,
-        title: userData.title || undefined,
+        handle: userData.handle || undefined,
       })
       toast.success('User created successfully')
       navigate({ to: '/users' })

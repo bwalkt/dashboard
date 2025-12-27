@@ -25,10 +25,12 @@ export interface CreateUserRequest {
   name: string
   email: string
   phone?: string
-  role?: 'ADMIN' | 'USER' | 'VIEWER' | 'MANAGER'
-  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED'
-  department?: string
-  title?: string
+  handle?: string
+  email_verified?: boolean
+  phone_verified?: boolean
+  org_id?: string
+  tags?: Record<string, any>
+  data?: Record<string, any>
 }
 
 export interface UpdateUserRequest {
