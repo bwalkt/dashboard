@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import { CrudShell } from '@/components/crud-shell'
 import { AlertModal } from '@/components/modal/alert-modal'
 import { Button } from '@/components/ui/button'
-import { deleteEndpoint, getEndpoints, refreshCache } from '@/services/endpoints.service'
+import { deleteEndpoint, getEndpoints } from '@/services/endpoints.service'
 import type { Endpoint } from '@/types/endpoints'
 import { createColumns } from './columns'
 
@@ -27,7 +27,11 @@ export function EndpointsPage() {
   const [selectedTarget, setSelectedTarget] = useState<Endpoint | null>(null)
 
   // Fetch endpoints
-  const { data: endpoints = [], error } = useQuery({
+  const {
+    data: endpoints = [],
+    error,
+    isLoading,
+  } = useQuery({
     queryKey: ['endpoints'],
     queryFn: getEndpoints,
   })
@@ -41,30 +45,14 @@ export function EndpointsPage() {
       setSelectedTarget(null)
       toast.success('Endpoint deleted successfully')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error?.message || 'Failed to delete endpoint')
-    },
-  })
-
-  // Refresh cache mutation
-  const refreshCacheMutation = useMutation({
-    mutationFn: refreshCache,
-    onSuccess: data => {
-      queryClient.invalidateQueries({ queryKey: ['endpoints'] })
-      toast.success(`Cache refreshed successfully. ${data.count} endpoint(s) cached.`)
-    },
-    onError: (error: any) => {
-      toast.error(error?.message || 'Failed to refresh cache')
     },
   })
 
   const handleDelete = async () => {
     if (!selectedTarget) return
     await deleteMutation.mutateAsync(selectedTarget.id)
-  }
-
-  const handleRefreshCache = () => {
-    refreshCacheMutation.mutate()
   }
 
   const openDeleteDialog = (target: Endpoint) => {
@@ -96,7 +84,7 @@ export function EndpointsPage() {
         columns={columns}
         data={endpoints}
         addButton={<AddEndpointButton />}
-        isLoading={false}
+        isLoading={isLoading}
         error={error}
         onRetry={handleRetry}
       />

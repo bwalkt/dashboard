@@ -27,7 +27,7 @@ export function OrgSwitcher({
   onTenantSwitch,
 }: {
   tenants: Tenant[]
-  defaultTenant: Tenant
+  defaultTenant?: Tenant
   onTenantSwitch?: (tenantId: string) => void
 }) {
   const [selectedTenant, setSelectedTenant] = React.useState<Tenant | undefined>(

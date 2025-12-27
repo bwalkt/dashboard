@@ -20,11 +20,11 @@ function NewEndpointPage() {
         url: endpointData.url!,
         port: endpointData.port || undefined,
       })
+      toast.success('Endpoint created successfully')
       navigate({ to: '/endpoints' })
     } catch (error) {
       console.error('Failed to create endpoint:', error)
       toast.error('Failed to create endpoint')
-      throw error
     }
   }
 

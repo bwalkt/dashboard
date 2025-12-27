@@ -1,6 +1,5 @@
 'use client'
 
-import { EditIcon, PlusIcon, X } from 'lucide-react'
 import React from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -64,7 +63,6 @@ export function EndpointDrawer({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
 
     try {
       // Validate required fields
@@ -72,6 +70,8 @@ export function EndpointDrawer({
         toast.error('Name and URL are required')
         return
       }
+
+      setLoading(true)
 
       const endpointData = {
         name: formData.name.trim(),
@@ -85,11 +85,9 @@ export function EndpointDrawer({
         // Update existing endpoint
         const updatedEndpoint = { ...endpoint, ...endpointData }
         onUpdate(updatedEndpoint)
-        toast.success('Endpoint updated successfully')
       } else if (onAdd) {
         // Create new endpoint - API will handle ID and timestamps
         onAdd(endpointData as Endpoint)
-        toast.success('Endpoint created successfully')
       }
 
       setOpen(false)
