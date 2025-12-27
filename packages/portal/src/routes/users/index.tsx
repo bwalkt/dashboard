@@ -1,14 +1,14 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { Suspense } from 'react'
-import { EndpointsPage } from '@/features/endpoints/components'
+import { UsersPage } from '@/features/users/components'
 import DashboardLayout from '@/pages/dashboard/Layout'
 import { useAuthStore } from '@/stores/auth'
 
-export const Route = createFileRoute('/endpoints/')({
-  component: EndpointsPageWithLayout,
+export const Route = createFileRoute('/users/')({
+  component: UsersPageWithLayout,
 })
 
-function EndpointsPageWithLayout() {
+function UsersPageWithLayout() {
   const { user, loading } = useAuthStore()
 
   if (loading) {
@@ -26,7 +26,7 @@ function EndpointsPageWithLayout() {
   return (
     <DashboardLayout fullWidth>
       <Suspense fallback={<div className="p-6">Loading...</div>}>
-        <EndpointsPage />
+        <UsersPage />
       </Suspense>
     </DashboardLayout>
   )

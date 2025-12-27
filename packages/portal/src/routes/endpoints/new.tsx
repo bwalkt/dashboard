@@ -2,7 +2,7 @@
 
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { EndpointDrawer } from '@/routes/dashboard/endpoint-components/endpoint-drawer'
+import { EndpointDrawer } from '@/features/endpoints/components/endpoint-drawer'
 import { createEndpoint } from '@/services/endpoints.service'
 import type { Endpoint } from '@/types/endpoints'
 

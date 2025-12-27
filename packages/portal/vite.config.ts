@@ -27,7 +27,11 @@ export default defineConfig({
       '/api': {
         target: backendHost,
         changeOrigin: true,
-        rewrite: path => path.replace(/^\/api/, ''),
+        // Don't rewrite /api - keep the path as is
+      },
+      '/proxy-targets': {
+        target: backendHost,
+        changeOrigin: true,
       },
       '/auth/callback': {
         target: backendHost,
