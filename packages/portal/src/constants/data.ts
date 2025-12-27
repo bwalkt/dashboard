@@ -44,10 +44,18 @@ const allNavItems: NavItem[] = [
   {
     title: 'Organizations',
     url: '/orgs',
-    icon: 'users',
+    icon: 'building',
     isActive: false,
     shortcut: ['o', 'r'],
     items: [], // Empty array as there are no child items for Organizations
+  },
+  {
+    title: 'Users',
+    url: '/users',
+    icon: 'users',
+    isActive: false,
+    shortcut: ['u', 's'],
+    items: [], // Empty array as there are no child items for Users
   },
   {
     title: 'Tables',
@@ -59,7 +67,7 @@ const allNavItems: NavItem[] = [
         title: 'Users Table',
         url: '/data-table/users',
         icon: 'users',
-        shortcut: ['u', 's'],
+        shortcut: ['u', 't'],
       },
       {
         title: 'Avatar Table',

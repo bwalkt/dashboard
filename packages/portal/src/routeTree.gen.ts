@@ -20,8 +20,10 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthPromptRouteImport } from './routes/auth-prompt'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UsersIndexRouteImport } from './routes/users/index'
 import { Route as OrgsIndexRouteImport } from './routes/orgs/index'
 import { Route as EndpointsIndexRouteImport } from './routes/endpoints/index'
+import { Route as UsersNewRouteImport } from './routes/users/new'
 import { Route as OrgsNewRouteImport } from './routes/orgs/new'
 import { Route as EndpointsNewRouteImport } from './routes/endpoints/new'
 import { Route as DataTableUsersRouteImport } from './routes/data-table/users'
@@ -31,6 +33,7 @@ import { Route as DataTableLogsRouteImport } from './routes/data-table/logs'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as UsersEditUserIdRouteImport } from './routes/users/edit.$userId'
 import { Route as OrgsEditOrgIdRouteImport } from './routes/orgs/edit.$orgId'
 import { Route as EndpointsEditEndpointIdRouteImport } from './routes/endpoints/edit.$endpointId'
 
@@ -89,6 +92,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UsersIndexRoute = UsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrgsIndexRoute = OrgsIndexRouteImport.update({
   id: '/orgs/',
   path: '/orgs/',
@@ -97,6 +105,11 @@ const OrgsIndexRoute = OrgsIndexRouteImport.update({
 const EndpointsIndexRoute = EndpointsIndexRouteImport.update({
   id: '/endpoints/',
   path: '/endpoints/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersNewRoute = UsersNewRouteImport.update({
+  id: '/users/new',
+  path: '/users/new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrgsNewRoute = OrgsNewRouteImport.update({
@@ -144,6 +157,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UsersEditUserIdRoute = UsersEditUserIdRouteImport.update({
+  id: '/users/edit/$userId',
+  path: '/users/edit/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrgsEditOrgIdRoute = OrgsEditOrgIdRouteImport.update({
   id: '/orgs/edit/$orgId',
   path: '/orgs/edit/$orgId',
@@ -176,10 +194,13 @@ export interface FileRoutesByFullPath {
   '/data-table/users': typeof DataTableUsersRoute
   '/endpoints/new': typeof EndpointsNewRoute
   '/orgs/new': typeof OrgsNewRoute
+  '/users/new': typeof UsersNewRoute
   '/endpoints': typeof EndpointsIndexRoute
   '/orgs': typeof OrgsIndexRoute
+  '/users': typeof UsersIndexRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
   '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
+  '/users/edit/$userId': typeof UsersEditUserIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -202,10 +223,13 @@ export interface FileRoutesByTo {
   '/data-table/users': typeof DataTableUsersRoute
   '/endpoints/new': typeof EndpointsNewRoute
   '/orgs/new': typeof OrgsNewRoute
+  '/users/new': typeof UsersNewRoute
   '/endpoints': typeof EndpointsIndexRoute
   '/orgs': typeof OrgsIndexRoute
+  '/users': typeof UsersIndexRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
   '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
+  '/users/edit/$userId': typeof UsersEditUserIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -229,10 +253,13 @@ export interface FileRoutesById {
   '/data-table/users': typeof DataTableUsersRoute
   '/endpoints/new': typeof EndpointsNewRoute
   '/orgs/new': typeof OrgsNewRoute
+  '/users/new': typeof UsersNewRoute
   '/endpoints/': typeof EndpointsIndexRoute
   '/orgs/': typeof OrgsIndexRoute
+  '/users/': typeof UsersIndexRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
   '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
+  '/users/edit/$userId': typeof UsersEditUserIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -257,10 +284,13 @@ export interface FileRouteTypes {
     | '/data-table/users'
     | '/endpoints/new'
     | '/orgs/new'
+    | '/users/new'
     | '/endpoints'
     | '/orgs'
+    | '/users'
     | '/endpoints/edit/$endpointId'
     | '/orgs/edit/$orgId'
+    | '/users/edit/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -283,10 +313,13 @@ export interface FileRouteTypes {
     | '/data-table/users'
     | '/endpoints/new'
     | '/orgs/new'
+    | '/users/new'
     | '/endpoints'
     | '/orgs'
+    | '/users'
     | '/endpoints/edit/$endpointId'
     | '/orgs/edit/$orgId'
+    | '/users/edit/$userId'
   id:
     | '__root__'
     | '/'
@@ -309,10 +342,13 @@ export interface FileRouteTypes {
     | '/data-table/users'
     | '/endpoints/new'
     | '/orgs/new'
+    | '/users/new'
     | '/endpoints/'
     | '/orgs/'
+    | '/users/'
     | '/endpoints/edit/$endpointId'
     | '/orgs/edit/$orgId'
+    | '/users/edit/$userId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -336,10 +372,13 @@ export interface RootRouteChildren {
   DataTableUsersRoute: typeof DataTableUsersRoute
   EndpointsNewRoute: typeof EndpointsNewRoute
   OrgsNewRoute: typeof OrgsNewRoute
+  UsersNewRoute: typeof UsersNewRoute
   EndpointsIndexRoute: typeof EndpointsIndexRoute
   OrgsIndexRoute: typeof OrgsIndexRoute
+  UsersIndexRoute: typeof UsersIndexRoute
   EndpointsEditEndpointIdRoute: typeof EndpointsEditEndpointIdRoute
   OrgsEditOrgIdRoute: typeof OrgsEditOrgIdRoute
+  UsersEditUserIdRoute: typeof UsersEditUserIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -421,6 +460,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/users/': {
+      id: '/users/'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/orgs/': {
       id: '/orgs/'
       path: '/orgs'
@@ -433,6 +479,13 @@ declare module '@tanstack/react-router' {
       path: '/endpoints'
       fullPath: '/endpoints'
       preLoaderRoute: typeof EndpointsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/new': {
+      id: '/users/new'
+      path: '/users/new'
+      fullPath: '/users/new'
+      preLoaderRoute: typeof UsersNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/orgs/new': {
@@ -498,6 +551,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/users/edit/$userId': {
+      id: '/users/edit/$userId'
+      path: '/users/edit/$userId'
+      fullPath: '/users/edit/$userId'
+      preLoaderRoute: typeof UsersEditUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/orgs/edit/$orgId': {
       id: '/orgs/edit/$orgId'
       path: '/orgs/edit/$orgId'
@@ -536,10 +596,13 @@ const rootRouteChildren: RootRouteChildren = {
   DataTableUsersRoute: DataTableUsersRoute,
   EndpointsNewRoute: EndpointsNewRoute,
   OrgsNewRoute: OrgsNewRoute,
+  UsersNewRoute: UsersNewRoute,
   EndpointsIndexRoute: EndpointsIndexRoute,
   OrgsIndexRoute: OrgsIndexRoute,
+  UsersIndexRoute: UsersIndexRoute,
   EndpointsEditEndpointIdRoute: EndpointsEditEndpointIdRoute,
   OrgsEditOrgIdRoute: OrgsEditOrgIdRoute,
+  UsersEditUserIdRoute: UsersEditUserIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
