@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Suspense } from 'react'
 import DashboardLayout from '@/pages/dashboard/Layout'
-import { ProxyTargetsPage } from '@/routes/dashboard/proxy-targets-components'
+import { EndpointsPage } from '@/routes/dashboard/endpoint-components'
 import { useAuthStore } from '@/stores/auth'
 
 export const Route = createFileRoute('/endpoints/')({
@@ -27,7 +27,7 @@ function EndpointsPageWithLayout() {
   return (
     <DashboardLayout fullWidth>
       <Suspense fallback={<div className="p-6">Loading...</div>}>
-        <ProxyTargetsPage />
+        <EndpointsPage />
       </Suspense>
     </DashboardLayout>
   )

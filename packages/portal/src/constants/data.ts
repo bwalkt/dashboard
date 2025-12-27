@@ -88,14 +88,12 @@ const allNavItems: NavItem[] = [
     shortcut: ['p', 't'],
   },
   {
-    title: 'Logs',
-    url: '/logs',
+    title: 'SigNoz',
+    url: '/dashboard/signoz/traces',
     icon: 'activity',
-    shortcut: ['l', 'g'],
+    shortcut: ['s', 'z'],
   },
 ]
 
 // Filter navigation items - exclude Tables menu in production
-export const navItems: NavItem[] = isDev 
-  ? allNavItems 
-  : allNavItems.filter(item => item.title !== 'Tables')
+export const navItems: NavItem[] = isDev ? allNavItems : allNavItems.filter(item => item.title !== 'Tables')

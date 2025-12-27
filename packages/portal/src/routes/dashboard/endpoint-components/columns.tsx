@@ -8,13 +8,13 @@ import { toast } from 'sonner'
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import type { ProxyTarget } from '@/types/proxy-targets'
+import type { Endpoint } from '@/types/endpoints'
 
 interface ColumnsProps {
-  onDelete: (target: ProxyTarget) => void
+  onDelete: (target: Endpoint) => void
 }
 
-export const createColumns = ({ onDelete }: ColumnsProps): ColumnDef<ProxyTarget>[] => [
+export const createColumns = ({ onDelete }: ColumnsProps): ColumnDef<Endpoint>[] => [
   {
     accessorKey: 'id',
     header: ({ column }) => <DataTableColumnHeader column={column} title="ID" />,

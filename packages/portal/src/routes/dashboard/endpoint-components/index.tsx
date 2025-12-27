@@ -8,8 +8,8 @@ import { toast } from 'sonner'
 import { CrudShell } from '@/components/crud-shell'
 import { AlertModal } from '@/components/modal/alert-modal'
 import { Button } from '@/components/ui/button'
-import { deleteProxyTarget, getProxyTargets, refreshCache } from '@/services/proxy-targets.service'
-import type { ProxyTarget } from '@/types/proxy-targets'
+import { deleteEndpoint, getEndpoints, refreshCache } from '@/services/endpoints.service'
+import type { Endpoint } from '@/types/endpoints'
 import { createColumns } from './columns'
 
 const AddEndpointButton = () => (
@@ -21,22 +21,22 @@ const AddEndpointButton = () => (
   </Button>
 )
 
-export function ProxyTargetsPage() {
+export function EndpointsPage() {
   const queryClient = useQueryClient()
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [selectedTarget, setSelectedTarget] = useState<ProxyTarget | null>(null)
+  const [selectedTarget, setSelectedTarget] = useState<Endpoint | null>(null)
 
   // Fetch endpoints
-  const { data: proxyTargets = [], error } = useQuery({
-    queryKey: ['proxy-targets'],
-    queryFn: getProxyTargets,
+  const { data: endpoints = [], error } = useQuery({
+    queryKey: ['endpoints'],
+    queryFn: getEndpoints,
   })
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: deleteProxyTarget,
+    mutationFn: deleteEndpoint,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['proxy-targets'] })
+      queryClient.invalidateQueries({ queryKey: ['endpoints'] })
       setIsDeleteDialogOpen(false)
       setSelectedTarget(null)
       toast.success('Endpoint deleted successfully')
@@ -50,7 +50,7 @@ export function ProxyTargetsPage() {
   const refreshCacheMutation = useMutation({
     mutationFn: refreshCache,
     onSuccess: data => {
-      queryClient.invalidateQueries({ queryKey: ['proxy-targets'] })
+      queryClient.invalidateQueries({ queryKey: ['endpoints'] })
       toast.success(`Cache refreshed successfully. ${data.count} endpoint(s) cached.`)
     },
     onError: (error: any) => {
@@ -67,7 +67,7 @@ export function ProxyTargetsPage() {
     refreshCacheMutation.mutate()
   }
 
-  const openDeleteDialog = (target: ProxyTarget) => {
+  const openDeleteDialog = (target: Endpoint) => {
     setSelectedTarget(target)
     setIsDeleteDialogOpen(true)
   }
@@ -85,7 +85,7 @@ export function ProxyTargetsPage() {
   const columns = allColumns.filter(column => column.id !== 'id')
 
   const handleRetry = () => {
-    queryClient.invalidateQueries({ queryKey: ['proxy-targets'] })
+    queryClient.invalidateQueries({ queryKey: ['endpoints'] })
   }
 
   return (
@@ -94,7 +94,7 @@ export function ProxyTargetsPage() {
         title="Endpoints"
         description="List of all configured endpoints"
         columns={columns}
-        data={proxyTargets}
+        data={endpoints}
         addButton={<AddEndpointButton />}
         isLoading={false}
         error={error}

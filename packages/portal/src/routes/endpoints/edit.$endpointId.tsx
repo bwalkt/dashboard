@@ -3,9 +3,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { EndpointDrawer } from '@/routes/dashboard/proxy-targets-components/endpoint-drawer'
-import { getProxyTarget, updateProxyTarget } from '@/services/proxy-targets.service'
-import type { ProxyTarget } from '@/types/proxy-targets'
+import { EndpointDrawer } from '@/routes/dashboard/endpoint-components/endpoint-drawer'
+import { getEndpoint, updateEndpoint } from '@/services/endpoints.service'
+import type { Endpoint } from '@/types/endpoints'
 
 export const Route = createFileRoute('/endpoints/edit/$endpointId')({
   component: EditEndpointPage,
@@ -14,13 +14,13 @@ export const Route = createFileRoute('/endpoints/edit/$endpointId')({
 function EditEndpointPage() {
   const navigate = Route.useNavigate()
   const { endpointId } = Route.useParams()
-  const [endpoint, setEndpoint] = useState<ProxyTarget | undefined>()
+  const [endpoint, setEndpoint] = useState<Endpoint | undefined>()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchEndpoint = async () => {
       try {
-        const data = await getProxyTarget(endpointId)
+        const data = await getEndpoint(endpointId)
         setEndpoint(data)
       } catch (error) {
         console.error('Failed to fetch endpoint:', error)
@@ -34,12 +34,12 @@ function EditEndpointPage() {
     fetchEndpoint()
   }, [endpointId, navigate])
 
-  const handleUpdate = async (updatedEndpoint: ProxyTarget) => {
+  const handleUpdate = async (updatedEndpoint: Endpoint) => {
     try {
-      await updateProxyTarget(endpointId, {
+      await updateEndpoint(endpointId, {
         name: updatedEndpoint.name,
         url: updatedEndpoint.url,
-        port: updatedEndpoint.port,
+        port: updatedEndpoint.port || undefined,
       })
       navigate({ to: '/endpoints' })
     } catch (error) {

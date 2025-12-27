@@ -14,7 +14,6 @@ import { Route as QrTestRouteImport } from './routes/qr-test'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OverviewRouteImport } from './routes/overview'
-import { Route as LogsRouteImport } from './routes/logs'
 import { Route as DevicePairingRouteImport } from './routes/device-pairing'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthPromptRouteImport } from './routes/auth-prompt'
@@ -29,7 +28,6 @@ import { Route as DataTableTreeRouteImport } from './routes/data-table/tree'
 import { Route as DataTableTableRouteImport } from './routes/data-table/table'
 import { Route as DataTableLogsRouteImport } from './routes/data-table/logs'
 import { Route as DashboardSignozRouteImport } from './routes/dashboard/signoz'
-import { Route as DashboardProxyTargetsRouteImport } from './routes/dashboard/proxy-targets'
 import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
@@ -62,11 +60,6 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const OverviewRoute = OverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LogsRoute = LogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevicePairingRoute = DevicePairingRouteImport.update({
@@ -139,11 +132,6 @@ const DashboardSignozRoute = DashboardSignozRouteImport.update({
   path: '/signoz',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardProxyTargetsRoute = DashboardProxyTargetsRouteImport.update({
-  id: '/proxy-targets',
-  path: '/proxy-targets',
-  getParentRoute: () => DashboardRoute,
-} as any)
 const DashboardLogsRoute = DashboardLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
@@ -191,7 +179,6 @@ export interface FileRoutesByFullPath {
   '/auth-prompt': typeof AuthPromptRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/device-pairing': typeof DevicePairingRoute
-  '/logs': typeof LogsRoute
   '/overview': typeof OverviewRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -201,7 +188,6 @@ export interface FileRoutesByFullPath {
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
-  '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
   '/data-table/logs': typeof DataTableLogsRoute
   '/data-table/table': typeof DataTableTableRoute
@@ -222,7 +208,6 @@ export interface FileRoutesByTo {
   '/auth-prompt': typeof AuthPromptRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/device-pairing': typeof DevicePairingRoute
-  '/logs': typeof LogsRoute
   '/overview': typeof OverviewRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -232,7 +217,6 @@ export interface FileRoutesByTo {
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
-  '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/data-table/logs': typeof DataTableLogsRoute
   '/data-table/table': typeof DataTableTableRoute
   '/data-table/tree': typeof DataTableTreeRoute
@@ -253,7 +237,6 @@ export interface FileRoutesById {
   '/auth-prompt': typeof AuthPromptRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/device-pairing': typeof DevicePairingRoute
-  '/logs': typeof LogsRoute
   '/overview': typeof OverviewRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
@@ -263,7 +246,6 @@ export interface FileRoutesById {
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
-  '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
   '/data-table/logs': typeof DataTableLogsRoute
   '/data-table/table': typeof DataTableTableRoute
@@ -286,7 +268,6 @@ export interface FileRouteTypes {
     | '/auth-prompt'
     | '/dashboard'
     | '/device-pairing'
-    | '/logs'
     | '/overview'
     | '/privacy'
     | '/profile'
@@ -296,7 +277,6 @@ export interface FileRouteTypes {
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
-    | '/dashboard/proxy-targets'
     | '/dashboard/signoz'
     | '/data-table/logs'
     | '/data-table/table'
@@ -317,7 +297,6 @@ export interface FileRouteTypes {
     | '/auth-prompt'
     | '/dashboard'
     | '/device-pairing'
-    | '/logs'
     | '/overview'
     | '/privacy'
     | '/profile'
@@ -327,7 +306,6 @@ export interface FileRouteTypes {
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
-    | '/dashboard/proxy-targets'
     | '/data-table/logs'
     | '/data-table/table'
     | '/data-table/tree'
@@ -347,7 +325,6 @@ export interface FileRouteTypes {
     | '/auth-prompt'
     | '/dashboard'
     | '/device-pairing'
-    | '/logs'
     | '/overview'
     | '/privacy'
     | '/profile'
@@ -357,7 +334,6 @@ export interface FileRouteTypes {
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
-    | '/dashboard/proxy-targets'
     | '/dashboard/signoz'
     | '/data-table/logs'
     | '/data-table/table'
@@ -379,7 +355,6 @@ export interface RootRouteChildren {
   AuthPromptRoute: typeof AuthPromptRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   DevicePairingRoute: typeof DevicePairingRoute
-  LogsRoute: typeof LogsRoute
   OverviewRoute: typeof OverviewRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
@@ -435,13 +410,6 @@ declare module '@tanstack/react-router' {
       path: '/overview'
       fullPath: '/overview'
       preLoaderRoute: typeof OverviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/logs': {
-      id: '/logs'
-      path: '/logs'
-      fullPath: '/logs'
-      preLoaderRoute: typeof LogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/device-pairing': {
@@ -542,13 +510,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardSignozRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/dashboard/proxy-targets': {
-      id: '/dashboard/proxy-targets'
-      path: '/proxy-targets'
-      fullPath: '/dashboard/proxy-targets'
-      preLoaderRoute: typeof DashboardProxyTargetsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/dashboard/logs': {
       id: '/dashboard/logs'
       path: '/logs'
@@ -624,13 +585,11 @@ const DashboardSignozRouteWithChildren = DashboardSignozRoute._addFileChildren(
 
 interface DashboardRouteChildren {
   DashboardLogsRoute: typeof DashboardLogsRoute
-  DashboardProxyTargetsRoute: typeof DashboardProxyTargetsRoute
   DashboardSignozRoute: typeof DashboardSignozRouteWithChildren
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLogsRoute: DashboardLogsRoute,
-  DashboardProxyTargetsRoute: DashboardProxyTargetsRoute,
   DashboardSignozRoute: DashboardSignozRouteWithChildren,
 }
 
@@ -644,7 +603,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthPromptRoute: AuthPromptRoute,
   DashboardRoute: DashboardRouteWithChildren,
   DevicePairingRoute: DevicePairingRoute,
-  LogsRoute: LogsRoute,
   OverviewRoute: OverviewRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,

@@ -9,12 +9,12 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import type { ProxyTarget } from '@/types/proxy-targets'
+import type { Endpoint } from '@/types/endpoints'
 
 interface EndpointDrawerProps {
-  endpoint?: ProxyTarget // If provided, it's edit mode. If not, it's add mode
-  onUpdate?: (endpoint: ProxyTarget) => void
-  onAdd?: (endpoint: ProxyTarget) => void
+  endpoint?: Endpoint // If provided, it's edit mode. If not, it's add mode
+  onUpdate?: (endpoint: Endpoint) => void
+  onAdd?: (endpoint: Endpoint) => void
   trigger?: React.ReactNode
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -88,7 +88,7 @@ export function EndpointDrawer({
         toast.success('Endpoint updated successfully')
       } else if (onAdd) {
         // Create new endpoint - API will handle ID and timestamps
-        onAdd(endpointData as ProxyTarget)
+        onAdd(endpointData as Endpoint)
         toast.success('Endpoint created successfully')
       }
 
@@ -114,9 +114,7 @@ export function EndpointDrawer({
             <div>
               <SheetTitle>{isEditMode ? 'Edit Endpoint' : 'Add New Endpoint'}</SheetTitle>
               <SheetDescription>
-                {isEditMode
-                  ? 'Update the endpoint details below.'
-                  : 'Fill in the details to create a new endpoint.'}
+                {isEditMode ? 'Update the endpoint details below.' : 'Fill in the details to create a new endpoint.'}
               </SheetDescription>
             </div>
           </div>
@@ -154,9 +152,7 @@ export function EndpointDrawer({
                     placeholder="e.g., pzero-sfdc-server"
                     required
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Hostname or URL of the endpoint (must be unique)
-                  </p>
+                  <p className="text-xs text-muted-foreground">Hostname or URL of the endpoint (must be unique)</p>
                 </div>
               </div>
 
@@ -189,7 +185,7 @@ export function EndpointDrawer({
               {/* Endpoint Settings */}
               <div>
                 <h3 className="text-sm font-medium mb-4">Endpoint Settings</h3>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="status">
                     Status <span className="text-red-500">*</span>

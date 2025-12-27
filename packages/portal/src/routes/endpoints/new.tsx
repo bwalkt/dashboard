@@ -2,9 +2,9 @@
 
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { EndpointDrawer } from '@/routes/dashboard/proxy-targets-components/endpoint-drawer'
-import { createProxyTarget } from '@/services/proxy-targets.service'
-import type { ProxyTarget } from '@/types/proxy-targets'
+import { EndpointDrawer } from '@/routes/dashboard/endpoint-components/endpoint-drawer'
+import { createEndpoint } from '@/services/endpoints.service'
+import type { Endpoint } from '@/types/endpoints'
 
 export const Route = createFileRoute('/endpoints/new')({
   component: NewEndpointPage,
@@ -13,9 +13,9 @@ export const Route = createFileRoute('/endpoints/new')({
 function NewEndpointPage() {
   const navigate = Route.useNavigate()
 
-  const handleAdd = async (endpointData: Partial<ProxyTarget>) => {
+  const handleAdd = async (endpointData: Partial<Endpoint>) => {
     try {
-      await createProxyTarget({
+      await createEndpoint({
         name: endpointData.name!,
         url: endpointData.url!,
         port: endpointData.port || undefined,

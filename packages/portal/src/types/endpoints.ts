@@ -1,4 +1,4 @@
-export interface ProxyTarget {
+export interface Endpoint {
   id: string
   name: string
   url: string
@@ -9,7 +9,7 @@ export interface ProxyTarget {
   updatedAt: string
 }
 
-export interface CreateProxyTargetRequest {
+export interface CreateEndpointRequest {
   name: string
   url: string
   port?: number
@@ -17,7 +17,7 @@ export interface CreateProxyTargetRequest {
   status?: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED'
 }
 
-export interface UpdateProxyTargetRequest {
+export interface UpdateEndpointRequest {
   name?: string
   url?: string
   port?: number
@@ -25,19 +25,19 @@ export interface UpdateProxyTargetRequest {
   status?: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED'
 }
 
-export interface ProxyTargetsResponse {
+export interface EndpointsResponse {
   success: boolean
-  proxyTargets: ProxyTarget[]
+  proxyTargets: Endpoint[]
 }
 
-export interface ProxyTargetResponse {
+export interface EndpointResponse {
   success: boolean
-  proxyTarget: ProxyTarget
+  proxyTarget: Endpoint
 }
 
 export interface RefreshCacheResponse {
   success: boolean
   message: string
   count: number
-  proxyTargets: ProxyTarget[]
+  proxyTargets: Endpoint[]
 }
