@@ -79,7 +79,7 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    title: 'Proxy Targets',
+    title: 'Endpoints',
     url: '/dashboard/proxy-targets',
     icon: 'network',
     shortcut: ['p', 't'],

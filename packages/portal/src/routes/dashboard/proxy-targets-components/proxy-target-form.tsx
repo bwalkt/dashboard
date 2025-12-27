@@ -86,7 +86,7 @@ export function ProxyTargetForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isEditMode ? 'Edit Proxy Target' : 'Create Proxy Target'}</CardTitle>
+        <CardTitle>{isEditMode ? 'Edit Endpoint' : 'Create Endpoint'}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form form={form as any} onSubmit={form.handleSubmit(handleSubmit)}>
@@ -98,7 +98,7 @@ export function ProxyTargetForm({
               name="url"
               label="URL"
               placeholder="e.g., pzero-sfdc-server"
-              description="Hostname or URL of the proxy target (must be unique)"
+              description="Hostname or URL of the endpoint (must be unique)"
               required
             />
 

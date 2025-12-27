@@ -38,6 +38,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { mobileNavItems } from '@/constants/mobile-nav'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { useAuthStore } from '@/stores/auth'
+import { useOrgsStore } from '@/stores/orgs'
 import { DataTableFilterControls } from '../data-table/data-table-filter-controls'
 import { useDataTable } from '../data-table/data-table-provider'
 import { Icons } from '../icons'
@@ -49,12 +50,6 @@ export const company = {
   logo: IconPhotoUp,
   plan: 'Enterprise',
 }
-
-const tenants = [
-  { id: '1', name: 'Acme Inc' },
-  { id: '2', name: 'Beta Corp' },
-  { id: '3', name: 'Gamma Ltd' },
-]
 
 /**
  * Render the mobile collapsible sidebar for the admin portal.
@@ -72,6 +67,29 @@ export default function MobileAppSidebar() {
   const pathname = location.pathname
   const { isOpen } = useMediaQuery()
   const navigate = useNavigate()
+  const orgs = useOrgsStore(state => state.orgs)
+  const currentOrg = useOrgsStore(state => state.currentOrg)
+  const fetchOrgs = useOrgsStore(state => state.fetchOrgs)
+  const setCurrentOrg = useOrgsStore(state => state.setCurrentOrg)
+
+  // Fetch orgs on mount if not loaded
+  React.useEffect(() => {
+    if (!orgs || orgs.length === 0) {
+      fetchOrgs().catch(console.error)
+    }
+  }, [])
+
+  // Map orgs to tenant format
+  const tenants = React.useMemo(() => {
+    return (
+      orgs?.map(org => ({
+        id: org.id,
+        name: org.name,
+      })) || []
+    )
+  }, [orgs])
+
+  const defaultTenant = currentOrg ? { id: currentOrg.id, name: currentOrg.name } : tenants[0]
 
   // Tab state management - default to 'filter' and persist in localStorage
   const [activeTab, setActiveTab] = React.useState<'filter' | 'menu'>(() => {
@@ -85,11 +103,15 @@ export default function MobileAppSidebar() {
     localStorage.setItem('mobile-sidebar-tab', tab)
   }
 
-  const handleSwitchTenant = (_tenantId: string) => {
-    // Tenant switching functionality would be implemented here
+  const handleSwitchTenant = (tenantId: string) => {
+    // Find the org and set it as current
+    const org = orgs?.find(o => o.id === tenantId)
+    if (org) {
+      setCurrentOrg(org)
+    }
   }
 
-  const activeTenant = tenants[0]
+  const activeTenant = defaultTenant || tenants[0]
 
   React.useEffect(() => {
     // Side effects based on sidebar state changes

@@ -9,7 +9,7 @@ import type {
 } from '@/types/proxy-targets'
 
 /**
- * Get all proxy targets
+ * Get all endpoints
  */
 export async function getProxyTargets(): Promise<ProxyTarget[]> {
   const response = await api.get<ProxyTargetsResponse>('/proxy-targets')
@@ -17,7 +17,7 @@ export async function getProxyTargets(): Promise<ProxyTarget[]> {
 }
 
 /**
- * Get a single proxy target by ID
+ * Get a single endpoint by ID
  */
 export async function getProxyTarget(id: string): Promise<ProxyTarget> {
   const response = await api.get<ProxyTargetResponse>(`/proxy-targets/${id}`)
@@ -25,7 +25,7 @@ export async function getProxyTarget(id: string): Promise<ProxyTarget> {
 }
 
 /**
- * Create a new proxy target
+ * Create a new endpoint
  */
 export async function createProxyTarget(data: CreateProxyTargetRequest): Promise<ProxyTarget> {
   const response = await api.post<ProxyTargetResponse>('/proxy-targets', data)
@@ -33,7 +33,7 @@ export async function createProxyTarget(data: CreateProxyTargetRequest): Promise
 }
 
 /**
- * Update an existing proxy target
+ * Update an existing endpoint
  */
 export async function updateProxyTarget(id: string, data: UpdateProxyTargetRequest): Promise<ProxyTarget> {
   const response = await api.put<ProxyTargetResponse>(`/proxy-targets/${id}`, data)
@@ -41,7 +41,7 @@ export async function updateProxyTarget(id: string, data: UpdateProxyTargetReque
 }
 
 /**
- * Delete a proxy target
+ * Delete an endpoint
  */
 export async function deleteProxyTarget(id: string): Promise<void> {
   await api.delete(`/proxy-targets/${id}`)
