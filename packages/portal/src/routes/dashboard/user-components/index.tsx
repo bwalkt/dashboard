@@ -129,7 +129,7 @@ export function UsersPage() {
         onConfirm={handleDelete}
         loading={deleteMutation.isPending}
         title="Delete User"
-        description={`Are you sure you want to delete ${selectedUser?.name}? This action cannot be undone.`}
+        description={`Are you sure you want to delete ${selectedUser?.name}? This will soft delete the user and they can be restored later if needed.`}
       />
     </>
   )

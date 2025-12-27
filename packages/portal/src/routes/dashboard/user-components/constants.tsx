@@ -40,4 +40,22 @@ export const filterFields = [
       { label: 'Unverified', value: 'false' },
     ],
   },
+  {
+    label: 'Status',
+    value: 'is_act',
+    type: 'checkbox',
+    options: [
+      { label: 'Active', value: 'true' },
+      { label: 'Inactive', value: 'false' },
+    ],
+  },
+  {
+    label: 'Online Status',
+    value: 'online_status',
+    type: 'checkbox',
+    options: [
+      { label: 'Online', value: 'online' },
+      { label: 'Offline', value: 'offline' },
+    ],
+  },
 ] satisfies DataTableFilterField<User>[]

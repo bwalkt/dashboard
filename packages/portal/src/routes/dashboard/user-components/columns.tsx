@@ -80,10 +80,58 @@ export const createColumns = ({ onDelete, onSuspend, onActivate }: ColumnsProps)
     cell: ({ row }) => {
       const handle = row.getValue('handle') as string | undefined
       return handle ? (
-        <span className="font-mono text-sm">@{handle}</span>
+        <span className="font-mono text-sm">{handle}</span>
       ) : (
         <span className="text-muted-foreground">-</span>
       )
+    },
+  },
+  {
+    accessorKey: 'status',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+    cell: ({ row }) => {
+      const user = row.original
+      // Use is_act to determine status
+      const status = user.is_act ? 'ACTIVE' : 'INACTIVE'
+      return (
+        <Badge
+          className={
+            status === 'ACTIVE'
+              ? 'bg-green-100 text-green-800 border-green-200'
+              : 'bg-gray-100 text-gray-800 border-gray-200'
+          }
+          variant="outline"
+        >
+          {status}
+        </Badge>
+      )
+    },
+  },
+  {
+    accessorKey: 'online_status',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Online Status" />,
+    cell: ({ row }) => {
+      const onlineStatus = row.getValue('online_status') as string | null
+      const isOnline = onlineStatus === 'online'
+      return (
+        <Badge
+          className={
+            isOnline ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-800 border-gray-200'
+          }
+          variant="outline"
+        >
+          {onlineStatus?.toUpperCase() || 'OFFLINE'}
+        </Badge>
+      )
+    },
+  },
+  {
+    accessorKey: 'last_seen',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Last Seen" />,
+    cell: ({ row }) => {
+      const date = row.getValue('last_seen') as string | null
+      if (!date) return <span className="text-muted-foreground">Never</span>
+      return <div className="text-sm text-muted-foreground">{format(new Date(date), 'MMM dd, yyyy HH:mm')}</div>
     },
   },
   {
@@ -92,31 +140,27 @@ export const createColumns = ({ onDelete, onSuspend, onActivate }: ColumnsProps)
     cell: ({ row }) => {
       const user = row.original
       const emailVerified = user.email_verified
-      const phoneVerified = user.phone_verified
-
-      return (
-        <div className="flex gap-2">
-          {emailVerified && (
-            <Badge variant="outline" className="text-xs">
-              Email
-            </Badge>
-          )}
-          {phoneVerified && (
-            <Badge variant="outline" className="text-xs">
-              Phone
-            </Badge>
-          )}
-          {!emailVerified && !phoneVerified && <span className="text-muted-foreground text-xs">Unverified</span>}
-        </div>
+      return emailVerified ? (
+        <span className="text-green-600">✓</span>
+      ) : (
+        <span className="text-muted-foreground">-</span>
       )
     },
   },
   {
     accessorKey: 'c_at',
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Created At" />,
     cell: ({ row }) => {
       const date = row.getValue('c_at') as string
-      return <div className="text-sm text-muted-foreground">{format(new Date(date), 'MMM dd, yyyy')}</div>
+      return <div className="text-sm text-muted-foreground">{format(new Date(date), 'MMM dd, yyyy HH:mm')}</div>
+    },
+  },
+  {
+    accessorKey: 'is_act',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Active" />,
+    cell: ({ row }) => {
+      const isActive = row.getValue('is_act') as boolean
+      return isActive ? <span className="text-green-600">✓</span> : <span className="text-muted-foreground">-</span>
     },
   },
   {

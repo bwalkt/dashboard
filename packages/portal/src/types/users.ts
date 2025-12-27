@@ -8,6 +8,9 @@ export interface User {
   handle?: string
   org_id?: string | null
   is_del: boolean
+  is_act: boolean
+  online_status?: string | null
+  last_seen?: string | null
   c_at: string // created_at from backend
   u_at?: string // updated_at from backend
   // Frontend-specific fields (can be added later if needed)
@@ -32,6 +35,9 @@ export interface UpdateUserRequest {
   name?: string
   email?: string
   phone?: string
+  handle?: string
+  is_act?: boolean
+  is_del?: boolean
   role?: 'ADMIN' | 'USER' | 'VIEWER' | 'MANAGER'
   status?: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED'
   department?: string

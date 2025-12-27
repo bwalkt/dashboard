@@ -137,7 +137,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await db.pool.query(`
-          SELECT u.*, a.email, a.email_verified, a.phone_verified, a.c_at, a.is_act, a.is_del 
+          SELECT u.*, a.email, a.email_verified, u.handle, u.online_status, u.last_seen, a.phone_verified, a.c_at, a.is_act, a.is_del 
           FROM pzero.all_users u
           JOIN pzero.all_auth a ON u.id = a.id
           ORDER BY u.c_at DESC
