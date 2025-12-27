@@ -9,9 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UsersRouteImport } from './routes/users'
 import { Route as TermsRouteImport } from './routes/terms'
-import { Route as TableRouteImport } from './routes/table'
 import { Route as QrTestRouteImport } from './routes/qr-test'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -23,9 +21,13 @@ import { Route as AuthPromptRouteImport } from './routes/auth-prompt'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrgsIndexRouteImport } from './routes/orgs/index'
+import { Route as EndpointsIndexRouteImport } from './routes/endpoints/index'
 import { Route as OrgsNewRouteImport } from './routes/orgs/new'
 import { Route as EndpointsNewRouteImport } from './routes/endpoints/new'
-import { Route as DataTableTreeRouteImport } from './routes/data-table.tree'
+import { Route as DataTableUsersRouteImport } from './routes/data-table/users'
+import { Route as DataTableTreeRouteImport } from './routes/data-table/tree'
+import { Route as DataTableTableRouteImport } from './routes/data-table/table'
+import { Route as DataTableLogsRouteImport } from './routes/data-table/logs'
 import { Route as DashboardSignozRouteImport } from './routes/dashboard/signoz'
 import { Route as DashboardProxyTargetsRouteImport } from './routes/dashboard/proxy-targets'
 import { Route as DashboardLogsRouteImport } from './routes/dashboard/logs'
@@ -37,19 +39,9 @@ import { Route as OrgsEditOrgIdRouteImport } from './routes/orgs/edit.$orgId'
 import { Route as EndpointsEditEndpointIdRouteImport } from './routes/endpoints/edit.$endpointId'
 import { Route as DashboardSignozTracesRouteImport } from './routes/dashboard/signoz/traces'
 
-const UsersRoute = UsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TableRoute = TableRouteImport.update({
-  id: '/table',
-  path: '/table',
   getParentRoute: () => rootRouteImport,
 } as any)
 const QrTestRoute = QrTestRouteImport.update({
@@ -107,6 +99,11 @@ const OrgsIndexRoute = OrgsIndexRouteImport.update({
   path: '/orgs/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EndpointsIndexRoute = EndpointsIndexRouteImport.update({
+  id: '/endpoints/',
+  path: '/endpoints/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrgsNewRoute = OrgsNewRouteImport.update({
   id: '/orgs/new',
   path: '/orgs/new',
@@ -117,9 +114,24 @@ const EndpointsNewRoute = EndpointsNewRouteImport.update({
   path: '/endpoints/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DataTableUsersRoute = DataTableUsersRouteImport.update({
+  id: '/data-table/users',
+  path: '/data-table/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DataTableTreeRoute = DataTableTreeRouteImport.update({
   id: '/data-table/tree',
   path: '/data-table/tree',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DataTableTableRoute = DataTableTableRouteImport.update({
+  id: '/data-table/table',
+  path: '/data-table/table',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DataTableLogsRoute = DataTableLogsRouteImport.update({
+  id: '/data-table/logs',
+  path: '/data-table/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardSignozRoute = DashboardSignozRouteImport.update({
@@ -184,18 +196,20 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/qr-test': typeof QrTestRoute
-  '/table': typeof TableRoute
   '/terms': typeof TermsRoute
-  '/users': typeof UsersRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
+  '/data-table/logs': typeof DataTableLogsRoute
+  '/data-table/table': typeof DataTableTableRoute
   '/data-table/tree': typeof DataTableTreeRoute
+  '/data-table/users': typeof DataTableUsersRoute
   '/endpoints/new': typeof EndpointsNewRoute
   '/orgs/new': typeof OrgsNewRoute
+  '/endpoints': typeof EndpointsIndexRoute
   '/orgs': typeof OrgsIndexRoute
   '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
@@ -213,17 +227,19 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/qr-test': typeof QrTestRoute
-  '/table': typeof TableRoute
   '/terms': typeof TermsRoute
-  '/users': typeof UsersRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
+  '/data-table/logs': typeof DataTableLogsRoute
+  '/data-table/table': typeof DataTableTableRoute
   '/data-table/tree': typeof DataTableTreeRoute
+  '/data-table/users': typeof DataTableUsersRoute
   '/endpoints/new': typeof EndpointsNewRoute
   '/orgs/new': typeof OrgsNewRoute
+  '/endpoints': typeof EndpointsIndexRoute
   '/orgs': typeof OrgsIndexRoute
   '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
@@ -242,18 +258,20 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/qr-test': typeof QrTestRoute
-  '/table': typeof TableRoute
   '/terms': typeof TermsRoute
-  '/users': typeof UsersRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/proxy-targets': typeof DashboardProxyTargetsRoute
   '/dashboard/signoz': typeof DashboardSignozRouteWithChildren
+  '/data-table/logs': typeof DataTableLogsRoute
+  '/data-table/table': typeof DataTableTableRoute
   '/data-table/tree': typeof DataTableTreeRoute
+  '/data-table/users': typeof DataTableUsersRoute
   '/endpoints/new': typeof EndpointsNewRoute
   '/orgs/new': typeof OrgsNewRoute
+  '/endpoints/': typeof EndpointsIndexRoute
   '/orgs/': typeof OrgsIndexRoute
   '/dashboard/signoz/traces': typeof DashboardSignozTracesRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
@@ -273,18 +291,20 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/profile'
     | '/qr-test'
-    | '/table'
     | '/terms'
-    | '/users'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
     | '/dashboard/proxy-targets'
     | '/dashboard/signoz'
+    | '/data-table/logs'
+    | '/data-table/table'
     | '/data-table/tree'
+    | '/data-table/users'
     | '/endpoints/new'
     | '/orgs/new'
+    | '/endpoints'
     | '/orgs'
     | '/dashboard/signoz/traces'
     | '/endpoints/edit/$endpointId'
@@ -302,17 +322,19 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/profile'
     | '/qr-test'
-    | '/table'
     | '/terms'
-    | '/users'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
     | '/dashboard/proxy-targets'
+    | '/data-table/logs'
+    | '/data-table/table'
     | '/data-table/tree'
+    | '/data-table/users'
     | '/endpoints/new'
     | '/orgs/new'
+    | '/endpoints'
     | '/orgs'
     | '/dashboard/signoz/traces'
     | '/endpoints/edit/$endpointId'
@@ -330,18 +352,20 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/profile'
     | '/qr-test'
-    | '/table'
     | '/terms'
-    | '/users'
     | '/auth/callback'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/dashboard/logs'
     | '/dashboard/proxy-targets'
     | '/dashboard/signoz'
+    | '/data-table/logs'
+    | '/data-table/table'
     | '/data-table/tree'
+    | '/data-table/users'
     | '/endpoints/new'
     | '/orgs/new'
+    | '/endpoints/'
     | '/orgs/'
     | '/dashboard/signoz/traces'
     | '/endpoints/edit/$endpointId'
@@ -360,15 +384,17 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   QrTestRoute: typeof QrTestRoute
-  TableRoute: typeof TableRoute
   TermsRoute: typeof TermsRoute
-  UsersRoute: typeof UsersRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
+  DataTableLogsRoute: typeof DataTableLogsRoute
+  DataTableTableRoute: typeof DataTableTableRoute
   DataTableTreeRoute: typeof DataTableTreeRoute
+  DataTableUsersRoute: typeof DataTableUsersRoute
   EndpointsNewRoute: typeof EndpointsNewRoute
   OrgsNewRoute: typeof OrgsNewRoute
+  EndpointsIndexRoute: typeof EndpointsIndexRoute
   OrgsIndexRoute: typeof OrgsIndexRoute
   EndpointsEditEndpointIdRoute: typeof EndpointsEditEndpointIdRoute
   OrgsEditOrgIdRoute: typeof OrgsEditOrgIdRoute
@@ -376,25 +402,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/users': {
-      id: '/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof UsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/terms': {
       id: '/terms'
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/table': {
-      id: '/table'
-      path: '/table'
-      fullPath: '/table'
-      preLoaderRoute: typeof TableRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/qr-test': {
@@ -474,6 +486,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/endpoints/': {
+      id: '/endpoints/'
+      path: '/endpoints'
+      fullPath: '/endpoints'
+      preLoaderRoute: typeof EndpointsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/orgs/new': {
       id: '/orgs/new'
       path: '/orgs/new'
@@ -488,11 +507,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EndpointsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/data-table/users': {
+      id: '/data-table/users'
+      path: '/data-table/users'
+      fullPath: '/data-table/users'
+      preLoaderRoute: typeof DataTableUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/data-table/tree': {
       id: '/data-table/tree'
       path: '/data-table/tree'
       fullPath: '/data-table/tree'
       preLoaderRoute: typeof DataTableTreeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/data-table/table': {
+      id: '/data-table/table'
+      path: '/data-table/table'
+      fullPath: '/data-table/table'
+      preLoaderRoute: typeof DataTableTableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/data-table/logs': {
+      id: '/data-table/logs'
+      path: '/data-table/logs'
+      fullPath: '/data-table/logs'
+      preLoaderRoute: typeof DataTableLogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/signoz': {
@@ -609,15 +649,17 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   QrTestRoute: QrTestRoute,
-  TableRoute: TableRoute,
   TermsRoute: TermsRoute,
-  UsersRoute: UsersRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,
+  DataTableLogsRoute: DataTableLogsRoute,
+  DataTableTableRoute: DataTableTableRoute,
   DataTableTreeRoute: DataTableTreeRoute,
+  DataTableUsersRoute: DataTableUsersRoute,
   EndpointsNewRoute: EndpointsNewRoute,
   OrgsNewRoute: OrgsNewRoute,
+  EndpointsIndexRoute: EndpointsIndexRoute,
   OrgsIndexRoute: OrgsIndexRoute,
   EndpointsEditEndpointIdRoute: EndpointsEditEndpointIdRoute,
   OrgsEditOrgIdRoute: OrgsEditOrgIdRoute,

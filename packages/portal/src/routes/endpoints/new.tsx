@@ -20,7 +20,7 @@ function NewEndpointPage() {
         url: endpointData.url!,
         port: endpointData.port || undefined,
       })
-      navigate({ to: '/dashboard/proxy-targets' })
+      navigate({ to: '/endpoints' })
     } catch (error) {
       console.error('Failed to create endpoint:', error)
       toast.error('Failed to create endpoint')
@@ -29,7 +29,7 @@ function NewEndpointPage() {
   }
 
   const handleCancel = () => {
-    navigate({ to: '/dashboard/proxy-targets' })
+    navigate({ to: '/endpoints' })
   }
 
   return (

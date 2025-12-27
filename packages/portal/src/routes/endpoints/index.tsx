@@ -1,17 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Suspense } from 'react'
-import DefaultPage from '@/app/data-table/page'
 import DashboardLayout from '@/pages/dashboard/Layout'
+import { ProxyTargetsPage } from '@/routes/dashboard/proxy-targets-components'
 import { useAuthStore } from '@/stores/auth'
 
-export const Route = createFileRoute('/users')({
-  component: RouteComponent,
-  validateSearch: (search: Record<string, unknown>) => search,
+export const Route = createFileRoute('/endpoints/')({
+  component: EndpointsPageWithLayout,
 })
 
-function RouteComponent() {
-  const search = Route.useSearch()
-
+function EndpointsPageWithLayout() {
   // Temporarily bypass auth for development
   // const { user, loading } = useAuthStore()
 
@@ -28,13 +25,9 @@ function RouteComponent() {
   // }
 
   return (
-    <DashboardLayout>
-      <Suspense fallback={<div>Loading...</div>}>
-        <DefaultPage
-          searchParams={Promise.resolve(search as { [key: string]: string | string[] | undefined })}
-          title="Users"
-          description="Manage and monitor user accounts and their activity"
-        />
+    <DashboardLayout fullWidth>
+      <Suspense fallback={<div className="p-6">Loading...</div>}>
+        <ProxyTargetsPage />
       </Suspense>
     </DashboardLayout>
   )

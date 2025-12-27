@@ -1,20 +1,20 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
+
 import { DataTable } from '@/app/data-table'
-import { avatarColumns } from '@/app/data-table/avatar-columns'
-import { avatarFilterFields } from '@/app/data-table/avatar-constants'
-import { avatarData } from '@/app/data-table/avatar-data'
-import { avatarGroupByOptions } from '@/app/data-table/avatar-group-options'
+import { filterFields } from '@/app/data-table/constants'
+import { treeColumns } from '@/app/data-table/tree-columns'
+import { treeData } from '@/app/data-table/tree-data'
 import KBar from '@/components/kbar'
 import AppSidebar from '@/components/layout/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { useAuthStore } from '@/stores/auth'
 
-export const Route = createFileRoute('/table')({
-  component: TablePage,
+export const Route = createFileRoute('/data-table/tree')({
+  component: TreeTablePage,
 })
 
-function TablePage() {
+function TreeTablePage() {
   const { user, loading } = useAuthStore()
   const navigate = useNavigate({ from: Route.fullPath })
 
@@ -43,12 +43,12 @@ function TablePage() {
         <SidebarInset className="h-screen overflow-hidden">
           <div className="flex flex-col w-full h-full">
             <DataTable
-              columns={avatarColumns}
-              data={avatarData}
-              filterFields={avatarFilterFields}
-              groupByOptions={avatarGroupByOptions}
-              title="User Directory"
-              description="Employee directory with grouping functionality - try grouping by department, status, or role"
+              columns={treeColumns}
+              data={treeData}
+              filterFields={filterFields}
+              title="Expandable Tree Data Table"
+              description="Example of a data table with expandable tree rows using nested data structure"
+              enableExpanding={true}
             />
           </div>
         </SidebarInset>

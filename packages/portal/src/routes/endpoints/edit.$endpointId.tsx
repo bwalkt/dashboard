@@ -25,7 +25,7 @@ function EditEndpointPage() {
       } catch (error) {
         console.error('Failed to fetch endpoint:', error)
         toast.error('Failed to load endpoint')
-        navigate({ to: '/dashboard/proxy-targets' })
+        navigate({ to: '/endpoints' })
       } finally {
         setLoading(false)
       }
@@ -41,7 +41,7 @@ function EditEndpointPage() {
         url: updatedEndpoint.url,
         port: updatedEndpoint.port,
       })
-      navigate({ to: '/dashboard/proxy-targets' })
+      navigate({ to: '/endpoints' })
     } catch (error) {
       console.error('Failed to update endpoint:', error)
       toast.error('Failed to update endpoint')
@@ -50,7 +50,7 @@ function EditEndpointPage() {
   }
 
   const handleCancel = () => {
-    navigate({ to: '/dashboard/proxy-targets' })
+    navigate({ to: '/endpoints' })
   }
 
   if (loading) {
