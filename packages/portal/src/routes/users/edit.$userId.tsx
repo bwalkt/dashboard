@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
-import { UserDrawer } from '@/routes/dashboard/user-components'
+import { UserDrawer } from '@/features/users/components'
 import { getUser, updateUser } from '@/services/users.service'
 import type { User } from '@/types/users'
 

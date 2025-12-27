@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
-import { EndpointDrawer } from '@/routes/dashboard/endpoint-components/endpoint-drawer'
+import { EndpointDrawer } from '@/features/endpoints/components/endpoint-drawer'
 import { getEndpoint, updateEndpoint } from '@/services/endpoints.service'
 import type { Endpoint } from '@/types/endpoints'
 

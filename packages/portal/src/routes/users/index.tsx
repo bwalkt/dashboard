@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { Suspense } from 'react'
+import { UsersPage } from '@/features/users/components'
 import DashboardLayout from '@/pages/dashboard/Layout'
-import { UsersPage } from '@/routes/dashboard/user-components'
 import { useAuthStore } from '@/stores/auth'
 
 export const Route = createFileRoute('/users/')({

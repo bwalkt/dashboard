@@ -2,7 +2,7 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { UserDrawer } from '@/routes/dashboard/user-components'
+import { UserDrawer } from '@/features/users/components'
 import { createUser } from '@/services/users.service'
 import type { User } from '@/types/users'
 
