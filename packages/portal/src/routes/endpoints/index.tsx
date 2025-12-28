@@ -1,26 +1,28 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { Suspense } from 'react'
 import { EndpointsPage } from '@/features/endpoints/components'
+import { AuthLoadingComponent, requireAuth } from '@/lib/auth-guard'
 import DashboardLayout from '@/pages/dashboard/Layout'
 import { useAuthStore } from '@/stores/auth'
 
 export const Route = createFileRoute('/endpoints/')({
   component: EndpointsPageWithLayout,
+  pendingComponent: AuthLoadingComponent,
+  beforeLoad: requireAuth,
 })
 
 function EndpointsPageWithLayout() {
   const { user, loading } = useAuthStore()
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    )
+    return <AuthLoadingComponent />
   }
 
   if (!user) {
-    throw redirect({ to: '/auth/sign-in' })
+    // This should not happen as beforeLoad handles redirect
+    // But keep as fallback
+    window.location.href = '/auth/sign-in'
+    return null
   }
 
   return (

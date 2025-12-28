@@ -1,27 +1,28 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { AuthLoadingComponent, requireAuth } from '@/lib/auth-guard'
 import DashboardLayout from '@/pages/dashboard/Layout'
 import OrgsPage from '@/pages/dashboard/Orgs'
 import { useAuthStore } from '@/stores/auth'
 
 export const Route = createFileRoute('/orgs/')({
   component: OrgsPageWithLayout,
+  pendingComponent: AuthLoadingComponent,
+  beforeLoad: requireAuth,
 })
 
 function OrgsPageWithLayout() {
-  // Temporarily bypass auth for development
-  // const { user, loading } = useAuthStore()
+  const { user, loading } = useAuthStore()
 
-  // if (loading) {
-  //   return (
-  //     <div className="flex items-center justify-center min-h-screen">
-  //       <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-  //     </div>
-  //   )
-  // }
+  if (loading) {
+    return <AuthLoadingComponent />
+  }
 
-  // if (!user) {
-  //   throw redirect({ to: '/auth/sign-in' })
-  // }
+  if (!user) {
+    // This should not happen as beforeLoad handles redirect
+    // But keep as fallback
+    window.location.href = '/auth/sign-in'
+    return null
+  }
 
   return (
     <DashboardLayout fullWidth>
