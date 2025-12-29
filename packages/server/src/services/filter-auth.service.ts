@@ -29,7 +29,7 @@ export class FilterAuthService {
     const timestamp = Math.floor(Date.now() / 1000);
     const nonce = randomBytes(16).toString('hex');
     
-    const message = `${filterId}:${timestamp}:${nonce}:${envoyNodeId || ''}`;
+    const message = `${filterId}:${timestamp}:${nonce}:${envoyNodeId ?? ''}`;
     const signature = createHmac('sha256', this.FILTER_SECRET)
       .update(message)
       .digest('hex');
@@ -134,7 +134,11 @@ export class FilterAuthService {
     const identities: FilterIdentity[] = [];
 
     for (const filterRef of activeFilterIds) {
-      const [filterId, instanceId] = filterRef.split(':');
+      const parts = filterRef.split(':');
+      if (parts.length < 2) continue;
+      const filterId = parts[0];
+      const instanceId = parts[1];
+      if (!filterId || !instanceId) continue;
       const identity = await this.getFilterIdentity(filterId, instanceId);
       
       if (identity) {

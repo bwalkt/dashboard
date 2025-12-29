@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
-	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
 
 const (

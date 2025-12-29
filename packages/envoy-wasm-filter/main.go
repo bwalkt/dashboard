@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-	
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
@@ -32,7 +30,7 @@ func (*pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 	}
 }
 
-func (*pluginContext) OnPluginStart(rootContextID uint32) types.OnPluginStartStatus {
+func (*pluginContext) OnPluginStart(rootContextID int) types.OnPluginStartStatus {
 	// Register filter in Redis
 	if err := RegisterFilterInRedis(); err != nil {
 		proxywasm.LogErrorf("[WASM Filter] Failed to register filter in Redis: %v", err)

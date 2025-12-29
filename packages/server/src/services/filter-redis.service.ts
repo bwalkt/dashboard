@@ -69,8 +69,16 @@ export class FilterRedisService {
     await subscriber.connect();
 
     // Subscribe to header update channel
-    await subscriber.subscribe(REDIS_KEYS.HEADER_UPDATE_CHANNEL, (message: string) => {
-      console.log(`📡 Header update received: ${message}`);
+    await subscriber.subscribe(REDIS_KEYS.HEADER_UPDATE_CHANNEL, (err, count) => {
+      if (err) {
+        console.error("Redis subscription error:", err);
+        return;
+      }
+      console.log(`📡 Subscribed to ${count} Redis channels`);
+    });
+
+    subscriber.on('message', (channel: string, message: string) => {
+      console.log(`📡 Header update received on ${channel}: ${message}`);
       // Filters will see this update when they poll or subscribe
     });
 
@@ -216,9 +224,12 @@ export class FilterRedisService {
       requestId,
       timestamp: Date.now(),
       status: isValid ? 'success' : 'error',
-      data: { valid: isValid },
-      error: error || undefined
+      data: { valid: isValid }
     };
+
+    if (error) {
+      result.error = error;
+    }
 
     await redis.set(resultKey, JSON.stringify(result), FilterRedisService.REQUEST_TTL);
   }

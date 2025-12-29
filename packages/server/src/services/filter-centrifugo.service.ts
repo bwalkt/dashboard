@@ -191,9 +191,12 @@ export class FilterCentrifugoService {
         challengeId: request.challengeId,
         requestId: request.requestId,
         valid: isValid,
-        reason: isValid ? undefined : "Invalid challenge answer",
         cacheTtl: isValid ? 300 : 0 // Cache valid results for 5 minutes
       };
+      
+      if (!isValid) {
+        response.reason = "Invalid challenge answer";
+      }
 
       await this.sendChallengeValidationResponse(filterId, instanceId, response);
     } catch (error) {

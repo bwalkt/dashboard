@@ -72,11 +72,21 @@ export async function redisProxyRoutes(
           
         case 'HGET':
           const [hkey, hfield] = key.split(':');
+          if (!hkey || !hfield) {
+            return reply.status(400).send({
+              error: "Invalid key format for HGET. Expected format: 'key:field'"
+            });
+          }
           result = await redis.getClient().hget(hkey, hfield);
           break;
           
         case 'HSET':
           const [hskey, hsfield] = key.split(':');
+          if (!hskey || !hsfield) {
+            return reply.status(400).send({
+              error: "Invalid key format for HSET. Expected format: 'key:field'"
+            });
+          }
           await redis.getClient().hset(hskey, hsfield, value || "");
           result = "OK";
           break;
