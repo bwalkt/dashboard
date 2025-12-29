@@ -21,9 +21,10 @@ export interface FilterIdentity {
 
 export class FilterAuthService {
   private static readonly FILTER_SECRET = config.JWT_SECRET + "_FILTER_AUTH";
-  private static readonly TOKEN_VALIDITY_SECONDS = parseInt(process.env.FILTER_TOKEN_VALIDITY_SECONDS || "300", 10); // Default: 5 minutes
-  private static readonly NONCE_CACHE_TTL = parseInt(process.env.FILTER_NONCE_CACHE_TTL || "600", 10); // Default: 10 minutes
-  private static readonly MAX_CLOCK_SKEW = parseInt(process.env.FILTER_MAX_CLOCK_SKEW || "30", 10); // Default: 30 seconds
+  private static readonly TOKEN_VALIDITY_SECONDS = Math.max(1, parseInt(process.env.FILTER_TOKEN_VALIDITY_SECONDS || "300", 10)); // Default: 5 minutes
+  private static readonly NONCE_CACHE_TTL = Math.max(1, parseInt(process.env.FILTER_NONCE_CACHE_TTL || "600", 10)); // Default: 10 minutes
+  private static readonly MAX_CLOCK_SKEW = Math.max(0, parseInt(process.env.FILTER_MAX_CLOCK_SKEW || "30", 10)); // Default: 30 seconds
+  private static readonly MESSAGE_VALIDITY_SECONDS = Math.max(1, parseInt(process.env.FILTER_MESSAGE_VALIDITY_SECONDS || "120", 10)); // Default: 2 minutes
 
   // Generate a secure authentication token for the filter
   static generateAuthToken(filterId: string, envoyNodeId?: string): FilterAuthToken {
@@ -321,11 +322,11 @@ export class FilterAuthService {
         return { valid: false, reason: "Missing required fields" };
       }
 
-      // Check timestamp (allow 2 minute clock skew)
+      // Check timestamp with configurable validity window
       const currentTime = Math.floor(Date.now() / 1000);
       const timeDiff = Math.abs(currentTime - timestamp);
       
-      if (timeDiff > 120) {
+      if (timeDiff > this.MESSAGE_VALIDITY_SECONDS) {
         return { valid: false, reason: "Message timestamp too old or too far in future" };
       }
 

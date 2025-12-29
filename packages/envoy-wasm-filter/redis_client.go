@@ -32,6 +32,9 @@ var (
 	}
 	
 	// Redis operation state for async callbacks
+	// LIMITATION: Single global state may cause conflicts if multiple async operations overlap
+	// TODO: Replace with map[uint32]operationState keyed by callout ID for concurrent operations
+	// Current design assumes serial Redis operations per filter instance
 	redisOperationState struct {
 		pending        bool
 		operationType  string // "header_info", "challenge", etc.
@@ -128,24 +131,8 @@ func generateFilterToken() string {
 func ValidateChallengeViaRedis(challengeID, challengeAnswer string) (bool, error) {
 	requestID := "req_" + generateNonce()
 	
-	// First check Redis cache directly
-	cacheKey := RedisKeys.ChallengeCache + challengeID
-	cachedAnswer, err := redisGet(cacheKey)
-	if err == nil && cachedAnswer != "" {
-		// Validate against cache
-		if cachedAnswer == challengeAnswer {
-			proxywasm.LogInfof("[Redis] Challenge validated from cache: %s", challengeID)
-			// Cache in shared data for even faster access
-			SetChallengeInSharedDataWithDefaultTTL(challengeID, challengeAnswer)
-			// Return cache hit = true, validation is complete
-			return true, nil
-		} else {
-			proxywasm.LogWarnf("[Redis] Challenge cache mismatch for: %s", challengeID)
-			proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid challenge\"}"), -1)
-			// Return cache hit = true, but validation failed (response already sent)
-			return true, nil
-		}
-	}
+	// Note: Redis cache check removed as synchronous operations are not supported in WASM
+	// Cache checking is handled by shared data cache before this function is called
 	
 	// Queue validation request
 	request := RedisFilterRequest{
@@ -165,10 +152,10 @@ func ValidateChallengeViaRedis(challengeID, challengeAnswer string) (bool, error
 		return false, err
 	}
 	
-	// Push to Redis queue
-	err = redisLPush(RedisKeys.ChallengeQueue, string(requestJSON))
+	// Push to Redis queue using async operation
+	err = redisLPushAsync(RedisKeys.ChallengeQueue, string(requestJSON), "challenge_queue", nil)
 	if err != nil {
-		proxywasm.LogErrorf("[Redis] Failed to queue challenge validation: %v", err)
+		proxywasm.LogErrorf("[Redis] Failed to initiate challenge validation queue: %v", err)
 		return false, err
 	}
 	
@@ -222,17 +209,18 @@ func checkValidationResult() bool {
 		return true // Stop polling
 	}
 	
-	// Check Redis for result
-	resultKey := RedisKeys.ChallengeResults + validationState.requestID
-	result, err := redisGet(resultKey)
-	if err != nil || result == "" {
+	// Check shared data for result (Redis callback should write results here)
+	// Note: Using shared data instead of direct Redis polling as synchronous Redis calls always fail in WASM
+	resultKey := "validation_result:" + validationState.requestID
+	resultData, _, err := proxywasm.GetSharedData(resultKey)
+	if err != nil || len(resultData) == 0 {
 		return false // Continue polling
 	}
 	
-	// Parse result
+	// Parse result from shared data
 	var response RedisFilterResponse
-	if err := json.Unmarshal([]byte(result), &response); err != nil {
-		proxywasm.LogErrorf("[Redis] Failed to parse result: %v", err)
+	if err := json.Unmarshal(resultData, &response); err != nil {
+		proxywasm.LogErrorf("[Redis] Failed to parse result from shared data: %v", err)
 		return false // Continue polling
 	}
 	
@@ -244,6 +232,9 @@ func checkValidationResult() bool {
 				// Cache for future use
 				SetChallengeInSharedDataWithDefaultTTL(validationState.challengeID, validationState.answer)
 				clearValidationState()
+				
+				// Clean up the shared data result (ignore cas for cleanup)
+				proxywasm.SetSharedData(resultKey, nil, 0)
 				proxywasm.ResumeHttpRequest()
 				return true // Stop polling
 			}
@@ -254,6 +245,9 @@ func checkValidationResult() bool {
 	proxywasm.LogWarnf("[Redis] Challenge validation failed: %s - %s", validationState.challengeID, response.Error)
 	proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid challenge\"}"), -1)
 	clearValidationState()
+	
+	// Clean up the shared data result (ignore cas for cleanup)
+	proxywasm.SetSharedData(resultKey, nil, 0)
 	return true // Stop polling
 }
 
@@ -542,7 +536,6 @@ func handleRedisChallengeWriteResponse(response map[string]interface{}) {
 // handleRedisError handles Redis operation errors
 func handleRedisError(errorMsg string) {
 	proxywasm.LogErrorf("[Redis] Operation failed: %s", errorMsg)
-	clearRedisOperationState()
 	
 	// For operations that need to resume requests, send error response
 	if redisOperationState.operationType == "header_info" {
@@ -551,6 +544,8 @@ func handleRedisError(errorMsg string) {
 		// For other operations, resume normally
 		proxywasm.ResumeHttpRequest()
 	}
+	
+	clearRedisOperationState()
 }
 
 // clearRedisOperationState clears the Redis operation state
@@ -561,7 +556,15 @@ func clearRedisOperationState() {
 }
 
 // makeRedisRequestAsync initiates async Redis operation with proper callback handling
+// CONCURRENCY LIMITATION: Only supports one pending Redis operation at a time due to global state
+// Multiple overlapping calls will overwrite redisOperationState, causing incorrect callback handling
 func makeRedisRequestAsync(command, key, value, operationType string, context map[string]interface{}, args ...interface{}) error {
+	// Check for concurrent operation conflict
+	if redisOperationState.pending {
+		proxywasm.LogWarnf("[Redis] Concurrent operation detected: %s while %s is pending", operationType, redisOperationState.operationType)
+		return fmt.Errorf("concurrent Redis operation not supported: %s already pending", redisOperationState.operationType)
+	}
+	
 	// Create Redis command request
 	token := generateFilterToken() // Generate once to avoid token mismatch
 	

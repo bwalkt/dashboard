@@ -74,6 +74,15 @@ func (ctx *pluginContext) OnPluginStart(rootContextID int) types.OnPluginStartSt
 	return types.OnPluginStartStatusOK
 }
 
+// OnTick is called periodically when timer is set (for challenge validation polling)
+func (ctx *pluginContext) OnTick() {
+	// Check if validation is complete
+	if checkValidationResult() {
+		// Validation completed (success or failure), stop timer
+		proxywasm.SetTickPeriodMilliSeconds(0)
+	}
+}
+
 type httpContext struct {
 	// Embed the default HTTP context
 	types.DefaultHttpContext
@@ -166,14 +175,6 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	return types.ActionPause
 }
 
-// OnTick is called periodically when timer is set (for challenge validation polling)
-func (ctx *httpContext) OnTick() {
-	// Check if validation is complete
-	if checkValidationResult() {
-		// Validation completed (success or failure), stop timer
-		proxywasm.SetTickPeriodMilliSeconds(0)
-	}
-}
 
 // OnHttpCallResponse is not called when a callback is provided to DispatchHttpCall
 // The response is handled in the callback function instead
