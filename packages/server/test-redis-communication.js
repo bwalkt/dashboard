@@ -11,6 +11,7 @@ import { headerInfoCache } from './dist/services/header-info-cache.service.js';
 
 async function testRedisComms() {
   console.log('🧪 Testing Redis Communication System...\n');
+  let exitCode = 0;
 
   try {
     // Initialize Redis
@@ -106,7 +107,8 @@ async function testRedisComms() {
 
     // Test 8: Cleanup test data
     console.log('\n📝 Test 8: Cleanup');
-    await filterRedisService.deregisterFilter('test-filter-1', 'instance-123');
+    // Remove test filter from registry
+    await redis.getClient().hdel('filter:registry', 'test-filter-1');
     await headerInfoCache.clearAllData();
     await redis.getClient().del('filter:header:info');
     console.log('✅ Test data cleaned up');
@@ -115,10 +117,10 @@ async function testRedisComms() {
     
   } catch (error) {
     console.error('❌ Test failed:', error);
-    process.exit(1);
+    exitCode = 1;
   } finally {
     await redis.close();
-    process.exit(0);
+    process.exit(exitCode);
   }
 }
 

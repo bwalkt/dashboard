@@ -317,9 +317,16 @@ export async function centrifugoRoutes(
 
       // Check API key authentication
       if (apiKey) {
-        if (apiKey !== config.JWT_SECRET) {
+        // Use separate STATS_API_KEY for security, fallback to JWT_SECRET for backward compatibility
+        const validApiKey = config.STATS_API_KEY || config.JWT_SECRET;
+        if (apiKey !== validApiKey) {
           reply.code(401);
           return { error: "Invalid API key" };
+        }
+        
+        // Log security warning if using JWT_SECRET as fallback
+        if (!config.STATS_API_KEY) {
+          console.warn("⚠️ Using JWT_SECRET as stats API key. Consider setting STATS_API_KEY for better security separation.");
         }
       }
       // Check JWT authentication

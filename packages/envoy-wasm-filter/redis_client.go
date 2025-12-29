@@ -124,7 +124,8 @@ func generateFilterToken() string {
 // which provides cryptographic randomness with timestamp fallback
 
 // ValidateChallengeViaRedis checks challenge using Redis
-func ValidateChallengeViaRedis(challengeID, challengeAnswer string) error {
+// Returns (cacheHit, error) - if cacheHit is true, validation is complete and no pause needed
+func ValidateChallengeViaRedis(challengeID, challengeAnswer string) (bool, error) {
 	requestID := "req_" + generateNonce()
 	
 	// First check Redis cache directly
@@ -136,12 +137,13 @@ func ValidateChallengeViaRedis(challengeID, challengeAnswer string) error {
 			proxywasm.LogInfof("[Redis] Challenge validated from cache: %s", challengeID)
 			// Cache in shared data for even faster access
 			SetChallengeInSharedDataWithDefaultTTL(challengeID, challengeAnswer)
-			proxywasm.ResumeHttpRequest()
-			return nil
+			// Return cache hit = true, validation is complete
+			return true, nil
 		} else {
 			proxywasm.LogWarnf("[Redis] Challenge cache mismatch for: %s", challengeID)
 			proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid challenge\"}"), -1)
-			return nil
+			// Return cache hit = true, but validation failed (response already sent)
+			return true, nil
 		}
 	}
 	
@@ -178,7 +180,8 @@ func ValidateChallengeViaRedis(challengeID, challengeAnswer string) error {
 	// Start timer for polling (WASM-compatible)
 	proxywasm.SetTickPeriodMilliSeconds(500) // Poll every 500ms
 	
-	return nil
+	// Return cache hit = false, async validation in progress
+	return false, nil
 }
 
 // setValidationState stores validation state for timer-based polling
@@ -271,6 +274,7 @@ func pollForChallengeResult(requestID, challengeID, challengeAnswer string) {
 */
 
 // RegisterFilterInRedis registers the filter in Redis
+// Note: This function uses async Redis calls but is intended for initialization only
 func RegisterFilterInRedis() error {
 	registration := map[string]interface{}{
 		"filterId":      filterID,
@@ -285,17 +289,25 @@ func RegisterFilterInRedis() error {
 		return err
 	}
 	
-	err = redisHSet(RedisKeys.FilterRegistry, filterID, string(registrationJSON))
+	// Use async version for WASM compatibility
+	// Note: Since this is called during initialization, we don't wait for callback
+	context := map[string]interface{}{
+		"operation": "filter_registration",
+		"filterId":  filterID,
+	}
+	
+	err = redisHSetAsync(RedisKeys.FilterRegistry, filterID, string(registrationJSON), "filter_registration", context)
 	if err != nil {
-		proxywasm.LogErrorf("[Redis] Failed to register filter: %v", err)
+		proxywasm.LogErrorf("[Redis] Failed to initiate filter registration: %v", err)
 		return err
 	}
 	
-	proxywasm.LogInfof("[Redis] Filter registered: %s", filterID)
+	proxywasm.LogInfof("[Redis] Filter registration initiated: %s", filterID)
 	return nil
 }
 
 // SendHeartbeatToRedis sends heartbeat to maintain active status
+// Note: This function uses async Redis calls but is intended for periodic updates
 func SendHeartbeatToRedis() error {
 	heartbeatKey := RedisKeys.FilterHeartbeat + filterID
 	heartbeatData := map[string]interface{}{
@@ -310,12 +322,20 @@ func SendHeartbeatToRedis() error {
 		return err
 	}
 	
-	err = redisSetWithTTL(heartbeatKey, string(heartbeatJSON), 60) // 1 minute TTL
+	// Use async version for WASM compatibility
+	// Note: Since this is called periodically, we don't wait for callback
+	context := map[string]interface{}{
+		"operation": "heartbeat_update",
+		"filterId":  filterID,
+	}
+	
+	err = redisSetWithTTLAsync(heartbeatKey, string(heartbeatJSON), "heartbeat_update", 60, context) // 1 minute TTL
 	if err != nil {
-		proxywasm.LogWarnf("[Redis] Failed to send heartbeat: %v", err)
+		proxywasm.LogWarnf("[Redis] Failed to initiate heartbeat: %v", err)
 		return err
 	}
 	
+	proxywasm.LogDebugf("[Redis] Heartbeat initiated for: %s", filterID)
 	return nil
 }
 

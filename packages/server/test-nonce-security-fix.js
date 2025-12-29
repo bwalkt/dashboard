@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import crypto from 'crypto';
+
 /**
  * Test script to verify nonce generation security fix in WASM filter
  * This demonstrates that predictable timestamp-based nonces have been replaced with cryptographically secure random nonces
@@ -54,13 +56,8 @@ console.log('  ⚠️  Sequential and predictable pattern visible!');
 
 // New method simulation (secure)
 function generateSecureNonce() {
-  // Simulate 16 bytes of randomness
-  const chars = '0123456789abcdef';
-  let result = '';
-  for (let i = 0; i < 32; i++) { // 16 bytes = 32 hex chars
-    result += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return result;
+  // Generate 16 bytes of cryptographically secure randomness
+  return crypto.randomBytes(16).toString('hex');
 }
 
 console.log('\nNew (Secure) Nonces:');

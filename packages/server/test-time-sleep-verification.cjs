@@ -86,7 +86,7 @@ for (const file of goFiles) {
   }
 }
 
-console.log('\\n📋 WASM Compatibility Summary:');
+console.log('\n📋 WASM Compatibility Summary:');
 
 const compatibilityChecks = [
   {
@@ -130,7 +130,7 @@ compatibilityChecks.forEach((check, index) => {
 
 const allCompatible = compatibilityChecks.every(check => check.status);
 
-console.log('\\n🎯 Final Verification Result:');
+console.log('\n🎯 Final Verification Result:');
 if (allCompatible) {
   console.log('✅ ALL WASM COMPATIBILITY CHECKS PASSED!');
   console.log('💡 The envoy-wasm-filter is now fully compatible with TinyGo WASM environment');
@@ -141,7 +141,7 @@ if (allCompatible) {
   process.exit(1);
 }
 
-console.log('\\n📚 Key Improvements Made:');
+console.log('\n📚 Key Improvements Made:');
 console.log('- Replaced goroutines with timer-based polling');
 console.log('- Eliminated blocking time.Sleep() calls');
 console.log('- Added event-driven OnTick() callbacks');

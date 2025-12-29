@@ -148,14 +148,21 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	ctx.challengeAnswer = challengeHeaders.ChallengeAnswer
 
 	proxywasm.LogInfof("[WASM Filter] Challenge not in cache, validating via Redis: %s", challengeHeaders.ChallengeID)
-	err = ValidateChallengeViaRedis(challengeHeaders.ChallengeID, challengeHeaders.ChallengeAnswer)
+	cacheHit, err := ValidateChallengeViaRedis(challengeHeaders.ChallengeID, challengeHeaders.ChallengeAnswer)
 	if err != nil {
 		proxywasm.LogErrorf("[WASM Filter] Failed to validate via Redis: %v", err)
 		proxywasm.SendHttpResponse(500, nil, []byte("{\"error\":\"validation service error\"}"), -1)
 		return types.ActionPause
 	}
 
-	// Pause request processing until validation completes
+	if cacheHit {
+		// Cache hit: validation complete, continue processing
+		proxywasm.LogInfof("[WASM Filter] Cache hit - validation complete")
+		return types.ActionContinue
+	}
+
+	// Cache miss: pause request processing until async validation completes
+	proxywasm.LogInfof("[WASM Filter] Cache miss - pausing for async validation")
 	return types.ActionPause
 }
 
