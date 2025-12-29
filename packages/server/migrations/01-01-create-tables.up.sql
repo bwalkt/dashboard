@@ -636,7 +636,6 @@ CREATE TABLE pzero.all_users (
   LIKE pzero.uuid_base_loc_table including ALL,
   LIKE pzero.base_part including ALL,
   avatar text,
-  grid jsonb, -- 5x5 grid for password authentication
   status pzero.user_status DEFAULT 'ACTIVE',
   online_status pzero.user_online_status DEFAULT 'ONLINE',
   last_seen timestamptz default now(),

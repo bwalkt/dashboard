@@ -13,6 +13,7 @@ export type UserWithStatus = User & {
   status?: 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'DELETED' | 'PENDING' | 'BLOCKED' | null;
 };
 
+import { encryptionService } from "../utils/encryption.js";
 export class UserService {
   /**
    * Get user by GitHub ID
@@ -84,6 +85,32 @@ export class UserService {
   
 
   /**
+   * Get user's decrypted grid
+   */
+  public async getUserGrid(
+    userId: string,
+    schema: string = "pzero"
+  ): Promise<number[][] | null> {
+    try {
+      const result = await db.pool.query(
+        `SELECT data->'grid' as grid FROM ${schema}.all_users WHERE id = $1::uuid`,
+        [userId]
+      );
+      
+      if (!result.rows[0] || !result.rows[0].grid) {
+        return null;
+      }
+      
+      // Decrypt the grid
+      const encryptedGrid = result.rows[0].grid;
+      return encryptionService.decryptGrid(encryptedGrid);
+    } catch (error) {
+      console.error("Error getting user grid:", error);
+      return null;
+    }
+  }
+
+  /**
    * Update user's grid
    */
   public async updateUserGrid(
@@ -92,16 +119,19 @@ export class UserService {
     schema: string = "pzero"
   ): Promise<boolean> {
     try {
+      // Encrypt the grid before storing
+      const encryptedGrid = encryptionService.encryptGrid(grid);
+      
       const result = await db.pool.query(
         `UPDATE ${schema}.all_users 
-         SET grid = $1::jsonb, 
+         SET data = jsonb_set(COALESCE(data, '{}'), '{grid}', $1::jsonb), 
              u_at = CURRENT_TIMESTAMP 
          WHERE id = $2::uuid 
          RETURNING id`,
-        [JSON.stringify(grid), userId]
+        [JSON.stringify(encryptedGrid), userId]
       );
       
-      return result.rowCount > 0;
+      return !!result?.rowCount ? true : false;
     } catch (error) {
       console.error("Error updating user grid:", error);
       return false;
@@ -118,6 +148,9 @@ export class UserService {
     // Generate handle from email
     const handle = userData.handle ?? generateHandleFromEmail(userData.email);
 
+    // Encrypt grid if provided
+    const encryptedGrid = userData.grid ? encryptionService.encryptGrid(userData.grid) : null;
+
     // Use the create_user postgres function
     const createResult = await db.pool.query(
       `SELECT ${schema}.create_user($1::jsonb) as result`,
@@ -127,7 +160,7 @@ export class UserService {
           email: userData.email,
           handle: handle,
           avatar: userData.avatar || null,
-          grid: userData.grid || null,
+          grid: encryptedGrid,
           email_verified: userData.email_verified ?? false,
           device: JSON.stringify(userData.device || {})
         }),

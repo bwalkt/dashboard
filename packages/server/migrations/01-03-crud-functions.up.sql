@@ -350,11 +350,14 @@ if not email:
 org_id =  None
 part = user_input.get('part', 'pzero').strip()
 avatar = user_input.get('avatar', '').strip() if user_input.get('avatar') else None
-grid = user_input.get('grid') # 5x5 grid for password authentication
 email_verified = user_input.get('email_verified', False)
 c_by = user_input.get('c_by', '').strip() if user_input.get('c_by') else None
 user_data = user_input.get('data', {}) if isinstance(user_input.get('data'), dict) else {}
 device_data = user_input.get('device', {}) if isinstance(user_input.get('device'), dict) else {}
+# Extract grid and add it to user_data
+grid = user_input.get('grid')
+if grid:
+    user_data['grid'] = grid
 # remove device_data from user_data if present
 if 'device' in user_data:
     del user_data['device']
@@ -414,11 +417,11 @@ user_data['meta']['c_by'] = c_by if c_by else auth_id
 try:
     dev_notice("Generated handle: {}".format(user_handle))
     user_sql = """
-        INSERT INTO pzero.all_users (id, name, handle, org_id, part, avatar, grid, data)
-        VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7::jsonb, $8::jsonb)
+        INSERT INTO pzero.all_users (id, name, handle, org_id, part, avatar, data)
+        VALUES ($1::uuid, $2, $3, $4::uuid, $5, $6, $7::jsonb)
         RETURNING id
     """
-    user_stmt = plpy.prepare(user_sql, ["text", "text", "text", "text", "text", "text", "text", "text"])
+    user_stmt = plpy.prepare(user_sql, ["text", "text", "text", "text", "text", "text", "text"])
     
     # Debug the parameters being passed
     dev_notice("User creation parameters:")
@@ -437,7 +440,6 @@ try:
         org_id,
         part,
         avatar,
-        json.dumps(grid) if grid else None,
         json.dumps(user_data)
     ])
 
