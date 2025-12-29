@@ -11,7 +11,7 @@ import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
-import { userService } from "../services/user.service.js";
+import { type UserWithStatus, userService } from "../services/user.service.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -747,6 +747,16 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
             error: "Not Found",
             message: "User not found",
           } as ErrorResponse);
+        }
+
+        // Store user status in Redis
+        try {
+          const statusKey = `status:${user.id}`;
+          const userStatus = user.status || 'ACTIVE';
+          await redis.set(statusKey, userStatus);
+        } catch (redisError) {
+          // Log error but don't fail the login (status storage is supplementary)
+          console.error('Failed to store user status in Redis:', redisError);
         }
 
         // Delete verification code from Redis

@@ -1,6 +1,16 @@
 import type { CreateUserData, GitHubUser, User } from "@pzero/shared";
 import { generateHandleFromEmail } from '@pzero/shared/pzero'
 import { db } from "../config/database.js";
+
+/**
+ * User with status field from all_users table
+ * This type represents the data returned by getUserByEmail which joins
+ * all_auth and all_users tables to include the status field
+ */
+export type UserWithStatus = User & {
+  status?: 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'DELETED' | 'PENDING' | 'BLOCKED' | null;
+};
+
 export class UserService {
   /**
    * Get user by GitHub ID
@@ -29,13 +39,18 @@ export class UserService {
 
   /**
    * Get user by email
+   * Returns user data with status field from all_users table
    */
   public async getUserByEmail(
     email: string,
     schema: string = "pzero",
-  ): Promise<User | null> {
+  ): Promise<UserWithStatus | null> {
     const result = await db.pool.query(
-      `SELECT * FROM ${schema}.auth WHERE email = $1`,
+      `SELECT a.*, u.status
+       FROM ${schema}.all_auth a
+       LEFT JOIN ${schema}.all_users u ON a.id = u.id AND a.is_act = u.is_act
+       WHERE a.email = $1 AND a.is_act = true
+       LIMIT 1`,
       [email],
     );
     return result.rows[0] || null;
