@@ -51,9 +51,26 @@ export const createColumns = ({ onDelete, onSuspend, onActivate }: ColumnsProps)
   },
 
   // Online status column
-  createStatusColumn<User>({
+  {
     accessorKey: 'online_status',
-  }),
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Online" />,
+    cell: ({ row }) => {
+      const onlineStatus = row.getValue('online_status') as string | null
+      const upperStatus = onlineStatus?.toUpperCase() || 'OFFLINE'
+      return (
+        <Badge
+          className={
+            upperStatus === 'ONLINE'
+              ? 'bg-green-100 text-green-800 border-green-200'
+              : 'bg-gray-100 text-gray-800 border-gray-200'
+          }
+          variant="outline"
+        >
+          {upperStatus}
+        </Badge>
+      )
+    },
+  },
 
   // Last seen date
   createDateColumn<User>({
