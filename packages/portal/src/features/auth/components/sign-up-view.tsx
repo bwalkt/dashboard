@@ -92,7 +92,7 @@ export default function SignUpViewPage() {
       try {
         // Generate a 5x5 grid for the user
         const userGrid = genGrid(5)
-        
+
         await api.post('/auth/register', {
           email: formEmail,
           name: formName,
