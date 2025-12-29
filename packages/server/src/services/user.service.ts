@@ -84,6 +84,31 @@ export class UserService {
   
 
   /**
+   * Update user's grid
+   */
+  public async updateUserGrid(
+    userId: string,
+    grid: number[][],
+    schema: string = "pzero"
+  ): Promise<boolean> {
+    try {
+      const result = await db.pool.query(
+        `UPDATE ${schema}.all_users 
+         SET grid = $1::jsonb, 
+             u_at = CURRENT_TIMESTAMP 
+         WHERE id = $2::uuid 
+         RETURNING id`,
+        [JSON.stringify(grid), userId]
+      );
+      
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error("Error updating user grid:", error);
+      return false;
+    }
+  }
+
+  /**
    * Create a new user
    */
   public async createUser(

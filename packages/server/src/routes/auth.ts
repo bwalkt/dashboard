@@ -920,4 +920,62 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
     },
   );
+
+  /**
+   * POST /auth/reset
+   * Reset user's grid password (requires authentication)
+   */
+  fastify.post(
+    "/auth/reset",
+    { preHandler: authenticateToken },
+    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+      try {
+        const userId = request.user?.userId;
+        const { grid } = request.body as { grid: number[][] };
+        
+        if (!userId) {
+          return reply.status(401).send({
+            error: "Unauthorized",
+            message: "Authentication required",
+          } as ErrorResponse);
+        }
+
+        if (!grid || !Array.isArray(grid)) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Grid is required",
+          } as ErrorResponse);
+        }
+
+        // Validate grid is 5x5
+        if (grid.length !== 5 || !grid.every(row => Array.isArray(row) && row.length === 5)) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Grid must be a 5x5 matrix",
+          } as ErrorResponse);
+        }
+        
+        // Update the user's grid in the database
+        const updated = await userService.updateUserGrid(userId, grid);
+        
+        if (!updated) {
+          return reply.status(500).send({
+            error: "Internal Server Error",
+            message: "Failed to reset grid",
+          } as ErrorResponse);
+        }
+
+        return reply.send({
+          message: "Grid successfully reset",
+          success: true,
+        });
+      } catch (error) {
+        console.error("Grid reset error:", error);
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Failed to reset grid",
+        } as ErrorResponse);
+      }
+    },
+  );
 }
