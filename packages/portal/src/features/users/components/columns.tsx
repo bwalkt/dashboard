@@ -79,28 +79,21 @@ export const createColumns = ({ onDelete, onSuspend, onActivate }: ColumnsProps)
     routeParam: 'userId',
     onDelete,
     onCopyId: true,
-    additionalActions:
-      onSuspend || onActivate
-        ? [
-            ...(onSuspend
-              ? [
-                  {
-                    label: 'Suspend',
-                    onClick: onSuspend,
-                    className: 'text-warning',
-                  },
-                ]
-              : []),
-            ...(onActivate
-              ? [
-                  {
-                    label: 'Activate',
-                    onClick: onActivate,
-                    className: 'text-success',
-                  },
-                ]
-              : []),
-          ]
-        : undefined,
+    additionalActions: [
+      onSuspend && {
+        label: 'Suspend',
+        onClick: onSuspend,
+        className: 'text-warning',
+      },
+      onActivate && {
+        label: 'Activate',
+        onClick: onActivate,
+        className: 'text-success',
+      },
+    ].filter(Boolean) as Array<{
+      label: string
+      onClick: (user: User) => void
+      className?: string
+    }>,
   }),
 ]

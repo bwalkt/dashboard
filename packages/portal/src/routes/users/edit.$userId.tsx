@@ -37,7 +37,7 @@ function EditUserPage() {
       toast.error('Failed to load user')
       navigate({ to: '/users' })
     }
-  }, [error])
+  }, [error, navigate])
 
   const updateMutation = useMutation({
     mutationFn: (updatedUser: User) =>
@@ -75,11 +75,7 @@ function EditUserPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    )
+    return <AuthLoadingComponent />
   }
 
   if (!user) {

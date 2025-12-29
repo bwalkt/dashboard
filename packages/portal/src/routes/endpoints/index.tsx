@@ -3,7 +3,6 @@ import { Suspense } from 'react'
 import { EndpointsPage } from '@/features/endpoints/components'
 import { AuthLoadingComponent, requireAuth } from '@/lib/auth-guard'
 import DashboardLayout from '@/pages/dashboard/Layout'
-import { useAuthStore } from '@/stores/auth'
 
 export const Route = createFileRoute('/endpoints/')({
   component: EndpointsPageWithLayout,
@@ -12,19 +11,7 @@ export const Route = createFileRoute('/endpoints/')({
 })
 
 function EndpointsPageWithLayout() {
-  const { user, loading } = useAuthStore()
-
-  if (loading) {
-    return <AuthLoadingComponent />
-  }
-
-  if (!user) {
-    // This should not happen as beforeLoad handles redirect
-    // But keep as fallback
-    window.location.href = '/auth/sign-in'
-    return null
-  }
-
+  // Auth is already handled by beforeLoad
   return (
     <DashboardLayout fullWidth>
       <Suspense fallback={<div className="p-6">Loading...</div>}>

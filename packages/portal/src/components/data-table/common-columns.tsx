@@ -342,8 +342,8 @@ export const createActionsColumn = <T extends BaseEntity>(options: ActionsColumn
           )}
 
           {/* Additional custom actions */}
-          {options.additionalActions?.map((action, index) => (
-            <DropdownMenuItem key={index} onClick={() => action.onClick(item)} className={action.className}>
+          {options.additionalActions?.map(action => (
+            <DropdownMenuItem key={action.label} onClick={() => action.onClick(item)} className={action.className}>
               {action.icon}
               {action.label}
             </DropdownMenuItem>
