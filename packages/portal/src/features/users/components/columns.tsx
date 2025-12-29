@@ -86,10 +86,8 @@ export const createColumns = ({ onDelete, onSuspend, onActivate }: ColumnsProps)
     accessorKey: 'c_at',
     title: 'Created At',
   }),
-
   // Active boolean
   createBooleanColumn<User>('is_act', 'Active'),
-
   // Actions column
   createActionsColumn<User>({
     editRoute: '/users/edit/$userId',
