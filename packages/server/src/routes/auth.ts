@@ -411,11 +411,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     "/auth/register",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { email, name, device, handle } = request.body as {
+        const { email, name, device, handle, grid } = request.body as {
           email: string;
           name?: string;
           device?: any
           handle?: string
+          grid?: number[][]
         };
 
         console.log('Registration request received:', {
@@ -479,6 +480,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           code: verificationCode,
           name,
           device,
+          grid,
           createdAt: new Date().toISOString(),
         };
         
@@ -561,7 +563,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
-        const { code: storedCode, handle, name, device } = JSON.parse(registrationData);
+        const { code: storedCode, handle, name, device, grid } = JSON.parse(registrationData);
 
         console.log('Registration verification attempt:', {
           email,
@@ -594,7 +596,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           email,
           name: name || email.split("@")[0],
           email_verified: true,
-          handle
+          handle,
+          grid
         });
 
         if (!user) {

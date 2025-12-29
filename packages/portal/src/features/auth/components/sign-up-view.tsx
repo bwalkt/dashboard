@@ -1,4 +1,5 @@
 import { api } from '@pzero/shared/api'
+import { genGrid } from '@pzero/shared/grid'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -24,6 +25,7 @@ export default function SignUpViewPage() {
   const [name, setName] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [grid, setGrid] = useState<number[][] | null>(null)
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -35,7 +37,8 @@ export default function SignUpViewPage() {
   const handleResendCode = async () => {
     setIsLoading(true)
     try {
-      await api.post('/auth/register', { email, name })
+      // Use the same grid that was generated initially
+      await api.post('/auth/register', { email, name, grid })
       setOtpCode('') // Clear the OTP input
       toast.success('New verification code sent to your email')
     } catch (error: any) {
@@ -62,6 +65,7 @@ export default function SignUpViewPage() {
         const result = await api.post('/auth/register/verify', {
           email: email,
           code: otpCode,
+          grid: grid, // Include the grid in verification
         })
 
         // Update AuthStore with the new user
@@ -86,13 +90,18 @@ export default function SignUpViewPage() {
 
       setIsLoading(true)
       try {
+        // Generate a 5x5 grid for the user
+        const userGrid = genGrid(5)
+        
         await api.post('/auth/register', {
           email: formEmail,
           name: formName,
+          grid: userGrid,
         })
 
         setEmail(formEmail)
         setName(formName)
+        setGrid(userGrid) // Store the grid for later use
         setEmailSent(true)
         toast.success('Check your email for verification code')
       } catch (error: any) {

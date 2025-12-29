@@ -65,15 +65,17 @@ export class UserService {
     email: string;
     name: string;
     email_verified?: boolean;
-    handle?: string
+    handle?: string;
+    grid?: number[][];
   }): Promise<User> {
-    const createData: CreateUserData = {
+    const createData: CreateUserData & { grid?: number[][] } = {
       name: userData.name,
       email: userData.email,
       github_id: null,
       avatar: null,
       handle: userData.handle?? generateHandleFromEmail(userData.email),
       email_verified: userData.email_verified ?? false,
+      grid: userData.grid,
     };
 
     return this.createUser(createData);
@@ -85,7 +87,7 @@ export class UserService {
    * Create a new user
    */
   public async createUser(
-    userData: CreateUserData,
+    userData: CreateUserData & { grid?: number[][] },
     schema: string = "pzero",
   ): Promise<User> {
     // Generate handle from email
@@ -100,6 +102,7 @@ export class UserService {
           email: userData.email,
           handle: handle,
           avatar: userData.avatar || null,
+          grid: userData.grid || null,
           email_verified: userData.email_verified ?? false,
           device: JSON.stringify(userData.device || {})
         }),
