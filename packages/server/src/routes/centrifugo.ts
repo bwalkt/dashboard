@@ -1,7 +1,10 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { config } from "../config/env.js";
 import { authService } from "../services/auth.service.js";
 import { FilterAuthService } from "../services/filter-auth.service.js";
 import { filterCentrifugoService } from "../services/filter-centrifugo.service.js";
+
+// FilterAuthService uses static methods
 
 // Centrifugo proxy endpoints for authentication and authorization
 export async function centrifugoRoutes(
@@ -304,9 +307,63 @@ export async function centrifugoRoutes(
     },
   );
 
-  // Get filter statistics endpoint
+  // Get filter statistics endpoint (requires authentication)
   fastify.get("/centrifugo/filter-stats", async (request, reply) => {
     try {
+      // Authenticate admin user before returning sensitive statistics
+      const apiKey = request.headers['x-api-key'] as string;
+      const authHeader = request.headers['authorization'] as string;
+      const filterToken = request.headers['x-filter-token'] as string;
+
+      // Check API key authentication
+      if (apiKey) {
+        if (apiKey !== config.JWT_SECRET) {
+          reply.code(401);
+          return { error: "Invalid API key" };
+        }
+      }
+      // Check JWT authentication
+      else if (authHeader) {
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        try {
+          const authResult = await authService.validateToken(token);
+          if (!authResult.valid) {
+            reply.code(401);
+            return { error: "Invalid authentication token" };
+          }
+          // Optional: Check if user has admin privileges
+          // const user = authResult.user;
+          // if (!user.isAdmin) {
+          //   reply.code(403);
+          //   return { error: "Admin privileges required" };
+          // }
+        } catch (authError) {
+          console.error("JWT validation error:", authError);
+          reply.code(401);
+          return { error: "Token validation failed" };
+        }
+      }
+      // Check filter token authentication (for internal filter access)
+      else if (filterToken) {
+        try {
+          const tokenData = JSON.parse(Buffer.from(filterToken, 'base64').toString());
+          const result = await FilterAuthService.validateAuthToken(tokenData);
+          if (!result.valid) {
+            reply.code(401);
+            return { error: `Filter authentication failed: ${result.reason}` };
+          }
+        } catch (filterAuthError) {
+          console.error("Filter token validation error:", filterAuthError);
+          reply.code(401);
+          return { error: "Invalid filter token" };
+        }
+      }
+      // No authentication provided
+      else {
+        reply.code(401);
+        return { error: "Authentication required. Provide x-api-key, Authorization header, or x-filter-token" };
+      }
+
       const stats = await filterCentrifugoService.getFilterStatistics();
       return { success: true, stats };
     } catch (error) {

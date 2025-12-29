@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+	
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
@@ -30,7 +32,33 @@ func (*pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 	}
 }
 
-func (*pluginContext) OnPluginStart(rootContextID int) types.OnPluginStartStatus {
+func (ctx *pluginContext) OnPluginStart(rootContextID int) types.OnPluginStartStatus {
+	// Load configuration from plugin configuration
+	config, err := proxywasm.GetPluginConfiguration()
+	if err != nil {
+		proxywasm.LogErrorf("[WASM Filter] Failed to get plugin configuration: %v", err)
+		return types.OnPluginStartStatusFailed
+	}
+	
+	// Parse configuration (assuming JSON format)
+	configMap := make(map[string]string)
+	if len(config) > 0 {
+		// For simplicity, assuming key=value format separated by newlines
+		// In production, you'd use proper JSON parsing
+		lines := strings.Split(string(config), "\n")
+		for _, line := range lines {
+			if parts := strings.SplitN(strings.TrimSpace(line), "=", 2); len(parts) == 2 {
+				configMap[parts[0]] = parts[1]
+			}
+		}
+	}
+	
+	// Initialize configuration
+	if err := InitConfig(configMap); err != nil {
+		proxywasm.LogErrorf("[WASM Filter] Failed to initialize configuration: %v", err)
+		return types.OnPluginStartStatusFailed
+	}
+	
 	// Register filter in Redis
 	if err := RegisterFilterInRedis(); err != nil {
 		proxywasm.LogErrorf("[WASM Filter] Failed to register filter in Redis: %v", err)
@@ -49,9 +77,15 @@ func (*pluginContext) OnPluginStart(rootContextID int) types.OnPluginStartStatus
 type httpContext struct {
 	// Embed the default HTTP context
 	types.DefaultHttpContext
-	contextID       uint32
-	challengeID     string
-	challengeAnswer string
+	contextID           uint32
+	challengeID         string
+	challengeAnswer     string
+	
+	// Challenge validation state
+	validationPending   bool
+	validationRequestID string
+	validationStartTime int64
+	pollAttempts        int
 }
 
 // OnHttpRequestHeaders is called when request headers are received
@@ -121,8 +155,17 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 		return types.ActionPause
 	}
 
-	// Pause request processing until HTTP call completes
+	// Pause request processing until validation completes
 	return types.ActionPause
+}
+
+// OnTick is called periodically when timer is set (for challenge validation polling)
+func (ctx *httpContext) OnTick() {
+	// Check if validation is complete
+	if checkValidationResult() {
+		// Validation completed (success or failure), stop timer
+		proxywasm.SetTickPeriodMilliSeconds(0)
+	}
 }
 
 // OnHttpCallResponse is not called when a callback is provided to DispatchHttpCall

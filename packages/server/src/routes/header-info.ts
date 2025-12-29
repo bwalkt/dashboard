@@ -1,11 +1,52 @@
-import type { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type { FastifyInstance, FastifyPluginOptions, FastifyReply, FastifyRequest } from "fastify";
+import { authService } from "../services/auth.service.js";
 import { filterRedisService } from "../services/filter-redis.service.js";
 import { HeaderInfoCacheService, headerInfoCache } from "../services/header-info-cache.service.js";
+
+// Authentication middleware for admin routes
+async function authenticateAdmin(request: FastifyRequest, reply: FastifyReply) {
+  try {
+    // Check for API key in header or Authorization header
+    const apiKey = request.headers['x-api-key'] as string;
+    const authHeader = request.headers['authorization'] as string;
+    
+    let token = apiKey;
+    if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+    
+    if (!token) {
+      reply.code(401);
+      throw new Error('Authentication required - provide x-api-key header or Bearer token');
+    }
+    
+    // Validate token
+    const authResult = await authService.validateToken(token);
+    if (!authResult.valid || !authResult.user) {
+      reply.code(401);
+      throw new Error('Invalid authentication token');
+    }
+    
+    // Check if user has admin privileges (you may want to add role checking)
+    // For now, any valid authenticated user can access header-info endpoints
+    // In production, you should add role-based access control
+    
+    // Store user info in request for later use if needed
+    (request as any).user = authResult.user;
+    
+  } catch (error) {
+    reply.code(401);
+    throw new Error(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
 
 export async function headerInfoRoutes(
   fastify: FastifyInstance,
   opts: FastifyPluginOptions,
 ): Promise<void> {
+
+  // Apply authentication to all routes in this plugin
+  fastify.addHook('preHandler', authenticateAdmin);
 
   // User management endpoints
   fastify.post<{ Params: { uid: string } }>("/header-info/users/:uid/activate", async (request, reply) => {
@@ -31,7 +72,20 @@ export async function headerInfoRoutes(
   fastify.post<{ Params: { uid: string } }>("/header-info/users/:uid/deactivate", async (request, reply) => {
     try {
       const { uid } = request.params;
+      
+      // Check if user exists first
+      const user = await headerInfoCache.getActiveUser(uid);
+      if (!user) {
+        reply.code(404);
+        return { error: `User ${uid} not found` };
+      }
+      
       await headerInfoCache.updateUserActivity(uid, false);
+      
+      // Sync to Redis for filter access
+      const activeUsers = await headerInfoCache.getAllActiveUsers();
+      await filterRedisService.updateHeaderInfo('users', activeUsers);
+      
       return { success: true, message: `User ${uid} deactivated` };
     } catch (error) {
       console.error("Error deactivating user:", error);
@@ -43,7 +97,20 @@ export async function headerInfoRoutes(
   fastify.delete<{ Params: { uid: string } }>("/header-info/users/:uid", async (request, reply) => {
     try {
       const { uid } = request.params;
+      
+      // Check if user exists first
+      const user = await headerInfoCache.getActiveUser(uid);
+      if (!user) {
+        reply.code(404);
+        return { error: `User ${uid} not found` };
+      }
+      
       await headerInfoCache.removeActiveUser(uid);
+      
+      // Sync to Redis for filter access
+      const activeUsers = await headerInfoCache.getAllActiveUsers();
+      await filterRedisService.updateHeaderInfo('users', activeUsers);
+      
       return { success: true, message: `User ${uid} removed` };
     } catch (error) {
       console.error("Error removing user:", error);
@@ -99,7 +166,19 @@ export async function headerInfoRoutes(
         return { error: "answer is required" };
       }
 
+      // Check if endpoint exists first
+      const endpoint = await headerInfoCache.getActiveEndpoint(endpointId);
+      if (!endpoint) {
+        reply.code(404);
+        return { error: `Endpoint ${endpointId} not found` };
+      }
+
       await headerInfoCache.setEndpointAnswer(endpointId, answer);
+      
+      // Sync to Redis for filter access
+      const activeEndpoints = await headerInfoCache.getAllActiveEndpoints();
+      await filterRedisService.updateHeaderInfo('endpoints', activeEndpoints);
+      
       return { success: true, message: `Answer set for endpoint ${endpointId}` };
     } catch (error) {
       console.error("Error setting endpoint answer:", error);
@@ -119,6 +198,13 @@ export async function headerInfoRoutes(
       if (!functionName) {
         reply.code(400);
         return { error: "functionName is required" };
+      }
+
+      // Check if endpoint exists first
+      const endpoint = await headerInfoCache.getActiveEndpoint(endpointId);
+      if (!endpoint) {
+        reply.code(404);
+        return { error: `Endpoint ${endpointId} not found` };
       }
 
       const functionId = HeaderInfoCacheService.createFunctionId(endpointId, functionName);
@@ -152,13 +238,24 @@ export async function headerInfoRoutes(
     try {
       const { endpointId } = request.params;
       
-      // Get endpoint to check if it has a next function to clean up
+      // Check if endpoint exists first
       const endpoint = await headerInfoCache.getActiveEndpoint(endpointId);
-      if (endpoint?.next_function) {
+      if (!endpoint) {
+        reply.code(404);
+        return { error: `Endpoint ${endpointId} not found` };
+      }
+      
+      // Clean up next function if it exists
+      if (endpoint.next_function) {
         await headerInfoCache.removeNextFunction(endpoint.next_function);
       }
       
       await headerInfoCache.removeActiveEndpoint(endpointId);
+      
+      // Sync to Redis for filter access
+      const activeEndpoints = await headerInfoCache.getAllActiveEndpoints();
+      await filterRedisService.updateHeaderInfo('endpoints', activeEndpoints);
+      
       return { success: true, message: `Endpoint ${endpointId} removed` };
     } catch (error) {
       console.error("Error removing endpoint:", error);
@@ -181,7 +278,19 @@ export async function headerInfoRoutes(
         return { error: "id and answer are required" };
       }
 
+      // Check if function exists first
+      const nextFunction = await headerInfoCache.getNextFunction(functionId);
+      if (!nextFunction) {
+        reply.code(404);
+        return { error: `Function ${functionId} not found` };
+      }
+
       await headerInfoCache.addFunctionToNextFunction(functionId, { id, answer });
+      
+      // Sync to Redis for filter access
+      const nextFunctions = await headerInfoCache.getAllNextFunctions();
+      await filterRedisService.updateHeaderInfo('functions', nextFunctions);
+      
       return { success: true, message: `Function added to ${functionId}` };
     } catch (error) {
       console.error("Error adding function:", error);
@@ -237,10 +346,57 @@ export async function headerInfoRoutes(
   });
 
   // Utility endpoints
-  fastify.delete("/header-info/all", async (request, reply) => {
+  fastify.delete<{ 
+    Querystring: { confirm?: string; environment?: string } 
+  }>("/header-info/all", async (request, reply) => {
     try {
+      // Safety check 1: Require explicit confirmation
+      if (request.query.confirm !== 'DELETE_ALL_DATA') {
+        reply.code(400);
+        return { 
+          error: "Destructive operation requires confirmation. Add ?confirm=DELETE_ALL_DATA to proceed.",
+          warning: "This will permanently delete ALL user data, endpoints, and functions." 
+        };
+      }
+
+      // Safety check 2: Environment restriction (if specified)
+      const currentEnv = process.env.NODE_ENV || 'development';
+      if (request.query.environment && request.query.environment !== currentEnv) {
+        reply.code(400);
+        return { 
+          error: `Environment mismatch. Current: ${currentEnv}, Required: ${request.query.environment}` 
+        };
+      }
+
+      // Safety check 3: Prevent in production without explicit override
+      if (currentEnv === 'production' && request.query.environment !== 'production') {
+        reply.code(403);
+        return { 
+          error: "Cannot clear data in production without explicit environment confirmation",
+          hint: "Add &environment=production if you really want to do this in production" 
+        };
+      }
+
+      // Log the destructive operation for audit trail
+      const user = (request as any).user;
+      console.warn(`🚨 DESTRUCTIVE OPERATION: User ${user?.email || 'unknown'} (${user?.id || 'unknown'}) is clearing ALL header info data in ${currentEnv} environment`);
+
       await headerInfoCache.clearAllData();
-      return { success: true, message: "All header info data cleared" };
+      
+      // Also clear Redis data
+      await filterRedisService.updateHeaderInfo('users', {});
+      await filterRedisService.updateHeaderInfo('endpoints', {});
+      await filterRedisService.updateHeaderInfo('functions', {});
+
+      console.warn(`✅ ALL HEADER INFO DATA CLEARED by user ${user?.email || 'unknown'} in ${currentEnv} environment`);
+      
+      return { 
+        success: true, 
+        message: "All header info data cleared",
+        warning: "This action cannot be undone",
+        clearedAt: new Date().toISOString(),
+        clearedBy: user?.email || 'unknown'
+      };
     } catch (error) {
       console.error("Error clearing data:", error);
       reply.code(500);

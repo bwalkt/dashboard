@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { redis } from "../config/redis.js";
 
 // Type definitions for Redis data structures
@@ -44,7 +45,13 @@ export class HeaderInfoCacheService {
       HeaderInfoCacheService.ACTIVE_USERS_KEY,
       uid
     );
-    return result ? JSON.parse(result) : null;
+    if (!result) return null;
+    try {
+      return JSON.parse(result);
+    } catch (e) {
+      console.error(`Failed to parse user data for ${uid}:`, e);
+      return null;
+    }
   }
 
   async getAllActiveUsers(): Promise<Record<string, ActiveUser>> {
@@ -52,7 +59,12 @@ export class HeaderInfoCacheService {
     const activeUsers: Record<string, ActiveUser> = {};
     
     for (const [uid, data] of Object.entries(result)) {
-      activeUsers[uid] = JSON.parse(data);
+      try {
+        activeUsers[uid] = JSON.parse(data);
+      } catch (e) {
+        console.error(`Failed to parse user data for ${uid}:`, e);
+        // Skip malformed entries instead of failing the entire operation
+      }
     }
     
     return activeUsers;
@@ -63,11 +75,29 @@ export class HeaderInfoCacheService {
   }
 
   async updateUserActivity(uid: string, isActive: boolean): Promise<void> {
-    const user = await this.getActiveUser(uid);
-    if (user) {
-      user.is_act = isActive;
-      user.last_active = Date.now();
-      await this.setActiveUser(uid, user);
+    const script = `
+      local data = redis.call('HGET', KEYS[1], ARGV[1])
+      if data then
+        local user = cjson.decode(data)
+        user.is_act = ARGV[2] == 'true'
+        user.last_active = tonumber(ARGV[3])
+        redis.call('HSET', KEYS[1], ARGV[1], cjson.encode(user))
+        return 1
+      end
+      return 0
+    `;
+    
+    const result = await redis.getClient().eval(
+      script,
+      1,
+      HeaderInfoCacheService.ACTIVE_USERS_KEY,
+      uid,
+      String(isActive),
+      String(Date.now())
+    ) as number;
+    
+    if (result === 0) {
+      console.warn(`updateUserActivity: User ${uid} not found`);
     }
   }
 
@@ -86,7 +116,13 @@ export class HeaderInfoCacheService {
       HeaderInfoCacheService.ACTIVE_ENDPOINTS_KEY,
       endpointId
     );
-    return result ? JSON.parse(result) : null;
+    if (!result) return null;
+    try {
+      return JSON.parse(result);
+    } catch (e) {
+      console.error(`Failed to parse endpoint data for ${endpointId}:`, e);
+      return null;
+    }
   }
 
   async getAllActiveEndpoints(): Promise<Record<string, ActiveEndpoint>> {
@@ -94,7 +130,12 @@ export class HeaderInfoCacheService {
     const activeEndpoints: Record<string, ActiveEndpoint> = {};
     
     for (const [endpointId, data] of Object.entries(result)) {
-      activeEndpoints[endpointId] = JSON.parse(data);
+      try {
+        activeEndpoints[endpointId] = JSON.parse(data);
+      } catch (e) {
+        console.error(`Failed to parse endpoint data for ${endpointId}:`, e);
+        // Skip malformed entries instead of failing the entire operation
+      }
     }
     
     return activeEndpoints;
@@ -105,27 +146,79 @@ export class HeaderInfoCacheService {
   }
 
   async updateEndpointActivity(endpointId: string, isActive: boolean): Promise<void> {
-    const endpoint = await this.getActiveEndpoint(endpointId);
-    if (endpoint) {
-      endpoint.is_act = isActive;
-      endpoint.last_active = Date.now();
-      await this.setActiveEndpoint(endpointId, endpoint);
+    const script = `
+      local data = redis.call('HGET', KEYS[1], ARGV[1])
+      if data then
+        local endpoint = cjson.decode(data)
+        endpoint.is_act = ARGV[2] == 'true'
+        endpoint.last_active = tonumber(ARGV[3])
+        redis.call('HSET', KEYS[1], ARGV[1], cjson.encode(endpoint))
+        return 1
+      end
+      return 0
+    `;
+    
+    const result = await redis.getClient().eval(
+      script,
+      1,
+      HeaderInfoCacheService.ACTIVE_ENDPOINTS_KEY,
+      endpointId,
+      String(isActive),
+      String(Date.now())
+    ) as number;
+    
+    if (result === 0) {
+      console.warn(`updateEndpointActivity: Endpoint ${endpointId} not found`);
     }
   }
 
   async setEndpointAnswer(endpointId: string, answer: string): Promise<void> {
-    const endpoint = await this.getActiveEndpoint(endpointId);
-    if (endpoint) {
-      endpoint.answer = answer;
-      await this.setActiveEndpoint(endpointId, endpoint);
+    const script = `
+      local data = redis.call('HGET', KEYS[1], ARGV[1])
+      if data then
+        local endpoint = cjson.decode(data)
+        endpoint.answer = ARGV[2]
+        redis.call('HSET', KEYS[1], ARGV[1], cjson.encode(endpoint))
+        return 1
+      end
+      return 0
+    `;
+    
+    const result = await redis.getClient().eval(
+      script,
+      1,
+      HeaderInfoCacheService.ACTIVE_ENDPOINTS_KEY,
+      endpointId,
+      answer
+    ) as number;
+    
+    if (result === 0) {
+      console.warn(`setEndpointAnswer: Endpoint ${endpointId} not found`);
     }
   }
 
   async setEndpointNextFunction(endpointId: string, nextFunctionId: string): Promise<void> {
-    const endpoint = await this.getActiveEndpoint(endpointId);
-    if (endpoint) {
-      endpoint.next_function = nextFunctionId;
-      await this.setActiveEndpoint(endpointId, endpoint);
+    const script = `
+      local data = redis.call('HGET', KEYS[1], ARGV[1])
+      if data then
+        local endpoint = cjson.decode(data)
+        endpoint.next_function = ARGV[2]
+        redis.call('HSET', KEYS[1], ARGV[1], cjson.encode(endpoint))
+        return 1
+      end
+      return 0
+    `;
+    
+    const result = await redis.getClient().eval(
+      script,
+      1,
+      HeaderInfoCacheService.ACTIVE_ENDPOINTS_KEY,
+      endpointId,
+      nextFunctionId
+    ) as number;
+    
+    if (result === 0) {
+      console.warn(`setEndpointNextFunction: Endpoint ${endpointId} not found`);
     }
   }
 
@@ -143,7 +236,13 @@ export class HeaderInfoCacheService {
       HeaderInfoCacheService.NEXT_FUNCTIONS_KEY,
       functionId
     );
-    return result ? JSON.parse(result) : null;
+    if (!result) return null;
+    try {
+      return JSON.parse(result);
+    } catch (e) {
+      console.error(`Failed to parse function data for ${functionId}:`, e);
+      return null;
+    }
   }
 
   async getAllNextFunctions(): Promise<Record<string, NextFunction>> {
@@ -151,7 +250,12 @@ export class HeaderInfoCacheService {
     const nextFunctions: Record<string, NextFunction> = {};
     
     for (const [functionId, data] of Object.entries(result)) {
-      nextFunctions[functionId] = JSON.parse(data);
+      try {
+        nextFunctions[functionId] = JSON.parse(data);
+      } catch (e) {
+        console.error(`Failed to parse function data for ${functionId}:`, e);
+        // Skip malformed entries instead of failing the entire operation
+      }
     }
     
     return nextFunctions;
@@ -162,10 +266,29 @@ export class HeaderInfoCacheService {
   }
 
   async addFunctionToNextFunction(functionId: string, functionEntry: { id: string; answer: string }): Promise<void> {
-    const nextFunction = await this.getNextFunction(functionId);
-    if (nextFunction) {
-      nextFunction.functions.push(functionEntry);
-      await this.setNextFunction(functionId, nextFunction);
+    const script = `
+      local data = redis.call('HGET', KEYS[1], ARGV[1])
+      if data then
+        local nextFunction = cjson.decode(data)
+        local newEntry = { id = ARGV[2], answer = ARGV[3] }
+        table.insert(nextFunction.functions, newEntry)
+        redis.call('HSET', KEYS[1], ARGV[1], cjson.encode(nextFunction))
+        return 1
+      end
+      return 0
+    `;
+    
+    const result = await redis.getClient().eval(
+      script,
+      1,
+      HeaderInfoCacheService.NEXT_FUNCTIONS_KEY,
+      functionId,
+      functionEntry.id,
+      functionEntry.answer
+    ) as number;
+    
+    if (result === 0) {
+      console.warn(`addFunctionToNextFunction: Function ${functionId} not found`);
     }
   }
 
@@ -199,13 +322,15 @@ export class HeaderInfoCacheService {
   // Helper method to create a new endpoint ID
   static createEndpointId(uid: string, suffix?: string): string {
     const timestamp = Date.now();
-    return suffix ? `${uid}-${suffix}-${timestamp}` : `${uid}-endpoint-${timestamp}`;
+    const random = randomBytes(4).toString('hex');
+    return suffix ? `${uid}-${suffix}-${timestamp}-${random}` : `${uid}-endpoint-${timestamp}-${random}`;
   }
 
   // Helper method to create a new function ID
   static createFunctionId(endpointId: string, functionName: string): string {
     const timestamp = Date.now();
-    return `${endpointId}-${functionName}-${timestamp}`;
+    const random = randomBytes(4).toString('hex');
+    return `${endpointId}-${functionName}-${timestamp}-${random}`;
   }
 }
 

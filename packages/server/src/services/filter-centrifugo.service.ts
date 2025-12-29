@@ -1,5 +1,7 @@
 import { centrifugeServer } from "../centrifuge/server.js";
+import { redis } from "../config/redis.js";
 import { FilterAuthService } from "./filter-auth.service.js";
+import { filterRedisService } from "./filter-redis.service.js";
 import { headerInfoCache } from "./header-info-cache.service.js";
 
 export interface FilterMessage {
@@ -34,6 +36,8 @@ export interface HeaderInfoResponse {
     active_users?: Record<string, any>;
     active_endpoints?: Record<string, any>;
     next_functions?: Record<string, any>;
+    error?: string;
+    errorMessage?: string;
   };
   timestamp: number;
 }
@@ -59,7 +63,7 @@ export class FilterCentrifugoService {
   // Rate limiting
   private static readonly RATE_LIMIT_WINDOW = 60000; // 1 minute
   private static readonly MAX_REQUESTS_PER_FILTER = 1000; // per minute
-  private requestCounts = new Map<string, { count: number; window: number }>();
+  private static readonly RATE_LIMIT_TTL = 120; // 2 minutes (longer than window for safety)
 
   constructor() {
     this.setupMessageHandlers();
@@ -145,7 +149,7 @@ export class FilterCentrifugoService {
   async handleFilterRequest(filterId: string, instanceId: string, message: FilterMessage): Promise<void> {
     try {
       // Rate limiting check
-      if (!this.checkRateLimit(filterId)) {
+      if (!(await this.checkRateLimit(filterId))) {
         console.warn(`⚠️ Rate limit exceeded for filter ${filterId}`);
         return;
       }
@@ -244,6 +248,24 @@ export class FilterCentrifugoService {
       await this.sendHeaderInfoResponse(filterId, instanceId, response);
     } catch (error) {
       console.error("Header info request error:", error);
+      
+      // Send error response so filter doesn't wait indefinitely
+      try {
+        const errorResponse: HeaderInfoResponse = {
+          requestId: request.requestId,
+          data: {
+            error: "Failed to retrieve header info",
+            errorMessage: error instanceof Error ? error.message : "Unknown error"
+          },
+          timestamp: Date.now()
+        };
+        
+        await this.sendHeaderInfoResponse(filterId, instanceId, errorResponse);
+        console.log(`📤 Sent error response to filter ${filterId}:${instanceId} for request ${request.requestId}`);
+      } catch (responseError) {
+        console.error("Failed to send error response to filter:", responseError);
+        // At this point, the filter will timeout, but we've done our best to notify it
+      }
     }
   }
 
@@ -281,54 +303,159 @@ export class FilterCentrifugoService {
     }
   }
 
-  // Rate limiting implementation
-  private checkRateLimit(filterId: string): boolean {
-    const now = Date.now();
-    const windowStart = Math.floor(now / FilterCentrifugoService.RATE_LIMIT_WINDOW) * FilterCentrifugoService.RATE_LIMIT_WINDOW;
-    
-    const current = this.requestCounts.get(filterId);
-    
-    if (!current || current.window !== windowStart) {
-      // New window
-      this.requestCounts.set(filterId, { count: 1, window: windowStart });
+  // Rate limiting implementation using Redis for distributed servers
+  private async checkRateLimit(filterId: string): Promise<boolean> {
+    try {
+      const now = Date.now();
+      const windowStart = Math.floor(now / FilterCentrifugoService.RATE_LIMIT_WINDOW) * FilterCentrifugoService.RATE_LIMIT_WINDOW;
+      const key = `filter_rate_limit:${filterId}:${windowStart}`;
+      
+      // Atomically increment the counter and get the new value
+      const count = await redis.getClient().incr(key);
+      
+      // Set TTL on first increment to ensure cleanup
+      if (count === 1) {
+        await redis.getClient().expire(key, FilterCentrifugoService.RATE_LIMIT_TTL);
+      }
+      
+      // Check if we're within the limit
+      const isWithinLimit = count <= FilterCentrifugoService.MAX_REQUESTS_PER_FILTER;
+      
+      if (!isWithinLimit) {
+        console.warn(`🚫 Filter ${filterId} exceeded rate limit: ${count}/${FilterCentrifugoService.MAX_REQUESTS_PER_FILTER} requests in current window`);
+      }
+      
+      return isWithinLimit;
+    } catch (error) {
+      console.error("Rate limiting error:", error);
+      // On Redis error, allow the request (fail open for availability)
       return true;
     }
-    
-    if (current.count >= FilterCentrifugoService.MAX_REQUESTS_PER_FILTER) {
-      return false;
-    }
-    
-    current.count++;
-    return true;
   }
 
-  // Placeholder for challenge validation - integrate with your existing logic
+  // Challenge validation using Redis-based validation service
   private async validateChallenge(challengeId: string, challengeAnswer: string): Promise<boolean> {
-    // This should integrate with your existing challenge validation service
-    // For now, returning true as placeholder
-    console.log(`🔐 Validating challenge ${challengeId} with answer ${challengeAnswer}`);
-    return true;
+    try {
+      console.log(`🔐 Validating challenge ${challengeId}`);
+      
+      // Generate a unique request ID for this validation
+      const requestId = `cv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      // Queue the challenge for validation using the existing Redis service
+      await filterRedisService.queueChallengeValidation(
+        requestId,
+        'centrifugo', // filterId for centrifugo service
+        challengeId,
+        challengeAnswer
+      );
+      
+      // Poll for result (with timeout)
+      const maxWaitTime = 5000; // 5 seconds
+      const pollInterval = 100; // 100ms
+      const startTime = Date.now();
+      
+      while (Date.now() - startTime < maxWaitTime) {
+        const result = await filterRedisService.getChallengeResult(requestId);
+        
+        if (result) {
+          if (result.status === 'success' && result.data?.valid === true) {
+            console.log(`✅ Challenge ${challengeId} validation successful`);
+            return true;
+          } else {
+            console.log(`❌ Challenge ${challengeId} validation failed: ${result.error || 'Invalid answer'}`);
+            return false;
+          }
+        }
+        
+        // Wait before polling again
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      }
+      
+      // Timeout
+      console.warn(`⏰ Challenge ${challengeId} validation timed out`);
+      return false;
+      
+    } catch (error) {
+      console.error(`💥 Challenge validation error for ${challengeId}:`, error);
+      return false;
+    }
   }
 
   // Get filter statistics
   async getFilterStatistics(): Promise<any> {
-    const activeFilters = await FilterAuthService.getActiveFilters();
-    
-    return {
-      totalActiveFilters: activeFilters.length,
-      filters: activeFilters.map(f => ({
-        filterId: f.filterId,
-        instanceId: f.instanceId,
-        envoyNodeId: f.envoyNodeId,
-        lastSeen: f.lastSeen,
-        uptime: Date.now() - f.createdAt
-      })),
-      rateLimitStatus: Array.from(this.requestCounts.entries()).map(([filterId, stats]) => ({
-        filterId,
-        requestCount: stats.count,
-        windowStart: stats.window
-      }))
-    };
+    try {
+      const activeFilters = await FilterAuthService.getActiveFilters();
+      
+      // Get rate limit statistics from Redis
+      const rateLimitStatus = await this.getRateLimitStatistics(activeFilters);
+      
+      return {
+        totalActiveFilters: activeFilters.length,
+        filters: activeFilters.map(f => ({
+          filterId: f.filterId,
+          instanceId: f.instanceId,
+          envoyNodeId: f.envoyNodeId,
+          lastSeen: f.lastSeen,
+          uptime: Date.now() - f.createdAt,
+          isActive: Date.now() - f.lastSeen < 300000 // Active if seen within 5 minutes
+        })),
+        rateLimitStatus,
+        rateLimitConfig: {
+          maxRequestsPerFilter: FilterCentrifugoService.MAX_REQUESTS_PER_FILTER,
+          windowSizeMs: FilterCentrifugoService.RATE_LIMIT_WINDOW,
+          ttlSeconds: FilterCentrifugoService.RATE_LIMIT_TTL
+        }
+      };
+    } catch (error) {
+      console.error("Error getting filter statistics:", error);
+      return {
+        totalActiveFilters: 0,
+        filters: [],
+        rateLimitStatus: [],
+        error: "Failed to retrieve statistics"
+      };
+    }
+  }
+
+  // Get rate limit statistics from Redis
+  private async getRateLimitStatistics(activeFilters: any[]): Promise<any[]> {
+    try {
+      const now = Date.now();
+      const currentWindowStart = Math.floor(now / FilterCentrifugoService.RATE_LIMIT_WINDOW) * FilterCentrifugoService.RATE_LIMIT_WINDOW;
+      const prevWindowStart = currentWindowStart - FilterCentrifugoService.RATE_LIMIT_WINDOW;
+      
+      const rateLimitStats = [];
+      
+      for (const filter of activeFilters) {
+        const currentKey = `filter_rate_limit:${filter.filterId}:${currentWindowStart}`;
+        const prevKey = `filter_rate_limit:${filter.filterId}:${prevWindowStart}`;
+        
+        // Get counts for current and previous windows
+        const [currentCount, prevCount] = await Promise.all([
+          redis.getClient().get(currentKey),
+          redis.getClient().get(prevKey)
+        ]);
+        
+        rateLimitStats.push({
+          filterId: filter.filterId,
+          currentWindow: {
+            windowStart: currentWindowStart,
+            requestCount: parseInt(currentCount || '0', 10),
+            limit: FilterCentrifugoService.MAX_REQUESTS_PER_FILTER
+          },
+          previousWindow: {
+            windowStart: prevWindowStart,
+            requestCount: parseInt(prevCount || '0', 10)
+          },
+          isThrottled: parseInt(currentCount || '0', 10) >= FilterCentrifugoService.MAX_REQUESTS_PER_FILTER
+        });
+      }
+      
+      return rateLimitStats;
+    } catch (error) {
+      console.error("Error getting rate limit statistics:", error);
+      return [];
+    }
   }
 }
 

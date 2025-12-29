@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -14,10 +15,52 @@ import (
 )
 
 const (
-	serverCluster    = "server_cluster"
-	centrifugoSecret = "your-secret-key" // This should match JWT_SECRET + "_FILTER_AUTH" from server
-	filterId         = "wasm-filter-1"   // Unique identifier for this filter instance
+	serverCluster = "server_cluster"
 )
+
+var (
+	centrifugoSecret string
+	filterId         string
+	instanceId       string
+	isConfigured     bool
+)
+
+// InitConfig initializes the filter configuration from plugin configuration
+func InitConfig(config map[string]string) error {
+	centrifugoSecret = config["centrifugo_secret"]
+	filterId = config["filter_id"]
+	
+	if centrifugoSecret == "" {
+		proxywasm.LogCriticalf("[Filter] Missing required configuration: centrifugo_secret")
+		return errors.New("centrifugo_secret is required")
+	}
+	
+	if filterId == "" {
+		proxywasm.LogCriticalf("[Filter] Missing required configuration: filter_id")
+		return errors.New("filter_id is required")
+	}
+	
+	// Generate stable instance ID once at startup
+	instanceId = "instance_" + filterId + "_" + strconv.FormatInt(time.Now().Unix(), 36)
+	
+	// Initialize Redis configuration
+	if err := InitRedisConfig(config); err != nil {
+		proxywasm.LogCriticalf("[Filter] Failed to initialize Redis configuration: %v", err)
+		return err
+	}
+	
+	isConfigured = true
+	proxywasm.LogInfof("[Filter] Configuration loaded successfully - filter_id: %s, instance_id: %s", filterId, instanceId)
+	return nil
+}
+
+// requireConfig checks if the filter is properly configured
+func requireConfig() error {
+	if !isConfigured {
+		return errors.New("filter not configured - call InitConfig first")
+	}
+	return nil
+}
 
 // FilterAuthToken represents the authentication token for the filter
 type FilterAuthToken struct {
@@ -66,10 +109,14 @@ type HeaderInfoResponse struct {
 
 // generateAuthToken creates a secure authentication token for the filter
 func generateAuthToken() (*FilterAuthToken, error) {
+	if err := requireConfig(); err != nil {
+		return nil, err
+	}
+	
 	timestamp := time.Now().Unix()
 	nonce := generateNonce()
 	
-	message := filterId + ":" + strconv.FormatInt(timestamp, 10) + ":" + nonce + ":"
+	message := filterId + ":" + strconv.FormatInt(timestamp, 10) + ":" + nonce
 	signature, err := createHMACSignature(message, centrifugoSecret)
 	if err != nil {
 		return nil, err
@@ -154,7 +201,11 @@ func sendFilterMessage(message FilterMessage, challengeID, challengeAnswer strin
 	}
 
 	// Create signed message payload
-	signedMessage := createSignedMessage(message)
+	signedMessage, err := createSignedMessage(message)
+	if err != nil {
+		proxywasm.LogErrorf("[Filter] Failed to create signed message: %v", err)
+		return err
+	}
 
 	// Create request payload
 	requestPayload := map[string]interface{}{
@@ -207,7 +258,12 @@ func sendFilterMessage(message FilterMessage, challengeID, challengeAnswer strin
 }
 
 // createSignedMessage creates a signed message for security
-func createSignedMessage(message FilterMessage) map[string]interface{} {
+func createSignedMessage(message FilterMessage) (map[string]interface{}, error) {
+	if err := requireConfig(); err != nil {
+		proxywasm.LogErrorf("[Filter] Cannot create signed message: %v", err)
+		return nil, err
+	}
+	
 	timestamp := time.Now().Unix()
 	nonce := generateNonce()
 	
@@ -220,28 +276,39 @@ func createSignedMessage(message FilterMessage) map[string]interface{} {
 	}
 
 	// Create signature
-	messageString, _ := json.Marshal(map[string]interface{}{
+	messageString, err := json.Marshal(map[string]interface{}{
 		"filterId":   filterId,
 		"instanceId": getInstanceId(),
 		"timestamp":  timestamp,
 		"nonce":      nonce,
 		"data":       message,
 	})
+	if err != nil {
+		proxywasm.LogErrorf("[Filter] Failed to marshal message for signing: %v", err)
+		return nil, err
+	}
 	
 	signature, err := createHMACSignature(string(messageString), centrifugoSecret)
 	if err != nil {
 		proxywasm.LogErrorf("[Filter] Failed to create message signature: %v", err)
-		signature = "invalid"
+		return nil, err
 	}
 
 	payload["signature"] = signature
-	return payload
+	return payload, nil
 }
 
 // getInstanceId returns a unique instance ID for this filter
 func getInstanceId() string {
-	// In a real implementation, this could be derived from Envoy node ID
-	// For now, using a simple static ID with timestamp
+	// Return cached instance ID generated at startup
+	if instanceId != "" {
+		return instanceId
+	}
+	
+	// Fallback for unconfigured state (should not happen in normal operation)
+	if filterId == "" {
+		return "instance_unconfigured_" + strconv.FormatInt(time.Now().Unix(), 36)
+	}
 	return "instance_" + filterId + "_" + strconv.FormatInt(time.Now().Unix(), 36)
 }
 
@@ -313,7 +380,14 @@ func handleChallengeValidationResponse(body []byte, context map[string]string) {
 	}
 
 	// Extract the actual response from server wrapper
-	if !serverResponse["success"].(bool) {
+	success, ok := serverResponse["success"].(bool)
+	if !ok {
+		proxywasm.LogErrorf("[Filter] Invalid server response: 'success' field missing or not boolean")
+		handleValidationError(context)
+		return
+	}
+	
+	if !success {
 		proxywasm.LogWarnf("[Filter] Server rejected validation request")
 		handleValidationError(context)
 		return
@@ -393,5 +467,8 @@ func RegisterFilter() error {
 func getEnvoyNodeId() string {
 	// This would ideally get the actual Envoy node ID
 	// For now, return a placeholder
+	if filterId == "" {
+		return "envoy-node-unconfigured"
+	}
 	return "envoy-node-" + filterId
 }

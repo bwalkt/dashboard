@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -15,8 +16,41 @@ import (
 const (
 	redisCluster = "redis_cluster" // Redis cluster in Envoy config
 	filterID     = "wasm-filter-1"  // Unique filter identifier
-	jwtSecret    = "your-secret-key" // Should match server JWT_SECRET
 )
+
+var (
+	jwtSecret string // Loaded from configuration, should match server JWT_SECRET
+	
+	// Challenge validation state (WASM-compatible, no goroutines)
+	validationState struct {
+		pending     bool
+		requestID   string
+		challengeID string
+		answer      string
+		startTime   int64
+		attempts    int
+	}
+	
+	// Redis operation state for async callbacks
+	redisOperationState struct {
+		pending        bool
+		operationType  string // "header_info", "challenge", etc.
+		requestContext map[string]interface{} // Store context for callback
+	}
+)
+
+// InitRedisConfig initializes Redis-related configuration
+func InitRedisConfig(config map[string]string) error {
+	jwtSecret = config["jwt_secret"]
+	
+	if jwtSecret == "" {
+		proxywasm.LogCriticalf("[Redis Client] Missing required configuration: jwt_secret")
+		return fmt.Errorf("jwt_secret is required for Redis authentication")
+	}
+	
+	proxywasm.LogInfof("[Redis Client] Configuration initialized successfully")
+	return nil
+}
 
 // Redis keys matching server implementation
 var RedisKeys = struct {
@@ -68,7 +102,7 @@ type FilterToken struct {
 // generateFilterToken creates an authentication token
 func generateFilterToken() string {
 	timestamp := time.Now().UnixMilli()
-	nonce := generateRandomNonce()
+	nonce := generateNonce()
 	data := filterID + ":" + strconv.FormatInt(timestamp, 10) + ":" + nonce
 	
 	h := hmac.New(sha256.New, []byte(jwtSecret))
@@ -86,15 +120,12 @@ func generateFilterToken() string {
 	return base64.StdEncoding.EncodeToString(tokenJSON)
 }
 
-// generateRandomNonce generates a random nonce for security
-func generateRandomNonce() string {
-	// In WASM environment, use timestamp-based nonce
-	return strconv.FormatInt(time.Now().UnixNano(), 36)
-}
+// Note: Using secure generateNonce() function from centrifugo_client.go
+// which provides cryptographic randomness with timestamp fallback
 
 // ValidateChallengeViaRedis checks challenge using Redis
 func ValidateChallengeViaRedis(challengeID, challengeAnswer string) error {
-	requestID := "req_" + strconv.FormatInt(time.Now().UnixNano(), 36)
+	requestID := "req_" + generateNonce()
 	
 	// First check Redis cache directly
 	cacheKey := RedisKeys.ChallengeCache + challengeID
@@ -141,58 +172,103 @@ func ValidateChallengeViaRedis(challengeID, challengeAnswer string) error {
 	
 	proxywasm.LogInfof("[Redis] Challenge validation queued: %s (request: %s)", challengeID, requestID)
 	
-	// Poll for result (with timeout)
-	go pollForChallengeResult(requestID, challengeID, challengeAnswer)
+	// Store validation state for timer-based polling (no goroutines in WASM)
+	setValidationState(requestID, challengeID, challengeAnswer)
+	
+	// Start timer for polling (WASM-compatible)
+	proxywasm.SetTickPeriodMilliSeconds(500) // Poll every 500ms
 	
 	return nil
 }
 
-// pollForChallengeResult polls Redis for validation result
-func pollForChallengeResult(requestID, challengeID, challengeAnswer string) {
-	resultKey := RedisKeys.ChallengeResults + requestID
-	maxAttempts := 10 // Poll for up to 5 seconds (10 * 500ms)
-	
-	for attempt := 0; attempt < maxAttempts; attempt++ {
-		// Wait before polling (except first attempt)
-		if attempt > 0 {
-			time.Sleep(500 * time.Millisecond)
-		}
-		
-		result, err := redisGet(resultKey)
-		if err != nil || result == "" {
-			continue
-		}
-		
-		// Parse result
-		var response RedisFilterResponse
-		if err := json.Unmarshal([]byte(result), &response); err != nil {
-			proxywasm.LogErrorf("[Redis] Failed to parse result: %v", err)
-			continue
-		}
-		
-		// Handle result
-		if response.Status == "success" {
-			if data, ok := response.Data.(map[string]interface{}); ok {
-				if valid, ok := data["valid"].(bool); ok && valid {
-					proxywasm.LogInfof("[Redis] Challenge validated: %s", challengeID)
-					// Cache for future use
-					SetChallengeInSharedDataWithDefaultTTL(challengeID, challengeAnswer)
-					proxywasm.ResumeHttpRequest()
-					return
-				}
-			}
-		}
-		
-		// Validation failed
-		proxywasm.LogWarnf("[Redis] Challenge validation failed: %s - %s", challengeID, response.Error)
-		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid challenge\"}"), -1)
-		return
+// setValidationState stores validation state for timer-based polling
+func setValidationState(requestID, challengeID, answer string) {
+	validationState.pending = true
+	validationState.requestID = requestID
+	validationState.challengeID = challengeID
+	validationState.answer = answer
+	validationState.startTime = time.Now().Unix()
+	validationState.attempts = 0
+}
+
+// clearValidationState clears the validation state
+func clearValidationState() {
+	validationState.pending = false
+	validationState.requestID = ""
+	validationState.challengeID = ""
+	validationState.answer = ""
+	validationState.startTime = 0
+	validationState.attempts = 0
+}
+
+// checkValidationResult checks for validation result (called by timer)
+func checkValidationResult() bool {
+	if !validationState.pending {
+		return false
 	}
 	
-	// Timeout
-	proxywasm.LogErrorf("[Redis] Challenge validation timeout for: %s", challengeID)
-	proxywasm.SendHttpResponse(503, nil, []byte("{\"error\":\"validation timeout\"}"), -1)
+	validationState.attempts++
+	maxAttempts := 10 // 5 seconds max (10 * 500ms)
+	
+	// Check timeout
+	elapsed := time.Now().Unix() - validationState.startTime
+	if elapsed > 5 || validationState.attempts > maxAttempts {
+		proxywasm.LogErrorf("[Redis] Challenge validation timeout for: %s", validationState.challengeID)
+		proxywasm.SendHttpResponse(503, nil, []byte("{\"error\":\"validation timeout\"}"), -1)
+		clearValidationState()
+		return true // Stop polling
+	}
+	
+	// Check Redis for result
+	resultKey := RedisKeys.ChallengeResults + validationState.requestID
+	result, err := redisGet(resultKey)
+	if err != nil || result == "" {
+		return false // Continue polling
+	}
+	
+	// Parse result
+	var response RedisFilterResponse
+	if err := json.Unmarshal([]byte(result), &response); err != nil {
+		proxywasm.LogErrorf("[Redis] Failed to parse result: %v", err)
+		return false // Continue polling
+	}
+	
+	// Handle result
+	if response.Status == "success" {
+		if data, ok := response.Data.(map[string]interface{}); ok {
+			if valid, ok := data["valid"].(bool); ok && valid {
+				proxywasm.LogInfof("[Redis] Challenge validated: %s", validationState.challengeID)
+				// Cache for future use
+				SetChallengeInSharedDataWithDefaultTTL(validationState.challengeID, validationState.answer)
+				clearValidationState()
+				proxywasm.ResumeHttpRequest()
+				return true // Stop polling
+			}
+		}
+	}
+	
+	// Validation failed
+	proxywasm.LogWarnf("[Redis] Challenge validation failed: %s - %s", validationState.challengeID, response.Error)
+	proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid challenge\"}"), -1)
+	clearValidationState()
+	return true // Stop polling
 }
+
+/* 
+DEPRECATED: pollForChallengeResult - Goroutine-based polling doesn't work in TinyGo WASM
+This function used goroutines with time.Sleep which is unreliable in the WASM environment.
+Replaced with timer-based polling using OnTick callback and checkValidationResult().
+
+Original issue: Goroutines don't execute reliably in TinyGo WASM, causing validation failures.
+New approach: Use proxywasm.SetTickPeriod() with OnTick() callback for WASM-compatible polling.
+*/
+
+/*
+func pollForChallengeResult(requestID, challengeID, challengeAnswer string) {
+	// This goroutine-based approach is unreliable in TinyGo WASM environment
+	// Use timer-based approach instead
+}
+*/
 
 // RegisterFilterInRedis registers the filter in Redis
 func RegisterFilterInRedis() error {
@@ -276,51 +352,74 @@ func GetHeaderInfoFromRedis() (map[string]interface{}, error) {
 // Redis operations via HTTP (since direct Redis connection isn't available in WASM)
 // These make HTTP requests to a Redis proxy endpoint
 
+// Async Redis operations using proper callback pattern
+
+func redisGetAsync(key, operationType string, context map[string]interface{}) error {
+	return makeRedisRequestAsync("GET", key, "", operationType, context)
+}
+
+func redisSetAsync(key, value, operationType string, context map[string]interface{}) error {
+	return makeRedisRequestAsync("SET", key, value, operationType, context)
+}
+
+func redisSetWithTTLAsync(key, value, operationType string, ttl int, context map[string]interface{}) error {
+	return makeRedisRequestAsync("SETEX", key, value, operationType, context, ttl)
+}
+
+func redisLPushAsync(key, value, operationType string, context map[string]interface{}) error {
+	return makeRedisRequestAsync("LPUSH", key, value, operationType, context)
+}
+
+func redisHGetAsync(key, field, operationType string, context map[string]interface{}) error {
+	return makeRedisHashRequestAsync("HGET", key, field, "", operationType, context)
+}
+
+func redisHSetAsync(key, field, value, operationType string, context map[string]interface{}) error {
+	return makeRedisHashRequestAsync("HSET", key, field, value, operationType, context)
+}
+
+// Legacy synchronous functions (deprecated - use async versions)
 func redisGet(key string) (string, error) {
-	return makeRedisRequest("GET", key, "")
+	return "", fmt.Errorf("synchronous GET not supported in WASM - use redisGetAsync")
 }
 
 func redisSet(key, value string) error {
-	_, err := makeRedisRequest("SET", key, value)
-	return err
+	return fmt.Errorf("synchronous SET not supported in WASM - use redisSetAsync")
 }
 
 func redisSetWithTTL(key, value string, ttl int) error {
-	_, err := makeRedisRequest("SETEX", key, value, ttl)
-	return err
+	return fmt.Errorf("synchronous SETEX not supported in WASM - use redisSetWithTTLAsync")
 }
 
 func redisHGet(key, field string) (string, error) {
-	return makeRedisRequest("HGET", key+":"+field, "")
+	return "", fmt.Errorf("synchronous HGET not supported in WASM - use redisHGetAsync")
 }
 
 func redisHSet(key, field, value string) error {
-	_, err := makeRedisRequest("HSET", key+":"+field, value)
-	return err
+	return fmt.Errorf("synchronous HSET not supported in WASM - use redisHSetAsync")
 }
 
 func redisLPush(key, value string) error {
-	_, err := makeRedisRequest("LPUSH", key, value)
-	return err
+	return fmt.Errorf("synchronous LPUSH not supported in WASM - use redisLPushAsync")
 }
 
 // makeRedisRequest makes HTTP request to Redis proxy
-func makeRedisRequest(command, key, value string, args ...interface{}) (string, error) {
-	// Create Redis command request
+// makeRedisHashRequestAsync handles Redis hash operations with proper async callback pattern
+func makeRedisHashRequestAsync(command, key, field, value, operationType string, context map[string]interface{}) error {
+	// Create Redis hash command request with proper field parameter
+	token := generateFilterToken() // Generate once to avoid token mismatch
+	
 	request := map[string]interface{}{
 		"command": command,
 		"key":     key,
+		"field":   field, // Separate field for hash operations
 		"value":   value,
-		"token":   generateFilterToken(),
-	}
-	
-	if len(args) > 0 {
-		request["args"] = args
+		"token":   token,
 	}
 	
 	bodyJSON, err := json.Marshal(request)
 	if err != nil {
-		return "", err
+		return err
 	}
 	
 	// Headers for Redis proxy request
@@ -329,10 +428,154 @@ func makeRedisRequest(command, key, value string, args ...interface{}) (string, 
 		{":path", "/redis-proxy"},
 		{":authority", "server:8090"},
 		{"content-type", "application/json"},
-		{"x-filter-token", generateFilterToken()},
+		{"x-filter-token", token}, // Use same token
 	}
 	
-	var result string
+	// Store state for callback handling
+	redisOperationState.pending = true
+	redisOperationState.operationType = operationType
+	redisOperationState.requestContext = context
+	
+	// Proper async pattern: callback handles response and resumes processing
+	_, err = proxywasm.DispatchHttpCall(
+		"server_cluster",
+		headers,
+		bodyJSON,
+		nil,
+		1000,
+		func(numHeaders, bodySize, numTrailers int) {
+			handleRedisResponse(numHeaders, bodySize, numTrailers)
+		},
+	)
+	
+	return err
+}
+
+// handleRedisResponse processes Redis operation responses and resumes request processing
+func handleRedisResponse(numHeaders, bodySize, numTrailers int) {
+	if !redisOperationState.pending {
+		proxywasm.LogWarnf("[Redis] Unexpected callback - no pending operation")
+		return
+	}
+	
+	// Get response body
+	body, err := proxywasm.GetHttpCallResponseBody(0, bodySize)
+	if err != nil {
+		proxywasm.LogErrorf("[Redis] Failed to get response body: %v", err)
+		handleRedisError("Failed to get response body")
+		return
+	}
+	
+	// Parse response
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		proxywasm.LogErrorf("[Redis] Failed to parse response: %v", err)
+		handleRedisError("Failed to parse response")
+		return
+	}
+	
+	// Handle different operation types
+	switch redisOperationState.operationType {
+	case "header_info":
+		handleRedisHeaderInfoResponse(response)
+	case "challenge_write":
+		handleRedisChallengeWriteResponse(response)
+	default:
+		proxywasm.LogWarnf("[Redis] Unknown operation type: %s", redisOperationState.operationType)
+		clearRedisOperationState()
+		proxywasm.ResumeHttpRequest()
+	}
+}
+
+// handleRedisHeaderInfoResponse processes header info retrieval responses
+func handleRedisHeaderInfoResponse(response map[string]interface{}) {
+	defer clearRedisOperationState()
+	
+	if value, ok := response["value"].(string); ok && value != "" {
+		// Store result in shared data for retrieval
+		if err := proxywasm.SetSharedData("redis_result", []byte(value), 0); err != nil {
+			proxywasm.LogErrorf("[Redis] Failed to store result in shared data: %v", err)
+		}
+		proxywasm.LogInfof("[Redis] Header info retrieved successfully")
+	} else {
+		proxywasm.LogWarnf("[Redis] No value returned from header info request")
+	}
+	
+	// Resume request processing
+	proxywasm.ResumeHttpRequest()
+}
+
+// handleRedisChallengeWriteResponse processes challenge write operation responses
+func handleRedisChallengeWriteResponse(response map[string]interface{}) {
+	defer clearRedisOperationState()
+	
+	if status, ok := response["status"].(string); ok && status == "OK" {
+		proxywasm.LogInfof("[Redis] Challenge write operation completed successfully")
+	} else {
+		proxywasm.LogWarnf("[Redis] Challenge write operation may have failed")
+	}
+	
+	// For write operations, we don't need to resume request processing
+	// The request continues normally
+}
+
+// handleRedisError handles Redis operation errors
+func handleRedisError(errorMsg string) {
+	proxywasm.LogErrorf("[Redis] Operation failed: %s", errorMsg)
+	clearRedisOperationState()
+	
+	// For operations that need to resume requests, send error response
+	if redisOperationState.operationType == "header_info" {
+		proxywasm.SendHttpResponse(500, nil, []byte("{\"error\":\"Redis operation failed\"}"), -1)
+	} else {
+		// For other operations, resume normally
+		proxywasm.ResumeHttpRequest()
+	}
+}
+
+// clearRedisOperationState clears the Redis operation state
+func clearRedisOperationState() {
+	redisOperationState.pending = false
+	redisOperationState.operationType = ""
+	redisOperationState.requestContext = nil
+}
+
+// makeRedisRequestAsync initiates async Redis operation with proper callback handling
+func makeRedisRequestAsync(command, key, value, operationType string, context map[string]interface{}, args ...interface{}) error {
+	// Create Redis command request
+	token := generateFilterToken() // Generate once to avoid token mismatch
+	
+	request := map[string]interface{}{
+		"command": command,
+		"key":     key,
+		"value":   value,
+		"token":   token,
+	}
+	
+	if len(args) > 0 {
+		request["args"] = args
+	}
+	
+	bodyJSON, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+	
+	// Headers for Redis proxy request
+	headers := [][2]string{
+		{":method", "POST"},
+		{":path", "/redis-proxy"},
+		{":authority", "server:8090"},
+		{"content-type", "application/json"},
+		{"x-filter-token", token}, // Use same token
+	}
+	
+	// Store state for callback handling
+	redisOperationState.pending = true
+	redisOperationState.operationType = operationType
+	redisOperationState.requestContext = context
+	
+	// Proper async pattern: callback handles response and resumes processing
 	_, err = proxywasm.DispatchHttpCall(
 		"server_cluster",
 		headers,
@@ -340,19 +583,16 @@ func makeRedisRequest(command, key, value string, args ...interface{}) (string, 
 		nil,
 		1000, // 1 second timeout
 		func(numHeaders, bodySize, numTrailers int) {
-			body, err := proxywasm.GetHttpCallResponseBody(0, bodySize)
-			if err == nil {
-				var response map[string]interface{}
-				if json.Unmarshal(body, &response) == nil {
-					if val, ok := response["value"].(string); ok {
-						result = val
-					}
-				}
-			}
+			handleRedisResponse(numHeaders, bodySize, numTrailers)
 		},
 	)
 	
-	return result, err
+	return err
+}
+
+// Legacy synchronous function (deprecated)
+func makeRedisRequest(command, key, value string, args ...interface{}) (string, error) {
+	return "", fmt.Errorf("synchronous Redis operations not supported in WASM - use makeRedisRequestAsync")
 }
 
 // getEnvoyNodeID gets the Envoy node ID

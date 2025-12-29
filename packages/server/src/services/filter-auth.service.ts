@@ -7,6 +7,7 @@ export interface FilterAuthToken {
   signature: string;
   timestamp: number;
   nonce: string;
+  envoyNodeId?: string;
 }
 
 export interface FilterIdentity {
@@ -34,12 +35,18 @@ export class FilterAuthService {
       .update(message)
       .digest('hex');
 
-    return {
+    const token: FilterAuthToken = {
       filterId,
       signature,
       timestamp,
       nonce
     };
+    
+    if (envoyNodeId !== undefined) {
+      token.envoyNodeId = envoyNodeId;
+    }
+    
+    return token;
   }
 
   // Validate filter authentication token
@@ -55,26 +62,34 @@ export class FilterAuthService {
         return { valid: false, reason: "Token expired or invalid timestamp" };
       }
 
-      // Check if nonce was already used (prevent replay attacks)
-      const nonceKey = `filter_nonce:${nonce}`;
-      const nonceExists = await redis.exists(nonceKey);
-      
-      if (nonceExists) {
-        return { valid: false, reason: "Token already used (nonce replay)" };
-      }
-
-      // Validate signature
-      const expectedMessage = `${filterId}:${timestamp}:${nonce}:`;
+      // Validate signature first (cheaper operation)
+      const expectedMessage = `${filterId}:${timestamp}:${nonce}:${token.envoyNodeId ?? ''}`;
       const expectedSignature = createHmac('sha256', this.FILTER_SECRET)
         .update(expectedMessage)
         .digest('hex');
+
+      // Check signature format and length first
+      if (signature.length !== expectedSignature.length) {
+        return { valid: false, reason: "Invalid signature" };
+      }
 
       if (!timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expectedSignature, 'hex'))) {
         return { valid: false, reason: "Invalid signature" };
       }
 
-      // Mark nonce as used
-      await redis.set(nonceKey, "used", this.NONCE_CACHE_TTL);
+      // Atomically check and mark nonce as used (prevent replay attacks)
+      const nonceKey = `filter_nonce:${nonce}`;
+      const wasSet = await redis.getClient().set(
+        nonceKey, 
+        "used", 
+        "EX", 
+        this.NONCE_CACHE_TTL, 
+        "NX"
+      );
+      
+      if (!wasSet) {
+        return { valid: false, reason: "Token already used (nonce replay)" };
+      }
 
       return { valid: true };
     } catch (error) {
@@ -134,10 +149,12 @@ export class FilterAuthService {
     const identities: FilterIdentity[] = [];
 
     for (const filterRef of activeFilterIds) {
-      const parts = filterRef.split(':');
-      if (parts.length < 2) continue;
-      const filterId = parts[0];
-      const instanceId = parts[1];
+      // Split only on the first colon to handle IDs that contain colons
+      const colonIndex = filterRef.indexOf(':');
+      if (colonIndex === -1) continue;
+      
+      const filterId = filterRef.substring(0, colonIndex);
+      const instanceId = filterRef.substring(colonIndex + 1);
       if (!filterId || !instanceId) continue;
       const identity = await this.getFilterIdentity(filterId, instanceId);
       
@@ -220,20 +237,28 @@ export class FilterAuthService {
         .update(messageForSigning)
         .digest('hex');
 
+      // Check signature format and length first
+      if (signature.length !== expectedSignature.length) {
+        return { valid: false, reason: "Invalid message signature" };
+      }
+
       if (!timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expectedSignature, 'hex'))) {
         return { valid: false, reason: "Invalid message signature" };
       }
 
-      // Check nonce for replay protection
+      // Atomically check and mark message nonce as used (prevent replay protection)
       const nonceKey = `msg_nonce:${filterId}:${nonce}`;
-      const nonceExists = await redis.exists(nonceKey);
+      const wasSet = await redis.getClient().set(
+        nonceKey, 
+        "used", 
+        "EX", 
+        300, // 5 minutes
+        "NX"
+      );
       
-      if (nonceExists) {
+      if (!wasSet) {
         return { valid: false, reason: "Message nonce already used (replay attack)" };
       }
-
-      // Mark nonce as used (with shorter TTL for message nonces)
-      await redis.set(nonceKey, "used", 300); // 5 minutes
 
       // Update filter activity
       await this.updateFilterActivity(filterId, instanceId);

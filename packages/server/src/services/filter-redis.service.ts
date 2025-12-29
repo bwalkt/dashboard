@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import Redis from "ioredis";
 import { redis } from "../config/redis.js";
 import { headerInfoCache } from "./header-info-cache.service.js";
 
@@ -58,28 +59,32 @@ export class FilterRedisService {
   private static readonly RATE_LIMIT_WINDOW = 60; // 1 minute
   private static readonly MAX_REQUESTS_PER_WINDOW = 1000;
 
+  private subscriber: Redis | null = null;
+  private maintenanceInterval: NodeJS.Timeout | null = null;
+  private processorRunning: boolean = false;
+  private processorAbortController: AbortController | null = null;
+
   constructor() {
-    this.initializePubSub();
+    this.initializePubSub().catch(err => console.error("Failed to initialize pub/sub:", err));
     this.startMaintenanceWorker();
   }
 
   // Initialize Redis pub/sub for real-time updates
   private async initializePubSub(): Promise<void> {
-    const subscriber = redis.getClient().duplicate();
-    await subscriber.connect();
+    // Create a new Redis instance for pub/sub using the same options
+    this.subscriber = new Redis(redis.getClient().options);
 
     // Subscribe to header update channel
-    await subscriber.subscribe(REDIS_KEYS.HEADER_UPDATE_CHANNEL, (err, count) => {
-      if (err) {
-        console.error("Redis subscription error:", err);
-        return;
-      }
-      console.log(`📡 Subscribed to ${count} Redis channels`);
-    });
+    await this.subscriber.subscribe(REDIS_KEYS.HEADER_UPDATE_CHANNEL);
+    console.log(`📡 Subscribed to Redis channel: ${REDIS_KEYS.HEADER_UPDATE_CHANNEL}`);
 
-    subscriber.on('message', (channel: string, message: string) => {
+    this.subscriber.on('message', (channel: string, message: string) => {
       console.log(`📡 Header update received on ${channel}: ${message}`);
       // Filters will see this update when they poll or subscribe
+    });
+
+    this.subscriber.on('error', (err: Error) => {
+      console.error('Redis subscriber error:', err);
     });
 
     console.log("✅ Redis pub/sub initialized for filter communication");
@@ -87,7 +92,7 @@ export class FilterRedisService {
 
   // Start maintenance worker to clean up expired data
   private async startMaintenanceWorker(): Promise<void> {
-    setInterval(async () => {
+    this.maintenanceInterval = setInterval(async () => {
       try {
         await this.cleanupExpiredData();
         await this.checkFilterHealth();
@@ -175,42 +180,85 @@ export class FilterRedisService {
     console.log(`📥 Challenge validation queued: ${requestId}`);
   }
 
+  // Start challenge queue processor
+  startChallengeProcessor(): void {
+    if (this.processorRunning) {
+      console.log("⚠️ Challenge processor is already running");
+      return;
+    }
+
+    this.processorRunning = true;
+    this.processorAbortController = new AbortController();
+    
+    console.log("🚀 Starting challenge queue processor");
+    this.processChallengeQueue().catch(err => {
+      console.error("Challenge processor error:", err);
+      this.processorRunning = false;
+    });
+  }
+
+  // Stop challenge queue processor
+  stopChallengeProcessor(): void {
+    if (!this.processorRunning) {
+      console.log("⚠️ Challenge processor is not running");
+      return;
+    }
+
+    console.log("🛑 Stopping challenge queue processor");
+    this.processorRunning = false;
+    
+    if (this.processorAbortController) {
+      this.processorAbortController.abort();
+      this.processorAbortController = null;
+    }
+  }
+
   // Process challenge validation queue
-  async processChallengeQueue(): Promise<void> {
-    while (true) {
-      const data = await redis.getClient().brpop(REDIS_KEYS.CHALLENGE_QUEUE, 1);
-      
-      if (data) {
-        const [, value] = data;
-        const request: RedisFilterRequest = JSON.parse(value);
+  private async processChallengeQueue(): Promise<void> {
+    while (this.processorRunning && !this.processorAbortController?.signal.aborted) {
+      try {
+        const data = await redis.getClient().brpop(REDIS_KEYS.CHALLENGE_QUEUE, 1);
         
-        try {
-          // Validate challenge (integrate with existing auth service)
-          const isValid = await this.validateChallenge(
-            request.payload.challengeId,
-            request.payload.challengeAnswer
-          );
-
-          // Store result
-          await this.setChallengeResult(request.requestId, isValid);
-
-          // Cache if valid
-          if (isValid) {
-            const cacheKey = REDIS_KEYS.CHALLENGE_CACHE + request.payload.challengeId;
-            await redis.set(
-              cacheKey,
-              request.payload.challengeAnswer,
-              FilterRedisService.CHALLENGE_CACHE_TTL
+        if (data && this.processorRunning) {
+          const [, value] = data;
+          const request: RedisFilterRequest = JSON.parse(value);
+          
+          try {
+            // Validate challenge (integrate with existing auth service)
+            const isValid = await this.validateChallenge(
+              request.payload.challengeId,
+              request.payload.challengeAnswer
             );
-          }
 
-          console.log(`✅ Challenge processed: ${request.requestId} - ${isValid ? 'valid' : 'invalid'}`);
-        } catch (error) {
-          console.error(`Error processing challenge ${request.requestId}:`, error);
-          await this.setChallengeResult(request.requestId, false, "Processing error");
+            // Store result
+            await this.setChallengeResult(request.requestId, isValid);
+
+            // Cache if valid
+            if (isValid) {
+              const cacheKey = REDIS_KEYS.CHALLENGE_CACHE + request.payload.challengeId;
+              await redis.set(
+                cacheKey,
+                request.payload.challengeAnswer,
+                FilterRedisService.CHALLENGE_CACHE_TTL
+              );
+            }
+
+            console.log(`✅ Challenge processed: ${request.requestId} - ${isValid ? 'valid' : 'invalid'}`);
+          } catch (error) {
+            console.error(`Error processing challenge ${request.requestId}:`, error);
+            await this.setChallengeResult(request.requestId, false, "Processing error");
+          }
+        }
+      } catch (error) {
+        if (this.processorRunning) {
+          console.error("Challenge queue processor error:", error);
+          // Brief pause before retrying to prevent tight error loops
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
     }
+    
+    console.log("📴 Challenge queue processor stopped");
   }
 
   // Set challenge validation result
@@ -387,12 +435,21 @@ export class FilterRedisService {
     }
   }
 
-  // Placeholder for actual challenge validation
+  // Challenge validation - SECURITY CRITICAL
   private async validateChallenge(challengeId: string, challengeAnswer: string): Promise<boolean> {
-    // This should integrate with your existing challenge validation logic
-    // For now, returning true as placeholder
-    console.log(`🔐 Validating challenge ${challengeId}`);
-    return true;
+    // SECURITY: Failing securely until proper validation is implemented
+    // TODO: Implement actual challenge validation logic
+    console.error(`🚨 SECURITY: Challenge validation not implemented - refusing validation for ${challengeId}`);
+    throw new Error("Challenge validation not implemented - refusing to validate for security");
+  }
+
+  // Get secret with security validation
+  private static getSecret(): string {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET environment variable is required for secure token generation");
+    }
+    return secret;
   }
 
   // Generate secure token for filter authentication
@@ -401,7 +458,7 @@ export class FilterRedisService {
     const nonce = crypto.randomBytes(16).toString('hex');
     const data = `${filterId}:${timestamp}:${nonce}`;
     const signature = crypto
-      .createHmac('sha256', process.env.JWT_SECRET || 'secret')
+      .createHmac('sha256', this.getSecret())
       .update(data)
       .digest('hex');
     
@@ -428,7 +485,7 @@ export class FilterRedisService {
       // Verify signature
       const data = `${filterId}:${timestamp}:${nonce}`;
       const expectedSignature = crypto
-        .createHmac('sha256', process.env.JWT_SECRET || 'secret')
+        .createHmac('sha256', this.getSecret())
         .update(data)
         .digest('hex');
       
@@ -441,10 +498,39 @@ export class FilterRedisService {
       return { valid: false };
     }
   }
+
+  // Graceful shutdown
+  async shutdown(): Promise<void> {
+    console.log("🔄 Shutting down FilterRedisService...");
+    
+    // Stop challenge processor
+    this.stopChallengeProcessor();
+    
+    if (this.maintenanceInterval) {
+      clearInterval(this.maintenanceInterval);
+      this.maintenanceInterval = null;
+      console.log("✅ Maintenance worker stopped");
+    }
+    
+    if (this.subscriber) {
+      await this.subscriber.quit();
+      this.subscriber = null;
+      console.log("✅ Redis subscriber disconnected");
+    }
+    
+    console.log("✅ FilterRedisService shutdown complete");
+  }
 }
 
 // Export singleton instance
 export const filterRedisService = new FilterRedisService();
 
-// Start challenge queue processor
-filterRedisService.processChallengeQueue().catch(console.error);
+// Export function to start challenge processor explicitly
+export function startChallengeProcessor(): void {
+  filterRedisService.startChallengeProcessor();
+}
+
+// Export function to stop challenge processor
+export function stopChallengeProcessor(): void {
+  filterRedisService.stopChallengeProcessor();
+}
