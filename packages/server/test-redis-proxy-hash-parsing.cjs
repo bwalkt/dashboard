@@ -155,12 +155,22 @@ async function runTests() {
         }
       });
       
-      console.log(`   Request: ${JSON.stringify(requestBody, null, 6).replace(/\n/g, '\n   ')}`);
+      // Helper function to format JSON with consistent indentation
+      function formatIndented(obj, indent = '   ') {
+        return JSON.stringify(obj, null, 2)
+          .split('\n')
+          .map(line => indent + line)
+          .join('\n');
+      }
+      
+      console.log('   Request:');
+      console.log(formatIndented(requestBody));
       
       const response = await makeRequest(requestBody);
       
       console.log(`   Response Status: ${response.status}`);
-      console.log(`   Response: ${JSON.stringify(response.data, null, 6).replace(/\n/g, '\n   ')}`);
+      console.log('   Response:');
+      console.log(formatIndented(response.data));
       
       const isSuccess = response.status === 200 && response.data.success;
       const testResult = test.expectedSuccess ? isSuccess : !isSuccess;

@@ -171,10 +171,20 @@ async function testDistributedRateLimitingFix() {
     
     try {
       for (const pattern of testKeys) {
-        const keys = await redis.getClient().keys(pattern.replace('*', '*'));
-        if (keys.length > 0) {
-          await redis.getClient().del(...keys);
-        }
+        // Use SCAN instead of KEYS for production safety
+        let cursor = '0';
+        do {
+          const [nextCursor, keys] = await redis.getClient().scan(
+            cursor,
+            'MATCH', pattern,
+            'COUNT', 100
+          );
+          cursor = nextCursor;
+          
+          if (keys.length > 0) {
+            await redis.getClient().del(...keys);
+          }
+        } while (cursor !== '0');
       }
     } catch (cleanupError) {
       console.warn('⚠️ Cleanup error (non-critical):', cleanupError.message);

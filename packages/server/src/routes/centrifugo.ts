@@ -281,7 +281,7 @@ export async function centrifugoRoutes(
         }
 
         // Validate that this is from a filter user
-        if (!user.startsWith("filter:")) {
+        if (!user.startsWith("filter:") || !(await isAuthenticatedFilter(user))) {
           return reply.status(403).send({ error: "Unauthorized: not a filter user" });
         }
 
@@ -436,12 +436,9 @@ async function isAuthenticatedFilter(userId: string): Promise<boolean> {
       return false;
     }
 
-    const parts = userId.split(":");
-    if (parts.length < 2) {
-      return false;
-    }
-
-    const filterId = parts[1];
+    // Extract filterId by removing the "filter:" prefix
+    // This handles filterIds that contain colons (e.g., "filter:my:filter:id:12345" -> "my:filter:id:12345")
+    const filterId = userId.slice("filter:".length);
     if (!filterId) {
       return false;
     }

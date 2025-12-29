@@ -25,6 +25,18 @@ export class FilterAuthService {
   private static readonly NONCE_CACHE_TTL = Math.max(1, parseInt(process.env.FILTER_NONCE_CACHE_TTL || "600", 10)); // Default: 10 minutes
   private static readonly MAX_CLOCK_SKEW = Math.max(0, parseInt(process.env.FILTER_MAX_CLOCK_SKEW || "30", 10)); // Default: 30 seconds
   private static readonly MESSAGE_VALIDITY_SECONDS = Math.max(1, parseInt(process.env.FILTER_MESSAGE_VALIDITY_SECONDS || "120", 10)); // Default: 2 minutes
+  private static readonly FILTER_ACTIVITY_TIMEOUT_MS = Math.max(1000, parseInt(process.env.FILTER_ACTIVITY_TIMEOUT_MS || "300000", 10)); // Default: 5 minutes
+
+  static {
+    // Validate configuration relationships to prevent security issues
+    if (this.NONCE_CACHE_TTL < this.TOKEN_VALIDITY_SECONDS + this.MAX_CLOCK_SKEW) {
+      throw new Error(
+        `NONCE_CACHE_TTL (${this.NONCE_CACHE_TTL}s) must be greater than ` +
+        `TOKEN_VALIDITY_SECONDS (${this.TOKEN_VALIDITY_SECONDS}s) + MAX_CLOCK_SKEW (${this.MAX_CLOCK_SKEW}s) ` +
+        `to prevent token replay attacks`
+      );
+    }
+  }
 
   // Generate a secure authentication token for the filter
   static generateAuthToken(filterId: string, envoyNodeId?: string): FilterAuthToken {
@@ -79,6 +91,8 @@ export class FilterAuthService {
       }
 
       // Atomically check and mark nonce as used (prevent replay attacks)
+      // Authentication nonces use global scope (filter_nonce:${nonce}) to ensure
+      // unique nonces across all filters, preventing cross-filter token replay
       const nonceKey = `filter_nonce:${nonce}`;
       const wasSet = await redis.getClient().set(
         nonceKey, 
@@ -175,7 +189,7 @@ export class FilterAuthService {
       const results = await pipeline.exec();
       if (!results) return false;
       
-      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      const activityThreshold = Date.now() - this.FILTER_ACTIVITY_TIMEOUT_MS;
       const inactiveFilters: string[] = [];
       
       for (let i = 0; i < results.length; i++) {
@@ -194,7 +208,7 @@ export class FilterAuthService {
         
         try {
           const identity: FilterIdentity = JSON.parse(identityData as string);
-          if (identity.lastSeen > fiveMinutesAgo && identity.isActive) {
+          if (identity.lastSeen > activityThreshold && identity.isActive) {
             // Found at least one active instance
             return true;
           } else {
@@ -245,7 +259,7 @@ export class FilterAuthService {
     
     const identities: FilterIdentity[] = [];
     const inactiveFilters: string[] = [];
-    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    const activityThreshold = Date.now() - this.FILTER_ACTIVITY_TIMEOUT_MS;
     
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
@@ -259,7 +273,7 @@ export class FilterAuthService {
         const identity: FilterIdentity = JSON.parse(identityData as string);
         
         // Check if filter is still active (last seen within 5 minutes)
-        if (identity.lastSeen > fiveMinutesAgo) {
+        if (identity.lastSeen > activityThreshold) {
           identities.push(identity);
         } else {
           // Mark for removal from active set
@@ -352,6 +366,9 @@ export class FilterAuthService {
       }
 
       // Atomically check and mark message nonce as used (prevent replay protection)
+      // Message nonces are scoped per filter (msg_nonce:${filterId}:${nonce}) to allow
+      // different filters to use the same random nonce value while still preventing
+      // replay attacks within each filter's context
       const nonceKey = `msg_nonce:${filterId}:${nonce}`;
       const wasSet = await redis.getClient().set(
         nonceKey, 

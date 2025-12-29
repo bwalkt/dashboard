@@ -25,6 +25,7 @@ import { signozRoutes } from "./routes/signoz.js";
 import { smsRoutes } from "./routes/sms.js";
 import { termsRoutes } from "./routes/terms.js";
 import { userRoutes } from "./routes/users.js";
+import { filterRedisService } from "./services/filter-redis.service.js";
 import { refreshProxyTargetsCache } from "./services/proxy-targets-cache.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -41,6 +42,9 @@ export default async function (
   // Initialize database and Redis
   await db.initialize();
   await redis.initialize();
+
+  // Initialize filter Redis service
+  await filterRedisService.init();
 
   // Load proxy targets into Redis cache on startup
   try {

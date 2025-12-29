@@ -65,8 +65,13 @@ export class FilterRedisService {
   private processorAbortController: AbortController | null = null;
 
   constructor() {
-    this.initializePubSub().catch(err => console.error("Failed to initialize pub/sub:", err));
-    this.startMaintenanceWorker();
+    // Defer async initialization to explicit init() call
+  }
+
+  async init(): Promise<void> {
+    await this.initializePubSub();
+    await this.startMaintenanceWorker();
+    console.log("✅ FilterRedisService initialized");
   }
 
   // Initialize Redis pub/sub for real-time updates

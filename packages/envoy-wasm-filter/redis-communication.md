@@ -82,9 +82,18 @@ await filterRedisService.updateHeaderInfo('users', activeUsers);
 
 **Filter Reads Data:**
 ```go
-// Filter retrieves header info from Redis
+// NOTE: GetHeaderInfoFromRedis is DEPRECATED in WASM environment
+// Synchronous Redis operations are not supported in WASM filters.
+// Header info should be retrieved via:
+// 1. Server pushing to shared data cache periodically
+// 2. Async operations with state management
+// 3. Single server endpoint for all header info
+
+// DEPRECATED - will always return error
 headerInfo, err := GetHeaderInfoFromRedis()
-activeUsers := headerInfo["active_users"]
+if err != nil {
+    // Handle error - function not supported in WASM
+}
 ```
 
 ### 2. Challenge Validation Flow

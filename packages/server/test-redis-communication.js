@@ -6,6 +6,7 @@
  */
 
 import { redis } from './dist/config/redis.js';
+import { FilterAuthService } from './dist/services/filter-auth.service.js';
 import { filterRedisService } from './dist/services/filter-redis.service.js';
 import { headerInfoCache } from './dist/services/header-info-cache.service.js';
 
@@ -20,9 +21,10 @@ async function testRedisComms() {
 
     // Test 1: Register a filter
     console.log('\n📝 Test 1: Filter Registration');
-    await filterRedisService.registerFilter('test-filter-1', 'envoy-node-123');
+    const instanceId = await filterRedisService.registerFilter('test-filter-1', 'envoy-node-123');
     const stats = await filterRedisService.getFilterStats();
-    console.log('✅ Filter registered:', stats);
+    console.log('✅ Filter registered with instance ID:', instanceId);
+    console.log('  Stats:', stats);
 
     // Test 2: Set header info
     console.log('\n📝 Test 2: Header Info Management');
@@ -69,10 +71,18 @@ async function testRedisComms() {
       'answer123'
     );
     
-    // Wait a bit and check result
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const result = await filterRedisService.getChallengeResult(requestId);
+    // Wait with timeout and polling for challenge result
+    const maxWaitTime = 5000;
+    const pollInterval = 500;
+    let result = null;
+    for (let waited = 0; waited < maxWaitTime && !result; waited += pollInterval) {
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+      result = await filterRedisService.getChallengeResult(requestId);
+    }
     console.log('✅ Challenge validation result:', result);
+    if (!result) {
+      console.warn('⚠️ Challenge result not received within timeout - server may not be processing queue');
+    }
 
     // Test 5: Rate limiting
     console.log('\n📝 Test 5: Rate Limiting');
@@ -107,8 +117,11 @@ async function testRedisComms() {
 
     // Test 8: Cleanup test data
     console.log('\n📝 Test 8: Cleanup');
-    // Remove test filter from registry
-    await redis.getClient().hdel('filter:registry', 'test-filter-1');
+    // Properly deregister the filter using the correct instance ID
+    await FilterAuthService.deregisterFilter('test-filter-1', instanceId);
+    console.log('✅ Filter deregistered with instance ID:', instanceId);
+    
+    // Clean up remaining test data
     await headerInfoCache.clearAllData();
     await redis.getClient().del('filter:header:info');
     console.log('✅ Test data cleaned up');

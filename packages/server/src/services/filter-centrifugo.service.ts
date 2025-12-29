@@ -136,7 +136,14 @@ export class FilterCentrifugoService {
         messageId: `update_${Date.now()}_${Math.random().toString(36).substring(7)}`
       };
 
-      await centrifugeServer.publishToChannel(FilterCentrifugoService.BROADCAST_CHANNEL, message);
+      // Sign broadcast messages for integrity verification (consistent with targeted messages)
+      const signedMessage = FilterAuthService.createSignedMessage(
+        'broadcast', 
+        'system', 
+        message
+      );
+
+      await centrifugeServer.publishToChannel(FilterCentrifugoService.BROADCAST_CHANNEL, signedMessage);
       
       console.log(`📡 Broadcasted header info update: ${updateType}`);
     } catch (error) {

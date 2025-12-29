@@ -31,15 +31,12 @@ var (
 		attempts    int
 	}
 	
-	// Redis operation state for async callbacks
-	// LIMITATION: Single global state may cause conflicts if multiple async operations overlap
-	// TODO: Replace with map[uint32]operationState keyed by callout ID for concurrent operations
-	// Current design assumes serial Redis operations per filter instance
-	redisOperationState struct {
-		pending        bool
-		operationType  string // "header_info", "challenge", etc.
-		requestContext map[string]interface{} // Store context for callback
-	}
+	// Redis operation states for async callbacks (keyed by callout ID)
+	// Supports multiple concurrent Redis operations
+	redisOperationStates = make(map[uint32]struct {
+		operationType  string
+		requestContext map[string]interface{}
+	})
 )
 
 // InitRedisConfig initializes Redis-related configuration
@@ -119,7 +116,11 @@ func generateFilterToken() string {
 		Signature: signature,
 	}
 	
-	tokenJSON, _ := json.Marshal(token)
+	tokenJSON, err := json.Marshal(token)
+	if err != nil {
+		proxywasm.LogErrorf("[Redis] Failed to marshal token: %v", err)
+		return ""
+	}
 	return base64.StdEncoding.EncodeToString(tokenJSON)
 }
 
@@ -333,34 +334,20 @@ func SendHeartbeatToRedis() error {
 	return nil
 }
 
-// GetHeaderInfoFromRedis retrieves header info from Redis
+// GetHeaderInfoFromRedis - DEPRECATED: Cannot be implemented in WASM environment
+// Synchronous Redis operations are not supported in WASM filters.
+// Header info should be retrieved via async operations coordinated by the server.
+//
+// This function is kept for reference but will always fail if called because:
+// - redisHGet is a deprecated synchronous function that always returns an error
+// - WASM requires all Redis operations to be async with callbacks
+//
+// Alternative approaches:
+// 1. Server should push header info to shared data cache periodically
+// 2. Use async operations with state management to collect multiple fields
+// 3. Create a single server endpoint that returns all header info at once
 func GetHeaderInfoFromRedis() (map[string]interface{}, error) {
-	// Get all fields from header info hash
-	users, _ := redisHGet(RedisKeys.HeaderInfo, "users")
-	endpoints, _ := redisHGet(RedisKeys.HeaderInfo, "endpoints")
-	functions, _ := redisHGet(RedisKeys.HeaderInfo, "functions")
-	
-	headerInfo := make(map[string]interface{})
-	
-	if users != "" {
-		var userData interface{}
-		json.Unmarshal([]byte(users), &userData)
-		headerInfo["active_users"] = userData
-	}
-	
-	if endpoints != "" {
-		var endpointData interface{}
-		json.Unmarshal([]byte(endpoints), &endpointData)
-		headerInfo["active_endpoints"] = endpointData
-	}
-	
-	if functions != "" {
-		var functionData interface{}
-		json.Unmarshal([]byte(functions), &functionData)
-		headerInfo["next_functions"] = functionData
-	}
-	
-	return headerInfo, nil
+	return nil, fmt.Errorf("GetHeaderInfoFromRedis not supported in WASM - synchronous Redis operations are not available")
 }
 
 // Redis operations via HTTP (since direct Redis connection isn't available in WASM)
@@ -445,30 +432,38 @@ func makeRedisHashRequestAsync(command, key, field, value, operationType string,
 		{"x-filter-token", token}, // Use same token
 	}
 	
-	// Store state for callback handling
-	redisOperationState.pending = true
-	redisOperationState.operationType = operationType
-	redisOperationState.requestContext = context
-	
-	// Proper async pattern: callback handles response and resumes processing
-	_, err = proxywasm.DispatchHttpCall(
+	// Proper async pattern: use nil callback to rely on OnHttpCallResponse
+	calloutID, err := proxywasm.DispatchHttpCall(
 		"server_cluster",
 		headers,
 		bodyJSON,
 		nil,
 		1000,
-		func(numHeaders, bodySize, numTrailers int) {
-			handleRedisResponse(numHeaders, bodySize, numTrailers)
-		},
+		nil, // Use nil to rely on OnHttpCallResponse for handling
 	)
 	
-	return err
+	if err != nil {
+		return err
+	}
+	
+	// Store state for callback handling (keyed by callout ID)
+	redisOperationStates[calloutID] = struct {
+		operationType  string
+		requestContext map[string]interface{}
+	}{
+		operationType:  operationType,
+		requestContext: context,
+	}
+	
+	return nil
 }
 
-// handleRedisResponse processes Redis operation responses and resumes request processing
-func handleRedisResponse(numHeaders, bodySize, numTrailers int) {
-	if !redisOperationState.pending {
-		proxywasm.LogWarnf("[Redis] Unexpected callback - no pending operation")
+// handleRedisResponseWithID processes Redis operation responses with callout ID tracking
+func handleRedisResponseWithID(calloutID uint32, numHeaders, bodySize, numTrailers int) {
+	// Look up operation state by callout ID
+	opState, exists := redisOperationStates[calloutID]
+	if !exists {
+		proxywasm.LogWarnf("[Redis] Unexpected callback - no operation found for callout ID %d", calloutID)
 		return
 	}
 	
@@ -476,7 +471,7 @@ func handleRedisResponse(numHeaders, bodySize, numTrailers int) {
 	body, err := proxywasm.GetHttpCallResponseBody(0, bodySize)
 	if err != nil {
 		proxywasm.LogErrorf("[Redis] Failed to get response body: %v", err)
-		handleRedisError("Failed to get response body")
+		handleRedisErrorWithContext("Failed to get response body", opState.operationType)
 		return
 	}
 	
@@ -484,26 +479,28 @@ func handleRedisResponse(numHeaders, bodySize, numTrailers int) {
 	var response map[string]interface{}
 	if err := json.Unmarshal(body, &response); err != nil {
 		proxywasm.LogErrorf("[Redis] Failed to parse response: %v", err)
-		handleRedisError("Failed to parse response")
+		handleRedisErrorWithContext("Failed to parse response", opState.operationType)
 		return
 	}
 	
 	// Handle different operation types
-	switch redisOperationState.operationType {
+	switch opState.operationType {
 	case "header_info":
-		handleRedisHeaderInfoResponse(response)
+		handleRedisHeaderInfoResponse(response, opState.requestContext)
 	case "challenge_write":
-		handleRedisChallengeWriteResponse(response)
+		handleRedisChallengeWriteResponse(response, opState.requestContext)
 	default:
-		proxywasm.LogWarnf("[Redis] Unknown operation type: %s", redisOperationState.operationType)
-		clearRedisOperationState()
+		proxywasm.LogWarnf("[Redis] Unknown operation type: %s", opState.operationType)
+		delete(redisOperationStates, calloutID)
 		proxywasm.ResumeHttpRequest()
 	}
+	
+	// Clean up completed operation
+	delete(redisOperationStates, calloutID)
 }
 
 // handleRedisHeaderInfoResponse processes header info retrieval responses
-func handleRedisHeaderInfoResponse(response map[string]interface{}) {
-	defer clearRedisOperationState()
+func handleRedisHeaderInfoResponse(response map[string]interface{}, context map[string]interface{}) {
 	
 	if value, ok := response["value"].(string); ok && value != "" {
 		// Store result in shared data for retrieval
@@ -520,8 +517,7 @@ func handleRedisHeaderInfoResponse(response map[string]interface{}) {
 }
 
 // handleRedisChallengeWriteResponse processes challenge write operation responses
-func handleRedisChallengeWriteResponse(response map[string]interface{}) {
-	defer clearRedisOperationState()
+func handleRedisChallengeWriteResponse(response map[string]interface{}, context map[string]interface{}) {
 	
 	if status, ok := response["status"].(string); ok && status == "OK" {
 		proxywasm.LogInfof("[Redis] Challenge write operation completed successfully")
@@ -533,37 +529,23 @@ func handleRedisChallengeWriteResponse(response map[string]interface{}) {
 	// The request continues normally
 }
 
-// handleRedisError handles Redis operation errors
-func handleRedisError(errorMsg string) {
+// handleRedisErrorWithContext handles Redis operation errors with operation context
+func handleRedisErrorWithContext(errorMsg string, operationType string) {
 	proxywasm.LogErrorf("[Redis] Operation failed: %s", errorMsg)
 	
 	// For operations that need to resume requests, send error response
-	if redisOperationState.operationType == "header_info" {
+	if operationType == "header_info" {
 		proxywasm.SendHttpResponse(500, nil, []byte("{\"error\":\"Redis operation failed\"}"), -1)
 	} else {
 		// For other operations, resume normally
 		proxywasm.ResumeHttpRequest()
 	}
-	
-	clearRedisOperationState()
 }
 
-// clearRedisOperationState clears the Redis operation state
-func clearRedisOperationState() {
-	redisOperationState.pending = false
-	redisOperationState.operationType = ""
-	redisOperationState.requestContext = nil
-}
 
 // makeRedisRequestAsync initiates async Redis operation with proper callback handling
-// CONCURRENCY LIMITATION: Only supports one pending Redis operation at a time due to global state
-// Multiple overlapping calls will overwrite redisOperationState, causing incorrect callback handling
+// Supports multiple concurrent Redis operations using callout ID tracking
 func makeRedisRequestAsync(command, key, value, operationType string, context map[string]interface{}, args ...interface{}) error {
-	// Check for concurrent operation conflict
-	if redisOperationState.pending {
-		proxywasm.LogWarnf("[Redis] Concurrent operation detected: %s while %s is pending", operationType, redisOperationState.operationType)
-		return fmt.Errorf("concurrent Redis operation not supported: %s already pending", redisOperationState.operationType)
-	}
 	
 	// Create Redis command request
 	token := generateFilterToken() // Generate once to avoid token mismatch
@@ -593,24 +575,30 @@ func makeRedisRequestAsync(command, key, value, operationType string, context ma
 		{"x-filter-token", token}, // Use same token
 	}
 	
-	// Store state for callback handling
-	redisOperationState.pending = true
-	redisOperationState.operationType = operationType
-	redisOperationState.requestContext = context
-	
-	// Proper async pattern: callback handles response and resumes processing
-	_, err = proxywasm.DispatchHttpCall(
+	// Proper async pattern: use nil callback to rely on OnHttpCallResponse
+	calloutID, err := proxywasm.DispatchHttpCall(
 		"server_cluster",
 		headers,
 		bodyJSON,
 		nil,
 		1000, // 1 second timeout
-		func(numHeaders, bodySize, numTrailers int) {
-			handleRedisResponse(numHeaders, bodySize, numTrailers)
-		},
+		nil, // Use nil to rely on OnHttpCallResponse for handling
 	)
 	
-	return err
+	if err != nil {
+		return err
+	}
+	
+	// Store state for callback handling (keyed by callout ID)
+	redisOperationStates[calloutID] = struct {
+		operationType  string
+		requestContext map[string]interface{}
+	}{
+		operationType:  operationType,
+		requestContext: context,
+	}
+	
+	return nil
 }
 
 // Legacy synchronous function (deprecated)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"strings"
 	
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
@@ -32,7 +33,7 @@ func (*pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 	}
 }
 
-func (ctx *pluginContext) OnPluginStart(rootContextID int) types.OnPluginStartStatus {
+func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPluginStartStatus {
 	// Load configuration from plugin configuration
 	config, err := proxywasm.GetPluginConfiguration()
 	if err != nil {
@@ -40,16 +41,26 @@ func (ctx *pluginContext) OnPluginStart(rootContextID int) types.OnPluginStartSt
 		return types.OnPluginStartStatusFailed
 	}
 	
-	// Parse configuration (assuming JSON format)
+	// Parse configuration as JSON
 	configMap := make(map[string]string)
 	if len(config) > 0 {
-		// For simplicity, assuming key=value format separated by newlines
-		// In production, you'd use proper JSON parsing
-		lines := strings.Split(string(config), "\n")
-		for _, line := range lines {
-			if parts := strings.SplitN(strings.TrimSpace(line), "=", 2); len(parts) == 2 {
-				configMap[parts[0]] = parts[1]
+		// Try JSON parsing first (preferred)
+		if err := json.Unmarshal(config, &configMap); err != nil {
+			// Fallback to key=value format for backward compatibility
+			proxywasm.LogWarnf("[WASM Filter] Failed to parse config as JSON, falling back to key=value format: %v", err)
+			lines := strings.Split(string(config), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				// Skip empty lines and comments
+				if line == "" || strings.HasPrefix(line, "#") {
+					continue
+				}
+				if parts := strings.SplitN(line, "=", 2); len(parts) == 2 {
+					configMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+				}
 			}
+		} else {
+			proxywasm.LogInfof("[WASM Filter] Successfully parsed JSON configuration with %d keys", len(configMap))
 		}
 	}
 	
@@ -157,24 +168,22 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	ctx.challengeAnswer = challengeHeaders.ChallengeAnswer
 
 	proxywasm.LogInfof("[WASM Filter] Challenge not in cache, validating via Redis: %s", challengeHeaders.ChallengeID)
-	cacheHit, err := ValidateChallengeViaRedis(challengeHeaders.ChallengeID, challengeHeaders.ChallengeAnswer)
+	_, err = ValidateChallengeViaRedis(challengeHeaders.ChallengeID, challengeHeaders.ChallengeAnswer)
 	if err != nil {
 		proxywasm.LogErrorf("[WASM Filter] Failed to validate via Redis: %v", err)
 		proxywasm.SendHttpResponse(500, nil, []byte("{\"error\":\"validation service error\"}"), -1)
 		return types.ActionPause
 	}
 
-	if cacheHit {
-		// Cache hit: validation complete, continue processing
-		proxywasm.LogInfof("[WASM Filter] Cache hit - validation complete")
-		return types.ActionContinue
-	}
-
-	// Cache miss: pause request processing until async validation completes
-	proxywasm.LogInfof("[WASM Filter] Cache miss - pausing for async validation")
+	// Async validation queued, pause request processing
+	proxywasm.LogInfof("[WASM Filter] Async validation queued - pausing request")
 	return types.ActionPause
 }
 
 
-// OnHttpCallResponse is not called when a callback is provided to DispatchHttpCall
-// The response is handled in the callback function instead
+// OnHttpCallResponse handles responses from HTTP callouts (when callback is nil)
+func (ctx *httpContext) OnHttpCallResponse(calloutID uint32, numHeaders int, bodySize int, numTrailers int) types.Action {
+	// Delegate to the handler function that was previously being called directly
+	handleRedisResponseWithID(calloutID, numHeaders, bodySize, numTrailers)
+	return types.ActionContinue
+}
