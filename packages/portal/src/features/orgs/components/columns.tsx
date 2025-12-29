@@ -1,14 +1,19 @@
 import type { Org } from '@pzero/shared/pzero'
 import { useNavigate } from '@tanstack/react-router'
 import type { ColumnDef, Row } from '@tanstack/react-table'
-import { format } from 'date-fns'
 import React from 'react'
 import { toast } from 'sonner'
+import {
+  createDateColumn,
+  createEmailColumn,
+  createNameColumn,
+  createSelectColumn,
+  createStatusColumn,
+  createUrlColumn,
+} from '@/components/data-table/common-columns'
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header'
 import { DataTableRowActions } from '@/components/data-table/data-table-row-actions'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 import { useOrgsStore } from '@/stores/orgs'
 
@@ -88,85 +93,33 @@ function ActionsCell({ row }: { row: Row<Org> }) {
 
 export const createColumns = (): ColumnDef<Org>[] => {
   return [
-    {
-      id: 'select',
-      header: ({ table }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')}
-            onCheckedChange={value => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-          />
-        </div>
-      ),
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={value => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        </div>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-      size: 40,
-    },
-    {
+    // Select checkbox column
+    createSelectColumn<Org>(),
+
+    // Organization name with logo and handle
+    createNameColumn<Org>({
       accessorKey: 'name',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
-      cell: ({ row }) => {
-        const name = row.getValue('name') as string
-        const logoUrl = row.original.logo_url
+      showAvatar: true,
+      avatarField: 'logo_url',
+      subTextAccessor: org => org.handle,
+    }),
 
-        return (
-          <div className="flex items-center space-x-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={logoUrl || undefined} alt={name} />
-              <AvatarFallback className="text-xs">{name.charAt(0).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <span className="font-medium">{name}</span>
-              <span className="text-xs text-muted-foreground">{row.original.handle}</span>
-            </div>
-          </div>
-        )
+    // Status column
+    createStatusColumn<Org>({
+      variants: {
+        ACTIVE: 'default',
+        INACTIVE: 'secondary',
+        SUSPENDED: 'destructive',
+        BLOCKED: 'destructive',
       },
-      enableSorting: true,
-      enableHiding: false,
-    },
-    {
-      accessorKey: 'status',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-      cell: ({ row }) => {
-        const status = row.getValue('status') as string
+    }),
 
-        return (
-          <Badge
-            variant={
-              status === 'ACTIVE'
-                ? 'default'
-                : status === 'INACTIVE'
-                  ? 'secondary'
-                  : status === 'SUSPENDED' || status === 'BLOCKED'
-                    ? 'destructive'
-                    : 'outline'
-            }
-          >
-            {status}
-          </Badge>
-        )
-      },
-      filterFn: (row, id, value) => {
-        return value.includes(row.getValue(id))
-      },
-    },
+    // Plan column with custom badges
     {
       accessorKey: 'plan',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Plan" />,
       cell: ({ row }) => {
         const plan = row.getValue('plan') as string
-
         return (
           <Badge variant={plan === 'ENTERPRISE' ? 'default' : plan === 'PRO' ? 'secondary' : 'outline'}>{plan}</Badge>
         )
@@ -175,39 +128,21 @@ export const createColumns = (): ColumnDef<Org>[] => {
         return value.includes(row.getValue(id))
       },
     },
-    {
-      accessorKey: 'email',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Email" />,
-      cell: ({ row }) => {
-        const email = row.getValue('email') as string
 
-        return <span className="text-sm text-muted-foreground">{email}</span>
-      },
-    },
-    {
-      accessorKey: 'website',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Website" />,
-      cell: ({ row }) => {
-        const website = row.getValue('website') as string | null
+    // Email column
+    createEmailColumn<Org>(),
 
-        return website ? (
-          <a href={website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-            {website}
-          </a>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        )
-      },
-    },
-    {
+    // Website column
+    createUrlColumn<Org>(),
+
+    // Created date column
+    createDateColumn<Org>({
       accessorKey: 'c_at',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
-      cell: ({ row }) => {
-        const createdAt = row.getValue('c_at') as string
+      title: 'Created',
+      dateFormat: 'MMM dd, yyyy',
+    }),
 
-        return <span className="text-sm text-muted-foreground">{format(new Date(createdAt), 'MMM dd, yyyy')}</span>
-      },
-    },
+    // Actions column (keeping existing implementation)
     {
       id: 'actions',
       header: () => <span className="sr-only">Actions</span>,

@@ -1,37 +1,19 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { UserDrawer } from '@/features/users/components'
+import { AuthLoadingComponent, requireAuth } from '@/lib/auth-guard'
 import { getUser, updateUser } from '@/services/users.service'
-import { AuthStore } from '@/stores/auth'
 import type { User } from '@/types/users'
 
 export const Route = createFileRoute('/users/edit/$userId')({
-  beforeLoad: async ({ location }) => {
-    // Wait for auth check if loading
-    let attempts = 0
-    const maxAttempts = 50 // 5 seconds max wait
-
-    while (AuthStore.loading && attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 100))
-      attempts++
-    }
-
-    // Check if user is authenticated
-    if (!AuthStore.user) {
-      throw redirect({
-        to: '/auth/sign-in',
-        search: {
-          redirect: location.href,
-        },
-      })
-    }
-  },
   component: EditUserPage,
+  pendingComponent: AuthLoadingComponent,
+  beforeLoad: requireAuth,
 })
 
 function EditUserPage() {
@@ -55,7 +37,7 @@ function EditUserPage() {
       toast.error('Failed to load user')
       navigate({ to: '/users' })
     }
-  }, [error])
+  }, [error, navigate])
 
   const updateMutation = useMutation({
     mutationFn: (updatedUser: User) =>
@@ -95,7 +77,7 @@ function EditUserPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary" />
       </div>
     )
   }
