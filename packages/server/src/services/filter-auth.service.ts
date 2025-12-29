@@ -21,9 +21,9 @@ export interface FilterIdentity {
 
 export class FilterAuthService {
   private static readonly FILTER_SECRET = config.JWT_SECRET + "_FILTER_AUTH";
-  private static readonly TOKEN_VALIDITY_SECONDS = 300; // 5 minutes
-  private static readonly NONCE_CACHE_TTL = 600; // 10 minutes (longer than token validity)
-  private static readonly MAX_CLOCK_SKEW = 30; // 30 seconds
+  private static readonly TOKEN_VALIDITY_SECONDS = parseInt(process.env.FILTER_TOKEN_VALIDITY_SECONDS || "300", 10); // Default: 5 minutes
+  private static readonly NONCE_CACHE_TTL = parseInt(process.env.FILTER_NONCE_CACHE_TTL || "600", 10); // Default: 10 minutes
+  private static readonly MAX_CLOCK_SKEW = parseInt(process.env.FILTER_MAX_CLOCK_SKEW || "30", 10); // Default: 30 seconds
 
   // Generate a secure authentication token for the filter
   static generateAuthToken(filterId: string, envoyNodeId?: string): FilterAuthToken {
@@ -143,11 +143,88 @@ export class FilterAuthService {
     return identityData ? JSON.parse(identityData) : null;
   }
 
-  // Get all active filters
+  // Check if a specific filter is active (optimized for channel authorization)
+  static async isFilterActive(filterId: string): Promise<boolean> {
+    try {
+      // Get all active filter references for this filterId
+      const activeFilterIds = await redis.getClient().smembers("active_filters");
+      const filterRefs = activeFilterIds.filter(ref => {
+        const colonIndex = ref.indexOf(':');
+        return colonIndex !== -1 && ref.substring(0, colonIndex) === filterId;
+      });
+
+      if (filterRefs.length === 0) {
+        return false;
+      }
+
+      // Check if at least one instance is still active
+      const pipeline = redis.getClient().pipeline();
+      const checks: Array<{ instanceId: string; ref: string }> = [];
+      
+      for (const filterRef of filterRefs) {
+        const colonIndex = filterRef.indexOf(':');
+        const instanceId = filterRef.substring(colonIndex + 1);
+        if (!instanceId) continue;
+        
+        const key = `filter_identity:${filterId}:${instanceId}`;
+        pipeline.get(key);
+        checks.push({ instanceId, ref: filterRef });
+      }
+      
+      const results = await pipeline.exec();
+      if (!results) return false;
+      
+      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      const inactiveFilters: string[] = [];
+      
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        const check = checks[i];
+        if (!result || !check) {
+          if (check) inactiveFilters.push(check.ref);
+          continue;
+        }
+        
+        const [error, identityData] = result;
+        if (error || !identityData) {
+          inactiveFilters.push(check.ref);
+          continue;
+        }
+        
+        try {
+          const identity: FilterIdentity = JSON.parse(identityData as string);
+          if (identity.lastSeen > fiveMinutesAgo && identity.isActive) {
+            // Found at least one active instance
+            return true;
+          } else {
+            inactiveFilters.push(check.ref);
+          }
+        } catch (parseError) {
+          inactiveFilters.push(check.ref);
+        }
+      }
+      
+      // Clean up inactive filters
+      if (inactiveFilters.length > 0) {
+        await redis.getClient().srem("active_filters", ...inactiveFilters);
+      }
+      
+      return false;
+    } catch (error) {
+      console.error(`Error checking if filter ${filterId} is active:`, error);
+      return false;
+    }
+  }
+
+  // Get all active filters (optimized with pipeline)
   static async getActiveFilters(): Promise<FilterIdentity[]> {
     const activeFilterIds = await redis.getClient().smembers("active_filters");
-    const identities: FilterIdentity[] = [];
+    if (activeFilterIds.length === 0) return [];
 
+    // Use pipeline for efficient bulk Redis operations
+    const pipeline = redis.getClient().pipeline();
+    const filterRefs: Array<{ filterId: string; instanceId: string; ref: string }> = [];
+    
     for (const filterRef of activeFilterIds) {
       // Split only on the first colon to handle IDs that contain colons
       const colonIndex = filterRef.indexOf(':');
@@ -156,19 +233,46 @@ export class FilterAuthService {
       const filterId = filterRef.substring(0, colonIndex);
       const instanceId = filterRef.substring(colonIndex + 1);
       if (!filterId || !instanceId) continue;
-      const identity = await this.getFilterIdentity(filterId, instanceId);
       
-      if (identity) {
+      const key = `filter_identity:${filterId}:${instanceId}`;
+      pipeline.get(key);
+      filterRefs.push({ filterId, instanceId, ref: filterRef });
+    }
+    
+    const results = await pipeline.exec();
+    if (!results) return [];
+    
+    const identities: FilterIdentity[] = [];
+    const inactiveFilters: string[] = [];
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const filterRef = filterRefs[i];
+      if (!result || !filterRef) continue;
+      
+      const [error, identityData] = result;
+      if (error || !identityData) continue;
+      
+      try {
+        const identity: FilterIdentity = JSON.parse(identityData as string);
+        
         // Check if filter is still active (last seen within 5 minutes)
-        const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
         if (identity.lastSeen > fiveMinutesAgo) {
           identities.push(identity);
         } else {
-          // Remove inactive filter
-          await redis.getClient().srem("active_filters", filterRef);
-          identity.isActive = false;
+          // Mark for removal from active set
+          inactiveFilters.push(filterRef.ref);
         }
+      } catch (parseError) {
+        console.warn(`Failed to parse filter identity for ${filterRef.ref}:`, parseError);
+        inactiveFilters.push(filterRef.ref);
       }
+    }
+    
+    // Remove inactive filters in batch
+    if (inactiveFilters.length > 0) {
+      await redis.getClient().srem("active_filters", ...inactiveFilters);
     }
 
     return identities;
@@ -270,6 +374,3 @@ export class FilterAuthService {
     }
   }
 }
-
-// Export singleton instance  
-export const filterAuthService = new FilterAuthService();

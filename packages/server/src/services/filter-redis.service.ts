@@ -394,24 +394,32 @@ export class FilterRedisService {
 
   // Clean up expired data
   private async cleanupExpiredData(): Promise<void> {
-    // Clean up old request/response queues
-    const keys = await redis.getClient().keys('filter:challenge:results:*');
-    
-    for (const key of keys) {
-      const ttl = await redis.ttl(key);
-      if (ttl === -1) {
-        // No TTL set, check age
-        const data = await redis.get(key);
-        if (data) {
-          const parsed = JSON.parse(data);
-          const age = Date.now() - parsed.timestamp;
-          if (age > FilterRedisService.REQUEST_TTL * 1000) {
-            await redis.delete(key);
-            console.log(`🗑️  Cleaned up expired result: ${key}`);
+    // Clean up old request/response queues using SCAN (production-safe)
+    let cursor = '0';
+    do {
+      const [nextCursor, keys] = await redis.getClient().scan(
+        cursor,
+        'MATCH', 'filter:challenge:results:*',
+        'COUNT', 100
+      );
+      cursor = nextCursor;
+      
+      for (const key of keys) {
+        const ttl = await redis.ttl(key);
+        if (ttl === -1) {
+          // No TTL set, check age
+          const data = await redis.get(key);
+          if (data) {
+            const parsed = JSON.parse(data);
+            const age = Date.now() - parsed.timestamp;
+            if (age > FilterRedisService.REQUEST_TTL * 1000) {
+              await redis.delete(key);
+              console.log(`🗑️  Cleaned up expired result: ${key}`);
+            }
           }
         }
       }
-    }
+    } while (cursor !== '0');
   }
 
   // Check filter health

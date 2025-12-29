@@ -162,14 +162,14 @@ func ValidateChallengeViaRedis(challengeID, challengeAnswer string) (bool, error
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
 		proxywasm.LogErrorf("[Redis] Failed to marshal request: %v", err)
-		return err
+		return false, err
 	}
 	
 	// Push to Redis queue
 	err = redisLPush(RedisKeys.ChallengeQueue, string(requestJSON))
 	if err != nil {
 		proxywasm.LogErrorf("[Redis] Failed to queue challenge validation: %v", err)
-		return err
+		return false, err
 	}
 	
 	proxywasm.LogInfof("[Redis] Challenge validation queued: %s (request: %s)", challengeID, requestID)
@@ -615,8 +615,18 @@ func makeRedisRequest(command, key, value string, args ...interface{}) (string, 
 	return "", fmt.Errorf("synchronous Redis operations not supported in WASM - use makeRedisRequestAsync")
 }
 
-// getEnvoyNodeID gets the Envoy node ID
+// getEnvoyNodeID gets the Envoy node ID from Envoy context
 func getEnvoyNodeID() string {
-	// In real implementation, get from Envoy context
+	// Try to retrieve actual Envoy node ID from context
+	if nodeID, err := proxywasm.GetProperty([]string{"node", "id"}); err == nil && len(nodeID) > 0 {
+		return string(nodeID)
+	}
+	
+	// Fallback: try cluster name as a reasonable alternative
+	if cluster, err := proxywasm.GetProperty([]string{"node", "cluster"}); err == nil && len(cluster) > 0 {
+		return "cluster-" + string(cluster)
+	}
+	
+	// Final fallback: use filter ID if Envoy context is unavailable
 	return "envoy-node-" + filterID
 }

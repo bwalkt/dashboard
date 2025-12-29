@@ -39,9 +39,9 @@ static_resources:
                   "@type": type.googleapis.com/google.protobuf.StringValue
                   # SECURE: Configuration loaded at runtime, not hardcoded
                   value: |
-                    centrifugo_secret=your-production-centrifugo-secret-here
+                    centrifugo_secret=your-production-centrifugo-secret-here  # ⚠️ REPLACE: Use environment variable or secret manager
                     filter_id=prod-filter-001
-                    jwt_secret=your-production-jwt-secret-here-must-match-server
+                    jwt_secret=your-production-jwt-secret-here-must-match-server  # ⚠️ REPLACE: Must match server JWT_SECRET
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

@@ -242,8 +242,8 @@ export async function centrifugoRoutes(
           });
         }
 
-        // Generate filter user ID for Centrifugo
-        const filterUserId = `filter:${authToken.filterId}:${Date.now()}`;
+        // Generate stable filter user ID for Centrifugo
+        const filterUserId = `filter:${authToken.filterId}`;
 
         // Allow connection with filter context
         return reply.status(200).send({
@@ -431,7 +431,7 @@ async function authorizeChannelAccess(
 // Helper function to check if userId represents an authenticated filter
 async function isAuthenticatedFilter(userId: string): Promise<boolean> {
   try {
-    // Filter user IDs follow pattern: "filter:filterId:timestamp"
+    // Filter user IDs follow pattern: "filter:filterId"
     if (!userId.startsWith("filter:")) {
       return false;
     }
@@ -442,10 +442,12 @@ async function isAuthenticatedFilter(userId: string): Promise<boolean> {
     }
 
     const filterId = parts[1];
+    if (!filterId) {
+      return false;
+    }
     
-    // Check if this filter ID is registered and active
-    const activeFilters = await FilterAuthService.getActiveFilters();
-    return activeFilters.some(filter => filter.filterId === filterId && filter.isActive);
+    // Direct lookup for better performance - O(1) instead of O(n)
+    return await FilterAuthService.isFilterActive(filterId);
   } catch (error) {
     console.error("Error checking filter authentication:", error);
     return false;
