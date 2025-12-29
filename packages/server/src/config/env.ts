@@ -54,6 +54,7 @@ export interface EnvironmentConfig {
   LOGO_PUBLIC_URL: string | undefined;
   SIGNOZ_API_URL: string | undefined;
   SIGNOZ_API_KEY: string | undefined;
+  STATS_API_KEY: string | undefined;
 }
 const DEFAULT_ALLOWED_HEADERS = [
   "Content-Type",
@@ -158,6 +159,7 @@ export const config: EnvironmentConfig = {
   LOGO_PUBLIC_URL: process.env.LOGO_PUBLIC_URL,
   SIGNOZ_API_URL: process.env.SIGNOZ_API_URL,
   SIGNOZ_API_KEY: process.env.SIGNOZ_API_KEY,
+  STATS_API_KEY: process.env.STATS_API_KEY,
 };
 
 /**
