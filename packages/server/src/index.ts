@@ -44,7 +44,12 @@ export default async function (
   await redis.initialize();
 
   // Initialize filter Redis service
-  await filterRedisService.init();
+  try {
+    await filterRedisService.init();
+  } catch (error) {
+    console.error("❌ Failed to initialize filter Redis service:", error);
+    throw error; // Re-throw to prevent server start with broken Redis connection
+  }
 
   // Load proxy targets into Redis cache on startup
   try {
@@ -189,6 +194,10 @@ export default async function (
 
   // Close resources on server shutdown
   fastify.addHook("onClose", async () => {
-    await Promise.allSettled([db.close(), redis.close()]);
+    await Promise.allSettled([
+      db.close(),
+      redis.close(),
+      filterRedisService.shutdown()
+    ]);
   });
 }
