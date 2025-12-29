@@ -419,7 +419,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
         }
 
         // Validate status is one of the allowed enum values
-        const validStatuses = ['ACTIVE', 'INACTIVE', 'BANNED', 'DELETED', 'PENDING', 'BLOCKED'];
+        const validStatuses = ['ACTIVE', 'INACTIVE', 'BANNED', 'PENDING', 'BLOCKED'];
         if (!validStatuses.includes(status.toUpperCase())) {
           return reply.status(400).send({
             error: "Bad Request",
@@ -443,7 +443,15 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
 
-        return reply.send(result.rows[0]);
+        const updatedUser = result.rows[0];
+        const newStatus = updatedUser.status;
+
+        // Update cache only if it already exists (cache is created on login)
+        if (newStatus) {
+          await userService.updateUserStatusInCacheIfExists(id, newStatus);
+        }
+
+        return reply.send(updatedUser);
       } catch (error) {
         console.error("Change user status error:", error);
         return reply.status(500).send({

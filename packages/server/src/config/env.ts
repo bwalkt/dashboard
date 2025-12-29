@@ -54,6 +54,8 @@ export interface EnvironmentConfig {
   LOGO_PUBLIC_URL: string | undefined;
   SIGNOZ_API_URL: string | undefined;
   SIGNOZ_API_KEY: string | undefined;
+  REDIS_STATUS_NAMESPACE: string;
+  REDIS_STATUS_TTL_SECONDS: number;
 }
 const DEFAULT_ALLOWED_HEADERS = [
   "Content-Type",
@@ -158,6 +160,9 @@ export const config: EnvironmentConfig = {
   LOGO_PUBLIC_URL: process.env.LOGO_PUBLIC_URL,
   SIGNOZ_API_URL: process.env.SIGNOZ_API_URL,
   SIGNOZ_API_KEY: process.env.SIGNOZ_API_KEY,
+  // Redis cache configuration for user status
+  REDIS_STATUS_NAMESPACE: process.env.REDIS_STATUS_NAMESPACE || "APP:auth:status:",
+  REDIS_STATUS_TTL_SECONDS: parseInt(process.env.REDIS_STATUS_TTL_SECONDS || "86400", 10), // Default: 24 hours
 };
 
 /**

@@ -1,6 +1,8 @@
 import type { CreateUserData, GitHubUser, User } from "@pzero/shared";
 import { generateHandleFromEmail } from '@pzero/shared/pzero'
 import { db } from "../config/database.js";
+import { config } from "../config/env.js";
+import { redis } from "../config/redis.js";
 
 /**
  * User with status field from all_users table
@@ -224,6 +226,87 @@ export class UserService {
   public sanitizeUserForResponse(user: User): Omit<User, "id"> {
     const { id, ...sanitizedUser } = user;
     return sanitizedUser;
+  }
+
+  /**
+   * Cache user status in Redis for quick access during authentication checks.
+   * This reduces database queries for frequently accessed user status information.
+   * TTL is set to balance cache freshness with performance (default: 24 hours).
+   * The status is automatically refreshed on login, so the TTL primarily handles
+   * cases where status changes occur outside of login flows.
+   */
+  public async setUserStatusInCache(
+    userId: string,
+    status: string | null | undefined,
+  ): Promise<void> {
+    if (!status) {
+      console.warn(
+        `Skipping status cache for user ${userId}: status is missing. This may indicate a data integrity issue.`,
+      );
+      return;
+    }
+
+    try {
+      const statusKey = `${config.REDIS_STATUS_NAMESPACE}${userId}`;
+      await redis.set(statusKey, status, config.REDIS_STATUS_TTL_SECONDS);
+    } catch (error) {
+      // Log error but don't fail the operation (status storage is supplementary)
+      console.error(`Failed to store user status in Redis for user ${userId}:`, error);
+    }
+  }
+
+  /**
+   * Check if user status exists in Redis cache.
+   */
+  public async userStatusCacheExists(userId: string): Promise<boolean> {
+    try {
+      const statusKey = `${config.REDIS_STATUS_NAMESPACE}${userId}`;
+      return await redis.exists(statusKey);
+    } catch (error) {
+      // Log error but return false to be safe
+      console.error(`Failed to check user status cache existence for user ${userId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Update user status in Redis cache only if cache already exists.
+   * This is used when status is changed via API to keep existing cache in sync.
+   */
+  public async updateUserStatusInCacheIfExists(
+    userId: string,
+    status: string | null | undefined,
+  ): Promise<void> {
+    if (!status) {
+      return;
+    }
+
+    try {
+      const statusKey = `${config.REDIS_STATUS_NAMESPACE}${userId}`;
+      const cacheExists = await redis.exists(statusKey);
+      
+      if (cacheExists) {
+        await redis.set(statusKey, status, config.REDIS_STATUS_TTL_SECONDS);
+      }
+      // If cache doesn't exist, skip silently (cache will be created on next login)
+    } catch (error) {
+      // Log error but don't fail the operation (status storage is supplementary)
+      console.error(`Failed to update user status in Redis for user ${userId}:`, error);
+    }
+  }
+
+  /**
+   * Delete user status from Redis cache.
+   * Called during logout to ensure cached status is cleared.
+   */
+  public async deleteUserStatusFromCache(userId: string): Promise<void> {
+    try {
+      const statusKey = `${config.REDIS_STATUS_NAMESPACE}${userId}`;
+      await redis.delete(statusKey);
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error(`Failed to delete user status from Redis for user ${userId}:`, error);
+    }
   }
 }
 
