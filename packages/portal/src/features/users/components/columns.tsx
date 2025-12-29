@@ -9,6 +9,8 @@ import {
   createNameColumn,
   createStatusColumn,
 } from '@/components/data-table/common-columns'
+import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header'
+import { Badge } from '@/components/ui/badge'
 import type { User } from '@/types/users'
 
 interface ColumnsProps {
@@ -31,15 +33,20 @@ export const createColumns = ({ onDelete, onSuspend, onActivate }: ColumnsProps)
 
   // Status column (based on is_act field)
   {
-    ...createStatusColumn<User>({
-      accessorKey: 'is_act',
-    }),
+    accessorKey: 'is_act',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ row }) => {
-      const user = row.original
-      const status = user.is_act ? 'ACTIVE' : 'INACTIVE'
-      return createStatusColumn<User>().cell?.({
-        row: { ...row, getValue: () => status, original: user },
-      } as any)
+      const isActive = row.original.is_act
+      return (
+        <Badge
+          className={
+            isActive ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-800 border-gray-200'
+          }
+          variant="outline"
+        >
+          {isActive ? 'ACTIVE' : 'INACTIVE'}
+        </Badge>
+      )
     },
   },
 

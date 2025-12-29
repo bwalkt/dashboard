@@ -143,11 +143,11 @@ export const createNameColumn = <T extends BaseEntity>(options: NameColumnOption
       return (
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={avatar || undefined} alt={name} />
-            <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
+            <AvatarImage src={avatar || undefined} alt={name || ''} />
+            <AvatarFallback>{name?.charAt(0)?.toUpperCase() || '?'}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
-            <span className="font-medium">{name}</span>
+            <span className="font-medium">{name || '-'}</span>
             {subText && <span className="text-xs text-muted-foreground">{subText}</span>}
           </div>
         </div>
@@ -156,7 +156,7 @@ export const createNameColumn = <T extends BaseEntity>(options: NameColumnOption
 
     return (
       <div className="flex flex-col">
-        <span className="font-medium">{name}</span>
+        <span className="font-medium">{name || '-'}</span>
         {subText && <span className="text-xs text-muted-foreground">{subText}</span>}
       </div>
     )
@@ -225,11 +225,24 @@ export const createDateColumn = <T extends BaseEntity>(options: DateColumnOption
   cell: ({ row }) => {
     const date = row.getValue(options.accessorKey) as string | null
     if (!date) return <span className="text-muted-foreground">-</span>
-    return (
-      <div className="text-sm text-muted-foreground">
-        {format(new Date(date), options.dateFormat || 'MMM dd, yyyy HH:mm')}
-      </div>
-    )
+
+    try {
+      const parsedDate = new Date(date)
+      // Check if date is valid
+      if (isNaN(parsedDate.getTime())) {
+        console.warn(`Invalid date value: ${date}`)
+        return <span className="text-muted-foreground">Invalid date</span>
+      }
+
+      return (
+        <div className="text-sm text-muted-foreground">
+          {format(parsedDate, options.dateFormat || 'MMM dd, yyyy HH:mm')}
+        </div>
+      )
+    } catch (error) {
+      console.error(`Error parsing date: ${date}`, error)
+      return <span className="text-muted-foreground">Invalid date</span>
+    }
   },
 })
 
