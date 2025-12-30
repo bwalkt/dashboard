@@ -13,18 +13,12 @@ export type UserWithStatus = User & {
   status?: 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'DELETED' | 'PENDING' | 'BLOCKED' | null;
 };
 
+import { get } from "node:http";
 import { encryptionService } from "../utils/encryption.js";
 export class UserService {
   /**
    * Get user by GitHub ID
    */
-  public async getUserByGithubId(githubId: string): Promise<User | null> {
-    const result = await db.pool.query(
-      "SELECT * FROM users WHERE github_id = $1",
-      [githubId],
-    );
-    return result.rows[0] || null;
-  }
 
   /**
    * Get user by internal ID
@@ -206,19 +200,38 @@ export class UserService {
    * Upsert user (insert or update on conflict)
    */
   public async upsertUser(userData: CreateUserData): Promise<User> {
-    const result = await db.pool.query(
-      `INSERT INTO users (github_id, name, email, avatar)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (github_id)
-       DO UPDATE SET
-         name = EXCLUDED.name,
-         email = EXCLUDED.email,
-         avatar = EXCLUDED.avatar,
-         updated_at = CURRENT_TIMESTAMP
-       RETURNING *`,
-      [userData.github_id, userData.name, userData.email, userData.avatar],
-    );
-    return result.rows[0];
+    const client = await db.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const user = await this.getUserByEmail(userData.email);
+      if (user) {
+        if (user.email_verified === false ) {
+          const sql = `UPDATE pzero.all_auth SET email_verified = TRUE WHERE email = $1 RETURNING *`;
+          const result = await client.query(sql, [userData.email]);
+          if (!result.rows.length) {
+            throw new Error('Failed to update email_verified status');
+          }
+        }
+        if (userData.avatar && !user.avatar) {
+          user.avatar = userData.avatar;
+          const sql = `UPDATE pzero.all_users SET avatar = $1 WHERE id = $2 RETURNING *`;
+          const avatarResult = await client.query(sql, [userData.avatar, user.id]);
+          if (!avatarResult.rows.length) {
+            throw new Error('Failed to update avatar');
+          }
+        }
+        await client.query('COMMIT');          
+        return user;
+      } else {
+        // user should have been in pzero before github login
+        throw new Error('User not in the system');
+      }
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   /**
@@ -230,7 +243,7 @@ export class UserService {
       name: githubUser.name,
       email: githubUser.email,
       avatar: githubUser.avatar_url,
-      email_verified: false,
+      email_verified: true,
     };
 
     return this.upsertUser(userData);

@@ -7,17 +7,26 @@ import (
 // PublicRoutes contains the list of public routes that should bypass challenge validation
 var PublicRoutes = []PublicRoute{
 	{Path: "/health", Exact: true},
+	{Path: "/api/health", Exact: true},
 	{Prefix: "/auth/"},
+	{Prefix: "/api/auth/"},
 	{Prefix: "/centrifugo/"},
+	{Prefix: "/api/centrifugo/"},
 	{Prefix: "/sms/"},
+	{Prefix: "/api/sms/"},
 	{Prefix: "/email/"},
+	{Prefix: "/api/email/"},
 	{Prefix: "/proxy/auth/login"},
 	{Prefix: "/proxy/auth/callback"},
 	{Prefix: "/proxy/auth/refresh"},
 	{Path: "/faq", Exact: true},
+	{Path: "/api/faq", Exact: true},
 	{Path: "/terms", Exact: true},
+	{Path: "/api/terms", Exact: true},
 	{Prefix: "/public"},
+	{Prefix: "/api/public"},
 	{Prefix: "/docs"},
+	{Prefix: "/api/docs"},
 	{Prefix: "/assets"},
 }
 

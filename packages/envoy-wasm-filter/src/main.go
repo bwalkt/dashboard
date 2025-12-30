@@ -131,23 +131,6 @@ type httpContext struct {
 
 // OnHttpRequestHeaders is called when request headers are received
 func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) types.Action {
-	// Lazy registration: Register filter in Redis on first HTTP request
-	// This must be done from HTTP context, not plugin initialization
-	if !isFilterRegistered() {
-		if err := RegisterFilterInRedis(); err != nil {
-			proxywasm.LogErrorf("[WASM Filter] Failed to register filter in Redis: %v", err)
-			// Continue anyway, registration is not critical for request processing
-		} else {
-			setFilterRegistered(true)
-			proxywasm.LogInfof("[WASM Filter] Filter registered in Redis on first request")
-		}
-
-		// Send initial heartbeat
-		if err := SendHeartbeatToRedis(); err != nil {
-			proxywasm.LogWarnf("[WASM Filter] Failed to send initial heartbeat: %v", err)
-		}
-	}
-
 	// Get the request path
 	path, err := proxywasm.GetHttpRequestHeader(":path")
 	if err != nil {
@@ -168,6 +151,16 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	if IsPublicRoute(path, method) {
 		proxywasm.LogInfof("[WASM Filter] Public route, bypassing validation: %s %s", method, path)
 		return types.ActionContinue
+	}
+
+	// Lazy registration: Register filter in Redis on first non-public request
+	// This must be done from HTTP context, not plugin initialization
+	// Only register for requests that need validation
+	if !isFilterRegistered() {
+		// Skip registration for now to avoid crashes
+		// TODO: Fix the HTTP client crash before re-enabling
+		proxywasm.LogInfof("[WASM Filter] Skipping Redis registration (disabled)")
+		setFilterRegistered(true)
 	}
 
 	// Extract challenge headers
