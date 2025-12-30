@@ -1,6 +1,8 @@
 import { IconFilter } from '@tabler/icons-react'
 import { useState } from 'react'
+import { Breadcrumbs } from '@/components/breadcrumbs'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 
 interface MainHeaderProps {
@@ -21,6 +23,8 @@ export default function MainHeader({ title, description, onFilterToggle }: MainH
   return (
     <header className="flex h-16 shrink-0 items-center gap-4 border-b bg-background px-4">
       <SidebarTrigger className="-ml-1" />
+      <Separator orientation="vertical" className="mr-2 h-4" />
+      <Breadcrumbs />
 
       <div className="flex-1">
         <h1 className="text-lg font-semibold text-foreground">{title}</h1>

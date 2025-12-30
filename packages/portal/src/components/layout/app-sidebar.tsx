@@ -47,6 +47,7 @@ import { DataTableContext } from '../data-table/data-table-provider'
 import { SafeDataTableFilterControls } from '../data-table/safe-data-table-filter-controls'
 import { Icons } from '../icons'
 import { OrgSwitcher } from '../org-switcher'
+import { CollapseMenuButton } from './collapse-menu-button'
 import { ModeToggle } from './ThemeToggle/theme-toggle'
 export const company = {
   name: 'Acme Inc',
@@ -301,34 +302,30 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
             {navItems.map(item => {
               const Icon = item.icon ? Icons[item.icon] : Icons.logo
               return item?.items && item?.items?.length > 0 ? (
-                <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={item.title} isActive={pathname === item.url}>
-                        {item.icon && <Icon />}
-                        <span>{item.title}</span>
-                        <IconChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {item.items?.map(subItem => (
-                          <SidebarMenuSubItem key={subItem.title}>
-                            <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
-                              <Link to={subItem.url}>
-                                <span>{subItem.title}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
+                <CollapseMenuButton
+                  key={item.title}
+                  icon={Icon}
+                  label={item.title}
+                  active={pathname === item.url}
+                  submenus={item.items.map(subItem => ({
+                    url: subItem.url,
+                    title: subItem.title,
+                    icon: subItem.icon,
+                    isActive: pathname === subItem.url,
+                    items: subItem.items?.map(nestedItem => ({
+                      url: nestedItem.url,
+                      title: nestedItem.title,
+                      icon: nestedItem.icon,
+                      isActive: pathname === nestedItem.url,
+                    })),
+                  }))}
+                  isOpen={item.isActive || false}
+                  url={item.url}
+                />
               ) : (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url}>
-                    <Link to={item.url}>
+                    <Link to={item.url} onClick={handleNavigation}>
                       <Icon />
                       <span>{item.title}</span>
                     </Link>
