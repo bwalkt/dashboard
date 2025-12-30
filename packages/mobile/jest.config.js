@@ -1,5 +1,6 @@
 module.exports = {
   testEnvironment: 'node',
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { configFile: './babel.config.js' }],
@@ -13,6 +14,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^react-native$': '<rootDir>/node_modules/react-native',
     '^@pzero/shared/(.*)$': '<rootDir>/../shared/src/$1',
+    '^uuid$': '<rootDir>/__mocks__/uuid.js',
   },
   resolver: '<rootDir>/jest.resolver.js',
   haste: {
