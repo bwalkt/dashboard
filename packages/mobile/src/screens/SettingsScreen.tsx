@@ -122,6 +122,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
   const [emailBeingVerified, setEmailBeingVerified] = useState('')
   const [phoneBeingVerified, setPhoneBeingVerified] = useState('')
   const [tempPhone, setTempPhone] = useState('')
+  // Store the grid to reuse for resend requests
+  const [registrationGrid, setRegistrationGrid] = useState<number[][] | null>(null)
 
   // Popover state
   const [showPrimaryHint, setShowPrimaryHint] = useState(false)
@@ -828,6 +830,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
       // Generate grid for password authentication
       const grid = genGrid(5)
       console.log('Generated grid for registration:', grid)
+      // Store grid for potential resend requests
+      setRegistrationGrid(grid)
 
       // Send verification code via email using /auth/register endpoint
       const registrationPayload = {
@@ -1009,9 +1013,16 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         // Continue resend without device info if device detection fails
       }
 
-      // Generate grid for password authentication (resend)
-      const grid = genGrid(5)
-      console.log('Generated grid for registration resend:', grid)
+      // Reuse the original grid for consistency
+      let grid = registrationGrid
+      if (!grid) {
+        // Fallback: generate new grid only if original is not available
+        grid = genGrid(5)
+        setRegistrationGrid(grid)
+        console.warn('Original grid not found, generated new grid for resend:', grid)
+      } else {
+        console.log('Reusing original grid for registration resend:', grid)
+      }
 
       const resendPayload = {
         email: emailBeingVerified,
