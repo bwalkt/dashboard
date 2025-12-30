@@ -11,13 +11,31 @@ import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
-import { userService } from "../services/user.service.js";
+import { type UserWithStatus, userService } from "../services/user.service.js";
 
 declare module "fastify" {
   interface FastifyInstance {
     githubOAuth2: OAuth2Namespace;
   }
 }
+
+/**
+ * Extract user ID from access token cookie.
+ * Returns null if token is missing or invalid.
+ */
+function extractUserIdFromToken(request: FastifyRequest): string | null {
+  try {
+    const cookieToken = authService.extractTokenFromCookies(request.cookies);
+    if (!cookieToken) {
+      return null;
+    }
+    const payload = authService.verifyAccessToken(cookieToken);
+    return payload?.userId || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   // Register OAuth2 plugin
   await fastify.register(oauth2Plugin, {
@@ -318,6 +336,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     "/auth/logout",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        // Extract user ID from token before clearing cookies
+        const userId = extractUserIdFromToken(request);
+        if (userId) {
+          await userService.deleteUserStatusFromCache(userId);
+        }
+
         // Clear JWT cookies
         reply.clearCookie("accessToken", {
           path: "/",
@@ -350,6 +374,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     "/auth/logout",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        // Extract user ID from token before clearing cookies
+        const userId = extractUserIdFromToken(request);
+        if (userId) {
+          await userService.deleteUserStatusFromCache(userId);
+        }
+
         // Clear JWT cookies
         reply.clearCookie("accessToken", {
           path: "/",
@@ -574,6 +604,14 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
+        // Cache user status if available
+        // createUser joins all_users which includes status, but return type is User
+        // Fetch user with status to ensure we have the status field
+        const userWithStatus = await userService.getUserByEmail(email);
+        if (userWithStatus) {
+          await userService.setUserStatusInCache(user.id, userWithStatus.status);
+        }
+
         // Delete registration data from Redis
         await redis.delete(redisKey);
 
@@ -748,6 +786,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
             message: "User not found",
           } as ErrorResponse);
         }
+
+        // Cache user status if available
+        await userService.setUserStatusInCache(user.id, user.status);
 
         // Delete verification code from Redis
         await redis.delete(redisKey);

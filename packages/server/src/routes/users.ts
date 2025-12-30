@@ -390,4 +390,75 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       }
     },
   );
+
+  /**
+   * PATCH /api/users/:id/status
+   * Change user status
+   * 
+   * TODO: SECURITY - Add admin role verification
+   * Currently any authenticated user can change any user's status.
+   * Should be: preHandler: [authenticateToken, requireAdminRole]
+   * Waiting for requireAdminRole middleware implementation.
+   */
+  fastify.patch(
+    "/api/users/:id/status",
+    {
+      preHandler: authenticateToken, // TODO: Add requireAdminRole when available
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string };
+        const { status } = request.body as { status: string };
+
+        // Validate status field is provided
+        if (!status) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Status field is required",
+          });
+        }
+
+        // Validate status is one of the allowed enum values
+        const validStatuses = ['ACTIVE', 'INACTIVE', 'BANNED', 'PENDING', 'BLOCKED'];
+        if (!validStatuses.includes(status.toUpperCase())) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: `Invalid status value. Must be one of: ${validStatuses.join(', ')}`,
+          });
+        }
+
+        // Update user status
+        const result = await db.pool.query(
+          `UPDATE pzero.all_users 
+           SET status = $1::pzero.user_status
+           WHERE id = $2 AND is_del = false
+           RETURNING *`,
+          [status.toUpperCase(), id]
+        );
+
+        if (result.rows.length === 0) {
+          return reply.status(404).send({
+            error: "Not Found",
+            message: "User not found",
+          });
+        }
+
+        const updatedUser = result.rows[0];
+        const newStatus = updatedUser.status;
+
+        // Update cache only if it already exists (cache is created on login)
+        if (newStatus) {
+          await userService.updateUserStatusInCacheIfExists(id, newStatus);
+        }
+
+        return reply.send(updatedUser);
+      } catch (error) {
+        console.error("Change user status error:", error);
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Failed to change user status",
+        });
+      }
+    },
+  );
 }
