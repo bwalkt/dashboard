@@ -100,12 +100,20 @@ export function PageHeader({
         </div>
       </div>
 
-      {/* Title and description */}
-      {(title || description) && (
+      {/* Title and description - always show title if provided for accessibility */}
+      {title && (
         <div className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-foreground">{title}</h1>
             {description && <p className="text-sm text-muted-foreground">{description}</p>}
+          </div>
+        </div>
+      )}
+      {/* Description only section */}
+      {!title && description && (
+        <div className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <div className="flex-1">
+            <p className="text-sm text-muted-foreground">{description}</p>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { IconSettings, IconUserPlus, IconUsers } from '@tabler/icons-react'
+import { IconSettings, IconUsers } from '@tabler/icons-react'
 import { PageLayout } from '@/components/layout/page-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

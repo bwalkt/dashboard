@@ -324,7 +324,14 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                       isActive: pathname === nestedItem.url,
                     })),
                   }))}
-                  isOpen={item.isActive}
+                  isOpen={
+                    item.isActive ||
+                    item.items?.some(
+                      subItem =>
+                        pathname.startsWith(subItem.url.split('?')[0]) ||
+                        subItem.items?.some(nestedItem => pathname.startsWith(nestedItem.url.split('?')[0])),
+                    )
+                  }
                   url={item.url}
                 />
               ) : (
