@@ -49,6 +49,44 @@ import { Icons } from '../icons'
 import { OrgSwitcher } from '../org-switcher'
 import { CollapseMenuButton } from './collapse-menu-button'
 import { ModeToggle } from './ThemeToggle/theme-toggle'
+
+// Helper function to generate CollapseMenuButton props
+const getCollapseMenuProps = (item: any, pathname: string, Icons: any) => {
+  const Icon = item.icon ? Icons[item.icon] : Icons.logo
+
+  return {
+    icon: Icon,
+    label: item.title,
+    active: pathname === item.url,
+    submenus: item.items.map((subItem: any) => ({
+      url: subItem.url,
+      title: subItem.title,
+      icon: subItem.icon,
+      isActive: pathname === subItem.url,
+      items: subItem.items?.map((nestedItem: any) => ({
+        url: nestedItem.url,
+        title: nestedItem.title,
+        icon: nestedItem.icon,
+        isActive: pathname === nestedItem.url,
+      })),
+    })),
+    isOpen:
+      pathname === item.url ||
+      pathname.startsWith(item.url + '/') ||
+      item.items?.some((subItem: any) => {
+        const subUrl = subItem.url.split('?')[0]
+        return (
+          pathname === subUrl ||
+          pathname.startsWith(subUrl + '/') ||
+          subItem.items?.some((nestedItem: any) => {
+            const nestedUrl = nestedItem.url.split('?')[0]
+            return pathname === nestedUrl || pathname.startsWith(nestedUrl + '/')
+          })
+        )
+      }),
+    url: item.url,
+  }
+}
 export const company = {
   name: 'Acme Inc',
   logo: IconPhotoUp,
@@ -199,32 +237,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                       const Icon = item.icon ? Icons[item.icon] : Icons.logo
                       return item?.items && item?.items?.length > 0 ? (
                         <div key={item.title} className="mb-2">
-                          <CollapseMenuButton
-                            icon={Icon}
-                            label={item.title}
-                            active={pathname === item.url}
-                            submenus={item.items.map(subItem => ({
-                              url: subItem.url,
-                              title: subItem.title,
-                              icon: subItem.icon,
-                              isActive: pathname === subItem.url,
-                              items: subItem.items?.map(nestedItem => ({
-                                url: nestedItem.url,
-                                title: nestedItem.title,
-                                icon: nestedItem.icon,
-                                isActive: pathname === nestedItem.url,
-                              })),
-                            }))}
-                            isOpen={
-                              item.isActive ||
-                              item.items?.some(
-                                subItem =>
-                                  pathname.startsWith(subItem.url.split('?')[0]) ||
-                                  subItem.items?.some(nestedItem => pathname.startsWith(nestedItem.url.split('?')[0])),
-                              )
-                            }
-                            url={item.url}
-                          />
+                          <CollapseMenuButton {...getCollapseMenuProps(item, pathname, Icons)} />
                         </div>
                       ) : (
                         <Link
@@ -307,33 +320,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
             {navItems.map(item => {
               const Icon = item.icon ? Icons[item.icon] : Icons.logo
               return item?.items && item?.items?.length > 0 ? (
-                <CollapseMenuButton
-                  key={item.title}
-                  icon={Icon}
-                  label={item.title}
-                  active={pathname === item.url}
-                  submenus={item.items.map(subItem => ({
-                    url: subItem.url,
-                    title: subItem.title,
-                    icon: subItem.icon,
-                    isActive: pathname === subItem.url,
-                    items: subItem.items?.map(nestedItem => ({
-                      url: nestedItem.url,
-                      title: nestedItem.title,
-                      icon: nestedItem.icon,
-                      isActive: pathname === nestedItem.url,
-                    })),
-                  }))}
-                  isOpen={
-                    item.isActive ||
-                    item.items?.some(
-                      subItem =>
-                        pathname.startsWith(subItem.url.split('?')[0]) ||
-                        subItem.items?.some(nestedItem => pathname.startsWith(nestedItem.url.split('?')[0])),
-                    )
-                  }
-                  url={item.url}
-                />
+                <CollapseMenuButton key={item.title} {...getCollapseMenuProps(item, pathname, Icons)} />
               ) : (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url}>

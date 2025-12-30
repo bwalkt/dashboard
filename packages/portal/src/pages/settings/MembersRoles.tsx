@@ -33,7 +33,7 @@ export default function MembersRoles() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-1 text-xs bg-primary/10 rounded">{member.role}</span>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" aria-label={`Manage settings for ${member.name}`}>
                         <IconSettings className="h-4 w-4" />
                       </Button>
                     </div>
