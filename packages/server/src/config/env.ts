@@ -166,7 +166,7 @@ export const config: EnvironmentConfig = {
   REDIS_STATUS_NAMESPACE: process.env.REDIS_STATUS_NAMESPACE || "APP:auth:status:",
   REDIS_STATUS_TTL_SECONDS: parseInt(process.env.REDIS_STATUS_TTL_SECONDS || "86400", 10), // Default: 24 hours
   STATS_API_KEY: process.env.STATS_API_KEY,
-  ENCRYPTION_SECRET: process.env.ENCRYPTION_SECRET,
+  ENCRYPTION_SECRET: process.env.ENCRYPTION_SECRET!,
 };
 
 /**

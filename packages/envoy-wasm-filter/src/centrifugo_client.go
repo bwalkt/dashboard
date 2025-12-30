@@ -29,26 +29,26 @@ var (
 func InitConfig(config map[string]string) error {
 	centrifugoSecret = config["centrifugo_secret"]
 	filterId = config["filter_id"]
-	
+
 	if centrifugoSecret == "" {
 		proxywasm.LogCriticalf("[Filter] Missing required configuration: centrifugo_secret")
 		return errors.New("centrifugo_secret is required")
 	}
-	
+
 	if filterId == "" {
 		proxywasm.LogCriticalf("[Filter] Missing required configuration: filter_id")
 		return errors.New("filter_id is required")
 	}
-	
+
 	// Generate stable instance ID once at startup
 	instanceId = "instance_" + filterId + "_" + strconv.FormatInt(time.Now().Unix(), 36)
-	
+
 	// Initialize Redis configuration
 	if err := InitRedisConfig(config); err != nil {
 		proxywasm.LogCriticalf("[Filter] Failed to initialize Redis configuration: %v", err)
 		return err
 	}
-	
+
 	isConfigured = true
 	proxywasm.LogInfof("[Filter] Configuration loaded successfully - filter_id: %s, instance_id: %s", filterId, instanceId)
 	return nil
@@ -112,10 +112,10 @@ func generateAuthToken() (*FilterAuthToken, error) {
 	if err := requireConfig(); err != nil {
 		return nil, err
 	}
-	
+
 	timestamp := time.Now().Unix()
 	nonce := generateNonce()
-	
+
 	message := filterId + ":" + strconv.FormatInt(timestamp, 10) + ":" + nonce
 	signature, err := createHMACSignature(message, centrifugoSecret)
 	if err != nil {
@@ -263,16 +263,16 @@ func createSignedMessage(message FilterMessage) (map[string]interface{}, error) 
 		proxywasm.LogErrorf("[Filter] Cannot create signed message: %v", err)
 		return nil, err
 	}
-	
+
 	timestamp := time.Now().Unix()
 	nonce := generateNonce()
-	
+
 	payload := map[string]interface{}{
-		"filterId":  filterId,
+		"filterId":   filterId,
 		"instanceId": getInstanceId(),
-		"timestamp": timestamp,
-		"nonce":     nonce,
-		"data":      message,
+		"timestamp":  timestamp,
+		"nonce":      nonce,
+		"data":       message,
 	}
 
 	// Create signature
@@ -287,7 +287,7 @@ func createSignedMessage(message FilterMessage) (map[string]interface{}, error) 
 		proxywasm.LogErrorf("[Filter] Failed to marshal message for signing: %v", err)
 		return nil, err
 	}
-	
+
 	signature, err := createHMACSignature(string(messageString), centrifugoSecret)
 	if err != nil {
 		proxywasm.LogErrorf("[Filter] Failed to create message signature: %v", err)
@@ -304,7 +304,7 @@ func getInstanceId() string {
 	if instanceId != "" {
 		return instanceId
 	}
-	
+
 	// Fallback for unconfigured state (should not happen in normal operation)
 	if filterId == "" {
 		return "instance_unconfigured_" + strconv.FormatInt(time.Now().Unix(), 36)
@@ -324,7 +324,7 @@ func getCurrentRequestId() string {
 
 // handleServerResponse handles the response from the server
 func handleServerResponse(numHeaders, bodySize int, context map[string]string) {
-	proxywasm.LogInfof("[Filter] Received server response for %s (headers: %d, bodySize: %d)", 
+	proxywasm.LogInfof("[Filter] Received server response for %s (headers: %d, bodySize: %d)",
 		context["type"], numHeaders, bodySize)
 
 	// Get response status
@@ -372,7 +372,7 @@ func handleServerResponse(numHeaders, bodySize int, context map[string]string) {
 func handleChallengeValidationResponse(body []byte, context map[string]string) {
 	var serverResponse map[string]interface{}
 	bodyStr := strings.TrimRight(string(body), "\x00")
-	
+
 	if err := json.Unmarshal([]byte(bodyStr), &serverResponse); err != nil {
 		proxywasm.LogErrorf("[Filter] Failed to unmarshal server response: %v", err)
 		handleValidationError(context)
@@ -386,7 +386,7 @@ func handleChallengeValidationResponse(body []byte, context map[string]string) {
 		handleValidationError(context)
 		return
 	}
-	
+
 	if !success {
 		proxywasm.LogWarnf("[Filter] Server rejected validation request")
 		handleValidationError(context)
@@ -396,11 +396,11 @@ func handleChallengeValidationResponse(body []byte, context map[string]string) {
 	// For challenge validation, we would typically get the response via Centrifugo
 	// For now, we'll assume success and continue the request
 	proxywasm.LogInfof("[Filter] Challenge validation request accepted by server")
-	
+
 	// Cache the challenge if we have the answer
 	challengeID := context["challengeId"]
 	challengeAnswer := context["challengeAnswer"]
-	
+
 	if challengeID != "" && challengeAnswer != "" {
 		if err := SetChallengeInSharedDataWithDefaultTTL(challengeID, challengeAnswer); err != nil {
 			proxywasm.LogWarnf("[Filter] Failed to cache challenge: %v", err)
@@ -422,7 +422,7 @@ func handleHeaderInfoResponse(body []byte, context map[string]string) {
 // handleValidationError handles validation errors
 func handleValidationError(context map[string]string) {
 	proxywasm.LogWarnf("[Filter] Validation failed for %s", context["type"])
-	
+
 	if context["type"] == "challenge_validation" {
 		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"challenge validation failed\"}"), -1)
 	}

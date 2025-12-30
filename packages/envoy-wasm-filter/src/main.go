@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"strings"
-	
+
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
@@ -40,7 +40,7 @@ func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlu
 		proxywasm.LogErrorf("[WASM Filter] Failed to get plugin configuration: %v", err)
 		return types.OnPluginStartStatusFailed
 	}
-	
+
 	// Parse configuration as JSON
 	configMap := make(map[string]string)
 	if len(config) > 0 {
@@ -63,25 +63,18 @@ func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlu
 			proxywasm.LogInfof("[WASM Filter] Successfully parsed JSON configuration with %d keys", len(configMap))
 		}
 	}
-	
+
 	// Initialize configuration
 	if err := InitConfig(configMap); err != nil {
 		proxywasm.LogErrorf("[WASM Filter] Failed to initialize configuration: %v", err)
 		return types.OnPluginStartStatusFailed
 	}
-	
-	// Register filter in Redis
-	if err := RegisterFilterInRedis(); err != nil {
-		proxywasm.LogErrorf("[WASM Filter] Failed to register filter in Redis: %v", err)
-		// Continue anyway, registration is not critical
-	}
-	
-	// Send initial heartbeat
-	if err := SendHeartbeatToRedis(); err != nil {
-		proxywasm.LogWarnf("[WASM Filter] Failed to send initial heartbeat: %v", err)
-	}
-	
-	proxywasm.LogInfof("[WASM Filter] Plugin started and registered with Redis")
+
+	// NOTE: Registration and heartbeat are deferred until first HTTP request
+	// because DispatchHttpCall requires an HTTP context and cannot be called
+	// from OnPluginStart. They will be called lazily in OnHttpRequestHeaders.
+
+	proxywasm.LogInfof("[WASM Filter] Plugin started successfully (registration deferred to first request)")
 	return types.OnPluginStartStatusOK
 }
 
@@ -97,10 +90,10 @@ func (ctx *pluginContext) OnTick() {
 type httpContext struct {
 	// Embed the default HTTP context
 	types.DefaultHttpContext
-	contextID           uint32
-	challengeID         string
-	challengeAnswer     string
-	
+	contextID       uint32
+	challengeID     string
+	challengeAnswer string
+
 	// Challenge validation state
 	validationPending   bool
 	validationRequestID string
@@ -110,6 +103,23 @@ type httpContext struct {
 
 // OnHttpRequestHeaders is called when request headers are received
 func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) types.Action {
+	// Lazy registration: Register filter in Redis on first HTTP request
+	// This must be done from HTTP context, not plugin initialization
+	if !isFilterRegistered() {
+		if err := RegisterFilterInRedis(); err != nil {
+			proxywasm.LogErrorf("[WASM Filter] Failed to register filter in Redis: %v", err)
+			// Continue anyway, registration is not critical for request processing
+		} else {
+			setFilterRegistered(true)
+			proxywasm.LogInfof("[WASM Filter] Filter registered in Redis on first request")
+		}
+
+		// Send initial heartbeat
+		if err := SendHeartbeatToRedis(); err != nil {
+			proxywasm.LogWarnf("[WASM Filter] Failed to send initial heartbeat: %v", err)
+		}
+	}
+
 	// Get the request path
 	path, err := proxywasm.GetHttpRequestHeader(":path")
 	if err != nil {
@@ -179,7 +189,6 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	proxywasm.LogInfof("[WASM Filter] Async validation queued - pausing request")
 	return types.ActionPause
 }
-
 
 // OnHttpCallResponse handles responses from HTTP callouts (when callback is nil)
 func (ctx *httpContext) OnHttpCallResponse(calloutID uint32, numHeaders int, bodySize int, numTrailers int) types.Action {

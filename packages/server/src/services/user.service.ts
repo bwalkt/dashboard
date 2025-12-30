@@ -76,7 +76,7 @@ export class UserService {
       avatar: null,
       handle: userData.handle?? generateHandleFromEmail(userData.email),
       email_verified: userData.email_verified ?? false,
-      grid: userData.grid,
+      grid: userData.grid??[],
     };
 
     return this.createUser(createData);

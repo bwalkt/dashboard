@@ -334,7 +334,7 @@ The filter is written in Go using the [proxy-wasm-go-sdk](https://github.com/pro
 
 ```bash
 # Compile with upstream Go (requires Go 1.24+)
-GOOS=wasip1 GOARCH=wasm go build -o filter.wasm .
+GOOS=wasip1 GOARCH=wasm go build -o filter.wasm ./src
 
 # Build using Makefile
 make build

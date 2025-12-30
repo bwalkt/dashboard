@@ -10,7 +10,7 @@ COPY ./packages/envoy-wasm-filter/go.mod ./packages/envoy-wasm-filter/go.sum* ./
 RUN go mod download
 
 # Copy all Go source files
-COPY ./packages/envoy-wasm-filter/*.go ./
+COPY ./packages/envoy-wasm-filter/src/*.go ./
 
 # Build the WASM filter with upstream Go and GOOS=wasip1
 RUN env GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o filter.wasm .
