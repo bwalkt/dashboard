@@ -13,6 +13,7 @@ export type UserWithStatus = User & {
   status?: 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'DELETED' | 'PENDING' | 'BLOCKED' | null;
 };
 
+import { encryptionService } from "../utils/encryption.js";
 export class UserService {
   /**
    * Get user by GitHub ID
@@ -65,15 +66,17 @@ export class UserService {
     email: string;
     name: string;
     email_verified?: boolean;
-    handle?: string
+    handle?: string;
+    grid?: number[][];
   }): Promise<User> {
-    const createData: CreateUserData = {
+    const createData: CreateUserData & { grid?: number[][] } = {
       name: userData.name,
       email: userData.email,
       github_id: null,
       avatar: null,
       handle: userData.handle?? generateHandleFromEmail(userData.email),
       email_verified: userData.email_verified ?? false,
+      grid: userData.grid,
     };
 
     return this.createUser(createData);
@@ -82,14 +85,92 @@ export class UserService {
   
 
   /**
+   * Get user's decrypted grid
+   */
+  public async getUserGrid(
+    userId: string,
+    schema: string = "pzero"
+  ): Promise<number[][] | null> {
+    try {
+      const result = await db.pool.query(
+        `SELECT data->'grid' as grid FROM ${schema}.all_users WHERE id = $1::uuid`,
+        [userId]
+      );
+      
+      if (!result.rows[0] || !result.rows[0].grid) {
+        return null;
+      }
+      
+      // Decrypt the grid
+      const encryptedGrid = result.rows[0].grid;
+      return encryptionService.decryptGrid(encryptedGrid);
+    } catch (error) {
+      console.error("Error getting user grid:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Update user's grid
+   */
+  public async updateUserGrid(
+    userId: string,
+    grid: number[][],
+    schema: string = "pzero"
+  ): Promise<boolean> {
+    try {
+      // Validate grid structure (5x5 matrix of numbers)
+      if (!grid || !Array.isArray(grid) || grid.length !== 5) {
+        console.error("Invalid grid: must be 5x5 matrix");
+        return false;
+      }
+      
+      if (!grid.every(row => 
+        Array.isArray(row) && 
+        row.length === 5 && 
+        row.every(cell => typeof cell === 'number' && !isNaN(cell) && cell > 0)
+      )) {
+        console.error("Invalid grid: all elements must be positive numbers");
+        return false;
+      }
+      
+      // Validate userId format (basic UUID check)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(userId)) {
+        console.error("Invalid userId format");
+        return false;
+      }
+
+      // Encrypt the grid before storing
+      const encryptedGrid = encryptionService.encryptGrid(grid);
+      
+      const result = await db.pool.query(
+        `UPDATE ${schema}.all_users 
+         SET data = jsonb_set(COALESCE(data, '{}'), '{grid}', $1::jsonb)
+         WHERE id = $2::uuid 
+         RETURNING id`,
+        [JSON.stringify(encryptedGrid), userId]
+      );
+      
+      return !!result?.rowCount ? true : false;
+    } catch (error) {
+      console.error("Error updating user grid:", error);
+      return false;
+    }
+  }
+
+  /**
    * Create a new user
    */
   public async createUser(
-    userData: CreateUserData,
+    userData: CreateUserData & { grid?: number[][] },
     schema: string = "pzero",
   ): Promise<User> {
     // Generate handle from email
     const handle = userData.handle ?? generateHandleFromEmail(userData.email);
+
+    // Encrypt grid if provided
+    const encryptedGrid = userData.grid ? encryptionService.encryptGrid(userData.grid) : null;
 
     // Use the create_user postgres function
     const createResult = await db.pool.query(
@@ -100,6 +181,7 @@ export class UserService {
           email: userData.email,
           handle: handle,
           avatar: userData.avatar || null,
+          grid: encryptedGrid,
           email_verified: userData.email_verified ?? false,
           device: JSON.stringify(userData.device || {})
         }),

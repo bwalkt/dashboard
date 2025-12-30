@@ -411,11 +411,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     "/auth/register",
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { email, name, device, handle } = request.body as {
+        const { email, name, device, handle, grid } = request.body as {
           email: string;
           name?: string;
           device?: any
           handle?: string
+          grid?: number[][]
         };
 
         console.log('Registration request received:', {
@@ -479,6 +480,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           code: verificationCode,
           name,
           device,
+          grid,
           createdAt: new Date().toISOString(),
         };
         
@@ -561,7 +563,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
-        const { code: storedCode, handle, name, device } = JSON.parse(registrationData);
+        const { code: storedCode, handle, name, device, grid } = JSON.parse(registrationData);
 
         console.log('Registration verification attempt:', {
           email,
@@ -594,7 +596,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           email,
           name: name || email.split("@")[0],
           email_verified: true,
-          handle
+          handle,
+          grid
         });
 
         if (!user) {
@@ -914,6 +917,73 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           valid: false,
           error: "Token validation failed",
         });
+      }
+    },
+  );
+
+  /**
+   * POST /auth/reset
+   * Reset user's grid password (requires authentication)
+   */
+  fastify.post<{
+    Body: { grid: number[][] }
+  }>(
+    "/auth/reset",
+    { preHandler: authenticateToken },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = (request as unknown as AuthenticatedRequest).user?.id;
+        const { grid } = request.body as { grid: number[][] };
+        
+        if (!userId) {
+          return reply.status(401).send({
+            error: "Unauthorized",
+            message: "Authentication required",
+          } as ErrorResponse);
+        }
+
+        if (!grid || !Array.isArray(grid)) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Grid is required",
+          } as ErrorResponse);
+        }
+
+        // Validate grid is 5x5 and contains only positive numbers
+        if (
+          grid.length !== 5 || 
+          !grid.every(row => 
+            Array.isArray(row) && 
+            row.length === 5 && 
+            row.every(cell => typeof cell === 'number' && !isNaN(cell) && cell > 0)
+          )
+        ) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Grid must be a 5x5 matrix of positive numbers",
+          } as ErrorResponse);
+        }
+        
+        // Update the user's grid in the database
+        const updated = await userService.updateUserGrid(userId, grid);
+        
+        if (!updated) {
+          return reply.status(500).send({
+            error: "Internal Server Error",
+            message: "Failed to reset grid",
+          } as ErrorResponse);
+        }
+
+        return reply.send({
+          message: "Grid successfully reset",
+          success: true,
+        });
+      } catch (error) {
+        console.error("Grid reset error:", error);
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Failed to reset grid",
+        } as ErrorResponse);
       }
     },
   );

@@ -354,6 +354,10 @@ email_verified = user_input.get('email_verified', False)
 c_by = user_input.get('c_by', '').strip() if user_input.get('c_by') else None
 user_data = user_input.get('data', {}) if isinstance(user_input.get('data'), dict) else {}
 device_data = user_input.get('device', {}) if isinstance(user_input.get('device'), dict) else {}
+# Extract grid and add it to user_data
+grid = user_input.get('grid')
+if grid:
+    user_data['grid'] = grid
 # remove device_data from user_data if present
 if 'device' in user_data:
     del user_data['device']

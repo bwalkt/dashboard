@@ -3,7 +3,7 @@ module.exports = {
   plugins: ['react-native-reanimated/plugin'],
   env: {
     test: {
-      presets: [['module:@react-native/babel-preset', { modules: 'commonjs' }]],
+      presets: [['module:@react-native/babel-preset', { modules: 'auto' }]],
     },
   },
 }

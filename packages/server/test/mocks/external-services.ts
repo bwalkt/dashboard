@@ -86,3 +86,24 @@ vi.mock("axios", () => ({
     create: vi.fn().mockReturnThis(),
   },
 }));
+
+// Mock filter Redis service
+vi.mock("../../src/services/filter-redis.service.js", () => ({
+  filterRedisService: {
+    init: vi.fn().mockResolvedValue(undefined),
+    shutdown: vi.fn().mockResolvedValue(undefined),
+    registerFilter: vi.fn().mockResolvedValue(undefined),
+    updateHeartbeat: vi.fn().mockResolvedValue(undefined),
+    queueChallengeValidation: vi.fn().mockResolvedValue(undefined),
+    getChallengeResult: vi.fn().mockResolvedValue(null),
+    updateHeaderInfo: vi.fn().mockResolvedValue(undefined),
+    getHeaderInfo: vi.fn().mockResolvedValue({}),
+    syncHeaderInfoFromCache: vi.fn().mockResolvedValue(undefined),
+    checkRateLimit: vi.fn().mockResolvedValue(true),
+    getFilterStats: vi.fn().mockResolvedValue({ total: 0, active: 0, inactive: 0, filters: [] }),
+    startChallengeProcessor: vi.fn(),
+    stopChallengeProcessor: vi.fn(),
+  },
+  startChallengeProcessor: vi.fn(),
+  stopChallengeProcessor: vi.fn(),
+}));

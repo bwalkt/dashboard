@@ -36,21 +36,32 @@ import {
 import { SignalProcessing } from '../math/signalProcessing.js'
 import { StatisticalFunctions } from '../math/statisticalFunctions.js'
 import { TimeSeries } from '../math/timeSeries.js'
+import { getRandomInt } from '../utils/crypto.js'
 import { toFullCompact, toFullVerbose } from '../utils/functionShorthand.js'
 
 export function genGrid(size: number = 5) {
-  const min = Math.ceil(Math.random() * 100) || 1
-  const max = Math.ceil((min + Math.random()) * 1000)
-  const grid = randomInt([size, size], min, max) as any
-  // Convert mathjs matrix to plain 2D array if needed
-  return Array.isArray(grid) ? (grid as number[][]) : (grid.toArray() as number[][])
+  // Use cryptographically secure random for bounds
+  const min = getRandomInt(1, 100)
+  const max = getRandomInt(min + 100, min + 1000)
+
+  // Generate grid with secure random numbers
+  const grid: number[][] = []
+  for (let i = 0; i < size; i++) {
+    const row: number[] = []
+    for (let j = 0; j < size; j++) {
+      row.push(getRandomInt(min, max))
+    }
+    grid.push(row)
+  }
+
+  return grid
 }
 
 export function expandGrid(grid: number[][], newSize: number) {
   const size = grid.length
   if (newSize <= size) return grid
 
-  // Generate a full newSize x newSize grid
+  // Generate a full newSize x newSize grid with secure random
   const expandedGrid = genGrid(newSize)
 
   // Copy existing values into the top-left region
@@ -72,9 +83,9 @@ export function getSubgrid(matrix: number[][], size: number): number[][] {
     throw new Error(`Size must be between 1 and ${Math.min(rows, cols)}`)
   }
 
-  // Random starting position
-  const startRow = Math.floor(Math.random() * rows)
-  const startCol = Math.floor(Math.random() * cols)
+  // Use secure random for starting position
+  const startRow = getRandomInt(0, rows - 1)
+  const startCol = getRandomInt(0, cols - 1)
 
   // Create subgrid with rotation (wrap around if necessary)
   const subgrid: number[][] = []
@@ -226,7 +237,7 @@ export function flattenMatrix(matrix: number[][]): number[] {
 export function genFunction(complexity?: number, size?: number) {
   const startTime = Date.now()
 
-  const actualComplexity = complexity !== undefined ? complexity : Math.floor(Math.random() * 3) + 1
+  const actualComplexity = complexity !== undefined ? complexity : getRandomInt(1, 3)
 
   // Validate size before processing
   if (size !== undefined) {
@@ -235,21 +246,21 @@ export function genFunction(complexity?: number, size?: number) {
     }
   }
 
-  const actualSize = size !== undefined ? size : Math.floor(Math.random() * 6) + 5
+  const actualSize = size !== undefined ? size : getRandomInt(5, 10)
   const finalComplexity = Math.max(1, actualComplexity)
 
   // Generate random grid cells for x and y, ensuring they are different
   const xCell = {
-    row: Math.floor(Math.random() * actualSize),
-    col: Math.floor(Math.random() * actualSize),
+    row: getRandomInt(0, actualSize - 1),
+    col: getRandomInt(0, actualSize - 1),
   }
 
   // Ensure yCell is different from xCell
   let yCell: { row: number; col: number }
   do {
     yCell = {
-      row: Math.floor(Math.random() * actualSize),
-      col: Math.floor(Math.random() * actualSize),
+      row: getRandomInt(0, actualSize - 1),
+      col: getRandomInt(0, actualSize - 1),
     }
   } while (yCell.row === xCell.row && yCell.col === xCell.col)
 
@@ -257,18 +268,18 @@ export function genFunction(complexity?: number, size?: number) {
   let expression: string
   let operations: string[] = []
 
-  // Helper to get random coefficients for parameterization
-  const randCoeff = () => Math.floor(Math.random() * 10) + 1 // 1-10
-  const randSmallCoeff = () => Math.floor(Math.random() * 5) + 1 // 1-5
-  const randPower = () => Math.floor(Math.random() * 9) + 2 // 2-10
-  const randDivisor = () => Math.floor(Math.random() * 5) + 2 // 2-6
-  const randOffset = () => Math.floor(Math.random() * 10) + 1 // 1-10
-  const randFraction = () => `1/${Math.floor(Math.random() * 5) + 2}` // 1/2 to 1/6
+  // Helper to get random coefficients for parameterization using secure random
+  const randCoeff = () => getRandomInt(1, 10) // 1-10
+  const randSmallCoeff = () => getRandomInt(1, 5) // 1-5
+  const randPower = () => getRandomInt(2, 10) // 2-10
+  const randDivisor = () => getRandomInt(2, 6) // 2-6
+  const randOffset = () => getRandomInt(1, 10) // 1-10
+  const randFraction = () => `1/${getRandomInt(2, 6)}` // 1/2 to 1/6
 
   // Helper to get random unit conversions for diversity
   const randTempConversion = () => {
     const conversions = ['degC to degF', 'degF to degC', 'degC to K', 'K to degC']
-    return conversions[Math.floor(Math.random() * conversions.length)]
+    return conversions[getRandomInt(0, conversions.length - 1)]
   }
   const randLengthConversion = () => {
     const conversions = [
@@ -281,19 +292,19 @@ export function genFunction(complexity?: number, size?: number) {
       'mm to cm',
       'mm to inch',
     ]
-    return conversions[Math.floor(Math.random() * conversions.length)]
+    return conversions[getRandomInt(0, conversions.length - 1)]
   }
   const randMassConversion = () => {
     const conversions = ['kg to lb', 'lb to kg', 'g to oz', 'oz to g']
-    return conversions[Math.floor(Math.random() * conversions.length)]
+    return conversions[getRandomInt(0, conversions.length - 1)]
   }
   const randAngleConversion = () => {
     const conversions = ['deg to rad', 'rad to deg']
-    return conversions[Math.floor(Math.random() * conversions.length)]
+    return conversions[getRandomInt(0, conversions.length - 1)]
   }
   const randVolumeConversion = () => {
     const conversions = ['liter to gallon', 'gallon to liter', 'ml to cup', 'cup to ml']
-    return conversions[Math.floor(Math.random() * conversions.length)]
+    return conversions[getRandomInt(0, conversions.length - 1)]
   }
 
   if (finalComplexity === 1) {
