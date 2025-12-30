@@ -127,14 +127,6 @@ export class UserService {
         console.error("Invalid grid: all elements must be positive numbers");
         return false;
       }
-      
-      // Validate userId format (basic UUID check)
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(userId)) {
-        console.error("Invalid userId format");
-        return false;
-      }
-
       // Encrypt the grid before storing
       const encryptedGrid = encryptionService.encryptGrid(grid);
       
@@ -245,8 +237,10 @@ export class UserService {
       avatar: githubUser.avatar_url,
       email_verified: true,
     };
-
-    return this.upsertUser(userData);
+    const user = await this.upsertUser(userData);
+    const returnData = { ...githubUser, ...user, github_id: githubUser.id };
+    console.log('🔥 SERVER: Upserted user ', returnData);
+    return returnData;
   }
 
   /**
