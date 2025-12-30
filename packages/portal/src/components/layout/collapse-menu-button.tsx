@@ -86,7 +86,7 @@ export function CollapseMenuButton({ icon: Icon, label, active, submenus, isOpen
           <CollapsibleTrigger asChild>
             <SidebarMenuButton tooltip={label} isActive={isMenuItemActive} className="w-full justify-between">
               <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4" />
+                <Icon />
                 <span>{label}</span>
               </div>
               <IconChevronRight
@@ -146,8 +146,8 @@ export function CollapseMenuButton({ icon: Icon, label, active, submenus, isOpen
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
-              <SidebarMenuButton isActive={isMenuItemActive} className="w-full" size="lg">
-                <Icon className="h-4 w-4" />
+              <SidebarMenuButton isActive={isMenuItemActive} className="w-full">
+                <Icon />
                 <span className="sr-only">{label}</span>
               </SidebarMenuButton>
             </DropdownMenuTrigger>
