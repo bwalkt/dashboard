@@ -15,8 +15,8 @@ SET app.environment = 'development';
 \echo 'Cleaning up any existing test data...'
 DO $$
 BEGIN
-  DELETE FROM pzero.all_users WHERE name IN ('Test User 1', 'Test User 2', 'Test User 3');
-  DELETE FROM pzero.all_auth WHERE email IN ('testuser1@example.com', 'testuser2@example.com', 'testuser3@example.com');
+  DELETE FROM pzero.all_users WHERE name IN ('Test User 1', 'Test User 2', 'Test User 3', 'Grid User');
+  DELETE FROM pzero.all_auth WHERE email IN ('testuser1@example.com', 'testuser2@example.com', 'testuser3@example.com', 'griduser@example.com');
   RAISE NOTICE 'Cleanup complete';
 EXCEPTION
   WHEN OTHERS THEN
@@ -26,14 +26,20 @@ END $$;
 \echo '';
 
 -- ============================================
--- Test 1: Create user with all optional fields
+-- Test 1: Create user with all optional fields including grid
 -- ============================================
-\echo '=== Test 1: Create user with all optional fields ==='
+\echo '=== Test 1: Create user with all optional fields including grid ==='
 SELECT pzero.create_user(jsonb_build_object(
   'name', 'Test User 1',
   'email', 'testuser1@example.com',
   'org_id', (SELECT id::text FROM pzero.all_orgs WHERE handle = 'acme'),
   'part', 'pzero',
+  'grid', jsonb_build_array(
+    jsonb_build_object('row', 0, 'col', 0, 'value', '1234'),
+    jsonb_build_object('row', 0, 'col', 1, 'value', '5678'),
+    jsonb_build_object('row', 1, 'col', 0, 'value', '9012'),
+    jsonb_build_object('row', 1, 'col', 1, 'value', '3456')
+  ),
   'data', jsonb_build_object(
     'department', 'Engineering',
     'title', 'Software Engineer',
@@ -55,6 +61,15 @@ SELECT
   u.data->'meta'->>'c_by' as c_by,
   (u.id::text = u.data->'meta'->>'c_by') as c_by_is_self,
   jsonb_pretty(u.data) as data
+FROM pzero.all_users u
+WHERE u.name = 'Test User 1';
+
+-- Verify grid data is stored correctly
+\echo 'Verifying grid data:'
+SELECT
+  u.name,
+  jsonb_array_length(u.data->'grid') as grid_entries_count,
+  u.data->'grid' as grid_data
 FROM pzero.all_users u
 WHERE u.name = 'Test User 1';
 
@@ -110,10 +125,38 @@ JOIN pzero.all_orgs o ON u.org_id = o.id
 WHERE u.name = 'Test User 3';
 
 -- ============================================
--- Test 4: Error handling - duplicate email
+-- Test 4: Create user with only grid data (no additional data)
 -- ============================================
 \echo '';
-\echo '=== Test 4: Error handling - duplicate email ==='
+\echo '=== Test 4: Create user with only grid data ==='
+SELECT pzero.create_user(jsonb_build_object(
+  'name', 'Grid User',
+  'email', 'griduser@example.com',
+  'grid', jsonb_build_array(
+    jsonb_build_object('row', 0, 'col', 0, 'value', 'PIN1'),
+    jsonb_build_object('row', 0, 'col', 1, 'value', 'PIN2'),
+    jsonb_build_object('row', 0, 'col', 2, 'value', 'PIN3'),
+    jsonb_build_object('row', 1, 'col', 0, 'value', 'PIN4'),
+    jsonb_build_object('row', 1, 'col', 1, 'value', 'PIN5'),
+    jsonb_build_object('row', 1, 'col', 2, 'value', 'PIN6')
+  )
+)) as result;
+
+-- Verify grid-only user
+\echo 'Verifying grid-only user:'
+SELECT
+  u.name,
+  jsonb_array_length(u.data->'grid') as grid_entries_count,
+  u.data->'grid'->0 as first_grid_entry,
+  u.data->'grid'->5 as last_grid_entry
+FROM pzero.all_users u
+WHERE u.name = 'Grid User';
+
+-- ============================================
+-- Test 5: Error handling - duplicate email
+-- ============================================
+\echo '';
+\echo '=== Test 5: Error handling - duplicate email ==='
 DO $$
 BEGIN
   PERFORM pzero.create_user(jsonb_build_object(
@@ -132,10 +175,10 @@ EXCEPTION
 END $$;
 
 -- ============================================
--- Test 5: Error handling - missing name
+-- Test 6: Error handling - missing name
 -- ============================================
 \echo '';
-\echo '=== Test 5: Error handling - missing name ==='
+\echo '=== Test 6: Error handling - missing name ==='
 DO $$
 BEGIN
   PERFORM pzero.create_user(jsonb_build_object(
@@ -152,7 +195,7 @@ EXCEPTION
 END $$;
 
 \echo '';
-\echo '=== Test 6: Error handling - missing email ==='
+\echo '=== Test 7: Error handling - missing email ==='
 DO $$
 BEGIN
   PERFORM pzero.create_user(jsonb_build_object(
@@ -177,7 +220,7 @@ END $$;
 \echo 'Total users created:'
 SELECT COUNT(*) as user_count
 FROM pzero.all_users
-WHERE name IN ('Test User 1', 'Test User 2', 'Test User 3');
+WHERE name IN ('Test User 1', 'Test User 2', 'Test User 3', 'Grid User');
 
 \echo '';
 \echo 'All created users with c_by verification:'
@@ -194,7 +237,7 @@ JOIN pzero.all_auth a ON u.id = a.id
 JOIN pzero.all_orgs o ON u.org_id = o.id
 JOIN pzero.all_audits au ON au.row_id::text = u.id::text
 JOIN pzero.all_txns t ON t.id = au.txn_id
-WHERE u.name IN ('Test User 1', 'Test User 2', 'Test User 3')
+WHERE u.name IN ('Test User 1', 'Test User 2', 'Test User 3', 'Grid User')
 GROUP BY u.name, a.email, o.handle, t.c_by, u.id
 ORDER BY u.name;
 

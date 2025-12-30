@@ -20,7 +20,7 @@ SET app.environment = 'development';
 DO $$
 BEGIN
   -- Delete test users (this will cascade to related records)
-  DELETE FROM pzero.all_users WHERE name = 'Jane Doe';
+  DELETE FROM pzero.all_users WHERE name IN ('Jane Doe', 'Grid Only User');
 
   -- Delete test orgs
   DELETE FROM pzero.all_orgs
@@ -28,7 +28,7 @@ BEGIN
      OR name IN ('Acme Corp', 'Data Co', 'Test Company', 'Null Test Org', 'Empty Fields Test');
 
   -- Delete test auth records
-  DELETE FROM pzero.all_auth WHERE email = 'jane.doe@acme.com';
+  DELETE FROM pzero.all_auth WHERE email IN ('jane.doe@acme.com', 'gridonly@example.com');
 
   RAISE NOTICE 'Cleanup complete';
 EXCEPTION
@@ -104,13 +104,13 @@ FROM pzero.all_orgs
 WHERE handle = 'dtco';
 
 -- ============================================
--- Test 3: Insert into all_users
+-- Test 3: Insert into all_users with grid data
 -- ============================================
-\echo '=== Test 3: Insert into all_users ==='
+\echo '=== Test 3: Insert into all_users with grid data ==='
 -- First create an auth record for the user
 INSERT INTO pzero.all_auth (email) VALUES ('jane.doe@acme.com');
 
--- Now insert the user record
+-- Now insert the user record with grid
 SELECT pzero.insert_into_table(
   'all_users',
   (SELECT id::text FROM pzero.all_auth WHERE email = 'admin@example.com'),
@@ -124,13 +124,29 @@ SELECT pzero.insert_into_table(
     'department', 'Engineering',
     'title', 'Senior Developer',
     'contact_email', 'jane.doe@acme.com',
-    'hire_date', '2024-01-15'
+    'hire_date', '2024-01-15',
+    'grid', jsonb_build_array(
+      jsonb_build_object('row', 0, 'col', 0, 'value', 'A1'),
+      jsonb_build_object('row', 0, 'col', 1, 'value', 'B1'),
+      jsonb_build_object('row', 1, 'col', 0, 'value', 'A2'),
+      jsonb_build_object('row', 1, 'col', 1, 'value', 'B2')
+    )
   )
 ) as inserted_id;
 
 -- Verify the insert
 \echo 'Verifying Jane Doe user insert:'
 SELECT id, name, org_id, status, jsonb_pretty(data) as data
+FROM pzero.all_users
+WHERE name = 'Jane Doe';
+
+-- Verify grid data in user record
+\echo 'Verifying grid data in user record:'
+SELECT 
+  name,
+  jsonb_array_length(data->'grid') as grid_entries_count,
+  data->'grid'->0 as first_grid_entry,
+  data->'grid'->3 as last_grid_entry
 FROM pzero.all_users
 WHERE name = 'Jane Doe';
 
@@ -230,9 +246,52 @@ EXCEPTION
 END $$;
 
 -- ============================================
--- Test 8: Insert with empty fields
+-- Test 8: Insert user with only grid data (no other fields)
 -- ============================================
-\echo '=== Test 8: Insert with empty fields (only data) ==='
+\echo '=== Test 8: Insert user with only grid data ==='
+-- First create an auth record for the grid-only user
+INSERT INTO pzero.all_auth (email) VALUES ('gridonly@example.com');
+
+-- Insert user with only grid data in the data column
+SELECT pzero.insert_into_table(
+  'all_users',
+  (SELECT id::text FROM pzero.all_auth WHERE email = 'admin@example.com'),
+  jsonb_build_object(
+    'name', 'Grid Only User',
+    'id', (SELECT id::text FROM pzero.all_auth WHERE email = 'gridonly@example.com'),
+    'org_id', (SELECT id::text FROM pzero.all_orgs WHERE handle = 'acme'),
+    'part', 'pzero'
+  ),
+  jsonb_build_object(
+    'grid', jsonb_build_array(
+      jsonb_build_object('row', 0, 'col', 0, 'value', '1'),
+      jsonb_build_object('row', 0, 'col', 1, 'value', '2'),
+      jsonb_build_object('row', 0, 'col', 2, 'value', '3'),
+      jsonb_build_object('row', 1, 'col', 0, 'value', '4'),
+      jsonb_build_object('row', 1, 'col', 1, 'value', '5'),
+      jsonb_build_object('row', 1, 'col', 2, 'value', '6'),
+      jsonb_build_object('row', 2, 'col', 0, 'value', '7'),
+      jsonb_build_object('row', 2, 'col', 1, 'value', '8'),
+      jsonb_build_object('row', 2, 'col', 2, 'value', '9')
+    )
+  )
+) as inserted_id;
+
+-- Verify grid-only user
+\echo 'Verifying grid-only user:'
+SELECT 
+  name,
+  jsonb_array_length(data->'grid') as grid_entries_count,
+  data->'grid'->0 as first_entry,
+  data->'grid'->4 as middle_entry,
+  data->'grid'->8 as last_entry
+FROM pzero.all_users
+WHERE name = 'Grid Only User';
+
+-- ============================================
+-- Test 9: Insert with empty fields
+-- ============================================
+\echo '=== Test 9: Insert with empty fields (only data) ==='
 SELECT pzero.insert_into_table(
   'all_orgs',
   (SELECT id::text FROM pzero.all_auth WHERE email = 'admin@example.com'),
@@ -254,9 +313,9 @@ FROM pzero.all_orgs
 WHERE handle = 'empty';
 
 -- ============================================
--- Test 9: Production DELETE protection and soft delete
+-- Test 10: Production DELETE protection and soft delete
 -- ============================================
-\echo '=== Test 9: Production DELETE protection ==='
+\echo '=== Test 10: Production DELETE protection ==='
 
 -- First, create a test org
 SELECT pzero.insert_into_table(
@@ -325,13 +384,13 @@ WHERE name IN ('Acme Corp', 'Data Co', 'Test Company', 'Null Test Org', 'Empty F
 \echo 'Total user records created by tests:'
 SELECT COUNT(*) as user_count
 FROM pzero.all_users
-WHERE name = 'Jane Doe';
+WHERE name IN ('Jane Doe', 'Grid Only User');
 
 \echo '';
 \echo 'Total auth records created by tests:'
 SELECT COUNT(*) as auth_count
 FROM pzero.all_auth
-WHERE email = 'jane.doe@acme.com';
+WHERE email IN ('jane.doe@acme.com', 'gridonly@example.com');
 
 \echo '';
 \echo 'Total audit records created by tests (last 5 minutes):'
@@ -351,7 +410,7 @@ WHERE id IN (
 -- Cleanup (optional - uncomment to remove test data)
 -- ============================================
 -- \echo 'Cleaning up test data...'
--- DELETE FROM pzero.all_users WHERE name = 'Jane Doe';
+-- DELETE FROM pzero.all_users WHERE name IN ('Jane Doe', 'Grid Only User');
 -- DELETE FROM pzero.all_orgs WHERE handle IN ('acme', 'dtco', 'test', 'null', 'empty');
--- DELETE FROM pzero.all_auth WHERE email = 'jane.doe@acme.com';
+-- DELETE FROM pzero.all_auth WHERE email IN ('jane.doe@acme.com', 'gridonly@example.com');
 -- \echo 'Cleanup complete!'
