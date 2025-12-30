@@ -83,7 +83,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
     if (!orgs || orgs.length === 0) {
       fetchOrgs().catch(console.error)
     }
-  }, [])
+  }, [orgs, fetchOrgs])
 
   // Map orgs to tenant format
   const tenants = React.useMemo(() => {

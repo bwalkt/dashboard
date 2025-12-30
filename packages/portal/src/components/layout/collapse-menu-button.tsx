@@ -99,7 +99,7 @@ export function CollapseMenuButton({ icon: Icon, label, active, submenus, isOpen
               {submenus.map(submenu => (
                 <SidebarMenuSubItem key={submenu.url}>
                   {submenu.items && submenu.items.length > 0 ? (
-                    <Collapsible defaultOpen={false}>
+                    <Collapsible defaultOpen={submenu.items?.some(nestedItem => pathname === nestedItem.url)}>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuSubButton className="w-full justify-between group/nested">
                           <span>{submenu.title}</span>
