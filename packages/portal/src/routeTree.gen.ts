@@ -24,6 +24,8 @@ import { Route as UsersIndexRouteImport } from './routes/users/index'
 import { Route as OrgsIndexRouteImport } from './routes/orgs/index'
 import { Route as EndpointsIndexRouteImport } from './routes/endpoints/index'
 import { Route as UsersNewRouteImport } from './routes/users/new'
+import { Route as SettingsMembersRolesRouteImport } from './routes/settings/members-roles'
+import { Route as SettingsCompanyProfileRouteImport } from './routes/settings/company-profile'
 import { Route as OrgsNewRouteImport } from './routes/orgs/new'
 import { Route as EndpointsNewRouteImport } from './routes/endpoints/new'
 import { Route as DataTableUsersRouteImport } from './routes/data-table/users'
@@ -34,6 +36,8 @@ import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as UsersEditUserIdRouteImport } from './routes/users/edit.$userId'
+import { Route as SettingsSecurityCurrentSessionsRouteImport } from './routes/settings/security/current-sessions'
+import { Route as SettingsSecurityAllowedAddressesRouteImport } from './routes/settings/security/allowed-addresses'
 import { Route as OrgsEditOrgIdRouteImport } from './routes/orgs/edit.$orgId'
 import { Route as EndpointsEditEndpointIdRouteImport } from './routes/endpoints/edit.$endpointId'
 
@@ -112,6 +116,16 @@ const UsersNewRoute = UsersNewRouteImport.update({
   path: '/users/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsMembersRolesRoute = SettingsMembersRolesRouteImport.update({
+  id: '/settings/members-roles',
+  path: '/settings/members-roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsCompanyProfileRoute = SettingsCompanyProfileRouteImport.update({
+  id: '/settings/company-profile',
+  path: '/settings/company-profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrgsNewRoute = OrgsNewRouteImport.update({
   id: '/orgs/new',
   path: '/orgs/new',
@@ -162,6 +176,18 @@ const UsersEditUserIdRoute = UsersEditUserIdRouteImport.update({
   path: '/users/edit/$userId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsSecurityCurrentSessionsRoute =
+  SettingsSecurityCurrentSessionsRouteImport.update({
+    id: '/settings/security/current-sessions',
+    path: '/settings/security/current-sessions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SettingsSecurityAllowedAddressesRoute =
+  SettingsSecurityAllowedAddressesRouteImport.update({
+    id: '/settings/security/allowed-addresses',
+    path: '/settings/security/allowed-addresses',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const OrgsEditOrgIdRoute = OrgsEditOrgIdRouteImport.update({
   id: '/orgs/edit/$orgId',
   path: '/orgs/edit/$orgId',
@@ -194,12 +220,16 @@ export interface FileRoutesByFullPath {
   '/data-table/users': typeof DataTableUsersRoute
   '/endpoints/new': typeof EndpointsNewRoute
   '/orgs/new': typeof OrgsNewRoute
+  '/settings/company-profile': typeof SettingsCompanyProfileRoute
+  '/settings/members-roles': typeof SettingsMembersRolesRoute
   '/users/new': typeof UsersNewRoute
   '/endpoints': typeof EndpointsIndexRoute
   '/orgs': typeof OrgsIndexRoute
   '/users': typeof UsersIndexRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
   '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
+  '/settings/security/allowed-addresses': typeof SettingsSecurityAllowedAddressesRoute
+  '/settings/security/current-sessions': typeof SettingsSecurityCurrentSessionsRoute
   '/users/edit/$userId': typeof UsersEditUserIdRoute
 }
 export interface FileRoutesByTo {
@@ -223,12 +253,16 @@ export interface FileRoutesByTo {
   '/data-table/users': typeof DataTableUsersRoute
   '/endpoints/new': typeof EndpointsNewRoute
   '/orgs/new': typeof OrgsNewRoute
+  '/settings/company-profile': typeof SettingsCompanyProfileRoute
+  '/settings/members-roles': typeof SettingsMembersRolesRoute
   '/users/new': typeof UsersNewRoute
   '/endpoints': typeof EndpointsIndexRoute
   '/orgs': typeof OrgsIndexRoute
   '/users': typeof UsersIndexRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
   '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
+  '/settings/security/allowed-addresses': typeof SettingsSecurityAllowedAddressesRoute
+  '/settings/security/current-sessions': typeof SettingsSecurityCurrentSessionsRoute
   '/users/edit/$userId': typeof UsersEditUserIdRoute
 }
 export interface FileRoutesById {
@@ -253,12 +287,16 @@ export interface FileRoutesById {
   '/data-table/users': typeof DataTableUsersRoute
   '/endpoints/new': typeof EndpointsNewRoute
   '/orgs/new': typeof OrgsNewRoute
+  '/settings/company-profile': typeof SettingsCompanyProfileRoute
+  '/settings/members-roles': typeof SettingsMembersRolesRoute
   '/users/new': typeof UsersNewRoute
   '/endpoints/': typeof EndpointsIndexRoute
   '/orgs/': typeof OrgsIndexRoute
   '/users/': typeof UsersIndexRoute
   '/endpoints/edit/$endpointId': typeof EndpointsEditEndpointIdRoute
   '/orgs/edit/$orgId': typeof OrgsEditOrgIdRoute
+  '/settings/security/allowed-addresses': typeof SettingsSecurityAllowedAddressesRoute
+  '/settings/security/current-sessions': typeof SettingsSecurityCurrentSessionsRoute
   '/users/edit/$userId': typeof UsersEditUserIdRoute
 }
 export interface FileRouteTypes {
@@ -284,12 +322,16 @@ export interface FileRouteTypes {
     | '/data-table/users'
     | '/endpoints/new'
     | '/orgs/new'
+    | '/settings/company-profile'
+    | '/settings/members-roles'
     | '/users/new'
     | '/endpoints'
     | '/orgs'
     | '/users'
     | '/endpoints/edit/$endpointId'
     | '/orgs/edit/$orgId'
+    | '/settings/security/allowed-addresses'
+    | '/settings/security/current-sessions'
     | '/users/edit/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -313,12 +355,16 @@ export interface FileRouteTypes {
     | '/data-table/users'
     | '/endpoints/new'
     | '/orgs/new'
+    | '/settings/company-profile'
+    | '/settings/members-roles'
     | '/users/new'
     | '/endpoints'
     | '/orgs'
     | '/users'
     | '/endpoints/edit/$endpointId'
     | '/orgs/edit/$orgId'
+    | '/settings/security/allowed-addresses'
+    | '/settings/security/current-sessions'
     | '/users/edit/$userId'
   id:
     | '__root__'
@@ -342,12 +388,16 @@ export interface FileRouteTypes {
     | '/data-table/users'
     | '/endpoints/new'
     | '/orgs/new'
+    | '/settings/company-profile'
+    | '/settings/members-roles'
     | '/users/new'
     | '/endpoints/'
     | '/orgs/'
     | '/users/'
     | '/endpoints/edit/$endpointId'
     | '/orgs/edit/$orgId'
+    | '/settings/security/allowed-addresses'
+    | '/settings/security/current-sessions'
     | '/users/edit/$userId'
   fileRoutesById: FileRoutesById
 }
@@ -372,12 +422,16 @@ export interface RootRouteChildren {
   DataTableUsersRoute: typeof DataTableUsersRoute
   EndpointsNewRoute: typeof EndpointsNewRoute
   OrgsNewRoute: typeof OrgsNewRoute
+  SettingsCompanyProfileRoute: typeof SettingsCompanyProfileRoute
+  SettingsMembersRolesRoute: typeof SettingsMembersRolesRoute
   UsersNewRoute: typeof UsersNewRoute
   EndpointsIndexRoute: typeof EndpointsIndexRoute
   OrgsIndexRoute: typeof OrgsIndexRoute
   UsersIndexRoute: typeof UsersIndexRoute
   EndpointsEditEndpointIdRoute: typeof EndpointsEditEndpointIdRoute
   OrgsEditOrgIdRoute: typeof OrgsEditOrgIdRoute
+  SettingsSecurityAllowedAddressesRoute: typeof SettingsSecurityAllowedAddressesRoute
+  SettingsSecurityCurrentSessionsRoute: typeof SettingsSecurityCurrentSessionsRoute
   UsersEditUserIdRoute: typeof UsersEditUserIdRoute
 }
 
@@ -488,6 +542,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/members-roles': {
+      id: '/settings/members-roles'
+      path: '/settings/members-roles'
+      fullPath: '/settings/members-roles'
+      preLoaderRoute: typeof SettingsMembersRolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/company-profile': {
+      id: '/settings/company-profile'
+      path: '/settings/company-profile'
+      fullPath: '/settings/company-profile'
+      preLoaderRoute: typeof SettingsCompanyProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/orgs/new': {
       id: '/orgs/new'
       path: '/orgs/new'
@@ -558,6 +626,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersEditUserIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/security/current-sessions': {
+      id: '/settings/security/current-sessions'
+      path: '/settings/security/current-sessions'
+      fullPath: '/settings/security/current-sessions'
+      preLoaderRoute: typeof SettingsSecurityCurrentSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/security/allowed-addresses': {
+      id: '/settings/security/allowed-addresses'
+      path: '/settings/security/allowed-addresses'
+      fullPath: '/settings/security/allowed-addresses'
+      preLoaderRoute: typeof SettingsSecurityAllowedAddressesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/orgs/edit/$orgId': {
       id: '/orgs/edit/$orgId'
       path: '/orgs/edit/$orgId'
@@ -596,12 +678,16 @@ const rootRouteChildren: RootRouteChildren = {
   DataTableUsersRoute: DataTableUsersRoute,
   EndpointsNewRoute: EndpointsNewRoute,
   OrgsNewRoute: OrgsNewRoute,
+  SettingsCompanyProfileRoute: SettingsCompanyProfileRoute,
+  SettingsMembersRolesRoute: SettingsMembersRolesRoute,
   UsersNewRoute: UsersNewRoute,
   EndpointsIndexRoute: EndpointsIndexRoute,
   OrgsIndexRoute: OrgsIndexRoute,
   UsersIndexRoute: UsersIndexRoute,
   EndpointsEditEndpointIdRoute: EndpointsEditEndpointIdRoute,
   OrgsEditOrgIdRoute: OrgsEditOrgIdRoute,
+  SettingsSecurityAllowedAddressesRoute: SettingsSecurityAllowedAddressesRoute,
+  SettingsSecurityCurrentSessionsRoute: SettingsSecurityCurrentSessionsRoute,
   UsersEditUserIdRoute: UsersEditUserIdRoute,
 }
 export const routeTree = rootRouteImport

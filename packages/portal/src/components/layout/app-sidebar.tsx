@@ -47,7 +47,46 @@ import { DataTableContext } from '../data-table/data-table-provider'
 import { SafeDataTableFilterControls } from '../data-table/safe-data-table-filter-controls'
 import { Icons } from '../icons'
 import { OrgSwitcher } from '../org-switcher'
+import { CollapseMenuButton } from './collapse-menu-button'
 import { ModeToggle } from './ThemeToggle/theme-toggle'
+
+// Helper function to generate CollapseMenuButton props
+const getCollapseMenuProps = (item: any, pathname: string, Icons: any) => {
+  const Icon = item.icon ? Icons[item.icon] : Icons.logo
+
+  return {
+    icon: Icon,
+    label: item.title,
+    active: pathname === item.url,
+    submenus: item.items.map((subItem: any) => ({
+      url: subItem.url,
+      title: subItem.title,
+      icon: subItem.icon,
+      isActive: pathname === subItem.url,
+      items: subItem.items?.map((nestedItem: any) => ({
+        url: nestedItem.url,
+        title: nestedItem.title,
+        icon: nestedItem.icon,
+        isActive: pathname === nestedItem.url,
+      })),
+    })),
+    isOpen:
+      pathname === item.url ||
+      pathname.startsWith(item.url + '/') ||
+      item.items?.some((subItem: any) => {
+        const subUrl = subItem.url.split('?')[0]
+        return (
+          pathname === subUrl ||
+          pathname.startsWith(subUrl + '/') ||
+          subItem.items?.some((nestedItem: any) => {
+            const nestedUrl = nestedItem.url.split('?')[0]
+            return pathname === nestedUrl || pathname.startsWith(nestedUrl + '/')
+          })
+        )
+      }),
+    url: item.url,
+  }
+}
 export const company = {
   name: 'Acme Inc',
   logo: IconPhotoUp,
@@ -82,7 +121,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
     if (!orgs || orgs.length === 0) {
       fetchOrgs().catch(console.error)
     }
-  }, [])
+  }, [orgs, fetchOrgs])
 
   // Map orgs to tenant format
   const tenants = React.useMemo(() => {
@@ -197,29 +236,9 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                     {navItems.map(item => {
                       const Icon = item.icon ? Icons[item.icon] : Icons.logo
                       return item?.items && item?.items?.length > 0 ? (
-                        <Collapsible key={item.title} defaultOpen={item.isActive} className="group/collapsible">
-                          <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-left hover:bg-accent rounded-md">
-                            <div className="flex items-center gap-2">
-                              {item.icon && <Icon className="h-4 w-4" />}
-                              <span>{item.title}</span>
-                            </div>
-                            <IconChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <div className="ml-6 space-y-1 pt-2">
-                              {item.items?.map(subItem => (
-                                <Link
-                                  key={subItem.title}
-                                  to={subItem.url}
-                                  className="block p-2 text-sm hover:bg-accent rounded-md"
-                                  onClick={handleNavigation}
-                                >
-                                  {subItem.title}
-                                </Link>
-                              ))}
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
+                        <div key={item.title} className="mb-2">
+                          <CollapseMenuButton {...getCollapseMenuProps(item, pathname, Icons)} />
+                        </div>
                       ) : (
                         <Link
                           key={item.title}
@@ -301,34 +320,11 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
             {navItems.map(item => {
               const Icon = item.icon ? Icons[item.icon] : Icons.logo
               return item?.items && item?.items?.length > 0 ? (
-                <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={item.title} isActive={pathname === item.url}>
-                        {item.icon && <Icon />}
-                        <span>{item.title}</span>
-                        <IconChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {item.items?.map(subItem => (
-                          <SidebarMenuSubItem key={subItem.title}>
-                            <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
-                              <Link to={subItem.url}>
-                                <span>{subItem.title}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
+                <CollapseMenuButton key={item.title} {...getCollapseMenuProps(item, pathname, Icons)} />
               ) : (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url}>
-                    <Link to={item.url}>
+                    <Link to={item.url} onClick={handleNavigation}>
                       <Icon />
                       <span>{item.title}</span>
                     </Link>

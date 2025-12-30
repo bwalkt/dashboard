@@ -90,6 +90,45 @@ const allNavItems: NavItem[] = [
     ],
   },
   {
+    title: 'Organization Settings',
+    url: '#',
+    icon: 'settings',
+    isActive: false,
+    items: [
+      {
+        title: 'Company Profile',
+        url: '/settings/company-profile',
+        icon: 'building',
+        shortcut: ['c', 'p'],
+      },
+      {
+        title: 'Members and Roles',
+        url: '/settings/members-roles',
+        icon: 'users',
+        shortcut: ['m', 'r'],
+      },
+      {
+        title: 'Security',
+        url: '#',
+        icon: 'shield',
+        items: [
+          {
+            title: 'Allowed Addresses',
+            url: '/settings/security/allowed-addresses',
+            icon: 'mapPin',
+            shortcut: ['a', 'a'],
+          },
+          {
+            title: 'Current Sessions',
+            url: '/settings/security/current-sessions',
+            icon: 'activity',
+            shortcut: ['c', 's'],
+          },
+        ],
+      },
+    ],
+  },
+  {
     title: 'Endpoints',
     url: '/endpoints',
     icon: 'network',
