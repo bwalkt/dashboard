@@ -5,10 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function CompanyProfile() {
   return (
     <PageLayout
-      header={{
-        title: 'Company Profile',
-        description: "Manage your organization's profile and details",
-      }}
+      title="Company Profile"
+      description="Manage your organization's profile and details"
+      showBreadcrumbs={true}
     >
       <div className="container mx-auto p-6 space-y-6">
         <Card>

@@ -49,7 +49,6 @@ export function CollapseMenuButton({ icon: Icon, label, active, submenus, isOpen
   const pathname = location.pathname
   const { state, isMobile, setOpenMobile } = useSidebar()
   const isCollapsed = state === 'collapsed'
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false)
 
   const handleNavigation = () => {
     if (isMobile) {
@@ -69,7 +68,16 @@ export function CollapseMenuButton({ icon: Icon, label, active, submenus, isOpen
     return checkActive(submenus)
   }, [pathname, submenus])
 
+  const [isMenuOpen, setIsMenuOpen] = React.useState(isOpen || isSubmenuActive)
+
   const isMenuItemActive = active || isSubmenuActive || pathname === url
+
+  // Update menu open state when submenu becomes active
+  React.useEffect(() => {
+    if (isSubmenuActive) {
+      setIsMenuOpen(true)
+    }
+  }, [isSubmenuActive])
 
   // In mobile or expanded mode, use Collapsible
   if (isMobile || !isCollapsed) {

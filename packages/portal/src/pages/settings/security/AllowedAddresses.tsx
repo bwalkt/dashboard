@@ -6,16 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function AllowedAddresses() {
   return (
     <PageLayout
-      header={{
-        title: 'Allowed IP Addresses',
-        description: 'Manage IP addresses that can access your organization',
-        action: (
-          <Button>
-            <IconPlus className="mr-2 h-4 w-4" />
-            Add IP Address
-          </Button>
-        ),
-      }}
+      title="Allowed Addresses"
+      description="Manage IP addresses that can access your organization"
+      showBreadcrumbs={true}
     >
       <div className="container mx-auto p-6 space-y-6">
         <Card>

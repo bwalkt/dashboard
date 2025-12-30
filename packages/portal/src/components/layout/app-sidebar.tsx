@@ -198,7 +198,18 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                     {navItems.map(item => {
                       const Icon = item.icon ? Icons[item.icon] : Icons.logo
                       return item?.items && item?.items?.length > 0 ? (
-                        <Collapsible key={item.title} defaultOpen={item.isActive} className="group/collapsible">
+                        <Collapsible
+                          key={item.title}
+                          defaultOpen={
+                            item.isActive ||
+                            item.items?.some(
+                              subItem =>
+                                pathname.startsWith(subItem.url.split('?')[0]) ||
+                                subItem.items?.some(nestedItem => pathname.startsWith(nestedItem.url.split('?')[0])),
+                            )
+                          }
+                          className="group/collapsible"
+                        >
                           <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-left hover:bg-accent rounded-md">
                             <div className="flex items-center gap-2">
                               {item.icon && <Icon className="h-4 w-4" />}

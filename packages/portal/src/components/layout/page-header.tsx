@@ -40,7 +40,7 @@ export function PageHeader({
 
   return (
     <div className="flex flex-col">
-      {/* Main header bar */}
+      {/* Main header bar with breadcrumbs */}
       <div className="flex h-16 items-center gap-4 border-b bg-background px-4">
         <div className="flex items-center gap-2">
           {/* Sidebar toggle */}
@@ -87,11 +87,10 @@ export function PageHeader({
           )}
         </div>
 
-        {/* Title and description */}
-        {(title || description) && (
+        {/* Breadcrumbs */}
+        {showBreadcrumbs && (
           <div className="flex-1">
-            <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-            {description && <p className="text-sm text-muted-foreground">{description}</p>}
+            <Breadcrumbs />
           </div>
         )}
 
@@ -101,10 +100,13 @@ export function PageHeader({
         </div>
       </div>
 
-      {/* Optional breadcrumbs */}
-      {showBreadcrumbs && (
+      {/* Title and description */}
+      {(title || description) && (
         <div className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <Breadcrumbs />
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+            {description && <p className="text-sm text-muted-foreground">{description}</p>}
+          </div>
         </div>
       )}
     </div>

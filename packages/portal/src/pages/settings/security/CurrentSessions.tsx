@@ -5,18 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export default function CurrentSessions() {
   return (
-    <PageLayout
-      header={{
-        title: 'Current Sessions',
-        description: 'View and manage active sessions',
-        action: (
-          <Button variant="destructive">
-            <IconLogout className="mr-2 h-4 w-4" />
-            End All Sessions
-          </Button>
-        ),
-      }}
-    >
+    <PageLayout title="Current Sessions" description="View and manage active sessions" showBreadcrumbs={true}>
       <div className="container mx-auto p-6 space-y-6">
         <Card>
           <CardHeader>

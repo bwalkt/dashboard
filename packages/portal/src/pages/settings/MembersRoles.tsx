@@ -5,18 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export default function MembersRoles() {
   return (
-    <PageLayout
-      header={{
-        title: 'Members and Roles',
-        description: 'Manage team members and their roles',
-        action: (
-          <Button>
-            <IconUserPlus className="mr-2 h-4 w-4" />
-            Invite Member
-          </Button>
-        ),
-      }}
-    >
+    <PageLayout title="Members and Roles" description="Manage team members and their roles" showBreadcrumbs={true}>
       <div className="container mx-auto p-6 space-y-6">
         <Card>
           <CardHeader>
