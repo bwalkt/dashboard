@@ -21,8 +21,12 @@ const mockRedisClient = {
     return entry.value;
   }),
 
-  set: vi.fn().mockImplementation(async (key: string, value: string) => {
-    mockRedisStorage.set(key, { value });
+  set: vi.fn().mockImplementation(async (key: string, value: string, ttlSeconds?: number) => {
+    const entry: { value: string; expiresAt?: number } = { value };
+    if (ttlSeconds) {
+      entry.expiresAt = Date.now() + ttlSeconds * 1000;
+    }
+    mockRedisStorage.set(key, entry);
     return "OK";
   }),
 
