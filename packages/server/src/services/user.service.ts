@@ -119,13 +119,34 @@ export class UserService {
     schema: string = "pzero"
   ): Promise<boolean> {
     try {
+      // Validate grid structure (5x5 matrix of numbers)
+      if (!grid || !Array.isArray(grid) || grid.length !== 5) {
+        console.error("Invalid grid: must be 5x5 matrix");
+        return false;
+      }
+      
+      if (!grid.every(row => 
+        Array.isArray(row) && 
+        row.length === 5 && 
+        row.every(cell => typeof cell === 'number' && !isNaN(cell) && cell > 0)
+      )) {
+        console.error("Invalid grid: all elements must be positive numbers");
+        return false;
+      }
+      
+      // Validate userId format (basic UUID check)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(userId)) {
+        console.error("Invalid userId format");
+        return false;
+      }
+
       // Encrypt the grid before storing
       const encryptedGrid = encryptionService.encryptGrid(grid);
       
       const result = await db.pool.query(
         `UPDATE ${schema}.all_users 
-         SET data = jsonb_set(COALESCE(data, '{}'), '{grid}', $1::jsonb), 
-             u_at = CURRENT_TIMESTAMP 
+         SET data = jsonb_set(COALESCE(data, '{}'), '{grid}', $1::jsonb)
          WHERE id = $2::uuid 
          RETURNING id`,
         [JSON.stringify(encryptedGrid), userId]

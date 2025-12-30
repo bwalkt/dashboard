@@ -925,12 +925,14 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    * POST /auth/reset
    * Reset user's grid password (requires authentication)
    */
-  fastify.post(
+  fastify.post<{
+    Body: { grid: number[][] }
+  }>(
     "/auth/reset",
     { preHandler: authenticateToken },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = request.user?.userId;
+        const userId = (request as unknown as AuthenticatedRequest).user?.id;
         const { grid } = request.body as { grid: number[][] };
         
         if (!userId) {
@@ -947,11 +949,18 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
-        // Validate grid is 5x5
-        if (grid.length !== 5 || !grid.every(row => Array.isArray(row) && row.length === 5)) {
+        // Validate grid is 5x5 and contains only positive numbers
+        if (
+          grid.length !== 5 || 
+          !grid.every(row => 
+            Array.isArray(row) && 
+            row.length === 5 && 
+            row.every(cell => typeof cell === 'number' && !isNaN(cell) && cell > 0)
+          )
+        ) {
           return reply.status(400).send({
             error: "Bad Request",
-            message: "Grid must be a 5x5 matrix",
+            message: "Grid must be a 5x5 matrix of positive numbers",
           } as ErrorResponse);
         }
         

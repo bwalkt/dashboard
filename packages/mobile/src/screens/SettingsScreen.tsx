@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { api } from '@pzero/shared/api'
 import { labels } from '@pzero/shared/constants'
+import { genGrid } from '@pzero/shared/grid/grid'
 import { DEFAULT_COUNTRY, getAllowedCountryCodes, isValidPhoneNumber, validatePhoneNumber } from '@pzero/shared/phone'
 import type { Section } from '@pzero/shared/pzero'
 import { generateNameFromEmail } from '@pzero/shared/pzero/users'
@@ -824,6 +825,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         // Continue registration without device info if device detection fails
       }
 
+      // Generate grid for password authentication
+      const grid = genGrid(5)
+      console.log('Generated grid for registration:', grid)
+
       // Send verification code via email using /auth/register endpoint
       const registrationPayload = {
         email: finalEmail.trim().toLowerCase(),
@@ -833,6 +838,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
           type: 'MOBILE',
           nickname: formData.deviceNickName || `${finalName.split(' ')[0]}'s Device`,
         },
+        grid,
       }
 
       console.log('Registration payload being sent:', JSON.stringify(registrationPayload, null, 2))
@@ -1003,9 +1009,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, onSettingsC
         // Continue resend without device info if device detection fails
       }
 
+      // Generate grid for password authentication (resend)
+      const grid = genGrid(5)
+      console.log('Generated grid for registration resend:', grid)
+
       const resendPayload = {
         email: emailBeingVerified,
         name: formData.name?.trim() || emailBeingVerified.split('@')[0],
+        grid,
       }
 
       if (currentDeviceInfo) {
