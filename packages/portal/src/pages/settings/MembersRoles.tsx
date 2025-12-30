@@ -3,6 +3,12 @@ import { PageLayout } from '@/components/layout/page-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+const sampleMembers = [
+  { id: '1', name: 'John Doe', email: 'john.doe@acme.com', role: 'Admin' },
+  { id: '2', name: 'Jane Smith', email: 'jane.smith@acme.com', role: 'Editor' },
+  { id: '3', name: 'Bob Johnson', email: 'bob.johnson@acme.com', role: 'Viewer' },
+]
+
 export default function MembersRoles() {
   return (
     <PageLayout title="Members and Roles" description="Manage team members and their roles" showBreadcrumbs={true}>
@@ -17,44 +23,22 @@ export default function MembersRoles() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Sample team members */}
+              {/* Team members list */}
               <div className="divide-y">
-                <div className="py-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">John Doe</p>
-                    <p className="text-sm text-muted-foreground">john.doe@acme.com</p>
+                {sampleMembers.map(member => (
+                  <div key={member.id} className="py-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{member.name}</p>
+                      <p className="text-sm text-muted-foreground">{member.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-1 text-xs bg-primary/10 rounded">{member.role}</span>
+                      <Button variant="ghost" size="sm">
+                        <IconSettings className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-1 text-xs bg-primary/10 rounded">Admin</span>
-                    <Button variant="ghost" size="sm">
-                      <IconSettings className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="py-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Jane Smith</p>
-                    <p className="text-sm text-muted-foreground">jane.smith@acme.com</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-1 text-xs bg-primary/10 rounded">Editor</span>
-                    <Button variant="ghost" size="sm">
-                      <IconSettings className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="py-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Bob Johnson</p>
-                    <p className="text-sm text-muted-foreground">bob.johnson@acme.com</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-1 text-xs bg-primary/10 rounded">Viewer</span>
-                    <Button variant="ghost" size="sm">
-                      <IconSettings className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                ))}
               </div>
               <div className="pt-4">
                 <p className="text-sm text-muted-foreground">

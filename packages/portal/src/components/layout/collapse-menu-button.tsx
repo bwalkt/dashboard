@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { Icons } from '../icons'
 
 interface Submenu {
   url: string
@@ -102,9 +101,9 @@ export function CollapseMenuButton({ icon: Icon, label, active, submenus, isOpen
                   {submenu.items && submenu.items.length > 0 ? (
                     <Collapsible defaultOpen={false}>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuSubButton className="w-full justify-between">
+                        <SidebarMenuSubButton className="w-full justify-between group/nested">
                           <span>{submenu.title}</span>
-                          <IconChevronRight className="h-3 w-3" />
+                          <IconChevronRight className="h-3 w-3 transition-transform duration-200 group-data-[state=open]/nested:rotate-90" />
                         </SidebarMenuSubButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
@@ -162,7 +161,7 @@ export function CollapseMenuButton({ icon: Icon, label, active, submenus, isOpen
           <DropdownMenuLabel className="text-xs text-muted-foreground">{label}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            {submenus.map(submenu => (
+            {submenus.map((submenu, index) => (
               <React.Fragment key={submenu.url}>
                 {submenu.items && submenu.items.length > 0 ? (
                   <>
@@ -183,7 +182,7 @@ export function CollapseMenuButton({ icon: Icon, label, active, submenus, isOpen
                         </DropdownMenuItem>
                       ))}
                     </div>
-                    {submenus.indexOf(submenu) < submenus.length - 1 && <DropdownMenuSeparator className="my-1" />}
+                    {index < submenus.length - 1 && <DropdownMenuSeparator className="my-1" />}
                   </>
                 ) : (
                   <DropdownMenuItem

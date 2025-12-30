@@ -116,11 +116,13 @@ const allNavItems: NavItem[] = [
             title: 'Allowed Addresses',
             url: '/settings/security/allowed-addresses',
             icon: 'mapPin',
+            shortcut: ['a', 'a'],
           },
           {
             title: 'Current Sessions',
             url: '/settings/security/current-sessions',
             icon: 'activity',
+            shortcut: ['c', 's'],
           },
         ],
       },

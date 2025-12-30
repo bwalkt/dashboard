@@ -198,40 +198,34 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                     {navItems.map(item => {
                       const Icon = item.icon ? Icons[item.icon] : Icons.logo
                       return item?.items && item?.items?.length > 0 ? (
-                        <Collapsible
-                          key={item.title}
-                          defaultOpen={
-                            item.isActive ||
-                            item.items?.some(
-                              subItem =>
-                                pathname.startsWith(subItem.url.split('?')[0]) ||
-                                subItem.items?.some(nestedItem => pathname.startsWith(nestedItem.url.split('?')[0])),
-                            )
-                          }
-                          className="group/collapsible"
-                        >
-                          <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-left hover:bg-accent rounded-md">
-                            <div className="flex items-center gap-2">
-                              {item.icon && <Icon className="h-4 w-4" />}
-                              <span>{item.title}</span>
-                            </div>
-                            <IconChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <div className="ml-6 space-y-1 pt-2">
-                              {item.items?.map(subItem => (
-                                <Link
-                                  key={subItem.title}
-                                  to={subItem.url}
-                                  className="block p-2 text-sm hover:bg-accent rounded-md"
-                                  onClick={handleNavigation}
-                                >
-                                  {subItem.title}
-                                </Link>
-                              ))}
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
+                        <div key={item.title} className="mb-2">
+                          <CollapseMenuButton
+                            icon={Icon}
+                            label={item.title}
+                            active={pathname === item.url}
+                            submenus={item.items.map(subItem => ({
+                              url: subItem.url,
+                              title: subItem.title,
+                              icon: subItem.icon,
+                              isActive: pathname === subItem.url,
+                              items: subItem.items?.map(nestedItem => ({
+                                url: nestedItem.url,
+                                title: nestedItem.title,
+                                icon: nestedItem.icon,
+                                isActive: pathname === nestedItem.url,
+                              })),
+                            }))}
+                            isOpen={
+                              item.isActive ||
+                              item.items?.some(
+                                subItem =>
+                                  pathname.startsWith(subItem.url.split('?')[0]) ||
+                                  subItem.items?.some(nestedItem => pathname.startsWith(nestedItem.url.split('?')[0])),
+                              )
+                            }
+                            url={item.url}
+                          />
+                        </div>
                       ) : (
                         <Link
                           key={item.title}
@@ -330,7 +324,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                       isActive: pathname === nestedItem.url,
                     })),
                   }))}
-                  isOpen={item.isActive || false}
+                  isOpen={item.isActive}
                   url={item.url}
                 />
               ) : (
