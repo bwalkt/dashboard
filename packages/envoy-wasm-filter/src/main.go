@@ -33,6 +33,32 @@ func (*pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 	}
 }
 
+// parseKeyValueConfig parses key=value format configuration
+func parseKeyValueConfig(configStr string, configMap map[string]string) {
+	lines := strings.Split(configStr, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if parts := strings.SplitN(line, "=", 2); len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			configMap[key] = value
+			proxywasm.LogInfof("[WASM Filter] Config: %s = %s", key, value[:min(len(value), 20)]+"...")
+		}
+	}
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPluginStartStatus {
 	// Load configuration from plugin configuration
 	config, err := proxywasm.GetPluginConfiguration()
@@ -44,23 +70,25 @@ func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlu
 	// Parse configuration as JSON
 	configMap := make(map[string]string)
 	if len(config) > 0 {
-		// Try JSON parsing first (preferred)
-		if err := json.Unmarshal(config, &configMap); err != nil {
-			// Fallback to key=value format for backward compatibility
-			proxywasm.LogWarnf("[WASM Filter] Failed to parse config as JSON, falling back to key=value format: %v", err)
-			lines := strings.Split(string(config), "\n")
-			for _, line := range lines {
-				line = strings.TrimSpace(line)
-				// Skip empty lines and comments
-				if line == "" || strings.HasPrefix(line, "#") {
-					continue
-				}
-				if parts := strings.SplitN(line, "=", 2); len(parts) == 2 {
-					configMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
-				}
+		configStr := string(config)
+		// Trim any whitespace/newlines
+		configStr = strings.TrimSpace(configStr)
+		
+		// Check if it looks like JSON (starts with { or [)
+		if strings.HasPrefix(configStr, "{") || strings.HasPrefix(configStr, "[") {
+			// Try JSON parsing
+			if err := json.Unmarshal([]byte(configStr), &configMap); err != nil {
+				proxywasm.LogErrorf("[WASM Filter] Failed to parse config as JSON: %v", err)
+				proxywasm.LogErrorf("[WASM Filter] Config starts with: %.50s", configStr)
+				// Try to recover by parsing as key=value
+				parseKeyValueConfig(configStr, configMap)
+			} else {
+				proxywasm.LogInfof("[WASM Filter] Successfully parsed JSON configuration with %d keys", len(configMap))
 			}
 		} else {
-			proxywasm.LogInfof("[WASM Filter] Successfully parsed JSON configuration with %d keys", len(configMap))
+			// Assume key=value format
+			proxywasm.LogInfof("[WASM Filter] Using key=value format configuration")
+			parseKeyValueConfig(configStr, configMap)
 		}
 	}
 

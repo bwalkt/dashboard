@@ -122,6 +122,16 @@ type FilterToken struct {
 
 // generateFilterToken creates an authentication token
 func generateFilterToken() string {
+	// Validate required config
+	if filterID == "" {
+		proxywasm.LogErrorf("[Redis] filterID is empty - check filter_id in configuration")
+		return ""
+	}
+	if jwtSecret == "" {
+		proxywasm.LogErrorf("[Redis] jwtSecret is empty - check jwt_secret in configuration")
+		return ""
+	}
+	
 	timestamp := time.Now().UnixMilli()
 	nonce := generateNonce()
 	data := filterID + ":" + strconv.FormatInt(timestamp, 10) + ":" + nonce

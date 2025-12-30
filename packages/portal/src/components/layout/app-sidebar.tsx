@@ -341,9 +341,12 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
           <SidebarGroupLabel>Settings</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Toggle theme" onClick={() => {
-                setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
-              }}>
+              <SidebarMenuButton
+                tooltip="Toggle theme"
+                onClick={() => {
+                  setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
+                }}
+              >
                 <IconBrightness />
                 <span>Theme</span>
               </SidebarMenuButton>

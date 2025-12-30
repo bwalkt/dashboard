@@ -22,7 +22,7 @@ CREATE DOMAIN pzero.email AS text CHECK (
 
 CREATE DOMAIN pzero.valid_name AS varchar(100) NOT NULL CHECK (value ~* '^[A-Za-z0-9._ \-]+$');
 
-CREATE DOMAIN pzero.valid_handle AS varchar(10) NOT NULL CHECK (value ~* '^[A-Za-z0-9._\-]+$');
+CREATE DOMAIN pzero.valid_handle AS varchar(50) NOT NULL CHECK (value ~* '^[A-Za-z0-9._\-]+$');
 
 CREATE DOMAIN pzero.valid_part AS varchar(10) NOT NULL DEFAULT 'pzero' CHECK (value ~* '^[A-Za-z0-9 ._\-]+$');
 
@@ -79,18 +79,6 @@ CREATE TYPE pzero.dir_status AS enum('ACTIVE', 'INACTIVE', 'DELETED', 'CORRUPTED
 
 CREATE TYPE pzero.from_to AS ("from" timestamptz, "to" timestamptz);
 
-CREATE TYPE pzero.org_status AS enum(
-  'ACTIVE',
-  'INACTIVE',
-  'DEPRECATED',
-  'PENDING',
-  'REMOVED',
-  'VERIFIED',
-  'UNVERIFIED',
-  'BLOCKED',
-  'SUSPENDED',
-  'DELETED'
-);
 CREATE TYPE pzero.org_status AS enum(
   'ACTIVE',
   'INACTIVE',
