@@ -201,7 +201,9 @@ export class UserService {
           const sql = `UPDATE pzero.all_auth SET email_verified = TRUE WHERE email = $1 RETURNING *`;
           const result = await client.query(sql, [userData.email]);
           if (!result.rows.length) {
-            throw new Error('Failed to update email_verified status');
+            console.log('Failed to update email_verified status for user ', userData.email);
+            client.query('ROLLBACK');
+            return {} as User;
           }
         }
         if (userData.avatar && !user.avatar) {
@@ -209,7 +211,9 @@ export class UserService {
           const sql = `UPDATE pzero.all_users SET avatar = $1 WHERE id = $2 RETURNING *`;
           const avatarResult = await client.query(sql, [userData.avatar, user.id]);
           if (!avatarResult.rows.length) {
-            throw new Error('Failed to update avatar');
+            console.log('Failed to update avatar for user ', userData.email);
+            client.query('ROLLBACK');
+            return {} as User;
           }
         }
         await client.query('COMMIT');          
@@ -240,6 +244,8 @@ export class UserService {
     const user = await this.upsertUser(userData);
     const returnData = { ...githubUser, ...user, github_id: githubUser.id };
     console.log('🔥 SERVER: Upserted user ', returnData);
+    // returnData.id is postgres id,
+    // returnData.is_act = false blocks user from proceeding
     return returnData;
   }
 
