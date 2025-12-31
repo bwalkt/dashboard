@@ -3,6 +3,7 @@
  */
 
 const USE_PROXY_STORAGE_KEY = 'use_proxy'
+const USE_WASM_STORAGE_KEY = 'use_wasm'
 
 /**
  * Check if localStorage is available
@@ -70,6 +71,56 @@ export function setUseProxy(value: boolean): boolean {
 }
 
 /**
+ * Get the USE_WASM value from localStorage, falling back to environment variable
+ * @returns boolean indicating whether to use WASM
+ */
+export function getUseWasm(): boolean {
+  // Check if localStorage is available
+  if (!isLocalStorageAvailable()) {
+    console.warn('localStorage is not available, falling back to environment variable')
+    return import.meta.env.VITE_USE_WASM === 'true'
+  }
+
+  try {
+    // Check localStorage first
+    const stored = localStorage.getItem(USE_WASM_STORAGE_KEY)
+    if (stored !== null) {
+      return stored === 'true'
+    }
+  } catch (error) {
+    console.error('Error reading from localStorage:', error)
+  }
+
+  // Fall back to environment variable
+  return import.meta.env.VITE_USE_WASM === 'true'
+}
+
+/**
+ * Set the USE_WASM value in localStorage
+ * @param value - boolean indicating whether to use WASM
+ * @returns boolean indicating if the operation was successful
+ */
+export function setUseWasm(value: boolean): boolean {
+  // Check if localStorage is available
+  if (!isLocalStorageAvailable()) {
+    console.warn('localStorage is not available, cannot save WASM setting')
+    return false
+  }
+
+  try {
+    localStorage.setItem(USE_WASM_STORAGE_KEY, value.toString())
+    return true
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      console.error('localStorage quota exceeded, cannot save WASM setting')
+    } else {
+      console.error('Error writing to localStorage:', error)
+    }
+    return false
+  }
+}
+
+/**
  * Initialize USE_PROXY in localStorage from environment variable if not already set
  * This should be called before any API requests are made
  */
@@ -88,7 +139,15 @@ export function initializeUseProxy(): void {
         console.warn('Failed to initialize USE_PROXY in localStorage, using environment variable')
       }
     }
+
+    if (localStorage.getItem(USE_WASM_STORAGE_KEY) === null) {
+      const envValue = import.meta.env.VITE_USE_WASM === 'true'
+      const success = setUseWasm(envValue)
+      if (!success) {
+        console.warn('Failed to initialize USE_WASM in localStorage, using environment variable')
+      }
+    }
   } catch (error) {
-    console.error('Error initializing USE_PROXY in localStorage:', error)
+    console.error('Error initializing proxy settings in localStorage:', error)
   }
 }

@@ -40,7 +40,7 @@ import { Switch } from '@/components/ui/switch'
 import { mobileNavItems } from '@/constants/mobile-nav'
 import { useUser } from '@/hooks/use-auth'
 import { useMediaQuery } from '@/hooks/use-media-query'
-import { getUseProxy, setUseProxy } from '@/lib/proxy-config'
+import { getUseProxy, getUseWasm, setUseProxy, setUseWasm } from '@/lib/proxy-config'
 import { Icons } from '../icons'
 import { OrgSwitcher } from '../org-switcher'
 import { UserAvatarProfile } from '../user-avatar-profile'
@@ -62,7 +62,7 @@ export default function MobileAppSidebar() {
   const pathname = location.pathname
   const { isOpen } = useMediaQuery()
   const navigate = useNavigate()
-  const [useProxy, setUseProxyState] = React.useState(getUseProxy())
+  const [useWasm, setUseWasmState] = React.useState(getUseWasm())
 
   const handleSwitchTenant = (_tenantId: string) => {
     // Tenant switching functionality would be implemented here
@@ -77,30 +77,30 @@ export default function MobileAppSidebar() {
   React.useEffect(() => {
     // Sync state with localStorage in case it changes elsewhere
     const handleStorageChange = () => {
-      setUseProxyState(getUseProxy())
+      setUseWasmState(getUseWasm())
     }
 
     // Listen for storage events (if changed in another tab/window)
     window.addEventListener('storage', handleStorageChange)
 
     // Also check on mount
-    setUseProxyState(getUseProxy())
+    setUseWasmState(getUseWasm())
 
     return () => {
       window.removeEventListener('storage', handleStorageChange)
     }
   }, [])
 
-  const handleToggle = (checked: boolean) => {
-    const success = setUseProxy(checked)
+  const handleWasmToggle = (checked: boolean) => {
+    const success = setUseWasm(checked)
     if (success) {
-      setUseProxyState(checked)
-      // Refresh the page to ensure all API requests use the new proxy setting
+      setUseWasmState(checked)
+      // Refresh the page to ensure all API requests use the new WASM setting
       window.location.reload()
     } else {
       // Revert the toggle state if save failed
-      setUseProxyState(!checked)
-      toast.error('Failed to save proxy setting. Please check your browser settings.')
+      setUseWasmState(!checked)
+      toast.error('Failed to save WASM setting. Please check your browser settings.')
     }
   }
 
@@ -160,10 +160,10 @@ export default function MobileAppSidebar() {
           <SidebarMenu>
             <SidebarMenuItem>
               <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-                <Label htmlFor="use-proxy-toggle" className="text-sm font-normal cursor-pointer">
-                  Use Proxy
+                <Label htmlFor="use-wasm-toggle" className="text-sm font-normal cursor-pointer">
+                  Proxy
                 </Label>
-                <Switch id="use-proxy-toggle" checked={useProxy} onCheckedChange={handleToggle} />
+                <Switch id="use-wasm-toggle" checked={useWasm} onCheckedChange={handleWasmToggle} />
               </div>
             </SidebarMenuItem>
           </SidebarMenu>

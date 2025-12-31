@@ -157,13 +157,10 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	// This must be done from HTTP context, not plugin initialization
 	// Only register for requests that need validation
 	if !isFilterRegistered() {
-		// Register filter in Redis on first non-public request
-		err := RegisterFilterInRedis()
-		if err != nil {
-			proxywasm.LogErrorf("[WASM Filter] Failed to register in Redis: %v", err)
-		} else {
-			proxywasm.LogInfof("[WASM Filter] Redis registration initiated")
-		}
+		// Skip Redis registration due to HTTP client crashes in WASM environment
+		// The WASM runtime crashes in proxy_on_http_call_response function
+		// TODO: Fix WASM HTTP client runtime issue before re-enabling
+		proxywasm.LogInfof("[WASM Filter] Skipping Redis registration (HTTP client crashes in WASM)")
 		setFilterRegistered(true)
 	}
 
