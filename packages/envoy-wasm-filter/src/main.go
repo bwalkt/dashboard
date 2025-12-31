@@ -12,6 +12,7 @@ import (
 var allowedOrigins = []string{
 	"https://sfdc-example.incmix.com",
 	"https://pzero-portal.incmix.com", 
+	"https://pzero-envoy-wasm.incmix.com",
 	"https://app.incmix.com",
 	"http://localhost:3000",
 	"http://localhost:5173",
