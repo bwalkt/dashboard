@@ -48,7 +48,7 @@ export async function authenticateToken(
     }
 
     // Get user from database
-    const user = await userService.getUserById(payload.userId);
+    const user = await userService.getUserByEmail(payload.email);
 
     if (!user) {
       return reply.status(401).send({
