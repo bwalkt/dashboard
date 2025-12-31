@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -13,7 +14,7 @@ import (
 // Allowed origins for CORS - validate against this list for security
 var allowedOrigins = []string{
 	"https://sfdc-example.incmix.com",
-	"https://pzero-portal.incmix.com", 
+	"https://pzero-portal.incmix.com",
 	"https://pzero-envoy-wasm.incmix.com",
 	"https://app.incmix.com",
 	"http://localhost:3000",
@@ -29,12 +30,12 @@ func isOriginAllowed(origin string) bool {
 			return true
 		}
 	}
-	
+
 	// Temporary: also allow any incmix.com subdomain for debugging
 	if strings.HasSuffix(origin, ".incmix.com") {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -101,6 +102,81 @@ func parseKeyValueConfig(configStr string, configMap map[string]string) {
 	}
 }
 
+// extractAccessTokenFromCookie extracts the accessToken value from the cookie header
+func extractAccessTokenFromCookie() (string, error) {
+	cookieHeader, err := proxywasm.GetHttpRequestHeader("cookie")
+	if err != nil {
+		return "", err
+	}
+
+	// Parse cookies: format is "key1=value1; key2=value2"
+	cookies := strings.Split(cookieHeader, ";")
+	for _, cookie := range cookies {
+		cookie = strings.TrimSpace(cookie)
+		parts := strings.SplitN(cookie, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			if key == "accessToken" {
+				return value, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("accessToken cookie not found")
+}
+
+// JWTPayload represents the JWT token payload structure
+type JWTPayload struct {
+	UserID string `json:"userId"`
+	Email  string `json:"email"`
+	Exp    int64  `json:"exp"`
+	Iat    int64  `json:"iat"`
+}
+
+// decodeJWTToken decodes a JWT token and extracts the userId from the payload
+// JWT format: header.payload.signature
+func decodeJWTToken(token string) (string, error) {
+	// Split JWT into parts
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return "", fmt.Errorf("invalid JWT format: expected 3 parts, got %d", len(parts))
+	}
+
+	// Decode the payload (second part)
+	payload := parts[1]
+
+	// Add padding if needed (base64 URL encoding may omit padding)
+	switch len(payload) % 4 {
+	case 2:
+		payload += "=="
+	case 3:
+		payload += "="
+	}
+
+	// Decode base64 URL-encoded payload
+	decoded, err := base64.RawURLEncoding.DecodeString(payload)
+	if err != nil {
+		// Try standard base64 encoding as fallback
+		decoded, err = base64.StdEncoding.DecodeString(payload)
+		if err != nil {
+			return "", fmt.Errorf("failed to decode JWT payload: %v", err)
+		}
+	}
+
+	// Parse JSON payload
+	var jwtPayload JWTPayload
+	if err := json.Unmarshal(decoded, &jwtPayload); err != nil {
+		return "", fmt.Errorf("failed to parse JWT payload: %v", err)
+	}
+
+	// Extract userId
+	if jwtPayload.UserID == "" {
+		return "", fmt.Errorf("userId not found in JWT payload")
+	}
+
+	return jwtPayload.UserID, nil
+}
 
 func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPluginStartStatus {
 	// Load configuration from plugin configuration
@@ -116,7 +192,7 @@ func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlu
 		configStr := string(config)
 		// Trim any whitespace/newlines
 		configStr = strings.TrimSpace(configStr)
-		
+
 		// Check if it looks like JSON (starts with { or [)
 		if strings.HasPrefix(configStr, "{") || strings.HasPrefix(configStr, "[") {
 			// Try JSON parsing
@@ -261,9 +337,42 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	}
 
 	// TEMPORARY: Bypass all challenge validation to debug CORS
-	proxywasm.LogInfof("[WASM Filter] TEMPORARY: Bypassing all challenge validation for debugging: %s %s", method, path)
-	return types.ActionContinue
+	// proxywasm.LogInfof("[WASM Filter] TEMPORARY: Bypassing all challenge validation for debugging: %s %s", method, path)
+	// return types.ActionContinue
 
+	// Check user status in Redis
+	// Extract accessToken from cookie
+	accessToken, err := extractAccessTokenFromCookie()
+	if err != nil {
+		proxywasm.LogWarnf("[WASM Filter] Failed to extract accessToken from cookie: %v", err)
+		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"missing access token\"}"), -1)
+		return types.ActionPause
+	}
+
+	// Decode JWT token to get userId
+	userId, err := decodeJWTToken(accessToken)
+	if err != nil {
+		proxywasm.LogWarnf("[WASM Filter] Failed to decode JWT token: %v", err)
+		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid access token\"}"), -1)
+		return types.ActionPause
+	}
+
+	// Check user status in Redis
+	proxywasm.LogInfof("[WASM Filter] Checking user status for user: %s", userId)
+	if err := checkUserStatusAsync(userId); err != nil {
+		proxywasm.LogErrorf("[WASM Filter] Failed to check user status: %v", err)
+		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"failed to verify user status\"}"), -1)
+		return types.ActionPause
+	}
+
+	// Pause request processing - will resume in callback when Redis response received
+	// Store context for challenge validation after status check
+	return types.ActionPause
+}
+
+// performChallengeValidation performs challenge header validation
+// This is called after user status check passes
+func performChallengeValidation() {
 	// Lazy registration: Register filter in Redis on first non-public request
 	// This must be done from HTTP context, not plugin initialization
 	// Only register for requests that need validation
@@ -281,14 +390,14 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 		// Headers not present or error extracting
 		proxywasm.LogWarnf("[WASM Filter] Missing challenge headers: %v", err)
 		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"missing challenge headers\"}"), -1)
-		return types.ActionPause
+		return
 	}
 
 	// Validate format
 	if !challengeHeaders.ValidateFormat() {
 		proxywasm.LogWarnf("[WASM Filter] Invalid challenge header format")
 		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid challenge format\"}"), -1)
-		return types.ActionPause
+		return
 	}
 
 	// Check shared data first
@@ -297,30 +406,27 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 		// Validate against cached answer
 		if ValidateAnswer(challengeHeaders.ChallengeAnswer, expectedAnswer) {
 			proxywasm.LogInfof("[WASM Filter] Challenge validated from cache: %s", challengeHeaders.ChallengeID)
-			return types.ActionContinue
+			proxywasm.ResumeHttpRequest()
+			return
 		}
 		// Answer mismatch
 		proxywasm.LogWarnf("[WASM Filter] Challenge answer mismatch for: %s", challengeHeaders.ChallengeID)
 		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid challenge answer\"}"), -1)
-		return types.ActionPause
+		return
 	}
 
 	// Not found in cache, validate via Redis
-	// Store challenge headers in context for callback
-	ctx.challengeID = challengeHeaders.ChallengeID
-	ctx.challengeAnswer = challengeHeaders.ChallengeAnswer
-
 	proxywasm.LogInfof("[WASM Filter] Challenge not in cache, validating via Redis: %s", challengeHeaders.ChallengeID)
 	_, err = ValidateChallengeViaRedis(challengeHeaders.ChallengeID, challengeHeaders.ChallengeAnswer)
 	if err != nil {
 		proxywasm.LogErrorf("[WASM Filter] Failed to validate via Redis: %v", err)
 		proxywasm.SendHttpResponse(500, nil, []byte("{\"error\":\"validation service error\"}"), -1)
-		return types.ActionPause
+		return
 	}
 
 	// Async validation queued, pause request processing
 	proxywasm.LogInfof("[WASM Filter] Async validation queued - pausing request")
-	return types.ActionPause
+	// Note: ValidateChallengeViaRedis handles pausing via timer-based polling
 }
 
 // OnHttpResponseHeaders is called when response headers are received

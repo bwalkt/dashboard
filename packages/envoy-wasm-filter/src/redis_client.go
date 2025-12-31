@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
@@ -524,6 +525,8 @@ func handleRedisResponseWithID(calloutID uint32, numHeaders, bodySize, numTraile
 		handleRedisFilterRegistrationResponse(response, opState.requestContext)
 	case "heartbeat_update":
 		handleRedisHeartbeatResponse(response, opState.requestContext)
+	case "user_status_check":
+		handleRedisUserStatusResponse(response, opState.requestContext)
 	default:
 		proxywasm.LogWarnf("[Redis] Unknown operation type: %s", opState.operationType)
 		// Don't call ResumeHttpRequest for unknown operations - they might not have a paused request
@@ -583,6 +586,41 @@ func handleRedisHeartbeatResponse(response map[string]interface{}, context map[s
 	// Heartbeat doesn't require resuming a request - it's a background operation
 }
 
+// checkUserStatusAsync checks user status in Redis using key format: status:{user_id}
+func checkUserStatusAsync(userId string) error {
+	redisKey := fmt.Sprintf("status:%s", userId)
+	context := map[string]interface{}{
+		"operation": "user_status_check",
+		"userId":    userId,
+	}
+	return redisGetAsync(redisKey, "user_status_check", context)
+}
+
+// handleRedisUserStatusResponse processes user status check responses
+func handleRedisUserStatusResponse(response map[string]interface{}, context map[string]interface{}) {
+	userId, _ := context["userId"].(string)
+	
+	// Check if we got a value from Redis
+	value, ok := response["value"].(string)
+	if !ok || value == "" {
+		// Status not found or empty - treat as non-ACTIVE
+		proxywasm.LogWarnf("[Redis] User status not found or empty for user: %s", userId)
+		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"user status not found or inactive\"}"), -1)
+		return
+	}
+
+	// Check if status is ACTIVE
+	status := strings.ToUpper(strings.TrimSpace(value))
+	if status == "ACTIVE" {
+		proxywasm.LogInfof("[Redis] User status is ACTIVE for user: %s", userId)
+		// User status is ACTIVE, now perform challenge validation
+		performChallengeValidation()
+	} else {
+		proxywasm.LogWarnf("[Redis] User status is not ACTIVE for user: %s, status: %s", userId, status)
+		proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("{\"error\":\"user status is %s, must be ACTIVE\"}", status)), -1)
+	}
+}
+
 // handleRedisErrorWithContext handles Redis operation errors with operation context
 func handleRedisErrorWithContext(errorMsg string, operationType string) {
 	proxywasm.LogErrorf("[Redis] Operation failed: %s", errorMsg)
@@ -590,6 +628,9 @@ func handleRedisErrorWithContext(errorMsg string, operationType string) {
 	// For operations that need to resume requests, send error response
 	if operationType == "header_info" {
 		proxywasm.SendHttpResponse(500, nil, []byte("{\"error\":\"Redis operation failed\"}"), -1)
+	} else if operationType == "user_status_check" {
+		// User status check failed - return 403
+		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"failed to verify user status\"}"), -1)
 	} else if operationType == "filter_registration" || operationType == "heartbeat_update" {
 		// Background operations - don't resume, just log
 		proxywasm.LogWarnf("[Redis] Background operation failed: %s", errorMsg)
