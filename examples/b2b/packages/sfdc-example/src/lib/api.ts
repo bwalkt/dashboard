@@ -663,7 +663,7 @@ export async function apiRequestWithProxy<T = any>(endpoint: string, options?: A
  * This checks localStorage dynamically so changes take effect immediately
  */
 function getApiRequest() {
-  return getUseProxy() ? apiRequestWithProxy : apiRequestWithoutProxy
+  return getUseWasm() ? apiRequestWithProxy : apiRequestWithoutProxy
 }
 
 export const api = {
