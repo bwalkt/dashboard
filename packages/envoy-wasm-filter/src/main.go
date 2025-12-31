@@ -8,6 +8,41 @@ import (
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
 
+// Allowed origins for CORS - validate against this list for security
+var allowedOrigins = []string{
+	"https://sfdc-example.incmix.com",
+	"https://pzero-portal.incmix.com", 
+	"https://app.incmix.com",
+	"http://localhost:3000",
+	"http://localhost:5173",
+	"http://localhost:8080",
+}
+
+// isOriginAllowed checks if origin is in the allowlist
+func isOriginAllowed(origin string) bool {
+	for _, allowed := range allowedOrigins {
+		if origin == allowed {
+			return true
+		}
+	}
+	return false
+}
+
+// getCORSHeaders returns CORS headers for the given origin if allowed
+func getCORSHeaders(origin string) [][2]string {
+	if origin == "" || !isOriginAllowed(origin) {
+		return nil
+	}
+	return [][2]string{
+		{"access-control-allow-origin", origin},
+		{"access-control-allow-credentials", "true"},
+		{"access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH"},
+		{"access-control-allow-headers", "Content-Type, Authorization, X-Requested-With, Accept, traceparent, x-client-type, x-auth-token, tracestate, X-Custom-Auth, x-grpc-web, x-grpc-web-accept-encoding, X-Custom-Header, X-Test-Eval, x-proxy-target-id, x-challenge-id, x-challenge-answer"},
+		{"access-control-expose-headers", "Content-Range, X-Content-Range, X-Test-Eval"},
+		{"access-control-max-age", "86400"},
+	}
+}
+
 func main() {}
 func init() {
 	proxywasm.SetVMContext(&vmContext{})
@@ -140,6 +175,19 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 
 	proxywasm.LogInfof("[WASM Filter] Processing request: %s %s", method, path)
 
+	// Handle CORS preflight requests
+	if method == "OPTIONS" {
+		// Get the Origin header
+		origin, _ := proxywasm.GetHttpRequestHeader("origin")
+		corsHeaders := getCORSHeaders(origin)
+		if corsHeaders != nil {
+			// Add content-type for preflight response
+			corsHeaders = append(corsHeaders, [2]string{"content-type", "text/plain"})
+			proxywasm.SendHttpResponse(204, corsHeaders, nil, -1)
+			return types.ActionPause
+		}
+	}
+
 	// Check if this is a public route - bypass validation
 	if IsPublicRoute(path, method) {
 		proxywasm.LogInfof("[WASM Filter] Public route, bypassing validation: %s %s", method, path)
@@ -203,6 +251,20 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	// Async validation queued, pause request processing
 	proxywasm.LogInfof("[WASM Filter] Async validation queued - pausing request")
 	return types.ActionPause
+}
+
+// OnHttpResponseHeaders is called when response headers are received
+func (ctx *httpContext) OnHttpResponseHeaders(numHeaders int, endOfStream bool) types.Action {
+	// Add CORS headers to all responses from allowed origins
+	origin, _ := proxywasm.GetHttpRequestHeader("origin")
+	corsHeaders := getCORSHeaders(origin)
+	if corsHeaders != nil {
+		// Set CORS headers for cross-origin requests from allowed origins
+		for _, header := range corsHeaders {
+			proxywasm.AddHttpResponseHeader(header[0], header[1])
+		}
+	}
+	return types.ActionContinue
 }
 
 // OnHttpCallResponse handles responses from HTTP callouts (when callback is nil)

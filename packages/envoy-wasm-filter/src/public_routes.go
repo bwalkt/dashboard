@@ -23,6 +23,8 @@ var PublicRoutes = []PublicRoute{
 	{Path: "/api/faq", Exact: true},
 	{Path: "/terms", Exact: true},
 	{Path: "/api/terms", Exact: true},
+	{Path: "/privacy", Exact: true},
+	{Path: "/api/privacy", Exact: true},
 	{Prefix: "/public"},
 	{Prefix: "/api/public"},
 	{Prefix: "/docs"},
