@@ -140,6 +140,26 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 
 	proxywasm.LogInfof("[WASM Filter] Processing request: %s %s", method, path)
 
+	// Handle CORS preflight requests
+	if method == "OPTIONS" {
+		// Get the Origin header
+		origin, _ := proxywasm.GetHttpRequestHeader("origin")
+		if origin != "" {
+			// Send CORS preflight response
+			headers := [][2]string{
+				{"access-control-allow-origin", origin},
+				{"access-control-allow-credentials", "true"},
+				{"access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH"},
+				{"access-control-allow-headers", "Content-Type, Authorization, X-Requested-With, Accept, traceparent, x-client-type, x-auth-token, tracestate, X-Custom-Auth, x-grpc-web, x-grpc-web-accept-encoding, X-Custom-Header, X-Test-Eval, x-proxy-target-id, x-challenge-id, x-challenge-answer"},
+				{"access-control-expose-headers", "Content-Range, X-Content-Range, X-Test-Eval"},
+				{"access-control-max-age", "86400"},
+				{"content-type", "text/plain"},
+			}
+			proxywasm.SendHttpResponse(204, headers, nil, -1)
+			return types.ActionPause
+		}
+	}
+
 	// Check if this is a public route - bypass validation
 	if IsPublicRoute(path, method) {
 		proxywasm.LogInfof("[WASM Filter] Public route, bypassing validation: %s %s", method, path)
@@ -203,6 +223,23 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	// Async validation queued, pause request processing
 	proxywasm.LogInfof("[WASM Filter] Async validation queued - pausing request")
 	return types.ActionPause
+}
+
+// OnHttpResponseHeaders is called when response headers are received
+func (ctx *httpContext) OnHttpResponseHeaders(numHeaders int, endOfStream bool) types.Action {
+	// Add CORS headers to all responses
+	// Get the Origin header from the request
+	origin, _ := proxywasm.GetHttpRequestHeader("origin")
+	if origin != "" {
+		// Set CORS headers for cross-origin requests
+		proxywasm.AddHttpResponseHeader("access-control-allow-origin", origin)
+		proxywasm.AddHttpResponseHeader("access-control-allow-credentials", "true")
+		proxywasm.AddHttpResponseHeader("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+		proxywasm.AddHttpResponseHeader("access-control-allow-headers", "Content-Type, Authorization, X-Requested-With, Accept, traceparent, x-client-type, x-auth-token, tracestate, X-Custom-Auth, x-grpc-web, x-grpc-web-accept-encoding, X-Custom-Header, X-Test-Eval, x-proxy-target-id, x-challenge-id, x-challenge-answer")
+		proxywasm.AddHttpResponseHeader("access-control-expose-headers", "Content-Range, X-Content-Range, X-Test-Eval")
+		proxywasm.AddHttpResponseHeader("access-control-max-age", "86400")
+	}
+	return types.ActionContinue
 }
 
 // OnHttpCallResponse handles responses from HTTP callouts (when callback is nil)
