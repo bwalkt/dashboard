@@ -20,11 +20,18 @@ var allowedOrigins = []string{
 
 // isOriginAllowed checks if origin is in the allowlist
 func isOriginAllowed(origin string) bool {
+	// Check exact matches
 	for _, allowed := range allowedOrigins {
 		if origin == allowed {
 			return true
 		}
 	}
+	
+	// Temporary: also allow any incmix.com subdomain for debugging
+	if strings.HasSuffix(origin, ".incmix.com") {
+		return true
+	}
+	
 	return false
 }
 
