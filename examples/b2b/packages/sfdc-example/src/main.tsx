@@ -3,10 +3,10 @@ import './tracing'
 
 // Validate challenge secret before any API requests are made
 import { validateChallengeSecret } from './lib/api'
-// Initialize USE_PROXY from localStorage before any API requests are made
-import { initializeUseProxy } from './lib/proxy-config'
+// Initialize proxy and WASM settings from localStorage before any API requests are made
+import { initializeProxySettings } from './lib/proxy-config'
 
-initializeUseProxy()
+initializeProxySettings()
 validateChallengeSecret()
 
 import React from 'react'

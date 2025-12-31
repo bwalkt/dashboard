@@ -33,6 +33,8 @@ services:
       - pzero-network
     volumes:
       - dragonfly_data:/data
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -150,6 +152,7 @@ services:
     restart: unless-stopped
     environment:
       - ENVOY_LOG_LEVEL=info
+      - JWT_SECRET=${JWT_SECRET:-default-secret-key-change-in-production}
     depends_on:
       pzero-server:
         condition: service_started

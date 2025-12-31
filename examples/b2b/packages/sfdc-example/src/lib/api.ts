@@ -10,7 +10,7 @@
  * - Challenge solving and header attachment
  */
 
-import { getUseProxy } from './proxy-config'
+import { getUseProxy, getUseWasm } from './proxy-config'
 
 const VALIDATION_HEADER = 'X-Test-Eval'
 const PROXY_TARGET_ID_HEADER = 'x-proxy-target-id'
@@ -158,14 +158,26 @@ function getBackendUrl(): string {
   return backendUrl
 }
 /**
- * Get the proxy URL from environment variables
+ * Get the proxy URL from environment variables, choosing between WASM and non-WASM proxy
  */
 function getProxyUrl(): string {
-  const proxyUrl = import.meta.env.VITE_PROXY_URL
-  if (!proxyUrl) {
-    throw new Error('Proxy URL not configured. Please set VITE_PROXY_URL in your environment variables.')
+  const useWasm = getUseWasm()
+
+  if (useWasm) {
+    // Use WASM proxy URL
+    const wasmProxyUrl = import.meta.env.VITE_PROXY_URL_WASM
+    if (!wasmProxyUrl) {
+      throw new Error('WASM Proxy URL not configured. Please set VITE_PROXY_URL_WASM in your environment variables.')
+    }
+    return wasmProxyUrl
+  } else {
+    // Use regular (non-WASM) proxy URL
+    const proxyUrl = import.meta.env.VITE_PROXY_URL
+    if (!proxyUrl) {
+      throw new Error('Proxy URL not configured. Please set VITE_PROXY_URL in your environment variables.')
+    }
+    return proxyUrl
   }
-  return proxyUrl
 }
 /**
  * Get the proxy target URL from environment variables

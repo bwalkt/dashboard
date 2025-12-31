@@ -8,8 +8,10 @@ async function authenticateRequest(request: FastifyRequest, reply: FastifyReply)
   try {
     // For filter requests, check x-filter-token
     const filterToken = request.headers['x-filter-token'] as string;
+    console.log({filterToken})
     if (filterToken) {
       const validation = await FilterRedisService.validateFilterToken(filterToken);
+      console.log(validation)
       if (!validation.valid) {
         reply.code(401);
         throw new Error('Invalid filter token');
@@ -22,7 +24,7 @@ async function authenticateRequest(request: FastifyRequest, reply: FastifyReply)
     // For admin requests, check standard auth
     const apiKey = request.headers['x-api-key'] as string;
     const authHeader = request.headers['authorization'] as string;
-    
+    console.log({apiKey,authHeader})
     let token = apiKey;
     if (!token && authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
@@ -68,7 +70,7 @@ export async function redisProxyRoutes(
   }>("/redis-proxy", async (request, reply) => {
     try {
       const { command, key, value, field, args } = request.body;
-      
+      console.log(request.body)
       // Get filter ID from authentication middleware
       const filterId = (request as any).filterId;
       if (!filterId) {

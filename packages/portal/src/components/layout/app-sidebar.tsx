@@ -1,6 +1,7 @@
 // User management imports
 import {
   IconBell,
+  IconBrightness,
   IconChevronRight,
   IconChevronsDown,
   IconCreditCard,
@@ -9,6 +10,7 @@ import {
   IconUserCircle,
 } from '@tabler/icons-react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
+import { useTheme } from 'next-themes'
 import * as React from 'react'
 import { toast } from 'sonner'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -115,6 +117,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
   const currentOrg = useOrgsStore(state => state.currentOrg)
   const fetchOrgs = useOrgsStore(state => state.fetchOrgs)
   const setCurrentOrg = useOrgsStore(state => state.setCurrentOrg)
+  const { setTheme, resolvedTheme } = useTheme()
 
   // Fetch orgs on mount if not loaded
   React.useEffect(() => {
@@ -338,10 +341,15 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
           <SidebarGroupLabel>Settings</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <div className="flex items-center gap-2 p-2">
-                <ModeToggle />
-                <span className="text-sm">Theme</span>
-              </div>
+              <SidebarMenuButton
+                tooltip="Toggle theme"
+                onClick={() => {
+                  setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
+                }}
+              >
+                <IconBrightness />
+                <span>Theme</span>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>

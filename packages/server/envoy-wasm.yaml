@@ -14,6 +14,17 @@ static_resources:
                   virtual_hosts:
                     - name: backend
                       domains: ["*"]
+                      cors:
+                        allow_origin_string_match:
+                          - prefix: "http://localhost"
+                          - prefix: "https://localhost"
+                          - prefix: "https://sfdc-example.incmix.com"
+                          - prefix: "https://pzero-envoy-wasm.incmix.com"
+                        allow_methods: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+                        allow_headers: "content-type,x-challenge-id,x-challenge-answer,authorization,traceparent,x-proxy-target-id,x-client-type"
+                        expose_headers: "x-challenge-id,x-challenge"
+                        allow_credentials: true
+                        max_age: "86400"
                       routes:
                         # All routes go to server_cluster
                         # Public route bypass is handled by WASM filter, not Envoy config
@@ -37,6 +48,12 @@ static_resources:
                             local:
                               filename: "/etc/envoy/wasm/challenge-authz.wasm"
                           allow_precompiled: true
+                        configuration:
+                          "@type": type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            centrifugo_secret=default-secret-key-change-in-production_FILTER_AUTH
+                            filter_id=pzero-envoy-wasm-filter-1
+                            jwt_secret=your_super_secret_jwt_key_change_this_in_production
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -71,5 +88,3 @@ admin:
     socket_address:
       address: 0.0.0.0
       port_value: 9902
-
-

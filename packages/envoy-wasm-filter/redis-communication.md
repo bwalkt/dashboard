@@ -182,9 +182,9 @@ clusters:
 ### Filter Constants (in Go code)
 ```go
 const (
-    redisCluster = "redis_cluster"
+    redisCluster = "server_cluster"
     filterID     = "wasm-filter-1"
-    jwtSecret    = "your-secret-key"
+    jwtSecret    = "your_super_secret_jwt_key_change_this_in_production"
 )
 ```
 
