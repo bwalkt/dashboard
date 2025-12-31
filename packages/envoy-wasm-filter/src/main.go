@@ -28,6 +28,21 @@ func isOriginAllowed(origin string) bool {
 	return false
 }
 
+// getCORSHeaders returns CORS headers for the given origin if allowed
+func getCORSHeaders(origin string) [][2]string {
+	if origin == "" || !isOriginAllowed(origin) {
+		return nil
+	}
+	return [][2]string{
+		{"access-control-allow-origin", origin},
+		{"access-control-allow-credentials", "true"},
+		{"access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH"},
+		{"access-control-allow-headers", "Content-Type, Authorization, X-Requested-With, Accept, traceparent, x-client-type, x-auth-token, tracestate, X-Custom-Auth, x-grpc-web, x-grpc-web-accept-encoding, X-Custom-Header, X-Test-Eval, x-proxy-target-id, x-challenge-id, x-challenge-answer"},
+		{"access-control-expose-headers", "Content-Range, X-Content-Range, X-Test-Eval"},
+		{"access-control-max-age", "86400"},
+	}
+}
+
 func main() {}
 func init() {
 	proxywasm.SetVMContext(&vmContext{})
@@ -164,18 +179,11 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	if method == "OPTIONS" {
 		// Get the Origin header
 		origin, _ := proxywasm.GetHttpRequestHeader("origin")
-		if origin != "" && isOriginAllowed(origin) {
-			// Send CORS preflight response
-			headers := [][2]string{
-				{"access-control-allow-origin", origin},
-				{"access-control-allow-credentials", "true"},
-				{"access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH"},
-				{"access-control-allow-headers", "Content-Type, Authorization, X-Requested-With, Accept, traceparent, x-client-type, x-auth-token, tracestate, X-Custom-Auth, x-grpc-web, x-grpc-web-accept-encoding, X-Custom-Header, X-Test-Eval, x-proxy-target-id, x-challenge-id, x-challenge-answer"},
-				{"access-control-expose-headers", "Content-Range, X-Content-Range, X-Test-Eval"},
-				{"access-control-max-age", "86400"},
-				{"content-type", "text/plain"},
-			}
-			proxywasm.SendHttpResponse(204, headers, nil, -1)
+		corsHeaders := getCORSHeaders(origin)
+		if corsHeaders != nil {
+			// Add content-type for preflight response
+			corsHeaders = append(corsHeaders, [2]string{"content-type", "text/plain"})
+			proxywasm.SendHttpResponse(204, corsHeaders, nil, -1)
 			return types.ActionPause
 		}
 	}
@@ -247,17 +255,14 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 
 // OnHttpResponseHeaders is called when response headers are received
 func (ctx *httpContext) OnHttpResponseHeaders(numHeaders int, endOfStream bool) types.Action {
-	// Add CORS headers to all responses
-	// Get the Origin header from the request
+	// Add CORS headers to all responses from allowed origins
 	origin, _ := proxywasm.GetHttpRequestHeader("origin")
-	if origin != "" && isOriginAllowed(origin) {
+	corsHeaders := getCORSHeaders(origin)
+	if corsHeaders != nil {
 		// Set CORS headers for cross-origin requests from allowed origins
-		proxywasm.AddHttpResponseHeader("access-control-allow-origin", origin)
-		proxywasm.AddHttpResponseHeader("access-control-allow-credentials", "true")
-		proxywasm.AddHttpResponseHeader("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
-		proxywasm.AddHttpResponseHeader("access-control-allow-headers", "Content-Type, Authorization, X-Requested-With, Accept, traceparent, x-client-type, x-auth-token, tracestate, X-Custom-Auth, x-grpc-web, x-grpc-web-accept-encoding, X-Custom-Header, X-Test-Eval, x-proxy-target-id, x-challenge-id, x-challenge-answer")
-		proxywasm.AddHttpResponseHeader("access-control-expose-headers", "Content-Range, X-Content-Range, X-Test-Eval")
-		proxywasm.AddHttpResponseHeader("access-control-max-age", "86400")
+		for _, header := range corsHeaders {
+			proxywasm.AddHttpResponseHeader(header[0], header[1])
+		}
 	}
 	return types.ActionContinue
 }
