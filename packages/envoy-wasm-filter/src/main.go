@@ -8,6 +8,26 @@ import (
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
 
+// Allowed origins for CORS - validate against this list for security
+var allowedOrigins = []string{
+	"https://sfdc-example.incmix.com",
+	"https://pzero-portal.incmix.com", 
+	"https://app.incmix.com",
+	"http://localhost:3000",
+	"http://localhost:5173",
+	"http://localhost:8080",
+}
+
+// isOriginAllowed checks if origin is in the allowlist
+func isOriginAllowed(origin string) bool {
+	for _, allowed := range allowedOrigins {
+		if origin == allowed {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {}
 func init() {
 	proxywasm.SetVMContext(&vmContext{})
@@ -144,7 +164,7 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	if method == "OPTIONS" {
 		// Get the Origin header
 		origin, _ := proxywasm.GetHttpRequestHeader("origin")
-		if origin != "" {
+		if origin != "" && isOriginAllowed(origin) {
 			// Send CORS preflight response
 			headers := [][2]string{
 				{"access-control-allow-origin", origin},
@@ -230,8 +250,8 @@ func (ctx *httpContext) OnHttpResponseHeaders(numHeaders int, endOfStream bool) 
 	// Add CORS headers to all responses
 	// Get the Origin header from the request
 	origin, _ := proxywasm.GetHttpRequestHeader("origin")
-	if origin != "" {
-		// Set CORS headers for cross-origin requests
+	if origin != "" && isOriginAllowed(origin) {
+		// Set CORS headers for cross-origin requests from allowed origins
 		proxywasm.AddHttpResponseHeader("access-control-allow-origin", origin)
 		proxywasm.AddHttpResponseHeader("access-control-allow-credentials", "true")
 		proxywasm.AddHttpResponseHeader("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
