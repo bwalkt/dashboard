@@ -1,128 +1,182 @@
-/**
- * Reusable API utility for making HTTP requests to the backend
- *
- * Features:
- * - Automatic token refresh on 401 responses
- * - Centralized error handling
- * - Type-safe responses
- * - Consistent configuration
- * - Built-in retry logic for authentication failures
- */
-import { envs } from '@/constants/envs'
-export interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
-  body?: any
-  baseUrl?: string
-  skipRefresh?: boolean // Skip automatic token refresh for this request
+export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
+  body?: any;
+  baseUrl?: string;
+  skipRefresh?: boolean; // Skip automatic token refresh for this request
 }
 
 export interface ApiResponse<T = any> {
-  success: boolean
-  data?: T
-  message?: string
-  error?: string
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
 }
 
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-    public statusText: string,
-    public response?: Response,
-  ) {
-    super(message)
-    this.name = 'ApiError'
+  constructor(message: string, public status: number, public statusText: string, public response?: Response) {
+    super(message);
+    this.name = "ApiError";
   }
 }
 
 /**
- * Retrieve the backend base URL from the `VITE_BACKEND_URL` environment variable.
- *
- * @returns The backend base URL string, or empty string for relative URLs.
+ * Get the backend URL from environment variables
  */
 function getBackendUrl(): string {
-  const backendUrl = envs.BASE_API_URL
-  // If not set or empty, use relative URLs (proxied through Vite)
-  console.log('Backend URL:', backendUrl)
-  return backendUrl || 'http://localhost:8090'
+  return import.meta.env.VITE_API_BASE_URL;
 }
 
 /**
  * Default headers for API requests
+ * Note: Content-Type is not included by default - it's added only when there's a body
  */
-const defaultHeaders: HeadersInit = {
-  'Content-Type': 'application/json',
-}
+const defaultHeaders: HeadersInit = {};
 
 /**
  * Default request options
  */
 const defaultOptions: RequestInit = {
-  credentials: 'include',
+  credentials: "include",
   headers: defaultHeaders,
-}
+};
 
 /**
  * Track if we're currently refreshing to avoid multiple simultaneous refresh attempts
  */
-let isRefreshing = false
-let refreshPromise: Promise<void> | null = null
+let isRefreshing = false;
+let refreshPromise: Promise<void> | null = null;
 
 /**
- * Refreshes the authentication token by calling the backend /auth/refresh endpoint and prevents concurrent refresh attempts.
- *
- * @returns Void when the refresh operation completes.
- * @throws {ApiError} If the refresh response has a non-OK HTTP status.
+ * Extract error message from a response, falling back to status text
  */
-async function refreshToken(): Promise<void> {
-  if (isRefreshing && refreshPromise) {
-    return refreshPromise
+async function extractErrorMessage(response: Response): Promise<string> {
+  let errorMessage = `Request failed: ${response.status} ${response.statusText}`;
+  try {
+    const errorData = await response.json();
+    errorMessage = errorData.message || errorData.error || errorMessage;
+  } catch {
+    // If we can't parse the error response, use the default message
   }
-
-  isRefreshing = true
-  refreshPromise = (async () => {
-    try {
-      const backendUrl = getBackendUrl()
-
-      const refreshUrl = backendUrl ? `${backendUrl}/auth/refresh` : '/auth/refresh'
-      const response = await fetch(refreshUrl, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (!response.ok) {
-        throw new ApiError('Token refresh failed', response.status, response.statusText, response)
-      }
-    } catch (error) {
-      throw error
-    } finally {
-      isRefreshing = false
-      refreshPromise = null
-    }
-  })()
-
-  return refreshPromise
+  return errorMessage;
 }
 
 /**
- * Perform an HTTP request to the backend with automatic token refresh on 401.
+ * Convert HeadersInit to a plain object
+ */
+function headersToObject(headers: HeadersInit): Record<string, string> {
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries());
+  }
+  return (headers as Record<string, string>) || {};
+}
+
+/**
+ * Serialize request body based on its type
+ */
+function serializeBody(body: any, headers: Record<string, string>): { body: any; headers: Record<string, string> } {
+  if (body === undefined) {
+    delete headers["Content-Type"];
+    return { body: undefined, headers };
+  }
+
+  const updatedHeaders = { ...headers };
+
+  if (body instanceof FormData) {
+    // Don't set Content-Type for FormData, let the browser set it with boundary
+    delete updatedHeaders["Content-Type"];
+    return { body, headers: updatedHeaders };
+  }
+
+  if (typeof body === "object") {
+    // Add Content-Type header for JSON body
+    updatedHeaders["Content-Type"] = "application/json";
+    // JSON.stringify for direct requests
+    return { body: JSON.stringify(body), headers: updatedHeaders };
+  }
+
+  return { body, headers: updatedHeaders };
+}
+
+/**
+ * Parse an API response
+ */
+async function parseResponse<T>(response: Response): Promise<T> {
+  // Handle empty responses (e.g., 204 No Content)
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return {} as T;
+  }
+
+  // Parse JSON response
+  const contentType = response.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return await response.json();
+  }
+
+  // Return text response for non-JSON content
+  return (await response.text()) as T;
+}
+
+/**
+ * Attempt to refresh the authentication token
+ */
+async function refreshToken(): Promise<void> {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${getBackendUrl()}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers: new Headers(defaultHeaders),
+      });
+
+      if (!response.ok) {
+        throw new ApiError("Token refresh failed", response.status, response.statusText, response);
+      }
+    } catch (error) {
+      throw error;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+/**
+ * Make an API request with standardized error handling and configuration
  *
- * Parses JSON responses to objects, returns text for non-JSON responses, and
- * returns an empty object for 204 No Content or zero-length responses.
+ * Automatically handles:
+ * - 401 responses by attempting token refresh and retrying the request
+ * - JSON response parsing
+ * - Error message extraction
+ * - Network error handling
  *
- * @param endpoint - The API endpoint path (e.g., "/auth/me")
- * @param options - Request options; supports `body`, `baseUrl`, `headers`, and `skipRefresh` to disable automatic token refresh for this request
- * @returns The response payload: parsed JSON as `T`, a string for non-JSON responses, or an empty object for 204/zero-length responses
- * @throws ApiError when the request fails due to an HTTP error or network failure
+ * @param endpoint - The API endpoint (e.g., "/auth/me")
+ * @param options - Request options including body, headers, and skipRefresh flag
+ * @returns Promise resolving to the response data
  */
 export async function apiRequest<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
-  const backendUrl = getBackendUrl()
-  const { baseUrl = backendUrl, body, headers = {}, skipRefresh = false, ...fetchOptions } = options
+  const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options;
+  console.log("baseUrl", baseUrl);
+  console.log("endpoint", endpoint);
+  console.log("headers", headers);
+  console.log("skipRefresh", skipRefresh);
+  console.log("fetchOptions", fetchOptions);
+  // Construct the full URL
+  const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
-  // Construct the full URL (handle empty baseUrl for relative paths)
-  const url = baseUrl ? `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}` : endpoint
+  // Prepare headers as a plain object for serialization
+  const headersObj = headersToObject(headers);
+
+  // Handle body serialization
+  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj);
 
   // Prepare the request configuration
   const requestConfig: RequestInit = {
@@ -130,144 +184,56 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
     ...fetchOptions,
     headers: {
       ...defaultHeaders,
-      ...headers,
+      ...updatedHeaders,
     },
-  }
-
-  // Handle body serialization
-  if (body !== undefined) {
-    if (body instanceof FormData) {
-      // Don't set Content-Type for FormData, let the browser set it with boundary
-      delete (requestConfig.headers as Record<string, string>)['Content-Type']
-      requestConfig.body = body
-    } else if (typeof body === 'object') {
-      requestConfig.body = JSON.stringify(body)
-    } else {
-      requestConfig.body = body
-    }
-  } else {
-    // Remove Content-Type header when there's no body to avoid Fastify empty body error
-    delete (requestConfig.headers as Record<string, string>)['Content-Type']
-  }
+    body: serializedBody,
+  };
 
   try {
-    const response = await fetch(url, requestConfig)
+    const response = await fetch(url, requestConfig);
 
     // Handle non-OK responses
     if (!response.ok) {
       // Handle 401 Unauthorized with token refresh
-      if (response.status === 401 && !skipRefresh && !url.includes('/auth/refresh')) {
+      if (response.status === 401 && !skipRefresh && !url.includes("/auth/refresh")) {
         try {
-          await refreshToken()
+          await refreshToken();
           // Retry the original request after successful refresh
-          const retryResponse = await fetch(url, requestConfig)
+          const retryResponse = await fetch(url, requestConfig);
 
           if (!retryResponse.ok) {
-            let errorMessage = `Request failed: ${retryResponse.status} ${retryResponse.statusText}`
-
-            try {
-              const errorData = await retryResponse.json()
-              errorMessage = errorData.message || errorData.error || errorMessage
-            } catch {
-              // If we can't parse the error response, use the default message
-            }
-
-            throw new ApiError(errorMessage, retryResponse.status, retryResponse.statusText, retryResponse)
+            const errorMessage = await extractErrorMessage(retryResponse);
+            throw new ApiError(errorMessage, retryResponse.status, retryResponse.statusText, retryResponse);
           }
 
-          // Use the retry response for the rest of the function
-          const contentType = retryResponse.headers.get('content-type')
-          if (retryResponse.status === 204 || retryResponse.headers.get('content-length') === '0') {
-            return {} as T
-          }
-
-          if (contentType && contentType.includes('application/json')) {
-            return await retryResponse.json()
-          }
-
-          return (await retryResponse.text()) as T
+          return await parseResponse<T>(retryResponse);
         } catch (refreshError) {
           // If refresh fails, throw the original 401 error
-          let errorMessage = `Request failed: ${response.status} ${response.statusText}`
-
-          try {
-            const errorData = await response.json()
-            errorMessage = errorData.message || errorData.error || errorMessage
-          } catch {
-            // If we can't parse the error response, use the default message
-          }
-
-          throw new ApiError(errorMessage, response.status, response.statusText, response)
+          const errorMessage = await extractErrorMessage(response);
+          throw new ApiError(errorMessage, response.status, response.statusText, response);
         }
       }
 
       // Handle other non-OK responses
-      let errorMessage = `Request failed: ${response.status} ${response.statusText}`
-
-      try {
-        const errorData = await response.json()
-        errorMessage = errorData.message || errorData.error || errorMessage
-      } catch {
-        // If we can't parse the error response, use the default message
-      }
-
-      throw new ApiError(errorMessage, response.status, response.statusText, response)
+      const errorMessage = await extractErrorMessage(response);
+      throw new ApiError(errorMessage, response.status, response.statusText, response);
     }
 
-    // Handle empty responses (e.g., 204 No Content)
-    if (response.status === 204 || response.headers.get('content-length') === '0') {
-      return {} as T
-    }
-
-    // Parse JSON response
-    const contentType = response.headers.get('content-type')
-    if (contentType && contentType.includes('application/json')) {
-      return await response.json()
-    }
-
-    // Return text response for non-JSON content
-    return (await response.text()) as T
+    return await parseResponse<T>(response);
   } catch (error) {
     if (error instanceof ApiError) {
-      throw error
+      throw error;
     }
 
     // Handle network errors and other fetch failures
-    throw new ApiError(error instanceof Error ? error.message : 'Network request failed', 0, 'Network Error')
+    throw new ApiError(error instanceof Error ? error.message : "Network request failed", 0, "Network Error");
   }
 }
 
-/**
- * Convenience methods for common HTTP methods
- */
 export const api = {
-  /**
-   * GET request
-   */
-  get: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, 'method' | 'body'>) =>
-    apiRequest<T>(endpoint, { ...options, method: 'GET' }),
-
-  /**
-   * POST request
-   */
-  post: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, 'method'>) =>
-    apiRequest<T>(endpoint, { ...options, method: 'POST', body }),
-
-  /**
-   * PUT request
-   */
-  put: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, 'method'>) =>
-    apiRequest<T>(endpoint, { ...options, method: 'PUT', body }),
-
-  /**
-   * PATCH request
-   */
-  patch: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, 'method'>) =>
-    apiRequest<T>(endpoint, { ...options, method: 'PATCH', body }),
-
-  /**
-   * DELETE request
-   */
-  delete: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, 'method' | 'body'>) =>
-    apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
-}
+  get: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, "method" | "body">) => apiRequest<T>(endpoint, { ...options, method: "GET" }),
+  post: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "POST", body }),
+  put: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "PUT", body }),
+  patch: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "PATCH", body }),
+  delete: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, "method" | "body">) => apiRequest<T>(endpoint, { ...options, method: "DELETE" }),
+};

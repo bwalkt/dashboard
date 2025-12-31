@@ -10,17 +10,17 @@
  * - Challenge solving and header attachment
  */
 
-import { getUseProxy, getUseWasm } from './proxy-config'
+import { getUseWasm } from "./proxy-config";
 
-const VALIDATION_HEADER = 'X-Test-Eval'
-const PROXY_TARGET_ID_HEADER = 'x-proxy-target-id'
-const CHALLENGE_ID_HEADER = 'x-challenge-id'
-const CHALLENGE_HEADER = 'x-challenge'
-const CHALLENGE_ANSWER_HEADER = 'x-challenge-answer'
+const VALIDATION_HEADER = "X-Test-Eval";
+const PROXY_TARGET_ID_HEADER = "x-proxy-target-id";
+const CHALLENGE_ID_HEADER = "x-challenge-id";
+const CHALLENGE_HEADER = "x-challenge";
+const CHALLENGE_ANSWER_HEADER = "x-challenge-answer";
 
 // LocalStorage keys
-const CHALLENGE_ID_STORAGE_KEY = 'challenge_id'
-const CHALLENGE_ANSWER_STORAGE_KEY = 'challenge_answer'
+const CHALLENGE_ID_STORAGE_KEY = "challenge_id";
+const CHALLENGE_ANSWER_STORAGE_KEY = "challenge_answer";
 
 /**
  * Get the challenge secret from environment variables
@@ -28,26 +28,20 @@ const CHALLENGE_ANSWER_STORAGE_KEY = 'challenge_answer'
  * @throws Error if VITE_CHALLENGE_SECRET is not set in non-development environments
  */
 function getChallengeSecret(): string {
-  const secret = import.meta.env.VITE_CHALLENGE_SECRET
+  const secret = import.meta.env.VITE_CHALLENGE_SECRET;
 
   if (!secret) {
     // In development, allow missing secret with a warning
-    if (import.meta.env.DEV || import.meta.env.MODE === 'development') {
-      console.warn(
-        '⚠️ VITE_CHALLENGE_SECRET is not set. Using default secret for development only. ' +
-          'This should be set in production environments.',
-      )
-      return 'default-secret-change-in-production'
+    if (import.meta.env.DEV || import.meta.env.MODE === "development") {
+      console.warn("⚠️ VITE_CHALLENGE_SECRET is not set. Using default secret for development only. " + "This should be set in production environments.");
+      return "default-secret-change-in-production";
     }
 
     // In non-development environments, fail fast
-    throw new Error(
-      'VITE_CHALLENGE_SECRET is required but not set. ' +
-        'Please set VITE_CHALLENGE_SECRET in your environment variables.',
-    )
+    throw new Error("VITE_CHALLENGE_SECRET is required but not set. " + "Please set VITE_CHALLENGE_SECRET in your environment variables.");
   }
 
-  return secret
+  return secret;
 }
 
 /**
@@ -57,7 +51,7 @@ function getChallengeSecret(): string {
  */
 export function validateChallengeSecret(): void {
   // Call getChallengeSecret() which will throw if missing in non-dev environments
-  getChallengeSecret()
+  getChallengeSecret();
 }
 
 /**
@@ -66,39 +60,39 @@ export function validateChallengeSecret(): void {
  * @returns The computed challenge answer (SHA256 hash)
  */
 async function solveChallenge(challengeId: string): Promise<string> {
-  const secret = getChallengeSecret()
-  const message = challengeId + secret
+  const secret = getChallengeSecret();
+  const message = challengeId + secret;
 
   // Use Web Crypto API for SHA256 hashing
-  const encoder = new TextEncoder()
-  const data = encoder.encode(message)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  const encoder = new TextEncoder();
+  const data = encoder.encode(message);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
-  return hashHex
+  return hashHex;
 }
 
 /**
  * Store challenge data in localStorage
  */
 function storeChallenge(challengeId: string, challengeAnswer: string): void {
-  localStorage.setItem(CHALLENGE_ID_STORAGE_KEY, challengeId)
-  localStorage.setItem(CHALLENGE_ANSWER_STORAGE_KEY, challengeAnswer)
+  localStorage.setItem(CHALLENGE_ID_STORAGE_KEY, challengeId);
+  localStorage.setItem(CHALLENGE_ANSWER_STORAGE_KEY, challengeAnswer);
 }
 
 /**
  * Get stored challenge data from localStorage
  */
 function getStoredChallenge(): { challengeId: string; challengeAnswer: string } | null {
-  const challengeId = localStorage.getItem(CHALLENGE_ID_STORAGE_KEY)
-  const challengeAnswer = localStorage.getItem(CHALLENGE_ANSWER_STORAGE_KEY)
+  const challengeId = localStorage.getItem(CHALLENGE_ID_STORAGE_KEY);
+  const challengeAnswer = localStorage.getItem(CHALLENGE_ANSWER_STORAGE_KEY);
 
   if (challengeId && challengeAnswer) {
-    return { challengeId, challengeAnswer }
+    return { challengeId, challengeAnswer };
   }
 
-  return null
+  return null;
 }
 
 /**
@@ -106,44 +100,39 @@ function getStoredChallenge(): { challengeId: string; challengeAnswer: string } 
  * Stores the solution in localStorage for future requests
  */
 async function handleChallengeHeaders(response: Response): Promise<void> {
-  const challengeId = response.headers.get(CHALLENGE_ID_HEADER)
-  const challenge = response.headers.get(CHALLENGE_HEADER)
+  const challengeId = response.headers.get(CHALLENGE_ID_HEADER);
+  const challenge = response.headers.get(CHALLENGE_HEADER);
 
   if (challengeId && challenge) {
     try {
       // Solve the challenge
-      const challengeAnswer = await solveChallenge(challengeId)
+      const challengeAnswer = await solveChallenge(challengeId);
       // Store in localStorage
-      storeChallenge(challengeId, challengeAnswer)
-      console.log('Challenge solved and stored:', { challengeId, challenge })
+      storeChallenge(challengeId, challengeAnswer);
+      console.log("Challenge solved and stored:", { challengeId, challenge });
     } catch (error) {
-      console.error('Failed to solve challenge:', error)
+      console.error("Failed to solve challenge:", error);
     }
   }
 }
 
-export interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
-  body?: any
-  baseUrl?: string
-  skipRefresh?: boolean // Skip automatic token refresh for this request
+export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
+  body?: any;
+  baseUrl?: string;
+  skipRefresh?: boolean; // Skip automatic token refresh for this request
 }
 
 export interface ApiResponse<T = any> {
-  success: boolean
-  data?: T
-  message?: string
-  error?: string
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
 }
 
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-    public statusText: string,
-    public response?: Response,
-  ) {
-    super(message)
-    this.name = 'ApiError'
+  constructor(message: string, public status: number, public statusText: string, public response?: Response) {
+    super(message);
+    this.name = "ApiError";
   }
 }
 
@@ -151,77 +140,48 @@ export class ApiError extends Error {
  * Get the backend URL from environment variables
  */
 function getBackendUrl(): string {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL
-  if (!backendUrl) {
-    throw new Error('Backend URL not configured. Please set VITE_BACKEND_URL in your environment variables.')
+  if (getUseWasm()) {
+    return import.meta.env.VITE_PROXY_URL_WASM;
   }
-  return backendUrl
-}
-/**
- * Get the proxy URL from environment variables, choosing between WASM and non-WASM proxy
- */
-function getProxyUrl(): string {
-  const useWasm = getUseWasm()
-
-  if (useWasm) {
-    // Use WASM proxy URL
-    const wasmProxyUrl = import.meta.env.VITE_PROXY_URL_WASM
-    if (!wasmProxyUrl) {
-      throw new Error('WASM Proxy URL not configured. Please set VITE_PROXY_URL_WASM in your environment variables.')
-    }
-    return wasmProxyUrl
-  } else {
-    // Use regular (non-WASM) proxy URL
-    const proxyUrl = import.meta.env.VITE_PROXY_URL
-    if (!proxyUrl) {
-      throw new Error('Proxy URL not configured. Please set VITE_PROXY_URL in your environment variables.')
-    }
-    return proxyUrl
-  }
-}
-/**
- * Get the proxy target URL from environment variables
- */
-function getProxyTarget(): string {
-  const proxyTarget = import.meta.env.VITE_PROXY_TARGET
-  if (!proxyTarget) {
-    throw new Error('Proxy target not configured. Please set VITE_PROXY_TARGET in your environment variables.')
-  }
-  return proxyTarget
+  return import.meta.env.VITE_BACKEND_URL;
 }
 
 /**
  * Default headers for API requests
  * Note: Content-Type is not included by default - it's added only when there's a body
  */
-const defaultHeaders: HeadersInit = {}
+const defaultHeaders: HeadersInit = getUseWasm()
+  ? {
+      [PROXY_TARGET_ID_HEADER]: import.meta.env.VITE_PROXY_TARGET,
+    }
+  : {};
 
 /**
  * Default request options
  */
 const defaultOptions: RequestInit = {
-  credentials: 'include',
+  credentials: "include",
   headers: defaultHeaders,
-}
+};
 
 /**
  * Track if we're currently refreshing to avoid multiple simultaneous refresh attempts
  */
-let isRefreshing = false
-let refreshPromise: Promise<void> | null = null
+let isRefreshing = false;
+let refreshPromise: Promise<void> | null = null;
 
 /**
  * Extract error message from a response, falling back to status text
  */
 async function extractErrorMessage(response: Response): Promise<string> {
-  let errorMessage = `Request failed: ${response.status} ${response.statusText}`
+  let errorMessage = `Request failed: ${response.status} ${response.statusText}`;
   try {
-    const errorData = await response.json()
-    errorMessage = errorData.message || errorData.error || errorMessage
+    const errorData = await response.json();
+    errorMessage = errorData.message || errorData.error || errorMessage;
   } catch {
     // If we can't parse the error response, use the default message
   }
-  return errorMessage
+  return errorMessage;
 }
 
 /**
@@ -229,147 +189,62 @@ async function extractErrorMessage(response: Response): Promise<string> {
  */
 function headersToObject(headers: HeadersInit): Record<string, string> {
   if (Array.isArray(headers)) {
-    return Object.fromEntries(headers)
+    return Object.fromEntries(headers);
   }
   if (headers instanceof Headers) {
-    return Object.fromEntries(headers.entries())
+    return Object.fromEntries(headers.entries());
   }
-  return (headers as Record<string, string>) || {}
+  return (headers as Record<string, string>) || {};
 }
 
 /**
  * Serialize request body based on its type
  */
-function serializeBody(
-  body: any,
-  headers: Record<string, string>,
-  useProxy: boolean,
-): { body: any; headers: Record<string, string> } {
+function serializeBody(body: any, headers: Record<string, string>): { body: any; headers: Record<string, string> } {
   if (body === undefined) {
-    return { body: undefined, headers }
+    delete headers["Content-Type"];
+    return { body: undefined, headers };
   }
 
-  const updatedHeaders = { ...headers }
+  const updatedHeaders = { ...headers };
 
   if (body instanceof FormData) {
     // Don't set Content-Type for FormData, let the browser set it with boundary
-    delete updatedHeaders['Content-Type']
-    return { body, headers: updatedHeaders }
+    delete updatedHeaders["Content-Type"];
+    return { body, headers: updatedHeaders };
   }
 
-  if (typeof body === 'object') {
+  if (typeof body === "object") {
     // Add Content-Type header for JSON body
-    updatedHeaders['Content-Type'] = 'application/json'
-    if (useProxy) {
-      // For proxy requests, return the plain object (will be JSON.stringify'd by createProxyFetchOptions)
-      return { body, headers: updatedHeaders }
-    } else {
-      // For direct requests, JSON.stringify
-      return { body: JSON.stringify(body), headers: updatedHeaders }
-    }
+    updatedHeaders["Content-Type"] = "application/json";
+    // JSON.stringify for direct requests
+    return { body: JSON.stringify(body), headers: updatedHeaders };
   }
 
-  return { body, headers: updatedHeaders }
+  return { body, headers: updatedHeaders };
 }
 
 /**
- * Parse a direct API response (non-proxy)
+ * Parse an API response
  */
-async function parseDirectResponse<T>(response: Response): Promise<T> {
-  storeValidationHeader(response)
+async function parseResponse<T>(response: Response): Promise<T> {
+  storeValidationHeader(response);
   // Handle challenge headers from response
-  await handleChallengeHeaders(response)
+  await handleChallengeHeaders(response);
 
   // Handle empty responses (e.g., 204 No Content)
-  if (response.status === 204 || response.headers.get('content-length') === '0') {
-    return {} as T
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return {} as T;
   }
 
   // Parse JSON response
-  const contentType = response.headers.get('content-type')
-  if (contentType && contentType.includes('application/json')) {
-    return await response.json()
+  const contentType = response.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return await response.json();
   }
 
   // Return text response for non-JSON content
-  return (await response.text()) as T
-}
-
-/**
- * Parse a proxy API response
- */
-async function parseProxyResponse<T>(response: Response): Promise<T> {
-  storeValidationHeader(response)
-  // Handle challenge headers from response
-  await handleChallengeHeaders(response)
-
-  // Handle empty responses (e.g., 204 No Content)
-  if (response.status === 204 || response.headers.get('content-length') === '0') {
-    return {} as T
-  }
-
-  // The proxy returns the raw body string directly, not wrapped in a data object
-  // Check content type to determine how to parse
-  const contentType = response.headers.get('content-type')
-
-  if (contentType && contentType.includes('application/json')) {
-    // Parse JSON response directly
-    const jsonData = await response.json()
-
-    // Check if this is a proxy error response
-    if (jsonData && typeof jsonData === 'object' && 'success' in jsonData && jsonData.success === false) {
-      // This is a proxy error response, throw it as an error
-      throw new ApiError(jsonData.message || 'Proxy request failed', response.status, response.statusText, response)
-    }
-
-    return jsonData as T
-  }
-
-  // Return text response for non-JSON content
-  return (await response.text()) as T
-}
-
-/**
- * Return type for proxy fetch options
- */
-interface ProxyFetchOptions {
-  fetchOptions: RequestInit
-}
-
-/**
- * Create fetch options for proxy requests
- * The proxy endpoint now accepts all HTTP methods and forwards them to the target URL
- */
-function createProxyFetchOptions(method: string, headers: Record<string, string>, body?: any): ProxyFetchOptions {
-  const proxyTarget = getProxyTarget()
-  const fetchOptions: RequestInit = {
-    method: method,
-    headers: new Headers({ ...headers, [PROXY_TARGET_ID_HEADER]: proxyTarget } as HeadersInit),
-    credentials: 'include',
-  }
-
-  // Add body if present (for POST, PUT, PATCH, DELETE)
-  // Note: body may be a plain object (for proxy) or already serialized
-  const methodsWithoutBody = ['GET', 'HEAD', 'OPTIONS']
-  if (!methodsWithoutBody.includes(method.toUpperCase()) && body !== undefined) {
-    // For proxy requests, serialize objects to JSON string
-    // FormData and other BodyInit types are passed as-is
-    if (body instanceof FormData || body instanceof Blob || typeof body === 'string') {
-      fetchOptions.body = body as BodyInit
-    } else {
-      // JSON stringify objects for proxy requests
-      fetchOptions.body = JSON.stringify(body)
-      // Ensure Content-Type is set for JSON body
-      if (!headers['Content-Type']) {
-        headers['Content-Type'] = 'application/json'
-      }
-    }
-  } else {
-    // Remove Content-Type header if there's no body
-    delete headers['Content-Type']
-  }
-
-  return { fetchOptions }
+  return (await response.text()) as T;
 }
 
 /**
@@ -377,92 +252,59 @@ function createProxyFetchOptions(method: string, headers: Record<string, string>
  */
 async function refreshToken(): Promise<void> {
   if (isRefreshing && refreshPromise) {
-    return refreshPromise
+    return refreshPromise;
   }
 
-  isRefreshing = true
+  isRefreshing = true;
   refreshPromise = (async () => {
     try {
       const response = await fetch(`${getBackendUrl()}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-      })
+        method: "POST",
+        credentials: "include",
+        headers: new Headers(defaultHeaders),
+      });
 
       if (!response.ok) {
-        throw new ApiError('Token refresh failed', response.status, response.statusText, response)
+        throw new ApiError("Token refresh failed", response.status, response.statusText, response);
       }
-      storeValidationHeader(response)
-      await handleChallengeHeaders(response)
+      storeValidationHeader(response);
+      await handleChallengeHeaders(response);
     } catch (error) {
-      throw error
+      throw error;
     } finally {
-      isRefreshing = false
-      refreshPromise = null
+      isRefreshing = false;
+      refreshPromise = null;
     }
-  })()
+  })();
 
-  return refreshPromise
-}
-
-/**
- * Attempt to refresh the authentication token via proxy
- */
-async function refreshTokenWithProxy(): Promise<void> {
-  if (isRefreshing && refreshPromise) {
-    return refreshPromise
-  }
-
-  isRefreshing = true
-  refreshPromise = (async () => {
-    try {
-      const targetUrl = `${getProxyUrl()}/auth/refresh`
-      const { fetchOptions } = createProxyFetchOptions('POST', {
-        'Content-Type': 'application/json',
-      })
-      const response = await fetch(targetUrl, fetchOptions)
-
-      if (!response.ok) {
-        throw new ApiError('Token refresh failed', response.status, response.statusText, response)
-      }
-
-      storeValidationHeader(response)
-      await handleChallengeHeaders(response)
-    } catch (error) {
-      throw error
-    } finally {
-      isRefreshing = false
-      refreshPromise = null
-    }
-  })()
-
-  return refreshPromise
+  return refreshPromise;
 }
 
 const storeValidationHeader = (response: Response) => {
-  const value = response.headers.get(VALIDATION_HEADER)
+  const value = response.headers.get(VALIDATION_HEADER);
 
   if (value === null) {
-    return
+    return;
   }
 
-  const parts = value.split('*')
+  const parts = value.split("*");
   if (parts.length !== 2) {
-    console.warn('Invalid X-Test-Eval header format:', value)
-    return
+    console.warn("Invalid X-Test-Eval header format:", value);
+    return;
   }
 
-  const randomInt1 = Number(parts[0])
-  const randomInt2 = Number(parts[1])
+  const randomInt1 = Number(parts[0]);
+  const randomInt2 = Number(parts[1]);
 
   if (Number.isNaN(randomInt1) || Number.isNaN(randomInt2)) {
-    console.warn('Invalid X-Test-Eval header values:', value)
-    return
+    console.warn("Invalid X-Test-Eval header values:", value);
+    return;
   }
 
-  const res = randomInt1 * randomInt2
+  const res = randomInt1 * randomInt2;
 
-  localStorage.setItem(VALIDATION_HEADER, res.toString())
-}
+  localStorage.setItem(VALIDATION_HEADER, res.toString());
+};
 
 /**
  * Make an API request with standardized error handling and configuration
@@ -477,28 +319,32 @@ const storeValidationHeader = (response: Response) => {
  * @param options - Request options including body, headers, and skipRefresh flag
  * @returns Promise resolving to the response data
  */
-export async function apiRequestWithoutProxy<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options
-
+export async function apiRequest<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
+  const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options;
+  console.log("baseUrl", baseUrl);
+  console.log("endpoint", endpoint);
+  console.log("headers", headers);
+  console.log("skipRefresh", skipRefresh);
+  console.log("fetchOptions", fetchOptions);
   // Construct the full URL
-  const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
+  const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
   // Prepare headers as a plain object for serialization
-  const headersObj = headersToObject(headers)
+  const headersObj = headersToObject(headers);
 
   // Handle body serialization
-  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, false)
+  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj);
 
-  const storedValidationHeader = localStorage.getItem(VALIDATION_HEADER)
+  const storedValidationHeader = localStorage.getItem(VALIDATION_HEADER);
   if (storedValidationHeader) {
-    updatedHeaders[VALIDATION_HEADER] = storedValidationHeader
+    updatedHeaders[VALIDATION_HEADER] = storedValidationHeader;
   }
 
   // Attach challenge headers if available
-  const storedChallenge = getStoredChallenge()
+  const storedChallenge = getStoredChallenge();
   if (storedChallenge) {
-    updatedHeaders[CHALLENGE_ID_HEADER] = storedChallenge.challengeId
-    updatedHeaders[CHALLENGE_ANSWER_HEADER] = storedChallenge.challengeAnswer
+    updatedHeaders[CHALLENGE_ID_HEADER] = storedChallenge.challengeId;
+    updatedHeaders[CHALLENGE_ANSWER_HEADER] = storedChallenge.challengeAnswer;
   }
 
   // Prepare the request configuration
@@ -510,171 +356,53 @@ export async function apiRequestWithoutProxy<T = any>(endpoint: string, options:
       ...updatedHeaders,
     },
     body: serializedBody,
-  }
+  };
 
   try {
-    const response = await fetch(url, requestConfig)
+    const response = await fetch(url, requestConfig);
 
     // Handle non-OK responses
     if (!response.ok) {
       // Handle 401 Unauthorized with token refresh
-      if (response.status === 401 && !skipRefresh && !url.includes('/auth/refresh')) {
+      if (response.status === 401 && !skipRefresh && !url.includes("/auth/refresh")) {
         try {
-          await refreshToken()
+          await refreshToken();
           // Retry the original request after successful refresh
-          const retryResponse = await fetch(url, requestConfig)
+          const retryResponse = await fetch(url, requestConfig);
 
           if (!retryResponse.ok) {
-            const errorMessage = await extractErrorMessage(retryResponse)
-            throw new ApiError(errorMessage, retryResponse.status, retryResponse.statusText, retryResponse)
+            const errorMessage = await extractErrorMessage(retryResponse);
+            throw new ApiError(errorMessage, retryResponse.status, retryResponse.statusText, retryResponse);
           }
 
-          return await parseDirectResponse<T>(retryResponse)
+          return await parseResponse<T>(retryResponse);
         } catch (refreshError) {
           // If refresh fails, throw the original 401 error
-          const errorMessage = await extractErrorMessage(response)
-          throw new ApiError(errorMessage, response.status, response.statusText, response)
+          const errorMessage = await extractErrorMessage(response);
+          throw new ApiError(errorMessage, response.status, response.statusText, response);
         }
       }
 
       // Handle other non-OK responses
-      const errorMessage = await extractErrorMessage(response)
-      throw new ApiError(errorMessage, response.status, response.statusText, response)
+      const errorMessage = await extractErrorMessage(response);
+      throw new ApiError(errorMessage, response.status, response.statusText, response);
     }
 
-    return await parseDirectResponse<T>(response)
+    return await parseResponse<T>(response);
   } catch (error) {
     if (error instanceof ApiError) {
-      throw error
+      throw error;
     }
 
     // Handle network errors and other fetch failures
-    throw new ApiError(error instanceof Error ? error.message : 'Network request failed', 0, 'Network Error')
+    throw new ApiError(error instanceof Error ? error.message : "Network request failed", 0, "Network Error");
   }
-}
-
-/**
- * Make an API request with standardized error handling and configuration
- *
- * Automatically handles:
- * - 401 responses by attempting token refresh and retrying the request
- * - JSON response parsing
- * - Error message extraction
- * - Network error handling
- *
- * @param endpoint - The API endpoint (e.g., "/auth/me")
- * @param options - Request options including body, headers, and skipRefresh flag
- * @returns Promise resolving to the response data
- */
-export async function apiRequestWithProxy<T = any>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
-  const { baseUrl = getProxyUrl(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options ?? {}
-
-  // Build target URL - handle query parameters in endpoint
-  const [endpointPath, endpointQuery] = endpoint.split('?')
-  const params = new URLSearchParams(endpointQuery)
-  const targetUrl = new URL(`${baseUrl}${endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`}`)
-  params.forEach((value, key) => {
-    targetUrl.searchParams.set(key, value)
-  })
-  // Convert headers to plain object
-  const headersObj = headersToObject(headers)
-
-  // Handle body serialization
-  const { body: serializedBody, headers: updatedHeaders } = serializeBody(body, headersObj, true)
-
-  // Extract method and preserve all other RequestInit properties (signal, cache, redirect, etc.)
-  const { method = 'GET', ...remainingFetchOptions } = fetchOptions
-
-  const storedValidationHeader = localStorage.getItem(VALIDATION_HEADER)
-  if (storedValidationHeader) {
-    updatedHeaders[VALIDATION_HEADER] = storedValidationHeader
-  }
-
-  // Attach challenge headers if available
-  const storedChallenge = getStoredChallenge()
-  if (storedChallenge) {
-    updatedHeaders[CHALLENGE_ID_HEADER] = storedChallenge.challengeId
-    updatedHeaders[CHALLENGE_ANSWER_HEADER] = storedChallenge.challengeAnswer
-  }
-
-  // Create proxy fetch options
-  const { fetchOptions: proxyFetchOptions } = createProxyFetchOptions(method, updatedHeaders, serializedBody)
-
-  // Merge remaining RequestInit properties (signal, cache, redirect, etc.) into proxy fetch options
-  const finalFetchOptions: RequestInit = {
-    ...proxyFetchOptions,
-    ...remainingFetchOptions,
-  }
-  console.log({ targetUrl, finalFetchOptions })
-
-  try {
-    const response = await fetch(targetUrl, finalFetchOptions)
-
-    // Handle non-OK responses
-    if (!response.ok) {
-      // Handle 401 Unauthorized with token refresh
-      if (response.status === 401 && !skipRefresh && !targetUrl.pathname.includes('/auth/refresh')) {
-        try {
-          await refreshTokenWithProxy()
-          // Retry the original request after successful refresh
-          const { fetchOptions: retryProxyFetchOptions } = createProxyFetchOptions(
-            method,
-            updatedHeaders,
-            serializedBody,
-          )
-          // Merge remaining RequestInit properties into retry fetch options
-          const retryFinalFetchOptions: RequestInit = {
-            ...retryProxyFetchOptions,
-            ...remainingFetchOptions,
-          }
-          const retryResponse = await fetch(targetUrl, retryFinalFetchOptions)
-
-          if (!retryResponse.ok) {
-            const errorMessage = await extractErrorMessage(retryResponse)
-            throw new ApiError(errorMessage, retryResponse.status, retryResponse.statusText, retryResponse)
-          }
-
-          return await parseProxyResponse<T>(retryResponse)
-        } catch (refreshError) {
-          // If refresh fails, throw the original 401 error
-          const errorMessage = await extractErrorMessage(response)
-          throw new ApiError(errorMessage, response.status, response.statusText, response)
-        }
-      }
-
-      // Handle other non-OK responses
-      const errorMessage = await extractErrorMessage(response)
-      throw new ApiError(errorMessage, response.status, response.statusText, response)
-    }
-
-    return await parseProxyResponse<T>(response)
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error
-    }
-
-    // Handle network errors and other fetch failures
-    throw new ApiError(error instanceof Error ? error.message : 'Network request failed', 0, 'Network Error')
-  }
-}
-
-/**
- * Get the appropriate API request function based on current USE_PROXY setting
- * This checks localStorage dynamically so changes take effect immediately
- */
-function getApiRequest() {
-  return getUseWasm() ? apiRequestWithProxy : apiRequestWithoutProxy
 }
 
 export const api = {
-  get: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, 'method' | 'body'>) =>
-    getApiRequest()<T>(endpoint, { ...options, method: 'GET' }),
-  post: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, 'method'>) =>
-    getApiRequest()<T>(endpoint, { ...options, method: 'POST', body }),
-  put: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, 'method'>) =>
-    getApiRequest()<T>(endpoint, { ...options, method: 'PUT', body }),
-  patch: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, 'method'>) =>
-    getApiRequest()<T>(endpoint, { ...options, method: 'PATCH', body }),
-  delete: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, 'method' | 'body'>) =>
-    getApiRequest()<T>(endpoint, { ...options, method: 'DELETE' }),
-}
+  get: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, "method" | "body">) => apiRequest<T>(endpoint, { ...options, method: "GET" }),
+  post: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "POST", body }),
+  put: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "PUT", body }),
+  patch: <T = any>(endpoint: string, body?: any, options?: Omit<ApiRequestOptions, "method">) => apiRequest<T>(endpoint, { ...options, method: "PATCH", body }),
+  delete: <T = any>(endpoint: string, options?: Omit<ApiRequestOptions, "method" | "body">) => apiRequest<T>(endpoint, { ...options, method: "DELETE" }),
+};
