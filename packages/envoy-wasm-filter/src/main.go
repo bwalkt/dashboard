@@ -202,6 +202,10 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 		return types.ActionContinue
 	}
 
+	// TEMPORARY: Bypass all challenge validation to debug CORS
+	proxywasm.LogInfof("[WASM Filter] TEMPORARY: Bypassing all challenge validation for debugging: %s %s", method, path)
+	return types.ActionContinue
+
 	// Lazy registration: Register filter in Redis on first non-public request
 	// This must be done from HTTP context, not plugin initialization
 	// Only register for requests that need validation
