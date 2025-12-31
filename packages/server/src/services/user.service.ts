@@ -13,7 +13,6 @@ export type UserWithStatus = User & {
   status?: 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'DELETED' | 'PENDING' | 'BLOCKED' | null;
 };
 
-import { get } from "node:http";
 import { encryptionService } from "../utils/encryption.js";
 export class UserService {
   /**
@@ -195,14 +194,22 @@ export class UserService {
     const client = await db.pool.connect();
     try {
       await client.query('BEGIN');
-      const user = await this.getUserByEmail(userData.email);
+      const userResult = await client.query(
+        `SELECT a.*, u.status
+         FROM pzero.all_auth a
+         LEFT JOIN pzero.all_users u ON a.id = u.id AND a.is_act = u.is_act
+         WHERE a.email = $1 AND a.is_act = true
+         LIMIT 1`,
+        [userData.email]
+      );
+      const user = userResult.rows[0] || null;
       if (user) {
         if (user.email_verified === false ) {
           const sql = `UPDATE pzero.all_auth SET email_verified = TRUE WHERE email = $1 RETURNING *`;
           const result = await client.query(sql, [userData.email]);
           if (!result.rows.length) {
             console.log('Failed to update email_verified status for user ', userData.email);
-            client.query('ROLLBACK');
+            await client.query('ROLLBACK');
             return {} as User;
           }
         }
@@ -212,7 +219,7 @@ export class UserService {
           const avatarResult = await client.query(sql, [userData.avatar, user.id]);
           if (!avatarResult.rows.length) {
             console.log('Failed to update avatar for user ', userData.email);
-            client.query('ROLLBACK');
+            await client.query('ROLLBACK');
             return {} as User;
           }
         }
@@ -242,7 +249,7 @@ export class UserService {
       email_verified: true,
     };
     const user = await this.upsertUser(userData);
-    const returnData = { ...githubUser, ...user, github_id: githubUser.id };
+    const returnData: User = { ...user, ...githubUser, github_id: githubUser.id } as User
     console.log('🔥 SERVER: Upserted user ', returnData);
     // returnData.id is postgres id,
     // returnData.is_act = false blocks user from proceeding

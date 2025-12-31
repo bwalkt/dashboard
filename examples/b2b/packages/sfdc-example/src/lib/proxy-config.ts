@@ -21,28 +21,62 @@ function isLocalStorageAvailable(): boolean {
 }
 
 /**
- * Get the USE_PROXY value from localStorage, falling back to environment variable
- * @returns boolean indicating whether to use proxy
+ * Generic getter for boolean localStorage values with env fallback
+ * @param storageKey - localStorage key to read from
+ * @param envValue - environment variable value as fallback
+ * @param configName - name of the configuration for logging
+ * @returns boolean value from localStorage or environment
  */
-export function getUseProxy(): boolean {
-  // Check if localStorage is available
+function getBooleanConfig(storageKey: string, envValue: string | undefined, configName: string): boolean {
   if (!isLocalStorageAvailable()) {
-    console.warn('localStorage is not available, falling back to environment variable')
-    return import.meta.env.VITE_USE_PROXY === 'true'
+    console.warn(`localStorage is not available, falling back to environment variable for ${configName}`)
+    return envValue === 'true'
   }
 
   try {
-    // Check localStorage first
-    const stored = localStorage.getItem(USE_PROXY_STORAGE_KEY)
+    const stored = localStorage.getItem(storageKey)
     if (stored !== null) {
       return stored === 'true'
     }
   } catch (error) {
-    console.error('Error reading from localStorage:', error)
+    console.error(`Error reading ${configName} from localStorage:`, error)
   }
 
-  // Fall back to environment variable
-  return import.meta.env.VITE_USE_PROXY === 'true'
+  return envValue === 'true'
+}
+
+/**
+ * Generic setter for boolean localStorage values
+ * @param storageKey - localStorage key to write to
+ * @param value - boolean value to store
+ * @param configName - name of the configuration for logging
+ * @returns boolean indicating if the operation was successful
+ */
+function setBooleanConfig(storageKey: string, value: boolean, configName: string): boolean {
+  if (!isLocalStorageAvailable()) {
+    console.warn(`localStorage is not available, cannot save ${configName}`)
+    return false
+  }
+
+  try {
+    localStorage.setItem(storageKey, value.toString())
+    return true
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      console.error(`localStorage quota exceeded, cannot save ${configName}`)
+    } else {
+      console.error(`Error writing ${configName} to localStorage:`, error)
+    }
+    return false
+  }
+}
+
+/**
+ * Get the USE_PROXY value from localStorage, falling back to environment variable
+ * @returns boolean indicating whether to use proxy
+ */
+export function getUseProxy(): boolean {
+  return getBooleanConfig(USE_PROXY_STORAGE_KEY, import.meta.env.VITE_USE_PROXY, 'proxy setting')
 }
 
 /**
@@ -51,23 +85,7 @@ export function getUseProxy(): boolean {
  * @returns boolean indicating if the operation was successful
  */
 export function setUseProxy(value: boolean): boolean {
-  // Check if localStorage is available
-  if (!isLocalStorageAvailable()) {
-    console.warn('localStorage is not available, cannot save proxy setting')
-    return false
-  }
-
-  try {
-    localStorage.setItem(USE_PROXY_STORAGE_KEY, value.toString())
-    return true
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      console.error('localStorage quota exceeded, cannot save proxy setting')
-    } else {
-      console.error('Error writing to localStorage:', error)
-    }
-    return false
-  }
+  return setBooleanConfig(USE_PROXY_STORAGE_KEY, value, 'proxy setting')
 }
 
 /**
@@ -75,24 +93,7 @@ export function setUseProxy(value: boolean): boolean {
  * @returns boolean indicating whether to use WASM
  */
 export function getUseWasm(): boolean {
-  // Check if localStorage is available
-  if (!isLocalStorageAvailable()) {
-    console.warn('localStorage is not available, falling back to environment variable')
-    return import.meta.env.VITE_USE_WASM === 'true'
-  }
-
-  try {
-    // Check localStorage first
-    const stored = localStorage.getItem(USE_WASM_STORAGE_KEY)
-    if (stored !== null) {
-      return stored === 'true'
-    }
-  } catch (error) {
-    console.error('Error reading from localStorage:', error)
-  }
-
-  // Fall back to environment variable
-  return import.meta.env.VITE_USE_WASM === 'true'
+  return getBooleanConfig(USE_WASM_STORAGE_KEY, import.meta.env.VITE_USE_WASM, 'WASM setting')
 }
 
 /**
@@ -101,30 +102,14 @@ export function getUseWasm(): boolean {
  * @returns boolean indicating if the operation was successful
  */
 export function setUseWasm(value: boolean): boolean {
-  // Check if localStorage is available
-  if (!isLocalStorageAvailable()) {
-    console.warn('localStorage is not available, cannot save WASM setting')
-    return false
-  }
-
-  try {
-    localStorage.setItem(USE_WASM_STORAGE_KEY, value.toString())
-    return true
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      console.error('localStorage quota exceeded, cannot save WASM setting')
-    } else {
-      console.error('Error writing to localStorage:', error)
-    }
-    return false
-  }
+  return setBooleanConfig(USE_WASM_STORAGE_KEY, value, 'WASM setting')
 }
 
 /**
- * Initialize USE_PROXY in localStorage from environment variable if not already set
+ * Initialize proxy and WASM settings in localStorage from environment variables if not already set
  * This should be called before any API requests are made
  */
-export function initializeUseProxy(): void {
+export function initializeProxySettings(): void {
   // Check if localStorage is available
   if (!isLocalStorageAvailable()) {
     console.warn('localStorage is not available, skipping initialization')

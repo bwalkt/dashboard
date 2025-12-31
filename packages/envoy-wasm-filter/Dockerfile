@@ -9,11 +9,11 @@ COPY ./packages/envoy-wasm-filter/go.mod ./packages/envoy-wasm-filter/go.sum* ./
 # Download dependencies
 RUN go mod download
 
-# Copy all Go source files
-COPY ./packages/envoy-wasm-filter/src/*.go ./
+# Copy src directory maintaining structure
+COPY ./packages/envoy-wasm-filter/src ./src
 
 # Build the WASM filter with upstream Go and GOOS=wasip1
-RUN env GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o filter.wasm .
+RUN env GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o filter.wasm ./src
 
 # Output stage
 FROM envoyproxy/envoy:v1.33-latest AS runner

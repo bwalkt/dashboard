@@ -51,13 +51,6 @@ func parseKeyValueConfig(configStr string, configMap map[string]string) {
 	}
 }
 
-// min returns the minimum of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
 
 func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPluginStartStatus {
 	// Load configuration from plugin configuration
@@ -80,8 +73,8 @@ func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlu
 			if err := json.Unmarshal([]byte(configStr), &configMap); err != nil {
 				proxywasm.LogErrorf("[WASM Filter] Failed to parse config as JSON: %v", err)
 				proxywasm.LogErrorf("[WASM Filter] Config starts with: %.50s", configStr)
-				// Try to recover by parsing as key=value
-				parseKeyValueConfig(configStr, configMap)
+				// Fail if JSON format is expected but parsing fails
+				return types.OnPluginStartStatusFailed
 			} else {
 				proxywasm.LogInfof("[WASM Filter] Successfully parsed JSON configuration with %d keys", len(configMap))
 			}
