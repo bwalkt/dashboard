@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
@@ -68,11 +69,13 @@ func (*vmContext) NewPluginContext(contextID uint32) types.PluginContext {
 type pluginContext struct {
 	// Embed the default plugin context
 	types.DefaultPluginContext
+	serverURL string
 }
 
-func (*pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
+func (p *pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 	return &httpContext{
-		contextID: contextID,
+		contextID:        contextID,
+		loginInterceptor: NewLoginInterceptor(p.serverURL),
 	}
 }
 
@@ -133,6 +136,16 @@ func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlu
 		proxywasm.LogErrorf("[WASM Filter] Failed to initialize configuration: %v", err)
 		return types.OnPluginStartStatusFailed
 	}
+	
+	// Store server URL for session management
+	if serverURL, ok := configMap["server_url"]; ok {
+		ctx.serverURL = serverURL
+		proxywasm.LogInfof("[WASM Filter] Server URL configured: %s", serverURL)
+	} else {
+		// Default to localhost if not configured
+		ctx.serverURL = "localhost:3001"
+		proxywasm.LogWarnf("[WASM Filter] No server_url configured, using default: %s", ctx.serverURL)
+	}
 
 	// NOTE: Registration and heartbeat are deferred until first HTTP request
 	// because DispatchHttpCall requires an HTTP context and cannot be called
@@ -163,6 +176,10 @@ type httpContext struct {
 	validationRequestID string
 	validationStartTime int64
 	pollAttempts        int
+	
+	// Login interception state
+	loginIntercepted bool
+	loginInterceptor *LoginInterceptor
 }
 
 // OnHttpRequestHeaders is called when request headers are received
@@ -182,6 +199,15 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	}
 
 	proxywasm.LogInfof("[WASM Filter] Processing request: %s %s", method, path)
+	
+	// Check for login interception
+	if ctx.loginInterceptor != nil {
+		intercepted, action := ctx.loginInterceptor.InterceptLogin(ctx, path, method)
+		if intercepted {
+			proxywasm.LogInfof("[WASM Filter] Login request intercepted: %s %s", method, path)
+			return action
+		}
+	}
 
 	// Handle CORS preflight requests
 	if method == "OPTIONS" {
@@ -267,6 +293,16 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 
 // OnHttpResponseHeaders is called when response headers are received
 func (ctx *httpContext) OnHttpResponseHeaders(numHeaders int, endOfStream bool) types.Action {
+	// Check if this is a login response that needs processing
+	if ctx.loginIntercepted && ctx.loginInterceptor != nil {
+		// Get response status
+		status, _ := proxywasm.GetHttpResponseHeader(":status")
+		if status == "200" {
+			// Response will be processed in OnHttpResponseBody
+			proxywasm.LogInfof("[WASM Filter] Login response intercepted, will process body")
+		}
+	}
+	
 	// Add CORS headers to all responses from allowed origins
 	origin, _ := proxywasm.GetHttpRequestHeader("origin")
 	corsHeaders := getCORSHeaders(origin)
@@ -276,6 +312,29 @@ func (ctx *httpContext) OnHttpResponseHeaders(numHeaders int, endOfStream bool) 
 			proxywasm.AddHttpResponseHeader(header[0], header[1])
 		}
 	}
+	return types.ActionContinue
+}
+
+// OnHttpResponseBody is called when response body is received
+func (ctx *httpContext) OnHttpResponseBody(bodySize int, endOfStream bool) types.Action {
+	// Process login response if intercepted
+	if ctx.loginIntercepted && ctx.loginInterceptor != nil && endOfStream {
+		status, _ := proxywasm.GetHttpResponseHeader(":status")
+		statusCode := uint32(200)
+		if status != "" {
+			// Parse status code
+			var code int
+			if _, err := fmt.Sscanf(status, "%d", &code); err == nil {
+				statusCode = uint32(code)
+			}
+		}
+		
+		if err := ctx.loginInterceptor.HandleLoginResponse(ctx, statusCode, bodySize); err != nil {
+			proxywasm.LogErrorf("[WASM Filter] Failed to handle login response: %v", err)
+		}
+		ctx.loginIntercepted = false
+	}
+	
 	return types.ActionContinue
 }
 
