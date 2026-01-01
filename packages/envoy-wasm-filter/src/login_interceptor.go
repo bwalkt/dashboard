@@ -48,16 +48,16 @@ func NewLoginInterceptor(serverURL string) *LoginInterceptor {
 
 // IsLoginPath checks if the path is a login-related path
 func (li *LoginInterceptor) IsLoginPath(path string) bool {
-	// Check for OAuth callback or login success paths
-	return strings.Contains(path, "/auth/callback") ||
-		strings.Contains(path, "/auth/login") ||
-		strings.Contains(path, "/api/auth/callback")
+	// Check for exact OAuth callback or login paths
+	return strings.HasPrefix(path, "/auth/callback") ||
+		strings.HasPrefix(path, "/auth/login") ||
+		strings.HasPrefix(path, "/api/auth/callback")
 }
 
 // InterceptLogin intercepts login requests and updates session
 func (li *LoginInterceptor) InterceptLogin(ctx *httpContext, path string, method string) (bool, types.Action) {
 	// Only intercept successful OAuth callbacks
-	if !strings.Contains(path, "/auth/callback") || method != "GET" {
+	if !strings.HasPrefix(path, "/auth/callback") || method != "GET" {
 		return false, types.ActionContinue
 	}
 

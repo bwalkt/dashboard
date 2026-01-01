@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { api } from '@/lib/api'
+import { ApiError, api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { User } from '@/types'
 
 export function useUser() {
-  const { user, isLoading: storeLoading, setUser, setLoading, clearUser, isStale } = useAuthStore()
+  const { user, setUser, clearUser, isStale } = useAuthStore()
 
   // Use React Query to fetch user, but integrate with zustand store
   const {
@@ -16,18 +16,12 @@ export function useUser() {
   } = useQuery<User>({
     queryKey: ['user'],
     queryFn: async () => {
-      setLoading(true)
-      try {
-        const { user } = await api.get<{ user: User }>('/auth/me', {
-          headers: {
-            'X-Client-Type': 'web',
-          },
-        })
-        setUser(user)
-        return user
-      } finally {
-        setLoading(false)
-      }
+      const { user } = await api.get<{ user: User }>('/auth/me', {
+        headers: {
+          'X-Client-Type': 'web',
+        },
+      })
+      return user
     },
     // Only fetch if we don't have data or it's stale
     enabled: !user || isStale(),
@@ -59,14 +53,15 @@ export function useUser() {
 
   // Sync zustand store with query data
   useEffect(() => {
-    if (data && data !== user) {
+    // Only update if we have new data and it's different (by ID)
+    if (data && (!user || data.id !== user.id || data.email !== user.email)) {
       setUser(data)
     }
   }, [data, user, setUser])
 
   // Handle auth errors by clearing user
   useEffect(() => {
-    if (error && (error as any)?.status === 401) {
+    if (error instanceof ApiError && error.status === 401) {
       clearUser()
     }
   }, [error, clearUser])
@@ -76,7 +71,7 @@ export function useUser() {
 
   return {
     data: currentUser,
-    isLoading: queryLoading || storeLoading,
+    isLoading: queryLoading,
     signOut,
     signOutLoading,
     signOutError,

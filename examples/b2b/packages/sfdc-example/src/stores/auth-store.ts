@@ -4,12 +4,10 @@ import { User } from '@/types'
 
 interface AuthState {
   user: User | null
-  isLoading: boolean
   lastFetched: number | null
 
   // Actions
   setUser: (user: User | null) => void
-  setLoading: (isLoading: boolean) => void
   clearUser: () => void
   updateLastFetched: () => void
 
@@ -24,7 +22,6 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      isLoading: false,
       lastFetched: null,
 
       setUser: user =>
@@ -33,13 +30,10 @@ export const useAuthStore = create<AuthState>()(
           lastFetched: user ? Date.now() : null,
         }),
 
-      setLoading: isLoading => set({ isLoading }),
-
       clearUser: () =>
         set({
           user: null,
           lastFetched: null,
-          isLoading: false,
         }),
 
       updateLastFetched: () => set({ lastFetched: Date.now() }),
@@ -58,6 +52,12 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         lastFetched: state.lastFetched,
       }),
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.warn('Failed to rehydrate auth state from localStorage:', error)
+          // State will remain at initial values if rehydration fails
+        }
+      },
     },
   ),
 )

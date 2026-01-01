@@ -69,13 +69,14 @@ func (*vmContext) NewPluginContext(contextID uint32) types.PluginContext {
 type pluginContext struct {
 	// Embed the default plugin context
 	types.DefaultPluginContext
-	serverURL string
+	serverURL        string
+	loginInterceptor *LoginInterceptor
 }
 
 func (p *pluginContext) NewHttpContext(contextID uint32) types.HttpContext {
 	return &httpContext{
 		contextID:        contextID,
-		loginInterceptor: NewLoginInterceptor(p.serverURL),
+		loginInterceptor: p.loginInterceptor,
 	}
 }
 
@@ -146,6 +147,9 @@ func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlu
 		ctx.serverURL = "localhost:3001"
 		proxywasm.LogWarnf("[WASM Filter] No server_url configured, using default: %s", ctx.serverURL)
 	}
+	
+	// Initialize login interceptor once at plugin level
+	ctx.loginInterceptor = NewLoginInterceptor(ctx.serverURL)
 
 	// NOTE: Registration and heartbeat are deferred until first HTTP request
 	// because DispatchHttpCall requires an HTTP context and cannot be called
