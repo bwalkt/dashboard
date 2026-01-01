@@ -14,6 +14,7 @@ active_sessions:<user_id>
 ```
 
 #### Structure (Hash)
+
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
 | `id` | string | User ID (same as key suffix) | `"user_001"` |
@@ -54,6 +55,7 @@ next_funcs:<user_id>:<sequence_number>
 ```
 
 #### Structure (Hash)
+
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
 | `uid` | string | User ID | `"user_001"` |
@@ -100,6 +102,7 @@ active_endpoints:<endpoint_id>
 ```
 
 #### Structure (Hash)
+
 | Field | Type | Description | Example |
 |-------|------|-------------|---------|
 | `id` | string | Unique endpoint identifier | `"endpoint_001"` |
