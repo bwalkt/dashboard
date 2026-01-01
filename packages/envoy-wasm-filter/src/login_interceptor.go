@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm/types"
 )
@@ -101,8 +103,12 @@ func (li *LoginInterceptor) HandleLoginResponse(ctx *httpContext, statusCode uin
 
 	proxywasm.LogInfof("[Login Interceptor] User logged in: %s", email)
 
-	// Generate session ID
-	sessionID := fmt.Sprintf("session_%d_%d", ctx.contextID, getCurrentTimeMillis())
+	// Generate session ID using UUID v7 (time-ordered UUID)
+	uuidV7, err := uuid.NewV7()
+	if err != nil {
+		return fmt.Errorf("failed to generate UUID v7: %v", err)
+	}
+	sessionID := uuidV7.String()
 
 	// Update session in backend
 	if err := li.updateSession(ctx, email, sessionID); err != nil {
@@ -121,7 +127,7 @@ func (li *LoginInterceptor) updateSession(ctx *httpContext, email string, sessio
 		SessionID: sessionID,
 		Metadata: map[string]interface{}{
 			"source":    "wasm_filter",
-			"timestamp": getCurrentTimeMillis(),
+			"timestamp": time.Now().UnixMilli(),
 		},
 	}
 
@@ -212,7 +218,7 @@ func SetSessionInSharedData(sessionID string, userID string, nextFuncs map[strin
 		"sessionId": sessionID,
 		"userId":    userID,
 		"nextFuncs": nextFuncs,
-		"timestamp": getCurrentTimeMillis(),
+		"timestamp": time.Now().UnixMilli(),
 	}
 
 	dataBytes, err := json.Marshal(sessionData)
@@ -228,9 +234,3 @@ func SetSessionInSharedData(sessionID string, userID string, nextFuncs map[strin
 	}
 }
 
-// getCurrentTimeMillis returns current time in milliseconds
-func getCurrentTimeMillis() int64 {
-	// In WASM environment, we need to use proxy-wasm SDK for time
-	// This is a placeholder - actual implementation depends on your WASM runtime
-	return 0 // You may need to implement this based on your environment
-}

@@ -1,3 +1,4 @@
+import { uuid } from "@pzero/shared/uuid";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../config/database.js";
 import { redis } from "../config/redis.js";
@@ -67,7 +68,8 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
 
         const user = userResult.rows[0];
         const userId = user.user_id;
-        const finalSessionId = sessionId || `session_${userId}_${Date.now()}`;
+        // Generate UUID v7 if no sessionId provided
+        const finalSessionId = sessionId || uuid();
 
         // Get next_funcs for the user from all_auth table
         const authResult = await db.query(
@@ -254,13 +256,21 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
         );
 
         if (sessionData) {
-          const userId = JSON.parse(sessionData);
+          let userId: string | undefined;
+          try {
+            userId = JSON.parse(sessionData);
+          } catch (err) {
+            console.warn(`Failed to parse userId from session ${sessionId}:`, err);
+            // Continue with deletion of other keys even if userId parse fails
+          }
           
-          // Remove from user's session set
-          await redis.getClient().srem(
-            SESSION_KEYS.USER_SESSIONS + userId,
-            sessionId
-          );
+          if (userId) {
+            // Remove from user's session set
+            await redis.getClient().srem(
+              SESSION_KEYS.USER_SESSIONS + userId,
+              sessionId
+            );
+          }
         }
 
         // Remove session data and next_funcs
