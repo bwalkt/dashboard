@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../config/database.js";
 import { redis } from "../config/redis.js";
 import { filterRedisService } from "../services/filter-redis.service.js";
+import { userService } from "../services/user.service.js";
 
 // Redis keys for session management
 const SESSION_KEYS = {
@@ -55,16 +56,10 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
           });
         }
 
-        // Look up user by email in PostgreSQL
-        const userResult = await db.query(
-          `SELECT user_id, email, handle 
-           FROM pzero.all_users 
-           WHERE email = $1 
-           LIMIT 1`,
-          [email]
-        );
+        // Look up user by email using user service
+        const user = await userService.getUserByEmail(email);
 
-        if (userResult.rows.length === 0) {
+        if (!user) {
           return reply.status(404).send({
             success: false,
             sessionId: sessionId || "",
@@ -72,8 +67,7 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
           });
         }
 
-        const user = userResult.rows[0];
-        const userId = user.user_id;
+        const userId = user.id;
         // Generate UUID v7 if no sessionId provided
         const finalSessionId = sessionId || uuid();
 
@@ -112,7 +106,7 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
         );
         pipeline.expire(SESSION_KEYS.SESSION_DATA + finalSessionId, sessionTTL);
 
-        // 2. Add to active sessions
+        // 2. Add to active sessions with TTL
         pipeline.hset(
           SESSION_KEYS.ACTIVE_SESSIONS,
           finalSessionId,
@@ -122,6 +116,8 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
             createdAt: Date.now(),
           })
         );
+        // Set TTL on the entire hash (will be refreshed on each session creation)
+        pipeline.expire(SESSION_KEYS.ACTIVE_SESSIONS, sessionTTL);
 
         // 3. Add to user's session set with TTL
         pipeline.sadd(SESSION_KEYS.USER_SESSIONS + userId, finalSessionId);

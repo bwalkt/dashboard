@@ -53,11 +53,11 @@ export function useUser() {
 
   // Sync zustand store with query data
   useEffect(() => {
-    // Only update if we have new data and it's different (by ID)
-    if (data && (!user || data.id !== user.id || data.email !== user.email)) {
+    // Always sync fresh query data to store
+    if (data) {
       setUser(data)
     }
-  }, [data, user, setUser])
+  }, [data, setUser])
 
   // Handle auth errors by clearing user
   useEffect(() => {
@@ -72,6 +72,7 @@ export function useUser() {
   return {
     data: currentUser,
     isLoading: queryLoading,
+    error: error instanceof ApiError && error.status !== 401 ? error : null, // Don't expose 401 as error (handled via clearUser)
     signOut,
     signOutLoading,
     signOutError,
