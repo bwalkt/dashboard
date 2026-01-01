@@ -16,9 +16,9 @@
 # Function to run redis-cli with proper authentication
 redis_cli() {
   if [ -n "$REDIS_PASSWORD" ]; then
-    redis-cli -h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379} -a "$REDIS_PASSWORD" "$@"
+    redis-cli -h "${REDIS_HOST:-localhost}" -p "${REDIS_PORT:-6379}" -a "$REDIS_PASSWORD" "$@"
   else
-    redis-cli -h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379} "$@"
+    redis-cli -h "${REDIS_HOST:-localhost}" -p "${REDIS_PORT:-6379}" "$@"
   fi
 }
 
@@ -30,7 +30,7 @@ if [ -n "$REDIS_URL" ]; then
   if [ -n "$REDIS_PASSWORD_ENCODED" ]; then
     # URL-decode using Node.js for proper handling of all percent-encoded characters
     # This correctly handles edge cases like %2540 (literal %40), spaces, and all special chars
-    REDIS_PASSWORD=$(node -e "console.log(decodeURIComponent('${REDIS_PASSWORD_ENCODED}'))" 2>/dev/null)
+    REDIS_PASSWORD=$(node -e "console.log(decodeURIComponent(process.argv[1]))" "$REDIS_PASSWORD_ENCODED" 2>/dev/null)
     if [ $? -ne 0 ]; then
       echo "ERROR: Failed to decode Redis password from REDIS_URL" >&2
       echo "Ensure password is properly URL-encoded in REDIS_URL" >&2
