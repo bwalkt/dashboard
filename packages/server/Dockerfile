@@ -40,8 +40,8 @@ FROM node:22-alpine AS production
 
 WORKDIR /app
 
-# # Install PostgreSQL client for debugging (optional)
-# RUN apk add --no-cache postgresql-client
+# Install PostgreSQL client and Redis client for debugging and initialization
+RUN apk add --no-cache postgresql-client redis
 
 # Install pnpm globally (no tsx needed since we're running compiled JS)
 RUN npm install -g pnpm@10.18.3
@@ -77,8 +77,14 @@ WORKDIR /app/packages/server
 COPY packages/server/migrations/*.sql ./migrations/
 COPY packages/server/scripts ./scripts
 
+# Make initialization script executable
+RUN chmod +x ./scripts/docker-init-redis.sh
+
 # Expose port
 EXPOSE 8080
+
+# Use the initialization script as entrypoint
+ENTRYPOINT ["./scripts/docker-init-redis.sh"]
 
 # Start the server using the compiled JavaScript
 # Environment variables will be provided at runtime via docker-compose
