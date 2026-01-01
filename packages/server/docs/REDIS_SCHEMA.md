@@ -9,7 +9,7 @@ This document describes the Redis data structures used in the P-Zero application
 Tracks user session information and activity status.
 
 #### Key Pattern
-```
+```text
 active_sessions:<user_id>
 ```
 
@@ -36,8 +36,8 @@ HGET active_sessions:user_001 is_active
 # Update last seen
 HSET active_sessions:user_001 last_seen "2024-01-01T11:00:00.000Z"
 
-# Get all active sessions
-KEYS active_sessions:*
+# Get all active sessions (use SCAN in production)
+SCAN 0 MATCH active_sessions:* COUNT 100
 ```
 
 #### Index
@@ -49,7 +49,7 @@ KEYS active_sessions:*
 Manages sequential user tasks, functions, or workflow steps.
 
 #### Key Pattern
-```
+```text
 next_funcs:<user_id>:<sequence_number>
 ```
 
@@ -95,7 +95,7 @@ HGET next_funcs:user_001:1 solved
 Monitors API endpoint health and performance metrics.
 
 #### Key Pattern
-```
+```text
 active_endpoints:<endpoint_id>
 ```
 
@@ -135,8 +135,8 @@ HGET active_endpoints:endpoint_001 status
 # Update endpoint metrics
 HSET active_endpoints:endpoint_001 data '{"url":"/api/v1/users","method":"GET","response_time":89}'
 
-# Get all endpoints
-KEYS active_endpoints:*
+# Get all endpoints (use SCAN in production)
+SCAN 0 MATCH active_endpoints:* COUNT 100
 ```
 
 #### Indexes
@@ -149,7 +149,7 @@ KEYS active_endpoints:*
 Stores proxy server configurations (existing structure).
 
 #### Key Pattern
-```
+```text
 proxy_targets:all
 ```
 
@@ -199,7 +199,7 @@ SMEMBERS active_endpoints:user:${user_id}
 SMEMBERS active_sessions:index
 
 # All healthy endpoints
-for key in $(redis-cli KEYS "active_endpoints:*"); do
+redis-cli --scan --pattern "active_endpoints:*" | while read key; do
   status=$(redis-cli HGET $key status)
   if [ "$status" = "healthy" ]; then
     echo $key

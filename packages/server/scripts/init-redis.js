@@ -270,7 +270,7 @@ try {
   // Show sample queries
   console.log('\n=== Sample Redis Commands ===');
   console.log('Get a session: HGETALL active_sessions:user_001');
-  console.log('Get all sessions: KEYS active_sessions:*');
+  console.log('Get all sessions: SCAN 0 MATCH active_sessions:* COUNT 100');
   console.log('Get user functions: SMEMBERS next_funcs:user:user_001');
   console.log('Get function details: HGETALL next_funcs:user_001:1');
   console.log('Get user endpoints: SMEMBERS active_endpoints:user:user_001');
