@@ -12,19 +12,35 @@
 # - Running Redis in isolated networks
 # - Using Redis ACLs with limited-privilege users
 # - Restricting container access
-REDIS_AUTH_ARG=""
+
+# Function to run redis-cli with proper authentication
+redis_cli() {
+  if [ -n "$REDIS_PASSWORD" ]; then
+    redis-cli -h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379} -a "$REDIS_PASSWORD" "$@"
+  else
+    redis-cli -h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379} "$@"
+  fi
+}
+
+# Extract and set REDIS_PASSWORD if needed
 if [ -n "$REDIS_URL" ]; then
   # Extract password from redis://:password@host:port or redis://username:password@host:port
-  # This expects URL-encoded passwords (e.g., %40 for @, %3A for :)
-  REDIS_PASSWORD=$(echo "$REDIS_URL" | sed -n 's|.*redis://\([^:]*:\)\?\([^@]*\)@.*|\2|p')
-  if [ -n "$REDIS_PASSWORD" ]; then
-    # URL-decode the password for common special characters
-    REDIS_PASSWORD=$(echo "$REDIS_PASSWORD" | sed 's/%40/@/g; s/%3A/:/g; s/%2F/\//g; s/%25/%/g')
-    REDIS_AUTH_ARG="-a $REDIS_PASSWORD"
+  # This expects URL-encoded passwords (e.g., %40 for @, %3A for :, %20 for space)
+  REDIS_PASSWORD_ENCODED=$(echo "$REDIS_URL" | sed -n 's|.*redis://\([^:]*:\)\?\([^@]*\)@.*|\2|p')
+  if [ -n "$REDIS_PASSWORD_ENCODED" ]; then
+    # URL-decode using Node.js for proper handling of all percent-encoded characters
+    # This correctly handles edge cases like %2540 (literal %40), spaces, and all special chars
+    REDIS_PASSWORD=$(node -e "console.log(decodeURIComponent('${REDIS_PASSWORD_ENCODED}'))" 2>/dev/null)
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to decode Redis password from REDIS_URL" >&2
+      echo "Ensure password is properly URL-encoded in REDIS_URL" >&2
+      exit 1
+    fi
+    export REDIS_PASSWORD
   fi
 elif [ -n "$REDIS_PASSWORD" ]; then
-  # Use REDIS_PASSWORD env var if set directly (no URL decoding needed)
-  REDIS_AUTH_ARG="-a $REDIS_PASSWORD"
+  # REDIS_PASSWORD is already set, just export it
+  export REDIS_PASSWORD
 fi
 
 # Configure timeout for Redis readiness check
@@ -32,7 +48,7 @@ MAX_RETRIES=30
 RETRY_COUNT=0
 
 echo "Waiting for Redis to be ready..."
-until redis-cli -h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379} $REDIS_AUTH_ARG ping > /dev/null 2>&1 || [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
+until redis_cli ping > /dev/null 2>&1 || [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
   echo "Redis is unavailable - sleeping (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
   sleep 1
   RETRY_COUNT=$((RETRY_COUNT + 1))
@@ -51,13 +67,13 @@ echo "Checking existing Redis data structures..."
 
 # Check multiple indicators to ensure complete initialization
 # The init script creates: active_sessions:index (global), and per-user indexes for funcs/endpoints
-ACTIVE_SESSIONS_INDEX=$(redis-cli -h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379} $REDIS_AUTH_ARG exists active_sessions:index)
+ACTIVE_SESSIONS_INDEX=$(redis_cli exists active_sessions:index)
 # Check for at least one actual session (the script creates user_001, user_002, user_003)
-SESSION_DATA=$(redis-cli -h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379} $REDIS_AUTH_ARG exists active_sessions:user_001)
+SESSION_DATA=$(redis_cli exists active_sessions:user_001)
 # Check for at least one function data
-FUNC_DATA=$(redis-cli -h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379} $REDIS_AUTH_ARG exists next_funcs:user_001:1)
+FUNC_DATA=$(redis_cli exists next_funcs:user_001:1)
 # Check for at least one endpoint data  
-ENDPOINT_DATA=$(redis-cli -h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379} $REDIS_AUTH_ARG exists active_endpoints:endpoint_001)
+ENDPOINT_DATA=$(redis_cli exists active_endpoints:endpoint_001)
 
 # Configure path to initialization script
 INIT_SCRIPT_PATH=${REDIS_INIT_SCRIPT:-/app/packages/server/scripts/init-redis.js}
