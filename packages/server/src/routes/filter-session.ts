@@ -21,14 +21,14 @@ const getSessionTTL = (): number => {
 
 interface SessionUpdateRequest {
   email: string;
-  sessionId?: string;
+  sid?: string;
   metadata?: Record<string, any>;
 }
 
 interface SessionUpdateResponse {
   success: boolean;
-  sessionId: string;
-  userId?: string;
+  sid: string;
+  uid?: string;
   nextFuncs?: Record<string, any>;
   message?: string;
 }
@@ -46,12 +46,12 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
       reply: FastifyReply
     ): Promise<SessionUpdateResponse> => {
       try {
-        const { email, sessionId, metadata } = request.body;
+        const { email, sid, metadata } = request.body;
 
         if (!email) {
           return reply.status(400).send({
             success: false,
-            sessionId: "",
+            sid: "",
             message: "Email is required",
           });
         }
@@ -62,14 +62,14 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
         if (!user) {
           return reply.status(404).send({
             success: false,
-            sessionId: sessionId || "",
+            sid: sid || "",
             message: "User not found",
           });
         }
 
         const userId = user.id;
-        // Generate UUID v7 if no sessionId provided
-        const finalSessionId = sessionId || uuid();
+        // Generate UUID v7 if no sid provided
+        const finalSessionId = sid || uuid();
 
         // Get next_funcs for the user from all_auth table
         const authResult = await db.query(
@@ -86,12 +86,12 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
 
         // Store session data in Redis
         const sessionData = {
-          userId,
+          uid: userId,
           email: user.email,
-          handle: user.handle,
-          sessionId: finalSessionId,
-          createdAt: Date.now(),
-          lastActivity: Date.now(),
+          name: user.name, // Use name instead of handle (handle not available in UserWithStatus)
+          sid: finalSessionId,
+          c_at: Date.now(),
+          last_seen: Date.now(),
           ...metadata,
         };
 
@@ -111,9 +111,9 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
           SESSION_KEYS.ACTIVE_SESSIONS,
           finalSessionId,
           JSON.stringify({
-            userId,
+            uid: userId,
             email: user.email,
-            createdAt: Date.now(),
+            c_at: Date.now(),
           })
         );
         // Set TTL on the entire hash (will be refreshed on each session creation)
@@ -141,9 +141,9 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
           ...headerInfo.active_users,
           [userId]: {
             email: user.email,
-            handle: user.handle,
-            sessionId: finalSessionId,
-            lastActivity: Date.now(),
+            name: user.name, // Use name instead of handle
+            sid: finalSessionId,
+            last_seen: Date.now(),
           }
         });
 
@@ -158,8 +158,8 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
 
         return reply.send({
           success: true,
-          sessionId: finalSessionId,
-          userId,
+          sid: finalSessionId,
+          uid: userId,
           nextFuncs,
         });
       } catch (error) {
@@ -224,10 +224,10 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
           }
         }
 
-        // Update last activity
+        // Update last seen
         await redis.getClient().hset(
           SESSION_KEYS.SESSION_DATA + sessionId,
-          "lastActivity",
+          "last_seen",
           JSON.stringify(Date.now())
         );
 
@@ -259,10 +259,10 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
       try {
         const { sessionId } = request.params;
 
-        // Get session data to find userId
+        // Get session data to find uid
         const sessionData = await redis.getClient().hget(
           SESSION_KEYS.SESSION_DATA + sessionId,
-          "userId"
+          "uid"
         );
 
         // Use pipeline for atomic deletions
@@ -276,8 +276,8 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
             // Remove from user's session set
             pipeline.srem(SESSION_KEYS.USER_SESSIONS + userId, sessionId);
           } catch (err) {
-            console.warn(`Failed to parse userId from session ${sessionId}:`, err);
-            // Continue with deletion of other keys even if userId parse fails
+            console.warn(`Failed to parse uid from session ${sessionId}:`, err);
+            // Continue with deletion of other keys even if uid parse fails
           }
         }
 
