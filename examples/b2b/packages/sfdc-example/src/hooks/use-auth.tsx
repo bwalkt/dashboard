@@ -66,8 +66,8 @@ export function useUser() {
     }
   }, [error, clearUser])
 
-  // Use store user if available, otherwise use query data
-  const currentUser = user || data
+  // Prioritize fresh query data over store to avoid stale renders
+  const currentUser = data ?? user
 
   return {
     data: currentUser,
@@ -101,9 +101,4 @@ export function useAuth() {
     signInWithGitHub,
     signInWithGitHubLoading,
   }
-}
-
-// Export a hook to access just the auth store directly if needed
-export function useAuthStoreDirectly() {
-  return useAuthStore()
 }
