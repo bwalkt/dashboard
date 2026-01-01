@@ -6,13 +6,45 @@ import Redis from 'ioredis';
 const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 const REDIS_PORT = process.env.REDIS_PORT || 6379;
 
-// Create Redis client
+// Extract password from REDIS_URL if present, or use REDIS_PASSWORD env var
+let REDIS_PASSWORD = process.env.REDIS_PASSWORD;
+if (!REDIS_PASSWORD && process.env.REDIS_URL) {
+  // Extract password from redis://:password@host:port or redis://username:password@host:port
+  const match = process.env.REDIS_URL.match(/redis:\/\/(?:[^:]*:)?([^@]*)@/);
+  if (match && match[1]) {
+    REDIS_PASSWORD = match[1];
+  }
+}
+
+// Create Redis client with lazy connection
 const redis = new Redis({
   host: REDIS_HOST,
   port: REDIS_PORT,
+  password: REDIS_PASSWORD,
+  lazyConnect: true,
+  retryStrategy: (times) => {
+    if (times > 3) {
+      console.error('Redis connection failed after 3 retries');
+      return null;
+    }
+    return Math.min(times * 200, 2000);
+  },
 });
 
-console.log('Connected to Redis');
+// Handle Redis connection errors
+redis.on('error', (err) => {
+  console.error('Redis connection error:', err.message);
+  process.exit(1);
+});
+
+// Connect to Redis
+try {
+  await redis.connect();
+  console.log('Connected to Redis');
+} catch (error) {
+  console.error('Failed to connect to Redis:', error.message);
+  process.exit(1);
+}
 
 // Helper function to generate timestamps
 const now = () => new Date().toISOString();
@@ -128,7 +160,7 @@ try {
       data.solved_at = func.solved_at;
     }
     
-    await redis.hmset(key, data);
+    await redis.hset(key, data);
     // Set TTL for completed items (7 days)
     if (func.solved) {
       await redis.expire(key, 604800);
