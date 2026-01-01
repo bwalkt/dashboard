@@ -4,15 +4,26 @@
 # This script runs when the container starts to populate Redis with initial data
 
 # Extract Redis password from REDIS_URL if present
+# NOTE: Passwords with special characters (@, :, /) must be URL-encoded in REDIS_URL
+# Example: redis://:my%40pass%3A123@localhost:6379 for password "my@pass:123"
+# 
+# Security Note: Using -a flag exposes password in process listings.
+# For production, consider:
+# - Running Redis in isolated networks
+# - Using Redis ACLs with limited-privilege users
+# - Restricting container access
 REDIS_AUTH_ARG=""
 if [ -n "$REDIS_URL" ]; then
   # Extract password from redis://:password@host:port or redis://username:password@host:port
+  # This expects URL-encoded passwords (e.g., %40 for @, %3A for :)
   REDIS_PASSWORD=$(echo "$REDIS_URL" | sed -n 's|.*redis://\([^:]*:\)\?\([^@]*\)@.*|\2|p')
   if [ -n "$REDIS_PASSWORD" ]; then
+    # URL-decode the password for common special characters
+    REDIS_PASSWORD=$(echo "$REDIS_PASSWORD" | sed 's/%40/@/g; s/%3A/:/g; s/%2F/\//g; s/%25/%/g')
     REDIS_AUTH_ARG="-a $REDIS_PASSWORD"
   fi
 elif [ -n "$REDIS_PASSWORD" ]; then
-  # Use REDIS_PASSWORD env var if set directly
+  # Use REDIS_PASSWORD env var if set directly (no URL decoding needed)
   REDIS_AUTH_ARG="-a $REDIS_PASSWORD"
 fi
 
@@ -34,23 +45,45 @@ fi
 
 echo "Redis is ready!"
 
-# Check if data already exists
-EXISTS=$(redis-cli -h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379} $REDIS_AUTH_ARG exists active_sessions:index)
+# Check if all required data structures exist for better idempotency
+# This prevents partial initialization issues if the script failed mid-execution
+echo "Checking existing Redis data structures..."
+ACTIVE_SESSIONS_EXISTS=$(redis-cli -h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379} $REDIS_AUTH_ARG exists active_sessions:index)
+
+# Note: The init-redis.js script creates user-specific indexes, not global ones
+# We check for the main index that's created for active sessions
+# If we need to check more thoroughly, we could check for actual data keys
 
 # Configure path to initialization script
 INIT_SCRIPT_PATH=${REDIS_INIT_SCRIPT:-/app/packages/server/scripts/init-redis.js}
 
-if [ "$EXISTS" = "0" ]; then
+if [ "$ACTIVE_SESSIONS_EXISTS" = "0" ]; then
   echo "Initializing Redis data structures..."
   if [ -f "$INIT_SCRIPT_PATH" ]; then
-    node "$INIT_SCRIPT_PATH"
-    echo "Redis initialization complete!"
+    # Pass Redis credentials to the Node script
+    export REDIS_HOST=${REDIS_HOST:-localhost}
+    export REDIS_PORT=${REDIS_PORT:-6379}
+    if [ -n "$REDIS_PASSWORD" ]; then
+      export REDIS_PASSWORD
+    fi
+    
+    # Run initialization with error handling
+    if node "$INIT_SCRIPT_PATH"; then
+      echo "Redis initialization complete!"
+    else
+      echo "ERROR: Redis initialization failed!" >&2
+      echo "The initialization script exited with an error." >&2
+      echo "Please check the logs above for details." >&2
+      exit 1
+    fi
   else
-    echo "WARNING: Initialization script not found at $INIT_SCRIPT_PATH"
-    echo "Skipping Redis data initialization"
+    echo "ERROR: Initialization script not found at $INIT_SCRIPT_PATH" >&2
+    echo "Cannot initialize Redis data structures." >&2
+    exit 1
   fi
 else
   echo "Redis data already exists, skipping initialization"
+  echo "Found active_sessions:index - assuming initialization was completed previously"
 fi
 
 # Continue with the main application
