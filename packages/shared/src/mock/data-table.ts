@@ -1,5 +1,5 @@
 import { subMinutes } from 'date-fns'
-
+import { uuid } from '../uuid.js'
 // Constants copied from portal for server-side mock generation
 const METHODS = ['GET', 'POST', 'PUT', 'DELETE'] as const
 const REGIONS = ['ams', 'fra', 'gru', 'hkg', 'iad', 'syd'] as const
@@ -159,7 +159,7 @@ export function createMockData({ minutes = 0 }: { size?: number; minutes?: numbe
 
   return [
     {
-      uuid: crypto.randomUUID(),
+      uuid: uuid(),
       level: getLevel(statusCode.ams),
       latency: latency.ams,
       regions: ['ams'],
@@ -171,7 +171,7 @@ export function createMockData({ minutes = 0 }: { size?: number; minutes?: numbe
       ...requestObject,
     },
     {
-      uuid: crypto.randomUUID(),
+      uuid: uuid(),
       level: getLevel(statusCode.iad),
       latency: latency.iad,
       regions: ['iad'],
@@ -183,7 +183,7 @@ export function createMockData({ minutes = 0 }: { size?: number; minutes?: numbe
       ...requestObject,
     },
     {
-      uuid: crypto.randomUUID(),
+      uuid: uuid(),
       level: getLevel(statusCode.gru),
       latency: latency.gru,
       regions: ['gru'],
@@ -195,7 +195,7 @@ export function createMockData({ minutes = 0 }: { size?: number; minutes?: numbe
       ...requestObject,
     },
     {
-      uuid: crypto.randomUUID(),
+      uuid: uuid(),
       level: getLevel(statusCode.syd),
       latency: latency.syd,
       regions: ['syd'],
@@ -207,7 +207,7 @@ export function createMockData({ minutes = 0 }: { size?: number; minutes?: numbe
       ...requestObject,
     },
     {
-      uuid: crypto.randomUUID(),
+      uuid: uuid(),
       level: getLevel(statusCode.fra),
       latency: latency.fra,
       regions: ['fra'],
@@ -219,7 +219,7 @@ export function createMockData({ minutes = 0 }: { size?: number; minutes?: numbe
       ...requestObject,
     },
     {
-      uuid: crypto.randomUUID(),
+      uuid: uuid(),
       level: getLevel(statusCode.hkg),
       latency: latency.hkg,
       regions: ['hkg'],
