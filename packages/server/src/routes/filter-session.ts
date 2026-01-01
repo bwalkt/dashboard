@@ -43,6 +43,15 @@ interface SessionUpdateResponse {
   message?: string;
 }
 
+/**
+ * Register three Fastify routes to manage filter sessions:
+ * - POST /filter/session/update — create or update a user's session in Redis and update header info
+ * - GET /filter/session/check/:sessionId — retrieve session data and associated next functions
+ * - DELETE /filter/session/:sessionId — remove a session and related Redis entries
+ *
+ * The routes coordinate Redis keys (SESSION_DATA, ACTIVE_SESSIONS, USER_SESSIONS, NEXT_FUNCS),
+ * query PostgreSQL for user and next_funcs when needed, and update header information via filterRedisService.
+ */
 export async function filterSessionRoutes(fastify: FastifyInstance): Promise<void> {
   /**
    * POST /filter/session/update

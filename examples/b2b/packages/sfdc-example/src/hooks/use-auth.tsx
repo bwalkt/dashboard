@@ -5,6 +5,17 @@ import { AUTH_CACHE_TIME_MS, AUTH_STALE_TIME_MS } from '@/lib/constants'
 import { useAuthStore } from '@/stores/auth-store'
 import { User } from '@/types'
 
+/**
+ * Synchronizes and exposes the current authenticated user from React Query and the auth store, and provides sign-out and refetch controls.
+ *
+ * @returns An object containing:
+ * - `data` — The authenticated user if available, otherwise `undefined`.
+ * - `isLoading` — `true` when either the query or the auth store is loading, otherwise `false`.
+ * - `signOut` — A function that signs out the current user.
+ * - `signOutLoading` — `true` while the sign-out mutation is in progress, otherwise `false`.
+ * - `signOutError` — The error produced by the sign-out mutation, if any.
+ * - `refetch` — A function to manually refetch the user data.
+ */
 export function useUser() {
   const { user, setUser, clearUser, isStale } = useAuthStore()
 
@@ -81,6 +92,13 @@ export function useUser() {
   }
 }
 
+/**
+ * Initiates the GitHub OAuth sign-in flow by requesting an authorization URL and redirecting the browser to it.
+ *
+ * @returns An object containing:
+ * - `signInWithGitHub` — Function that requests the provider authorization URL and navigates the browser to that URL when successful.
+ * - `signInWithGitHubLoading` — `true` if the sign-in request is in progress, `false` otherwise.
+ */
 export function useAuth() {
   const { mutateAsync: signInWithGitHub, isPending: signInWithGitHubLoading } = useMutation<{
     data: string
@@ -102,4 +120,13 @@ export function useAuth() {
     signInWithGitHub,
     signInWithGitHubLoading,
   }
+}
+
+/**
+ * Provide direct access to the authentication store.
+ *
+ * @returns The auth store instance used to read and update authentication state.
+ */
+export function useAuthStoreDirectly() {
+  return useAuthStore()
 }
