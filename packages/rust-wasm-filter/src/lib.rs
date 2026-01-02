@@ -19,11 +19,26 @@ struct ChallengeAuthzHttp {
 }
 
 // Filter configuration
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct FilterConfig {
     jwt_secret: String,
     filter_id: String,
     centrifugo_secret: String,
+    /// Buffer size for reading Redis HTTP call responses.
+    /// Default: 4096 bytes (4KB) - should be sufficient for challenge answers.
+    /// Configure via redis_response_buffer_size=<bytes> in filter config.
+    redis_response_buffer_size: usize,
+}
+
+impl Default for FilterConfig {
+    fn default() -> Self {
+        Self {
+            jwt_secret: String::new(),
+            filter_id: String::new(),
+            centrifugo_secret: String::new(),
+            redis_response_buffer_size: 4096, // Default 4KB buffer for Redis responses
+        }
+    }
 }
 
 // Challenge headers structure
@@ -45,13 +60,6 @@ const PUBLIC_ROUTES: &[&str] = &[
     "/ready",
 ];
 
-// JWT claims structure
-#[derive(Debug, Deserialize, Serialize)]
-struct Claims {
-    user_id: String,
-    iat: i64,
-    exp: Option<i64>,
-}
 
 impl Context for ChallengeAuthzRoot {}
 
@@ -76,6 +84,9 @@ impl RootContext for ChallengeAuthzRoot {
                         "jwt_secret" => config.jwt_secret = value.to_string(),
                         "filter_id" => config.filter_id = value.to_string(),
                         "centrifugo_secret" => config.centrifugo_secret = value.to_string(),
+                        "redis_response_buffer_size" => {
+                            config.redis_response_buffer_size = value.parse().unwrap_or(4096);
+                        }
                         _ => {}
                     }
                 }
@@ -111,16 +122,16 @@ impl Context for ChallengeAuthzHttp {
         
         // Handle Redis response
         if let (Some(challenge_id), Some(challenge_answer)) = (&self.pending_challenge_id, &self.pending_challenge_answer) {
-            // Get response body from Redis
-            let response_body = self.get_http_call_response_body(0, 1000);
+            // Get response body from Redis using configurable buffer size
+            let response_body = self.get_http_call_response_body(0, self.config.redis_response_buffer_size);
             
             match response_body {
                 Some(body) => {
                     let body_str = String::from_utf8_lossy(&body);
                     info!("[Rust WASM Filter] Redis response: {}", body_str);
                     
-                    // Parse Redis response (simple string comparison)
-                    if body_str.trim() == challenge_answer {
+                    // Parse Redis response (constant-time comparison to prevent timing attacks)
+                    if constant_time_compare(body_str.trim().as_bytes(), challenge_answer.as_bytes()) {
                         info!("[Rust WASM Filter] Challenge validated via Redis: {}", challenge_id);
                         self.resume_http_request();
                     } else {
@@ -155,10 +166,12 @@ impl HttpContext for ChallengeAuthzHttp {
 
         // Handle CORS preflight
         if method == "OPTIONS" {
+            let origin = self.get_http_request_header("origin")
+                .unwrap_or_else(|| "*".to_string());
             self.send_http_response(
                 204,
                 vec![
-                    ("access-control-allow-origin", "*"),
+                    ("access-control-allow-origin", &origin),
                     ("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH"),
                     ("access-control-allow-headers", "content-type,x-challenge-id,x-challenge-answer,authorization"),
                     ("access-control-allow-credentials", "true"),
@@ -248,6 +261,14 @@ fn is_public_route(path: &str, _method: &str) -> bool {
     PUBLIC_ROUTES.iter().any(|&route| path.starts_with(route))
 }
 
+/// Constant-time comparison to prevent timing attacks on challenge answers
+fn constant_time_compare(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.iter().zip(b.iter()).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
 fn extract_access_token(cookie_header: &str) -> String {
     for cookie in cookie_header.split(';') {
         let cookie = cookie.trim();
@@ -273,11 +294,15 @@ fn validate_challenge_format(id: &str, answer: &str) -> bool {
 
 impl ChallengeAuthzHttp {
     fn send_forbidden_response(&mut self, reason: &str) {
+        let origin = self.get_http_request_header("origin")
+            .unwrap_or_else(|| "*".to_string());
         let body = json!({ "error": reason }).to_string();
         self.send_http_response(
             403,
             vec![
                 ("content-type", "application/json"),
+                ("access-control-allow-origin", &origin),
+                ("access-control-allow-credentials", "true"),
             ],
             Some(body.as_bytes()),
         );

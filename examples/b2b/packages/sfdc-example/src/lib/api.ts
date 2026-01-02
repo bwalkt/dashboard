@@ -152,9 +152,17 @@ export class ApiError extends Error {
  */
 function getBackendUrl(): string {
   if (getUseWasm()) {
-    return import.meta.env.VITE_PROXY_URL_WASM
+    const url = import.meta.env.VITE_PROXY_URL_WASM
+    if (!url) {
+      throw new Error('VITE_PROXY_URL_WASM is not configured')
+    }
+    return url
   }
-  return import.meta.env.VITE_BACKEND_URL
+  const url = import.meta.env.VITE_BACKEND_URL
+  if (!url) {
+    throw new Error('VITE_BACKEND_URL is not configured')
+  }
+  return url
 }
 
 /**
@@ -214,8 +222,9 @@ function headersToObject(headers: HeadersInit): Record<string, string> {
  */
 function serializeBody(body: any, headers: Record<string, string>): { body: any; headers: Record<string, string> } {
   if (body === undefined) {
-    delete headers['Content-Type']
-    return { body: undefined, headers }
+    const updatedHeaders = { ...headers }
+    delete updatedHeaders['Content-Type']
+    return { body: undefined, headers: updatedHeaders }
   }
 
   const updatedHeaders = { ...headers }
@@ -239,14 +248,14 @@ function serializeBody(body: any, headers: Record<string, string>): { body: any;
 /**
  * Parse an API response
  */
-async function parseResponse<T>(response: Response): Promise<T> {
+async function parseResponse<T>(response: Response): Promise<T | undefined> {
   storeValidationHeader(response)
   // Handle challenge headers from response
   await handleChallengeHeaders(response)
 
   // Handle empty responses (e.g., 204 No Content)
   if (response.status === 204 || response.headers.get('content-length') === '0') {
-    return {} as T
+    return undefined
   }
 
   // Parse JSON response

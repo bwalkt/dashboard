@@ -1,4 +1,7 @@
-.PHONY: build clean install-deps dev
+.PHONY: all build clean install-deps dev test
+
+# Default target
+all: build
 
 # Target for WASM compilation
 TARGET = wasm32-wasi
@@ -32,3 +35,8 @@ dev: install-deps
 	@mkdir -p $(OUTPUT_DIR)
 	@cp target/$(TARGET)/debug/rust_wasm_filter.wasm $(OUTPUT_DIR)/$(WASM_FILE)
 	@echo "Debug WASM filter built: $(OUTPUT_DIR)/$(WASM_FILE)"
+
+# Run tests
+test:
+	@echo "Running tests..."
+	@cargo test

@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail, type UserResponse } from "@pzero/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -423,7 +424,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       // Generate verification code
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationCode = randomInt(100000, 1000000).toString();
       const expirySeconds = config.EMAIL_EXPIRY_MINUTES * 60;
       // Store verification data in Redis with 10 minute expiration
       const redisKey = `email_registration:${email}`;
@@ -645,7 +646,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       // Generate verification code
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationCode = randomInt(100000, 1000000).toString();
 
       // Store verification code in Redis
       const expirySeconds = config.EMAIL_EXPIRY_MINUTES * 60;

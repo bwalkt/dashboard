@@ -86,8 +86,9 @@ function headersToObject(headers: HeadersInit): Record<string, string> {
  */
 function serializeBody(body: any, headers: Record<string, string>): { body: any; headers: Record<string, string> } {
   if (body === undefined) {
-    delete headers['Content-Type']
-    return { body: undefined, headers }
+    const updatedHeaders = { ...headers }
+    delete updatedHeaders['Content-Type']
+    return { body: undefined, headers: updatedHeaders }
   }
 
   const updatedHeaders = { ...headers }
@@ -111,10 +112,10 @@ function serializeBody(body: any, headers: Record<string, string>): { body: any;
 /**
  * Parse an API response
  */
-async function parseResponse<T>(response: Response): Promise<T> {
+async function parseResponse<T>(response: Response): Promise<T | undefined> {
   // Handle empty responses (e.g., 204 No Content)
   if (response.status === 204 || response.headers.get('content-length') === '0') {
-    return {} as T
+    return undefined
   }
 
   // Parse JSON response
