@@ -155,6 +155,10 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
         const pipelineResults = await pipeline.exec();
         
         // Check if pipeline operations succeeded
+        if (!pipelineResults) {
+          throw new Error('Session storage failed: pipeline returned null');
+        }
+        
         for (const [error, result] of pipelineResults) {
           if (error) {
             throw new Error(`Session storage failed: ${error.message}`);
@@ -339,6 +343,10 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
         const pipelineResults = await pipeline.exec();
         
         // Check if pipeline operations succeeded
+        if (!pipelineResults) {
+          throw new Error('Session deletion failed: pipeline returned null');
+        }
+        
         for (const [error, result] of pipelineResults) {
           if (error) {
             throw new Error(`Session deletion failed: ${error.message}`);
