@@ -126,8 +126,10 @@ func (li *LoginInterceptor) updateSession(ctx *httpContext, email string, sessio
 		Email:     email,
 		SessionID: sessionID,
 		Metadata: map[string]interface{}{
-			"source":    "wasm_filter",
-			"timestamp": time.Now().UnixMilli(),
+			"meta": map[string]interface{}{
+				"source":    "wasm_filter",
+				"timestamp": time.Now().UnixMilli(),
+			},
 		},
 	}
 

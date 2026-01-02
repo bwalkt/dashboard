@@ -92,7 +92,7 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
           sid: finalSessionId,
           c_at: Date.now(),
           last_seen: Date.now(),
-          ...metadata,
+          data: metadata || { meta: { source: 'wasm_filter' } },
         };
 
         // Update multiple Redis keys atomically using pipeline
