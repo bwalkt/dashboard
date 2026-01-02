@@ -84,6 +84,7 @@ services:
       - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/pzero}
       - REDIS_HOST=dragonfly
       - REDIS_PORT=6379
+      - REDIS_URL=redis://dragonfly:6379
       - BREVO_API_KEY=${BREVO_API_KEY}
       - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
       - BREVO_SENDER_NAME=${BREVO_SENDER_NAME:-P-Zero}
@@ -145,6 +146,7 @@ services:
       - pzero-network
     ports:
       - "8182:8081" # External port for WASM filter requests
+      - "6380:6380" # Redis proxy port  
       - "9902:9902" # Admin interface
     volumes:
       - ./envoy-wasm.yaml:/etc/envoy/envoy.yaml:ro
@@ -158,6 +160,8 @@ services:
         condition: service_started
       authz-service:
         condition: service_started
+      dragonfly:
+        condition: service_healthy
 
 volumes:
   postgres_data:

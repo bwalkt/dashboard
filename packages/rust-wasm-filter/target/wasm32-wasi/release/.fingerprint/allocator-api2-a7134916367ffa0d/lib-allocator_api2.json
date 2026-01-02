@@ -1,0 +1,20 @@
+{
+  "rustc": 4013192585442940105,
+  "features": "[\"alloc\"]",
+  "declared_features": "[\"alloc\", \"default\", \"fresh-rust\", \"nightly\", \"serde\", \"std\"]",
+  "target": 2974225908581929585,
+  "profile": 11349355929603965641,
+  "path": 12289339412040192633,
+  "deps": [],
+  "local": [
+    {
+      "CheckDepInfo": {
+        "dep_info": "wasm32-wasi/release/.fingerprint/allocator-api2-a7134916367ffa0d/dep-lib-allocator_api2"
+      }
+    }
+  ],
+  "rustflags": [],
+  "metadata": 363439559241483613,
+  "config": 2202906307356721367,
+  "compile_kind": 16489420942494921214
+}

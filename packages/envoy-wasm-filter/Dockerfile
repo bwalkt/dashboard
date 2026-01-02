@@ -1,19 +1,26 @@
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM rust:1.82-alpine AS builder
+
+# Install necessary packages
+RUN apk add --no-cache musl-dev
 
 WORKDIR /build
 
-# Copy go mod files
-COPY ./packages/envoy-wasm-filter/go.mod ./packages/envoy-wasm-filter/go.sum* ./
+# Install WASM target
+RUN rustup target add wasm32-wasi
+
+# Copy Rust WASM filter
+COPY ./packages/rust-wasm-filter/Cargo.toml ./packages/rust-wasm-filter/Cargo.lock* ./
+COPY ./packages/rust-wasm-filter/src ./src
 
 # Download dependencies
-RUN go mod download
+RUN cargo fetch
 
-# Copy src directory maintaining structure
-COPY ./packages/envoy-wasm-filter/src ./src
+# Build the WASM filter
+RUN cargo build --target wasm32-wasi --release
 
-# Build the WASM filter with upstream Go and GOOS=wasip1
-RUN env GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o filter.wasm ./src
+# Rename to expected output
+RUN cp target/wasm32-wasi/release/rust_wasm_filter.wasm filter.wasm
 
 # Output stage
 FROM envoyproxy/envoy:v1.33-latest AS runner

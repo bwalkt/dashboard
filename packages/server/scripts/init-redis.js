@@ -309,11 +309,48 @@ try {
   await redis.expire('filter:registry', FILTER_REGISTRY_TTL);
   console.log(`  Created filter registry with ${filters.length} filters (TTL: ${FILTER_REGISTRY_TTL / 3600}h)`);
 
+  // 6. USER STATUS - Required for WASM filter validation
+  console.log('\n6. Creating user status keys...');
+  
+  const userStatuses = [
+    { userId: 'user_001', status: 'ACTIVE' },
+    { userId: 'user_002', status: 'ACTIVE' }, 
+    { userId: 'user_003', status: 'INACTIVE' },
+    { userId: '1', status: 'ACTIVE' }, // Common user ID from JWT tokens
+  ];
+  
+  for (const user of userStatuses) {
+    const statusKey = `status:${user.userId}`;
+    await redis.set(statusKey, user.status);
+    // Set TTL to match session TTL
+    await redis.expire(statusKey, SESSION_TTL);
+    console.log(`  Set user status: ${user.userId} = ${user.status}`);
+  }
+  
+  // 7. SAMPLE CHALLENGE DATA - For WASM filter testing
+  console.log('\n7. Creating sample challenge data...');
+  
+  const challenges = [
+    { id: 'test123', answer: 'answer123' },
+    { id: 'challenge_001', answer: 'correct_answer_1' },
+    { id: 'challenge_002', answer: 'correct_answer_2' },
+  ];
+  
+  for (const challenge of challenges) {
+    const challengeKey = `challenge:${challenge.id}`;
+    await redis.set(challengeKey, challenge.answer);
+    // Set shorter TTL for challenges (5 minutes)
+    await redis.expire(challengeKey, 300);
+    console.log(`  Set challenge: ${challenge.id} = ${challenge.answer}`);
+  }
+
   // Display summary
   console.log('\n=== Redis Initialization Complete ===');
   console.log(`Sessions Created: ${sessions.length}`);
   console.log(`Next Functions: ${sessionFuncs.length}`);
   console.log(`Registered Filters: ${filters.length}`);
+  console.log(`User Statuses: ${userStatuses.length}`);
+  console.log(`Challenge Data: ${challenges.length}`);
   console.log(`Session TTL: ${SESSION_TTL} seconds (${SESSION_TTL / 86400} days)`);
   console.log(`Filter Registry TTL: ${FILTER_REGISTRY_TTL} seconds (${FILTER_REGISTRY_TTL / 3600} hours)`);
   
@@ -330,9 +367,16 @@ try {
   console.log('Get filter registry: HGETALL filter:registry');
   console.log('Get filter heartbeat: GET filter:heartbeat:filter_001');
   
+  console.log('\n-- WASM Filter Data --');
+  console.log('Get user status: GET status:user_001');
+  console.log('Get challenge answer: GET challenge:test123');
+  console.log('Check if user is active: GET status:1');
+  
   console.log('\n-- Pattern Searches --');
   console.log('Find all sessions: SCAN 0 MATCH filter:sessions:data:* COUNT 100');
   console.log('Find user sessions: SCAN 0 MATCH filter:sessions:user:* COUNT 100');
+  console.log('Find user statuses: SCAN 0 MATCH status:* COUNT 100');
+  console.log('Find challenges: SCAN 0 MATCH challenge:* COUNT 100');
 
 } catch (error) {
   console.error('Error initializing Redis:', error);

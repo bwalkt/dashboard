@@ -1,0 +1,16 @@
+{
+  "rustc": 4013192585442940105,
+  "features": "[\"alloc\", \"std\"]",
+  "declared_features": "[\"alloc\", \"core\", \"default\", \"libc\", \"logging\", \"rustc-dep-of-std\", \"std\", \"use_std\"]",
+  "target": 11224823532731451965,
+  "profile": 5242605182404009969,
+  "path": 1239669351856717343,
+  "deps": [],
+  "local": [
+    { "CheckDepInfo": { "dep_info": "wasm32-wasi/release/.fingerprint/memchr-44735e05ba4e3d60/dep-lib-memchr" } }
+  ],
+  "rustflags": [],
+  "metadata": 7513296495906230968,
+  "config": 2202906307356721367,
+  "compile_kind": 16489420942494921214
+}

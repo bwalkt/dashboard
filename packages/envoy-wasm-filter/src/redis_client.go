@@ -589,9 +589,17 @@ func handleRedisHeartbeatResponse(response map[string]interface{}, context map[s
 // checkUserStatusAsync checks user status in Redis using key format: status:{user_id}
 func checkUserStatusAsync(userId string) error {
 	redisKey := fmt.Sprintf("status:%s", userId)
+	
+	// Pre-extract challenge headers while we still have HTTP context
+	// This avoids the crash when trying to read headers from callback
+	challengeID, _ := proxywasm.GetHttpRequestHeader("x-challenge-id")
+	challengeAnswer, _ := proxywasm.GetHttpRequestHeader("x-challenge-answer")
+	
 	context := map[string]interface{}{
 		"operation": "user_status_check",
 		"userId":    userId,
+		"challengeID": challengeID,
+		"challengeAnswer": challengeAnswer,
 	}
 	return redisGetAsync(redisKey, "user_status_check", context)
 }
@@ -613,8 +621,13 @@ func handleRedisUserStatusResponse(response map[string]interface{}, context map[
 	status := strings.ToUpper(strings.TrimSpace(value))
 	if status == "ACTIVE" {
 		proxywasm.LogInfof("[Redis] User status is ACTIVE for user: %s", userId)
-		// User status is ACTIVE, now perform challenge validation
-		performChallengeValidation()
+		
+		// Extract pre-stored challenge data from context
+		challengeID, _ := context["challengeID"].(string)
+		challengeAnswer, _ := context["challengeAnswer"].(string)
+		
+		// Validate challenge using pre-extracted headers
+		performChallengeValidationWithData(challengeID, challengeAnswer)
 	} else {
 		proxywasm.LogWarnf("[Redis] User status is not ACTIVE for user: %s, status: %s", userId, status)
 		proxywasm.SendHttpResponse(403, nil, []byte(fmt.Sprintf("{\"error\":\"user status is %s, must be ACTIVE\"}", status)), -1)
@@ -701,6 +714,44 @@ func makeRedisRequestAsync(command, key, value, operationType string, context ma
 // Legacy synchronous function (deprecated)
 func makeRedisRequest(command, key, value string, args ...interface{}) (string, error) {
 	return "", fmt.Errorf("synchronous Redis operations not supported in WASM - use makeRedisRequestAsync")
+}
+
+// performChallengeValidationWithData performs challenge validation with pre-extracted data
+// This version doesn't need HTTP context, avoiding crashes in callbacks
+func performChallengeValidationWithData(challengeID, challengeAnswer string) {
+	// Lazy registration: Register filter in Redis on first non-public request
+	if !isFilterRegistered() {
+		proxywasm.LogInfof("[Redis] Skipping Redis registration (HTTP client crashes in WASM)")
+		setFilterRegistered(true)
+	}
+
+	// Validate challenge headers
+	if challengeID == "" || challengeAnswer == "" {
+		proxywasm.LogWarnf("[Redis] Missing challenge headers")
+		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"missing challenge headers\"}"), -1)
+		return
+	}
+
+	// Check shared data cache first
+	expectedAnswer, found := GetChallengeFromSharedData(challengeID)
+	if found {
+		if ValidateAnswer(challengeAnswer, expectedAnswer) {
+			proxywasm.LogInfof("[Redis] Challenge validated from cache: %s", challengeID)
+			proxywasm.ResumeHttpRequest()
+			return
+		}
+		proxywasm.LogWarnf("[Redis] Challenge answer mismatch for: %s", challengeID)
+		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid challenge answer\"}"), -1)
+		return
+	}
+
+	// Not in cache, validate via Redis
+	proxywasm.LogInfof("[Redis] Challenge not in cache, validating via Redis: %s", challengeID)
+	_, err := ValidateChallengeViaRedis(challengeID, challengeAnswer)
+	if err != nil {
+		proxywasm.LogErrorf("[Redis] Failed to validate via Redis: %v", err)
+		proxywasm.SendHttpResponse(500, nil, []byte("{\"error\":\"validation service error\"}"), -1)
+	}
 }
 
 // getEnvoyNodeID gets the Envoy node ID from Envoy context

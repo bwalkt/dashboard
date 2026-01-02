@@ -1,0 +1,24 @@
+{
+  "rustc": 4013192585442940105,
+  "features": "[\"default\", \"std\"]",
+  "declared_features": "[\"alloc\", \"arbitrary_precision\", \"default\", \"float_roundtrip\", \"indexmap\", \"preserve_order\", \"raw_value\", \"std\", \"unbounded_depth\"]",
+  "target": 16692808257174462108,
+  "profile": 5242605182404009969,
+  "path": 11402031255082524373,
+  "deps": [
+    [4787959202970221163, "memchr", false, 1596020733419723500],
+    [8829414876511798693, "zmij", false, 14442970228662854237],
+    [10602040891819002138, "itoa", false, 1441682021922736737],
+    [15061164725649098585, "serde_core", false, 11027041578086059064],
+    [15944037779086058550, "build_script_build", false, 9579767516956781673]
+  ],
+  "local": [
+    {
+      "CheckDepInfo": { "dep_info": "wasm32-wasi/release/.fingerprint/serde_json-bd5aac5cbd80d7fb/dep-lib-serde_json" }
+    }
+  ],
+  "rustflags": [],
+  "metadata": 16261601059619201932,
+  "config": 2202906307356721367,
+  "compile_kind": 16489420942494921214
+}

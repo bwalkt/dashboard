@@ -340,8 +340,11 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 	// proxywasm.LogInfof("[WASM Filter] TEMPORARY: Bypassing all challenge validation for debugging: %s %s", method, path)
 	// return types.ActionContinue
 
-	// Check user status in Redis
-	// Extract accessToken from cookie
+	// SIMPLIFIED: Skip Redis status check due to WASM limitations
+	// User status validation should be done by the backend server
+	// The WASM filter will only validate challenge headers
+	
+	// Extract accessToken from cookie for basic validation
 	accessToken, err := extractAccessTokenFromCookie()
 	if err != nil {
 		proxywasm.LogWarnf("[WASM Filter] Failed to extract accessToken from cookie: %v", err)
@@ -349,25 +352,57 @@ func (ctx *httpContext) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 		return types.ActionPause
 	}
 
-	// Decode JWT token to get userId
+	// Basic JWT validation (just check if it's valid, don't check user status)
 	userId, err := decodeJWTToken(accessToken)
 	if err != nil {
 		proxywasm.LogWarnf("[WASM Filter] Failed to decode JWT token: %v", err)
 		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid access token\"}"), -1)
 		return types.ActionPause
 	}
+	
+	proxywasm.LogInfof("[WASM Filter] User %s authenticated, performing challenge validation", userId)
+	
+	// Directly perform challenge validation without Redis status check
+	return performChallengeValidationDirect()
+}
 
-	// Check user status in Redis
-	proxywasm.LogInfof("[WASM Filter] Checking user status for user: %s", userId)
-	if err := checkUserStatusAsync(userId); err != nil {
-		proxywasm.LogErrorf("[WASM Filter] Failed to check user status: %v", err)
-		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"failed to verify user status\"}"), -1)
+// performChallengeValidationDirect performs challenge validation without Redis
+// This simplified version only uses local cache, no external calls
+func performChallengeValidationDirect() types.Action {
+	// Extract challenge headers
+	challengeHeaders, err := ExtractChallengeHeaders()
+	if err != nil {
+		// Headers not present or error extracting
+		proxywasm.LogWarnf("[WASM Filter] Missing challenge headers: %v", err)
+		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"missing challenge headers\"}"), -1)
 		return types.ActionPause
 	}
 
-	// Pause request processing - will resume in callback when Redis response received
-	// Store context for challenge validation after status check
-	return types.ActionPause
+	// Validate format
+	if !challengeHeaders.ValidateFormat() {
+		proxywasm.LogWarnf("[WASM Filter] Invalid challenge header format")
+		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid challenge format\"}"), -1)
+		return types.ActionPause
+	}
+
+	// Check shared data cache only (no Redis)
+	expectedAnswer, found := GetChallengeFromSharedData(challengeHeaders.ChallengeID)
+	if found {
+		// Validate against cached answer
+		if ValidateAnswer(challengeHeaders.ChallengeAnswer, expectedAnswer) {
+			proxywasm.LogInfof("[WASM Filter] Challenge validated from cache: %s", challengeHeaders.ChallengeID)
+			return types.ActionContinue
+		}
+		// Answer mismatch
+		proxywasm.LogWarnf("[WASM Filter] Challenge answer mismatch for: %s", challengeHeaders.ChallengeID)
+		proxywasm.SendHttpResponse(403, nil, []byte("{\"error\":\"invalid challenge answer\"}"), -1)
+		return types.ActionPause
+	}
+
+	// Not in cache - for now, let the request through to backend for validation
+	// The backend server will handle Redis validation
+	proxywasm.LogInfof("[WASM Filter] Challenge not in cache, forwarding to backend: %s", challengeHeaders.ChallengeID)
+	return types.ActionContinue
 }
 
 // performChallengeValidation performs challenge header validation

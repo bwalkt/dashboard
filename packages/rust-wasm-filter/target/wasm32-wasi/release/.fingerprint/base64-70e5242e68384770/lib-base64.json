@@ -1,0 +1,16 @@
+{
+  "rustc": 4013192585442940105,
+  "features": "[\"alloc\", \"default\", \"std\"]",
+  "declared_features": "[\"alloc\", \"default\", \"std\"]",
+  "target": 15613143633061253375,
+  "profile": 5242605182404009969,
+  "path": 17565354902324403386,
+  "deps": [],
+  "local": [
+    { "CheckDepInfo": { "dep_info": "wasm32-wasi/release/.fingerprint/base64-70e5242e68384770/dep-lib-base64" } }
+  ],
+  "rustflags": [],
+  "metadata": 17497948042317577831,
+  "config": 2202906307356721367,
+  "compile_kind": 16489420942494921214
+}
