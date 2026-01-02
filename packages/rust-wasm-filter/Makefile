@@ -2,7 +2,7 @@
 
 # Target for WASM compilation
 TARGET = wasm32-wasi
-OUTPUT_DIR = ../envoy-wasm-filter/build
+OUTPUT_DIR = ../server
 WASM_FILE = challenge-authz.wasm
 
 # Install build dependencies

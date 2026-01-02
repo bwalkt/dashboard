@@ -1,5 +1,0 @@
-{
-  "centrifugo_secret": "your-centrifugo-secret",
-  "filter_id": "pzero-envoy-wasm-filter-1",
-  "jwt_secret": "your-jwt-secret"
-}

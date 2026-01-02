@@ -29,5 +29,3 @@ COPY --from=builder /build/filter.wasm /etc/envoy/wasm/challenge-authz.wasm
 EXPOSE 8081
 
 CMD ["envoy", "-c", "/etc/envoy/envoy.yaml"]
-
-

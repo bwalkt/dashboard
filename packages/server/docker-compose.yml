@@ -140,7 +140,7 @@ services:
   pzero-envoy-wasm:
     build:
       context: ../../
-      dockerfile: packages/envoy-wasm-filter/Dockerfile
+      dockerfile: packages/rust-wasm-filter/Dockerfile
     container_name: pzero-envoy-wasm-proxy
     networks:
       - pzero-network

@@ -67,11 +67,16 @@ static_resources:
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.redis_proxy.v3.RedisProxy
                 stat_prefix: redis_stats
-                cluster: redis_cluster
                 settings:
                   op_timeout: 5s
                   enable_redirection: true
                   enable_command_stats: true
+                downstream_auth_passwords:
+                  - inline_string: ""
+                prefix_routes:
+                  routes:
+                    - prefix: ""
+                      cluster: redis_cluster
   clusters:
     - name: server_cluster
       connect_timeout: 10s

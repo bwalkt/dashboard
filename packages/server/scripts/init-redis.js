@@ -331,6 +331,7 @@ try {
   console.log('\n7. Creating sample challenge data...');
   
   const challenges = [
+    { id: '1', answer: '1' },
     { id: 'test123', answer: 'answer123' },
     { id: 'challenge_001', answer: 'correct_answer_1' },
     { id: 'challenge_002', answer: 'correct_answer_2' },
@@ -369,7 +370,7 @@ try {
   
   console.log('\n-- WASM Filter Data --');
   console.log('Get user status: GET status:user_001');
-  console.log('Get challenge answer: GET challenge:test123');
+  console.log('Get challenge answer: GET challenge:1');
   console.log('Check if user is active: GET status:1');
   
   console.log('\n-- Pattern Searches --');

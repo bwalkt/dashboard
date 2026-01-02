@@ -71,7 +71,7 @@ SESSION_DATA=$(redis_cli exists filter:sessions:data)
 # Check for at least one user status (required for WASM filter)
 USER_STATUS=$(redis_cli exists status:user_001)
 # Check for at least one challenge (required for WASM filter testing)
-CHALLENGE_DATA=$(redis_cli exists challenge:test123)
+CHALLENGE_DATA=$(redis_cli exists challenge:1)
 # Check for filter registry
 FILTER_REGISTRY=$(redis_cli exists filter:registry)
 
