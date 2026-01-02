@@ -14,6 +14,7 @@ import { centrifugoRoutes } from "./routes/centrifugo.js";
 import { deviceRoutes } from "./routes/devices.js";
 import { emailRoutes } from "./routes/email.js";
 import { faqRoutes } from "./routes/faq.js";
+import { filterSessionRoutes } from "./routes/filter-session.js";
 import { gatewayRoutes } from "./routes/gateway.js";
 import { headerInfoRoutes } from "./routes/header-info.js";
 import { orgRoutes } from "./routes/orgs.js";
@@ -180,6 +181,7 @@ export default async function (
   await fastify.register(deviceRoutes);
   await fastify.register(emailRoutes);
   await fastify.register(faqRoutes);
+  await fastify.register(filterSessionRoutes);
   await fastify.register(gatewayRoutes);
   await fastify.register(headerInfoRoutes);
   await fastify.register(orgRoutes);

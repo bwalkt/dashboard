@@ -1,9 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { useEffect } from 'react'
+import { ApiError, api } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth-store'
 import { User } from '@/types'
 
 export function useUser() {
-  const { data, isLoading } = useQuery<User>({
+  const { user, setUser, clearUser, isStale } = useAuthStore()
+
+  // Use React Query to fetch user, but integrate with zustand store
+  const {
+    data,
+    isLoading: queryLoading,
+    error,
+    refetch,
+  } = useQuery<User>({
     queryKey: ['user'],
     queryFn: async () => {
       const { user } = await api.get<{ user: User }>('/auth/me', {
@@ -13,7 +23,11 @@ export function useUser() {
       })
       return user
     },
+    // Only fetch if we don't have data or it's stale
+    enabled: !user || isStale(),
     retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (was cacheTime in v4)
   })
 
   const queryClient = useQueryClient()
@@ -26,6 +40,7 @@ export function useUser() {
     mutationFn: async () => {
       await api.post('/auth/logout', undefined, { skipRefresh: true })
       queryClient.clear()
+      clearUser() // Clear zustand store
       return { error: null }
     },
     onSuccess: () => {
@@ -36,12 +51,32 @@ export function useUser() {
     },
   })
 
+  // Sync zustand store with query data
+  useEffect(() => {
+    // Always sync fresh query data to store
+    if (data) {
+      setUser(data)
+    }
+  }, [data, setUser])
+
+  // Handle auth errors by clearing user
+  useEffect(() => {
+    if (error instanceof ApiError && error.status === 401) {
+      clearUser()
+    }
+  }, [error, clearUser])
+
+  // Prioritize fresh query data over store to avoid stale renders
+  const currentUser = data ?? user
+
   return {
-    data,
-    isLoading,
+    data: currentUser,
+    isLoading: queryLoading,
+    error: error instanceof ApiError && error.status !== 401 ? error : null, // Don't expose 401 as error (handled via clearUser)
     signOut,
     signOutLoading,
     signOutError,
+    refetch, // Allow manual refetch if needed
   }
 }
 
