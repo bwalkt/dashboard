@@ -1,4 +1,4 @@
-.PHONY: build clean install-deps
+.PHONY: build clean install-deps dev
 
 # Target for WASM compilation
 TARGET = wasm32-wasi
@@ -26,7 +26,7 @@ clean:
 	@echo "Cleaned build artifacts"
 
 # Development build (with debug symbols)
-dev:
+dev: install-deps
 	@echo "Building Rust WASM filter in debug mode..."
 	@cargo build --target $(TARGET)
 	@mkdir -p $(OUTPUT_DIR)

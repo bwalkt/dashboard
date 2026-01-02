@@ -229,7 +229,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       try {
         const user = (request as unknown as AuthenticatedRequest).user as UserWithStatus;
         if (user.status !== "ACTIVE") {
-          deleteUserSession(request, reply);
+          await deleteUserSession(request, reply);
           return reply.status(403).send({
             error: "Forbidden",
             message: `User Account is ${user.status ?? "INACTIVE"}`,
@@ -320,7 +320,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.post("/auth/logout", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      deleteUserSession(request, reply);
+      await deleteUserSession(request, reply);
 
       // In a production app, you might want to blacklist the token
       // For now, we'll just return a success message
@@ -342,7 +342,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.get("/auth/logout", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      deleteUserSession(request, reply);
+      await deleteUserSession(request, reply);
       // Return success message
       return reply.send({
         message: "Logged out successfully",
@@ -371,7 +371,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       };
 
       console.log("Registration request received:", {
-        email,
+        email: config.NODE_ENV === "production" ? "[REDACTED]" : email,
         name,
         handle: handle ?? generateHandleFromEmail(email),
         deviceInfo: device
@@ -510,7 +510,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       const { code: storedCode, handle, name, device, grid } = JSON.parse(registrationData);
 
       console.log("Registration verification attempt:", {
-        email,
+        email: config.NODE_ENV === "production" ? "[REDACTED]" : email,
         name,
         handle: handle ?? generateHandleFromEmail(email),
         hasDevice: !!device,

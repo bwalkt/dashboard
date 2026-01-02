@@ -158,21 +158,22 @@ function getBackendUrl(): string {
 }
 
 /**
- * Default headers for API requests
+ * Get default headers for API requests (computed dynamically)
  * Note: Content-Type is not included by default - it's added only when there's a body
  */
-const defaultHeaders: HeadersInit = getUseWasm()
-  ? {
-      [PROXY_TARGET_ID_HEADER]: import.meta.env.VITE_PROXY_TARGET,
-    }
-  : {}
+function getDefaultHeaders(): HeadersInit {
+  return getUseWasm()
+    ? {
+        [PROXY_TARGET_ID_HEADER]: import.meta.env.VITE_PROXY_TARGET,
+      }
+    : {}
+}
 
 /**
  * Default request options
  */
 const defaultOptions: RequestInit = {
   credentials: 'include',
-  headers: defaultHeaders,
 }
 
 /**
@@ -272,7 +273,7 @@ async function refreshToken(): Promise<void> {
       const response = await fetch(`${getBackendUrl()}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
-        headers: new Headers(defaultHeaders),
+        headers: new Headers(getDefaultHeaders()),
       })
 
       if (!response.ok) {
@@ -363,7 +364,7 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
     ...defaultOptions,
     ...fetchOptions,
     headers: {
-      ...defaultHeaders,
+      ...getDefaultHeaders(),
       ...updatedHeaders,
     },
     body: serializedBody,

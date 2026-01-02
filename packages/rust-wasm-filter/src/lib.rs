@@ -2,6 +2,7 @@ use log::{info, warn};
 use proxy_wasm::traits::*;
 use proxy_wasm::types::*;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::time::Duration;
 
 // Root context for the filter
@@ -14,6 +15,7 @@ struct ChallengeAuthzHttp {
     config: FilterConfig,
     pending_challenge_id: Option<String>,
     pending_challenge_answer: Option<String>,
+    pending_call_id: Option<u32>,
 }
 
 // Filter configuration
@@ -32,6 +34,7 @@ struct ChallengeHeaders {
 }
 
 // Public routes that bypass authentication
+// Make these configureable TODO
 const PUBLIC_ROUTES: &[&str] = &[
     "/proxy/auth/login",
     "/proxy/auth/register", 
@@ -89,6 +92,7 @@ impl RootContext for ChallengeAuthzRoot {
             config: self.config.clone(),
             pending_challenge_id: None,
             pending_challenge_answer: None,
+            pending_call_id: None,
         }))
     }
 
@@ -98,7 +102,13 @@ impl RootContext for ChallengeAuthzRoot {
 }
 
 impl Context for ChallengeAuthzHttp {
-    fn on_http_call_response(&mut self, _: u32, _: usize, _: usize, _: usize) {
+    fn on_http_call_response(&mut self, token_id: u32, _: usize, _: usize, _: usize) {
+        // Verify this is the expected call response
+        if self.pending_call_id != Some(token_id) {
+            warn!("[Rust WASM Filter] Unexpected call response: {}", token_id);
+            return;
+        }
+        
         // Handle Redis response
         if let (Some(challenge_id), Some(challenge_answer)) = (&self.pending_challenge_id, &self.pending_challenge_answer) {
             // Get response body from Redis
@@ -128,6 +138,7 @@ impl Context for ChallengeAuthzHttp {
             // Clear pending context
             self.pending_challenge_id = None;
             self.pending_challenge_answer = None;
+            self.pending_call_id = None;
         }
     }
 }
@@ -213,11 +224,12 @@ impl HttpContext for ChallengeAuthzHttp {
             vec![],
             Duration::from_secs(5),
         ) {
-            Ok(_call_id) => {
+            Ok(call_id) => {
                 info!("[Rust WASM Filter] Dispatched Redis call for challenge: {}", challenge_id);
                 // Store context for callback
                 self.pending_challenge_id = Some(challenge_id.clone());
                 self.pending_challenge_answer = Some(challenge_answer.clone());
+                self.pending_call_id = Some(call_id);
                 return Action::Pause; // Wait for Redis response
             }
             Err(e) => {
@@ -261,7 +273,7 @@ fn validate_challenge_format(id: &str, answer: &str) -> bool {
 
 impl ChallengeAuthzHttp {
     fn send_forbidden_response(&mut self, reason: &str) {
-        let body = format!(r#"{{"error":"{}"}}"#, reason);
+        let body = json!({ "error": reason }).to_string();
         self.send_http_response(
             403,
             vec![

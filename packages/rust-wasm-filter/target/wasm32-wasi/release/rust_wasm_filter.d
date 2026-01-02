@@ -1,1 +1,0 @@
-/Users/umam3/projects/boardwalk/p-zero/dashboard/packages/rust-wasm-filter/target/wasm32-wasi/release/rust_wasm_filter.wasm: /Users/umam3/projects/boardwalk/p-zero/dashboard/packages/rust-wasm-filter/src/lib.rs

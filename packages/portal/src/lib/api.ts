@@ -27,7 +27,11 @@ export class ApiError extends Error {
  * Get the backend URL from environment variables
  */
 function getBackendUrl(): string {
-  return import.meta.env.VITE_API_BASE_URL
+  const url = import.meta.env.VITE_API_BASE_URL
+  if (!url) {
+    throw new Error('VITE_API_BASE_URL is not configured')
+  }
+  return url
 }
 
 /**
