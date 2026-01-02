@@ -53,6 +53,7 @@ struct ChallengeHeaders {
 const PUBLIC_ROUTES: &[&str] = &[
     "/proxy/auth/login",
     "/proxy/auth/register", 
+    "/proxy/auth/callback",
     "/proxy/auth/refresh",
     "/proxy/auth/logout",
     "/proxy/auth/me",
