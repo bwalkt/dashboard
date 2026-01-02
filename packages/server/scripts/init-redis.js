@@ -55,13 +55,32 @@ const minutesAgo = (min) => Date.now() - min * 60000;
 // Get session TTL from environment (in days), default to 30 days
 const SESSION_TTL = (process.env.SESSION_TTL_DAYS ? parseInt(process.env.SESSION_TTL_DAYS, 10) : 30) * 24 * 60 * 60;
 
+// Get filter registry TTL from environment (in hours), default to 24 hours
+const FILTER_REGISTRY_TTL = (process.env.FILTER_REGISTRY_TTL_HOURS ? parseInt(process.env.FILTER_REGISTRY_TTL_HOURS, 10) : 24) * 60 * 60;
+
 try {
   // Clear existing test data first
   console.log('\n0. Clearing existing test data...');
-  const keysToDelete = await redis.keys('filter:sessions:*');
+  
+  // Use SCAN instead of KEYS for production safety
+  const keysToDelete = [];
+  let cursor = '0';
+  do {
+    const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', 'filter:sessions:*', 'COUNT', 100);
+    cursor = nextCursor;
+    keysToDelete.push(...keys);
+  } while (cursor !== '0');
+  
   if (keysToDelete.length > 0) {
-    await redis.del(...keysToDelete);
+    // Delete in batches to avoid blocking Redis
+    const batchSize = 100;
+    for (let i = 0; i < keysToDelete.length; i += batchSize) {
+      const batch = keysToDelete.slice(i, i + batchSize);
+      await redis.del(...batch);
+    }
     console.log(`  Cleared ${keysToDelete.length} existing keys`);
+  } else {
+    console.log(`  No existing keys found to clear`);
   }
 
   // 1. FILTER SESSIONS - New session management structure
@@ -119,15 +138,15 @@ try {
   for (const session of sessions) {
     const sessionKey = `filter:sessions:data:${session.sid}`;
     
-    // Store session data
+    // Store session data (only stringify complex objects, not primitives)
     await redis.hset(sessionKey,
-      'uid', JSON.stringify(session.uid),
-      'email', JSON.stringify(session.email),
-      'name', JSON.stringify(session.name),
-      'sid', JSON.stringify(session.sid),
-      'c_at', JSON.stringify(session.c_at),
-      'last_seen', JSON.stringify(session.last_seen),
-      'data', JSON.stringify(session.data)
+      'uid', session.uid,
+      'email', session.email,
+      'name', session.name,
+      'sid', session.sid,
+      'c_at', session.c_at.toString(),
+      'last_seen', session.last_seen.toString(),
+      'data', JSON.stringify(session.data)  // Complex object needs JSON serialization
     );
     await redis.expire(sessionKey, SESSION_TTL);
     
@@ -287,7 +306,8 @@ try {
   }
   
   await redis.hset('filter:registry', filterRegistry);
-  console.log(`  Created filter registry with ${filters.length} filters`);
+  await redis.expire('filter:registry', FILTER_REGISTRY_TTL);
+  console.log(`  Created filter registry with ${filters.length} filters (TTL: ${FILTER_REGISTRY_TTL / 3600}h)`);
 
   // Display summary
   console.log('\n=== Redis Initialization Complete ===');
@@ -295,6 +315,7 @@ try {
   console.log(`Next Functions: ${sessionFuncs.length}`);
   console.log(`Registered Filters: ${filters.length}`);
   console.log(`Session TTL: ${SESSION_TTL} seconds (${SESSION_TTL / 86400} days)`);
+  console.log(`Filter Registry TTL: ${FILTER_REGISTRY_TTL} seconds (${FILTER_REGISTRY_TTL / 3600} hours)`);
   
   // Show sample queries
   console.log('\n=== Sample Redis Commands ===');

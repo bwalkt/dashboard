@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/proxy-wasm/proxy-wasm-go-sdk/proxywasm"
@@ -70,6 +71,8 @@ type pluginContext struct {
 	// Embed the default plugin context
 	types.DefaultPluginContext
 	serverURL        string
+	clusterName      string
+	timeout          int
 	loginInterceptor *LoginInterceptor
 }
 
@@ -148,8 +151,33 @@ func (ctx *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlu
 		proxywasm.LogWarnf("[WASM Filter] No server_url configured, using default: %s", ctx.serverURL)
 	}
 	
+	// Store cluster name for HTTP callouts
+	if clusterName, ok := configMap["cluster_name"]; ok {
+		ctx.clusterName = clusterName
+		proxywasm.LogInfof("[WASM Filter] Cluster name configured: %s", clusterName)
+	} else {
+		// Default to backend_cluster if not configured
+		ctx.clusterName = "backend_cluster"
+		proxywasm.LogWarnf("[WASM Filter] No cluster_name configured, using default: %s", ctx.clusterName)
+	}
+	
+	// Store timeout for HTTP callouts (in milliseconds)
+	if timeoutStr, ok := configMap["timeout_ms"]; ok {
+		if timeout, err := strconv.Atoi(timeoutStr); err == nil {
+			ctx.timeout = timeout
+			proxywasm.LogInfof("[WASM Filter] Timeout configured: %dms", ctx.timeout)
+		} else {
+			ctx.timeout = 5000 // default 5 seconds
+			proxywasm.LogWarnf("[WASM Filter] Invalid timeout_ms value '%s', using default: %dms", timeoutStr, ctx.timeout)
+		}
+	} else {
+		// Default to 5 seconds if not configured
+		ctx.timeout = 5000
+		proxywasm.LogWarnf("[WASM Filter] No timeout_ms configured, using default: %dms", ctx.timeout)
+	}
+	
 	// Initialize login interceptor once at plugin level
-	ctx.loginInterceptor = NewLoginInterceptor(ctx.serverURL)
+	ctx.loginInterceptor = NewLoginInterceptor(ctx.serverURL, ctx.clusterName, ctx.timeout)
 
 	// NOTE: Registration and heartbeat are deferred until first HTTP request
 	// because DispatchHttpCall requires an HTTP context and cannot be called

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
+import { AUTH_STALE_TIME_MS } from '@/lib/constants'
 import { User } from '@/types'
 
 interface AuthState {
@@ -14,9 +15,6 @@ interface AuthState {
   // Helpers
   isStale: () => boolean
 }
-
-// Consider data stale after 5 minutes
-const STALE_TIME = 5 * 60 * 1000
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -41,7 +39,7 @@ export const useAuthStore = create<AuthState>()(
       isStale: () => {
         const { lastFetched } = get()
         if (!lastFetched) return true
-        return Date.now() - lastFetched > STALE_TIME
+        return Date.now() - lastFetched > AUTH_STALE_TIME_MS
       },
     }),
     {
