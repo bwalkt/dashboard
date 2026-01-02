@@ -52,7 +52,12 @@ type SessionUpdateResponse struct {
 	Message   string                 `json:"message,omitempty"`
 }
 
-// NewLoginInterceptor creates a new login interceptor
+// NewLoginInterceptor creates a LoginInterceptor configured to send session update requests to the specified backend.
+// The serverURL is used as the base URL for backend session update callouts.
+// Parameters:
+//  - serverURL: The backend server URL for session update requests
+//  - clusterName: The Envoy cluster name to use for HTTP calls (defaults to "backend_cluster")
+//  - timeout: Request timeout in milliseconds (defaults to 5000ms)
 func NewLoginInterceptor(serverURL string, clusterName string, timeout int) *LoginInterceptor {
 	if clusterName == "" {
 		clusterName = "backend_cluster" // default
@@ -242,7 +247,12 @@ func (li *LoginInterceptor) handleSessionUpdateResponse(ctx *httpContext, numHea
 	}
 }
 
-// SetSessionInSharedData stores session info in shared data
+// SetSessionInSharedData stores session information in shared data under the key "session:<sessionID>".
+// The stored JSON contains `sessionId`, `userId`, `nextFuncs`, and a millisecond `timestamp`; failures to marshal
+// or to write shared data are logged. Parameters:
+//  - sessionID: identifier used to form the storage key.
+//  - userID: associated user identifier to record.
+//  - nextFuncs: optional map of follow-up functions or metadata to include.
 func SetSessionInSharedData(sessionID string, userID string, nextFuncs map[string]interface{}) {
 	sessionData := map[string]interface{}{
 		"sessionId": sessionID,
@@ -263,4 +273,3 @@ func SetSessionInSharedData(sessionID string, userID string, nextFuncs map[strin
 		proxywasm.LogWarnf("[Login Interceptor] Failed to store session in shared data: %v", err)
 	}
 }
-
