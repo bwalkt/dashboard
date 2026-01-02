@@ -41,24 +41,6 @@ services:
       timeout: 3s
       retries: 5
 
-  authz-service:
-    build:
-      context: ../../
-      dockerfile: packages/authz-service/Dockerfile
-    container_name: pzero-authz-service
-    restart: unless-stopped
-    networks:
-      - pzero-network
-    ports:
-      - "3002:3000"
-    environment:
-      - PORT=3000
-      - REDIS_URL=redis://dragonfly:6379
-      - CHALLENGE_SECRET=${CHALLENGE_SECRET:-default-secret-change-in-production}
-      - CHALLENGE_TTL=${CHALLENGE_TTL:-300}
-    depends_on:
-      dragonfly:
-        condition: service_healthy
 
   pzero-server:
     build:
@@ -117,25 +99,6 @@ services:
     volumes:
       - ./src:/app/packages/server/src
 
-  pzero-envoy:
-    image: envoyproxy/envoy:v1.30-latest
-    container_name: pzero-envoy-proxy
-    networks:
-      - pzero-network
-    ports:
-      - "8181:8080" # External port for client requests
-      - "9901:9901" # Admin interface
-    volumes:
-      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
-    command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
-    restart: unless-stopped
-    environment:
-      - ENVOY_LOG_LEVEL=info
-    depends_on:
-      pzero-server:
-        condition: service_started
-      authz-service:
-        condition: service_started
 
   pzero-envoy-wasm:
     build:
@@ -157,8 +120,6 @@ services:
       - JWT_SECRET=${JWT_SECRET:-default-secret-key-change-in-production}
     depends_on:
       pzero-server:
-        condition: service_started
-      authz-service:
         condition: service_started
       dragonfly:
         condition: service_healthy

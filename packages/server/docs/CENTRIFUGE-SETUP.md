@@ -432,7 +432,7 @@ services:
 
 ## Phase 10: Envoy Configuration for ext_proc
 
-### Update envoy.yaml
+### Update envoy-wasm.yaml
 
 ```yaml
 static_resources:
