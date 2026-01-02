@@ -13,7 +13,9 @@ import (
 
 // LoginInterceptor handles login request interception and session management
 type LoginInterceptor struct {
-	serverURL string
+	serverURL   string
+	clusterName string
+	timeout     int // milliseconds
 }
 
 // LoginCallbackData holds data from the OAuth callback
@@ -23,30 +25,50 @@ type LoginCallbackData struct {
 	GithubID string `json:"github_id"`
 }
 
+// SessionMeta contains metadata information
+type SessionMeta struct {
+	Source    string `json:"source"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+// SessionData contains the nested data structure matching server/Redis format
+type SessionData struct {
+	Meta SessionMeta `json:"meta"`
+}
+
 // SessionUpdateRequest is the request body for session update
 type SessionUpdateRequest struct {
-	Email     string                 `json:"email"`
-	SessionID string                 `json:"sessionId,omitempty"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	Email string      `json:"email"`
+	SID   string      `json:"sid,omitempty"`
+	Data  SessionData `json:"data,omitempty"`
 }
 
 // SessionUpdateResponse is the response from session update
 type SessionUpdateResponse struct {
 	Success   bool                   `json:"success"`
-	SessionID string                 `json:"sessionId"`
-	UserID    string                 `json:"userId,omitempty"`
+	SID       string                 `json:"sid"`
+	UID       string                 `json:"uid,omitempty"`
 	NextFuncs map[string]interface{} `json:"nextFuncs,omitempty"`
 	Message   string                 `json:"message,omitempty"`
 }
 
 // NewLoginInterceptor creates a new login interceptor
-func NewLoginInterceptor(serverURL string) *LoginInterceptor {
+func NewLoginInterceptor(serverURL string, clusterName string, timeout int) *LoginInterceptor {
+	if clusterName == "" {
+		clusterName = "backend_cluster" // default
+	}
+	if timeout <= 0 {
+		timeout = 5000 // default 5 seconds
+	}
 	return &LoginInterceptor{
-		serverURL: serverURL,
+		serverURL:   serverURL,
+		clusterName: clusterName,
+		timeout:     timeout,
 	}
 }
 
-// IsLoginPath checks if the path is a login-related path
+// IsLoginPath checks if the path is a login-related path that should be monitored
+// Note: This is broader than InterceptLogin to allow for future expansion
 func (li *LoginInterceptor) IsLoginPath(path string) bool {
 	// Check for exact OAuth callback or login paths
 	return strings.HasPrefix(path, "/auth/callback") ||
@@ -54,10 +76,16 @@ func (li *LoginInterceptor) IsLoginPath(path string) bool {
 		strings.HasPrefix(path, "/api/auth/callback")
 }
 
+// ShouldInterceptPath checks if the path should be actively intercepted
+func (li *LoginInterceptor) ShouldInterceptPath(path string) bool {
+	// Currently only intercept OAuth callbacks for session creation
+	return strings.HasPrefix(path, "/auth/callback")
+}
+
 // InterceptLogin intercepts login requests and updates session
 func (li *LoginInterceptor) InterceptLogin(ctx *httpContext, path string, method string) (bool, types.Action) {
 	// Only intercept successful OAuth callbacks
-	if !strings.HasPrefix(path, "/auth/callback") || method != "GET" {
+	if !li.ShouldInterceptPath(path) || method != "GET" {
 		return false, types.ActionContinue
 	}
 
@@ -123,12 +151,12 @@ func (li *LoginInterceptor) HandleLoginResponse(ctx *httpContext, statusCode uin
 func (li *LoginInterceptor) updateSession(ctx *httpContext, email string, sessionID string) error {
 	// Prepare request body
 	reqBody := SessionUpdateRequest{
-		Email:     email,
-		SessionID: sessionID,
-		Metadata: map[string]interface{}{
-			"meta": map[string]interface{}{
-				"source":    "wasm_filter",
-				"timestamp": time.Now().UnixMilli(),
+		Email: email,
+		SID:   sessionID,
+		Data: SessionData{
+			Meta: SessionMeta{
+				Source:    "wasm_filter",
+				Timestamp: time.Now().UnixMilli(),
 			},
 		},
 	}
@@ -149,11 +177,11 @@ func (li *LoginInterceptor) updateSession(ctx *httpContext, email string, sessio
 
 	// Make HTTP call to backend
 	calloutID, err := proxywasm.DispatchHttpCall(
-		"backend_cluster", // This should match your Envoy cluster configuration
+		li.clusterName, // Configurable cluster name
 		headers,
 		bodyBytes,
-		nil, // No trailers
-		5000, // 5 second timeout
+		nil,              // No trailers
+		uint32(li.timeout), // Configurable timeout
 		func(numHeaders, bodySize, numTrailers int) {
 			// Handle response in callback
 			li.handleSessionUpdateResponse(ctx, numHeaders, bodySize)
@@ -206,11 +234,11 @@ func (li *LoginInterceptor) handleSessionUpdateResponse(ctx *httpContext, numHea
 	}
 
 	proxywasm.LogInfof("[Login Interceptor] Session updated successfully: %s (user: %s)", 
-		response.SessionID, response.UserID)
+		response.SID, response.UID)
 
 	// Store session info in shared data if needed
-	if response.UserID != "" {
-		SetSessionInSharedData(response.SessionID, response.UserID, response.NextFuncs)
+	if response.UID != "" {
+		SetSessionInSharedData(response.SID, response.UID, response.NextFuncs)
 	}
 }
 

@@ -16,13 +16,23 @@ const SESSION_KEYS = {
 // Get session TTL from environment variable (in days), default to 30 days
 const getSessionTTL = (): number => {
   const ttlDays = process.env.SESSION_TTL_DAYS ? parseInt(process.env.SESSION_TTL_DAYS, 10) : 30;
+  if (isNaN(ttlDays) || ttlDays <= 0) {
+    console.warn(`Invalid SESSION_TTL_DAYS value: ${process.env.SESSION_TTL_DAYS}, using default 30 days`);
+    return 30 * 24 * 60 * 60;
+  }
   return ttlDays * 24 * 60 * 60; // Convert days to seconds
 };
 
 interface SessionUpdateRequest {
   email: string;
   sid?: string;
-  metadata?: Record<string, any>;
+  data?: {
+    meta?: {
+      source?: string;
+      timestamp?: number;
+      [key: string]: any;
+    };
+  };
 }
 
 interface SessionUpdateResponse {
@@ -46,7 +56,7 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
       reply: FastifyReply
     ): Promise<SessionUpdateResponse> => {
       try {
-        const { email, sid, metadata } = request.body;
+        const { email, sid, data } = request.body;
 
         if (!email) {
           return reply.status(400).send({
@@ -92,18 +102,28 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
           sid: finalSessionId,
           c_at: Date.now(),
           last_seen: Date.now(),
-          data: metadata || { meta: { source: 'wasm_filter' } },
+          data: data || { meta: { source: 'wasm_filter' } },
         };
 
         // Update multiple Redis keys atomically using pipeline
         const pipeline = redis.getClient().pipeline();
         const sessionTTL = getSessionTTL();
 
-        // 1. Store session data with TTL
-        pipeline.hset(
-          SESSION_KEYS.SESSION_DATA + finalSessionId,
-          Object.entries(sessionData).map(([k, v]) => [k, JSON.stringify(v)]).flat()
-        );
+        // 1. Store session data with TTL (optimized serialization)
+        const sessionEntries: string[] = [];
+        for (const [key, value] of Object.entries(sessionData)) {
+          if (key === 'data') {
+            // Complex object needs JSON serialization
+            sessionEntries.push(key, JSON.stringify(value));
+          } else if (key === 'c_at' || key === 'last_seen') {
+            // Store timestamps as strings for Redis
+            sessionEntries.push(key, value.toString());
+          } else {
+            // Primitives stored directly
+            sessionEntries.push(key, String(value));
+          }
+        }
+        pipeline.hset(SESSION_KEYS.SESSION_DATA + finalSessionId, sessionEntries);
         pipeline.expire(SESSION_KEYS.SESSION_DATA + finalSessionId, sessionTTL);
 
         // 2. Add to active sessions with TTL
@@ -132,35 +152,51 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
           pipeline.expire(SESSION_KEYS.NEXT_FUNCS + finalSessionId, sessionTTL);
         }
 
-        await pipeline.exec();
-
-        // Update filter header info to include this session
-        const headerInfo = await filterRedisService.getHeaderInfo();
-
-        await filterRedisService.updateHeaderInfo('users', {
-          ...headerInfo.active_users,
-          [userId]: {
-            email: user.email,
-            name: user.name, // Use name instead of handle
-            sid: finalSessionId,
-            last_seen: Date.now(),
+        const pipelineResults = await pipeline.exec();
+        
+        // Check if pipeline operations succeeded
+        for (const [error, result] of pipelineResults) {
+          if (error) {
+            throw new Error(`Session storage failed: ${error.message}`);
           }
-        });
-
-        if (nextFuncs && Object.keys(nextFuncs).length > 0) {
-          await filterRedisService.updateHeaderInfo('functions', {
-            ...headerInfo.next_functions,
-            [finalSessionId]: nextFuncs,
-          });
         }
 
-        console.log(`✅ Session updated for user ${userId} (${email}): ${finalSessionId}`);
+        // Update filter header info to include this session
+        let headerUpdateFailed = false;
+        try {
+          const headerInfo = await filterRedisService.getHeaderInfo();
+
+          await filterRedisService.updateHeaderInfo('users', {
+            ...headerInfo.active_users,
+            [userId]: {
+              email: user.email,
+              name: user.name, // Use name instead of handle
+              sid: finalSessionId,
+              last_seen: Date.now(),
+            }
+          });
+
+          if (nextFuncs && Object.keys(nextFuncs).length > 0) {
+            await filterRedisService.updateHeaderInfo('functions', {
+              ...headerInfo.next_functions,
+              [finalSessionId]: nextFuncs,
+            });
+          }
+        } catch (headerError) {
+          console.error(`Failed to update header info for session ${finalSessionId}:`, headerError);
+          headerUpdateFailed = true;
+          // Session data exists but header info is inconsistent
+          // Log for monitoring/cleanup but don't fail the request
+        }
+
+        console.log(`✅ Session updated for user ${userId} (${email}): ${finalSessionId}${headerUpdateFailed ? ' (header info update failed)' : ''}`);
 
         return reply.send({
           success: true,
           sid: finalSessionId,
           uid: userId,
           nextFuncs,
+          ...(headerUpdateFailed && { warning: 'Session created but header info update failed' }),
         });
       } catch (error) {
         console.error("Session update error:", error);
@@ -203,13 +239,22 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
           SESSION_KEYS.NEXT_FUNCS + sessionId
         );
 
-        // Parse stored JSON values
+        // Parse stored values (only JSON.parse complex objects)
         const parsedSessionData: Record<string, any> = {};
         for (const [key, value] of Object.entries(sessionData)) {
-          try {
-            parsedSessionData[key] = JSON.parse(value);
-          } catch (err) {
-            console.warn(`Failed to parse session data field '${key}' for session ${sessionId}:`, err);
+          if (key === 'data') {
+            // Complex object stored as JSON
+            try {
+              parsedSessionData[key] = JSON.parse(value);
+            } catch (err) {
+              console.warn(`Failed to parse session data field '${key}' for session ${sessionId}:`, err);
+              parsedSessionData[key] = value;
+            }
+          } else if (key === 'c_at' || key === 'last_seen') {
+            // Timestamps stored as strings, convert to numbers
+            parsedSessionData[key] = parseInt(value, 10);
+          } else {
+            // Primitives stored directly (uid, email, name, sid)
             parsedSessionData[key] = value;
           }
         }
@@ -224,11 +269,11 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
           }
         }
 
-        // Update last seen
+        // Update last seen (timestamp as string for optimized storage)
         await redis.getClient().hset(
           SESSION_KEYS.SESSION_DATA + sessionId,
           "last_seen",
-          JSON.stringify(Date.now())
+          Date.now().toString()
         );
 
         return reply.send({
@@ -271,7 +316,7 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
 
         if (sessionData) {
           try {
-            userId = JSON.parse(sessionData);
+            userId = sessionData; // uid now stored as plain string
             
             // Remove from user's session set
             pipeline.srem(SESSION_KEYS.USER_SESSIONS + userId, sessionId);
@@ -291,32 +336,52 @@ export async function filterSessionRoutes(fastify: FastifyInstance): Promise<voi
         pipeline.hdel(SESSION_KEYS.ACTIVE_SESSIONS, sessionId);
 
         // Execute all deletions atomically
-        await pipeline.exec();
+        const pipelineResults = await pipeline.exec();
+        
+        // Check if pipeline operations succeeded
+        for (const [error, result] of pipelineResults) {
+          if (error) {
+            throw new Error(`Session deletion failed: ${error.message}`);
+          }
+        }
 
         // Clean up header info if we have userId
+        let headerCleanupFailed = false;
         if (userId) {
           try {
             const headerInfo = await filterRedisService.getHeaderInfo();
             
-            // Remove user from header info (if this was their only session)
-            const updatedUsers = { ...headerInfo.active_users };
-            delete updatedUsers[userId];
-            await filterRedisService.updateHeaderInfo('users', updatedUsers);
+            // Check if user has any remaining sessions before removing from header
+            const remainingSessions = await redis.getClient().smembers(
+              SESSION_KEYS.USER_SESSIONS + userId
+            );
             
-            // Remove functions from header info
+            // Remove user from header info only if no remaining sessions
+            const updatedUsers = { ...headerInfo.active_users };
+            if (remainingSessions.length === 0) {
+              delete updatedUsers[userId];
+              await filterRedisService.updateHeaderInfo('users', updatedUsers);
+              console.log(`Removed user ${userId} from header info (no remaining sessions)`);
+            } else {
+              console.log(`User ${userId} still has ${remainingSessions.length} active sessions, keeping in header info`);
+            }
+            
+            // Remove functions from header info (session-specific, always remove)
             const updatedFunctions = { ...headerInfo.next_functions };
             delete updatedFunctions[sessionId];
             await filterRedisService.updateHeaderInfo('functions', updatedFunctions);
           } catch (err) {
             console.warn(`Failed to clean up header info for session ${sessionId}:`, err);
+            headerCleanupFailed = true;
           }
         }
 
-        console.log(`✅ Session removed: ${sessionId}`);
+        console.log(`✅ Session removed: ${sessionId}${headerCleanupFailed ? ' (header cleanup failed)' : ''}`);
 
         return reply.send({
           success: true,
           message: "Session removed successfully",
+          ...(headerCleanupFailed && { warning: 'Session deleted but header cleanup failed' }),
         });
       } catch (error) {
         console.error("Session removal error:", error);

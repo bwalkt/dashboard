@@ -165,6 +165,7 @@ Tracks registered WASM filters and their status.
 #### Structure (Hash)
 - **Keys**: Filter IDs
 - **Values**: JSON objects with filter information
+- **TTL**: Configurable via `FILTER_REGISTRY_TTL_HOURS` (default: 24 hours)
 
 #### Filter Information Structure
 ```json
@@ -436,6 +437,9 @@ redis-cli --scan --pattern "filter:heartbeat:*" | xargs -r redis-cli DEL
 ```bash
 # Session TTL (days)
 export SESSION_TTL_DAYS=30
+
+# Filter registry TTL (hours)
+export FILTER_REGISTRY_TTL_HOURS=24
 
 # Redis connection
 export REDIS_HOST=localhost

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { ApiError, api } from '@/lib/api'
+import { AUTH_CACHE_TIME_MS, AUTH_STALE_TIME_MS } from '@/lib/constants'
 import { useAuthStore } from '@/stores/auth-store'
 import { User } from '@/types'
 
@@ -26,8 +27,8 @@ export function useUser() {
     // Only fetch if we don't have data or it's stale
     enabled: !user || isStale(),
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes (was cacheTime in v4)
+    staleTime: AUTH_STALE_TIME_MS,
+    gcTime: AUTH_CACHE_TIME_MS,
   })
 
   const queryClient = useQueryClient()
