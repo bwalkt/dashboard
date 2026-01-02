@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { uuid } from '@pzero/shared/uuid';
 import Redis from 'ioredis';
 
 // Redis connection configuration
@@ -47,234 +48,272 @@ try {
 }
 
 // Helper function to generate timestamps
-const now = () => new Date().toISOString();
-const minutesAgo = (min) => new Date(Date.now() - min * 60000).toISOString();
+const now = () => Date.now();
+const minutesAgo = (min) => Date.now() - min * 60000;
+
+
+// Get session TTL from environment (in days), default to 30 days
+const SESSION_TTL = (process.env.SESSION_TTL_DAYS ? parseInt(process.env.SESSION_TTL_DAYS, 10) : 30) * 24 * 60 * 60;
 
 try {
-  // 1. ACTIVE_SESSIONS - Hash structure with user_id as key
-  // Pattern: active_sessions:<user_id>
-  console.log('\n1. Creating active_sessions...');
+  // Clear existing test data first
+  console.log('\n0. Clearing existing test data...');
+  const keysToDelete = await redis.keys('filter:sessions:*');
+  if (keysToDelete.length > 0) {
+    await redis.del(...keysToDelete);
+    console.log(`  Cleared ${keysToDelete.length} existing keys`);
+  }
+
+  // 1. FILTER SESSIONS - New session management structure
+  console.log('\n1. Creating filter sessions...');
   
   const sessions = [
     {
-      id: 'user_001',
-      data: {
-        last_login: minutesAgo(30),
-        last_seen: minutesAgo(2),
-        is_active: true,
-      },
-    },
-    {
-      id: 'user_002',
-      data: {
-        last_login: minutesAgo(120),
-        last_seen: minutesAgo(45),
-        is_active: false,
-      },
-    },
-    {
-      id: 'user_003',
-      data: {
-        last_login: minutesAgo(5),
-        last_seen: now(),
-        is_active: true,
-      },
-    },
-  ];
-
-  for (const session of sessions) {
-    const key = `active_sessions:${session.id}`;
-    await redis.hset(key,
-      'id', session.id,
-      'last_login', session.data.last_login,
-      'last_seen', session.data.last_seen,
-      'is_active', session.data.is_active.toString(),
-    );
-    // Set expiry for inactive sessions (24 hours)
-    if (!session.data.is_active) {
-      await redis.expire(key, 86400);
-    }
-    console.log(`  Created: ${key}`);
-  }
-
-  // 2. NEXT_FUNCS - Hash structure with uid+seq_no as composite key
-  // Pattern: next_funcs:<uid>:<seq_no>
-  console.log('\n2. Creating next_funcs...');
-  
-  const funcs = [
-    {
+      sid: uuid(),
       uid: 'user_001',
-      seq_no: 1,
-      func: 'validateEmail',
-      ans: 'email@example.com',
-      solved: true,
-      solved_at: minutesAgo(25),
-      status: 'completed',
-      data: JSON.stringify({ attempts: 1, score: 100 }),
+      email: 'alice@example.com',
+      name: 'Alice Johnson',
+      c_at: minutesAgo(30),
+      last_seen: minutesAgo(2),
+      data: {
+        meta: {
+          source: 'wasm_filter',
+          ip: '192.168.1.100',
+          user_agent: 'Mozilla/5.0'
+        }
+      }
     },
     {
-      uid: 'user_001',
-      seq_no: 2,
-      func: 'verifyPhone',
-      ans: '+1234567890',
-      solved: false,
-      solved_at: null,
-      status: 'pending',
-      data: JSON.stringify({ attempts: 2, lastAttempt: minutesAgo(5) }),
-    },
-    {
+      sid: uuid(),
       uid: 'user_002',
-      seq_no: 1,
-      func: 'completeProfile',
-      ans: 'profile_data',
-      solved: true,
-      solved_at: minutesAgo(100),
-      status: 'completed',
-      data: JSON.stringify({ fields: ['name', 'bio', 'avatar'] }),
+      email: 'bob@example.com',
+      name: 'Bob Smith',
+      c_at: minutesAgo(120),
+      last_seen: minutesAgo(45),
+      data: {
+        meta: {
+          source: 'wasm_filter',
+          ip: '192.168.1.101',
+          user_agent: 'Chrome/120.0'
+        }
+      }
     },
     {
+      sid: uuid(),
       uid: 'user_003',
-      seq_no: 1,
-      func: 'setupMFA',
-      ans: 'TOTP_SECRET',
-      solved: false,
-      solved_at: null,
-      status: 'in_progress',
-      data: JSON.stringify({ method: 'authenticator', backupCodes: 5 }),
-    },
-  ];
-
-  for (const func of funcs) {
-    const key = `next_funcs:${func.uid}:${func.seq_no}`;
-    const data = {
-      uid: func.uid,
-      seq_no: func.seq_no.toString(),
-      func: func.func,
-      ans: func.ans,
-      solved: func.solved.toString(),
-      status: func.status,
-      data: func.data,
-    };
-    
-    if (func.solved_at) {
-      data.solved_at = func.solved_at;
-    }
-    
-    await redis.hset(key, data);
-    // Set TTL for completed items (7 days)
-    if (func.solved) {
-      await redis.expire(key, 604800);
-    }
-    console.log(`  Created: ${key}`);
-  }
-
-  // 3. ACTIVE_ENDPOINTS - Hash structure with endpoint id as key
-  // Pattern: active_endpoints:<id>
-  console.log('\n3. Creating active_endpoints...');
-  
-  const endpoints = [
-    {
-      id: 'endpoint_001',
-      uid: 'user_001',
-      last_seen: minutesAgo(1),
-      status: 'healthy',
-      data: JSON.stringify({
-        url: '/api/v1/users',
-        method: 'GET',
-        response_time: 145,
-        requests_per_min: 12,
-      }),
-    },
-    {
-      id: 'endpoint_002',
-      uid: 'user_001',
-      last_seen: minutesAgo(3),
-      status: 'slow',
-      data: JSON.stringify({
-        url: '/api/v1/products',
-        method: 'POST',
-        response_time: 2500,
-        requests_per_min: 3,
-      }),
-    },
-    {
-      id: 'endpoint_003',
-      uid: 'user_002',
-      last_seen: minutesAgo(60),
-      status: 'down',
-      data: JSON.stringify({
-        url: '/api/v1/orders',
-        method: 'GET',
-        response_time: null,
-        error: 'Connection timeout',
-        requests_per_min: 0,
-      }),
-    },
-    {
-      id: 'endpoint_004',
-      uid: 'user_003',
+      email: 'charlie@example.com',
+      name: 'Charlie Davis',
+      c_at: minutesAgo(5),
       last_seen: now(),
-      status: 'healthy',
-      data: JSON.stringify({
-        url: '/api/v1/auth/login',
-        method: 'POST',
-        response_time: 89,
-        requests_per_min: 45,
-      }),
+      data: {
+        meta: {
+          source: 'wasm_filter',
+          ip: '192.168.1.102',
+          user_agent: 'Safari/17.0'
+        }
+      }
     },
   ];
 
-  for (const endpoint of endpoints) {
-    const key = `active_endpoints:${endpoint.id}`;
-    await redis.hset(key,
-      'id', endpoint.id,
-      'uid', endpoint.uid,
-      'last_seen', endpoint.last_seen,
-      'status', endpoint.status,
-      'data', endpoint.data,
-    );
-    // Set shorter TTL for down endpoints (1 hour)
-    if (endpoint.status === 'down') {
-      await redis.expire(key, 3600);
-    }
-    console.log(`  Created: ${key}`);
-  }
-
-  // Create indexes for faster lookups
-  console.log('\n4. Creating indexes...');
-  
-  // Index for user sessions
+  // Store session data
   for (const session of sessions) {
-    await redis.sadd('active_sessions:index', session.id);
+    const sessionKey = `filter:sessions:data:${session.sid}`;
+    
+    // Store session data
+    await redis.hset(sessionKey,
+      'uid', JSON.stringify(session.uid),
+      'email', JSON.stringify(session.email),
+      'name', JSON.stringify(session.name),
+      'sid', JSON.stringify(session.sid),
+      'c_at', JSON.stringify(session.c_at),
+      'last_seen', JSON.stringify(session.last_seen),
+      'source', JSON.stringify(session.data.meta.source),
+      'ip', JSON.stringify(session.data.meta.ip),
+      'user_agent', JSON.stringify(session.data.meta.user_agent)
+    );
+    await redis.expire(sessionKey, SESSION_TTL);
+    
+    // Add to user's session set
+    const userSessionKey = `filter:sessions:user:${session.uid}`;
+    await redis.sadd(userSessionKey, session.sid);
+    await redis.expire(userSessionKey, SESSION_TTL);
+    
+    console.log(`  Created session: ${session.sid} for user: ${session.uid}`);
   }
-  console.log('  Created: active_sessions:index');
 
-  // Index for user functions
-  for (const func of funcs) {
-    await redis.sadd(`next_funcs:user:${func.uid}`, `${func.uid}:${func.seq_no}`);
+  // 2. ACTIVE SESSIONS HASH
+  console.log('\n2. Creating active sessions hash...');
+  
+  const activeSessions = {};
+  for (const session of sessions) {
+    activeSessions[session.sid] = JSON.stringify({
+      uid: session.uid,
+      email: session.email,
+      c_at: session.c_at
+    });
   }
-  console.log('  Created: next_funcs:user:<uid> indexes');
+  
+  await redis.hset('filter:sessions:active', activeSessions);
+  await redis.expire('filter:sessions:active', SESSION_TTL);
+  console.log(`  Created active sessions hash with ${sessions.length} entries`);
 
-  // Index for user endpoints
-  for (const endpoint of endpoints) {
-    await redis.sadd(`active_endpoints:user:${endpoint.uid}`, endpoint.id);
+  // 3. NEXT_FUNCS for sessions
+  console.log('\n3. Creating next_funcs for sessions...');
+  
+  const sessionFuncs = [
+    {
+      sid: sessions[0].sid,
+      funcs: {
+        validateEmail: {
+          status: 'completed',
+          result: 'valid',
+          completedAt: minutesAgo(25)
+        },
+        verifyPhone: {
+          status: 'pending',
+          attempts: 2,
+          lastAttempt: minutesAgo(5)
+        }
+      }
+    },
+    {
+      sid: sessions[1].sid,
+      funcs: {
+        completeProfile: {
+          status: 'completed',
+          fields: ['name', 'bio', 'avatar'],
+          completedAt: minutesAgo(100)
+        }
+      }
+    },
+    {
+      sid: sessions[2].sid,
+      funcs: {
+        setupMFA: {
+          status: 'in_progress',
+          method: 'authenticator',
+          backupCodes: 5
+        },
+        acceptTerms: {
+          status: 'pending'
+        }
+      }
+    }
+  ];
+
+  for (const sf of sessionFuncs) {
+    const funcsKey = `filter:sessions:next_funcs:${sf.sid}`;
+    const funcsData = {};
+    
+    for (const [funcName, funcData] of Object.entries(sf.funcs)) {
+      funcsData[funcName] = JSON.stringify(funcData);
+    }
+    
+    await redis.hset(funcsKey, funcsData);
+    await redis.expire(funcsKey, SESSION_TTL);
+    console.log(`  Created next_funcs for session: ${sf.sid}`);
   }
-  console.log('  Created: active_endpoints:user:<uid> indexes');
+
+  // 4. FILTER HEADER INFO - Central header information
+  console.log('\n4. Creating filter header info...');
+  
+  const headerInfo = {
+    users: JSON.stringify({
+      'user_001': {
+        email: 'alice@example.com',
+        name: 'Alice Johnson',
+        sid: sessions[0].sid,
+        last_seen: minutesAgo(2)
+      },
+      'user_002': {
+        email: 'bob@example.com',
+        name: 'Bob Smith',
+        sid: sessions[1].sid,
+        last_seen: minutesAgo(45)
+      },
+      'user_003': {
+        email: 'charlie@example.com',
+        name: 'Charlie Davis',
+        sid: sessions[2].sid,
+        last_seen: now()
+      }
+    }),
+    endpoints: JSON.stringify({
+      '/api/v1/users': { status: 'active', method: 'GET' },
+      '/api/v1/auth/login': { status: 'active', method: 'POST' },
+      '/api/v1/products': { status: 'active', method: 'GET,POST' }
+    }),
+    functions: JSON.stringify({
+      [sessions[0].sid]: sessionFuncs[0].funcs,
+      [sessions[1].sid]: sessionFuncs[1].funcs,
+      [sessions[2].sid]: sessionFuncs[2].funcs
+    })
+  };
+  
+  await redis.hset('filter:header:info', headerInfo);
+  console.log('  Created filter header info');
+
+  // 5. FILTER REGISTRY - Registered WASM filters
+  console.log('\n5. Creating filter registry...');
+  
+  const filters = [
+    {
+      filterId: 'filter_001',
+      envoyNodeId: 'envoy_node_1',
+      registeredAt: minutesAgo(60),
+      lastHeartbeat: minutesAgo(1),
+      status: 'active'
+    },
+    {
+      filterId: 'filter_002',
+      envoyNodeId: 'envoy_node_2',
+      registeredAt: minutesAgo(30),
+      lastHeartbeat: now(),
+      status: 'active'
+    }
+  ];
+  
+  const filterRegistry = {};
+  for (const filter of filters) {
+    filterRegistry[filter.filterId] = JSON.stringify(filter);
+    
+    // Add heartbeat
+    const heartbeatKey = `filter:heartbeat:${filter.filterId}`;
+    await redis.set(heartbeatKey, JSON.stringify({
+      timestamp: filter.lastHeartbeat,
+      metrics: {
+        requests_processed: Math.floor(Math.random() * 1000),
+        avg_response_time: Math.floor(Math.random() * 500)
+      }
+    }), 'EX', 60); // 1 minute TTL
+  }
+  
+  await redis.hset('filter:registry', filterRegistry);
+  console.log(`  Created filter registry with ${filters.length} filters`);
 
   // Display summary
   console.log('\n=== Redis Initialization Complete ===');
-  console.log(`Active Sessions: ${sessions.length}`);
-  console.log(`Next Functions: ${funcs.length}`);
-  console.log(`Active Endpoints: ${endpoints.length}`);
+  console.log(`Sessions Created: ${sessions.length}`);
+  console.log(`Next Functions: ${sessionFuncs.length}`);
+  console.log(`Registered Filters: ${filters.length}`);
+  console.log(`Session TTL: ${SESSION_TTL} seconds (${SESSION_TTL / 86400} days)`);
   
   // Show sample queries
   console.log('\n=== Sample Redis Commands ===');
-  console.log('Get a session: HGETALL active_sessions:user_001');
-  console.log('Get all sessions: SCAN 0 MATCH active_sessions:* COUNT 100');
-  console.log('Get user functions: SMEMBERS next_funcs:user:user_001');
-  console.log('Get function details: HGETALL next_funcs:user_001:1');
-  console.log('Get user endpoints: SMEMBERS active_endpoints:user:user_001');
-  console.log('Get endpoint details: HGETALL active_endpoints:endpoint_001');
+  console.log('\n-- Session Management --');
+  console.log(`Get session data: HGETALL filter:sessions:data:${sessions[0].sid}`);
+  console.log(`Get user sessions: SMEMBERS filter:sessions:user:user_001`);
+  console.log(`Get active sessions: HGETALL filter:sessions:active`);
+  console.log(`Get session functions: HGETALL filter:sessions:next_funcs:${sessions[0].sid}`);
+  
+  console.log('\n-- Filter Management --');
+  console.log('Get header info: HGETALL filter:header:info');
+  console.log('Get filter registry: HGETALL filter:registry');
+  console.log('Get filter heartbeat: GET filter:heartbeat:filter_001');
+  
+  console.log('\n-- Pattern Searches --');
+  console.log('Find all sessions: SCAN 0 MATCH filter:sessions:data:* COUNT 100');
+  console.log('Find user sessions: SCAN 0 MATCH filter:sessions:user:* COUNT 100');
 
 } catch (error) {
   console.error('Error initializing Redis:', error);
