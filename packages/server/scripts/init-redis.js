@@ -127,9 +127,7 @@ try {
       'sid', JSON.stringify(session.sid),
       'c_at', JSON.stringify(session.c_at),
       'last_seen', JSON.stringify(session.last_seen),
-      'source', JSON.stringify(session.data.meta.source),
-      'ip', JSON.stringify(session.data.meta.ip),
-      'user_agent', JSON.stringify(session.data.meta.user_agent)
+      'data', JSON.stringify(session.data)
     );
     await redis.expire(sessionKey, SESSION_TTL);
     
