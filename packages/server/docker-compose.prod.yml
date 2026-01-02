@@ -25,20 +25,6 @@ services:
       - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql
     networks:
       - dokploy-network # Dokploy network required in production
-  authz-service:
-    # Image from GitHub Container Registry
-    # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
-    # Or set AUTHZ_SERVICE_IMAGE to override the full image path
-    image: ${AUTHZ_SERVICE_IMAGE:-ghcr.io/${GITHUB_OWNER}/authz-service:latest}
-    container_name: pzero-authz-service
-    restart: "no"
-    networks:
-      - dokploy-network # Dokploy network required in production
-    environment:
-      - PORT=3000
-      - REDIS_URL=${REDIS_URL}
-      - CHALLENGE_SECRET=${CHALLENGE_SECRET}
-      - CHALLENGE_TTL=${CHALLENGE_TTL:-300}
 
   pzero-server:
     # Image from GitHub Container Registry
@@ -87,26 +73,10 @@ services:
       - TWILIO_MESSAGE=${TWILIO_MESSAGE}
       - SIGNOZ_API_URL=${SIGNOZ_API_URL}
       - SIGNOZ_API_KEY=${SIGNOZ_API_KEY}
-      - AUTHZ_SERVICE_URL=${AUTHZ_SERVICE_URL:-http://authz-service:3000}
     depends_on:
       postgres:
         condition: service_healthy
 
-  pzero-envoy:
-    image: envoyproxy/envoy:v1.30-latest
-    container_name: pzero-envoy-proxy
-    ports:
-      - "8181:8080" # External port for client requests
-      - "9901:9901" # Admin interface
-    command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
-    restart: "no"
-    environment:
-      - ENVOY_LOG_LEVEL=info
-    depends_on:
-      pzero-server:
-        condition: service_started
-    volumes:
-      - ./envoy.yaml:/etc/envoy/envoy.yaml
 
   pzero-envoy-wasm:
     image: ${RUST_WASM_FILTER_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/rust-wasm-filter:latest}

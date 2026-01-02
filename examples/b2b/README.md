@@ -42,8 +42,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 - **Development**: Use `docker-compose.yml` (includes development defaults)
 - **Production**: Use `docker-compose.prod.yml` (requires all secrets to be set)
 
-For detailed information about environment variables and the authorization service, see:
-- [`../../packages/authz-service/README.md`](../../packages/authz-service/README.md) - Authorization service documentation
+For detailed information about environment variables, see:
 - [`packages/sfdc-server-vanilla/env.example`](packages/sfdc-server-vanilla/env.example) - Example environment variables
 
 ## Usage
@@ -78,9 +77,9 @@ docker compose -f docker-compose.prod.yml up -d
 
 ## Services
 
-- **authz-service**: Authorization service for challenge/answer validation
 - **dragonfly**: Redis-compatible in-memory database (development only)
-- **pzero-sfdc-server-vanilla**: Salesforce integration server
+- **pzero-sfdc-server-vanilla**: Salesforce integration server  
+- **pzero-envoy-wasm**: WASM filter proxy for authentication (when using proxy mode)
 
 ## Security Notes
 
