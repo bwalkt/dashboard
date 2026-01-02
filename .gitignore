@@ -18,6 +18,7 @@ node_modules
 dist
 dist-ssr
 *.local
+target/
 routeTreegen.ts 
 packages/portal/src/routeTreegen.ts
 # Editor directories and files

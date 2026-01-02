@@ -66,21 +66,21 @@ echo "Redis is ready!"
 echo "Checking existing Redis data structures..."
 
 # Check multiple indicators to ensure complete initialization
-# The init script creates: active_sessions:index (global), and per-user indexes for funcs/endpoints
-ACTIVE_SESSIONS_INDEX=$(redis_cli exists active_sessions:index)
-# Check for at least one actual session (the script creates user_001, user_002, user_003)
-SESSION_DATA=$(redis_cli exists active_sessions:user_001)
-# Check for at least one function data
-FUNC_DATA=$(redis_cli exists next_funcs:user_001:1)
-# Check for at least one endpoint data  
-ENDPOINT_DATA=$(redis_cli exists active_endpoints:endpoint_001)
+# The init script creates: filter sessions, user statuses, and challenge data
+SESSION_DATA=$(redis_cli exists filter:sessions:data)
+# Check for at least one user status (required for WASM filter)
+USER_STATUS=$(redis_cli exists status:user_001)
+# Check for at least one challenge (required for WASM filter testing)
+CHALLENGE_DATA=$(redis_cli exists challenge:1)
+# Check for filter registry
+FILTER_REGISTRY=$(redis_cli exists filter:registry)
 
 # Configure path to initialization script
 INIT_SCRIPT_PATH=${REDIS_INIT_SCRIPT:-/app/packages/server/scripts/init-redis.js}
 
 # Initialize if any of the expected data structures are missing
-if [ "$ACTIVE_SESSIONS_INDEX" = "0" ] || [ "$SESSION_DATA" = "0" ] || [ "$FUNC_DATA" = "0" ] || [ "$ENDPOINT_DATA" = "0" ]; then
-  if [ "$ACTIVE_SESSIONS_INDEX" = "1" ] || [ "$SESSION_DATA" = "1" ] || [ "$FUNC_DATA" = "1" ] || [ "$ENDPOINT_DATA" = "1" ]; then
+if [ "$SESSION_DATA" = "0" ] || [ "$USER_STATUS" = "0" ] || [ "$CHALLENGE_DATA" = "0" ] || [ "$FILTER_REGISTRY" = "0" ]; then
+  if [ "$SESSION_DATA" = "1" ] || [ "$USER_STATUS" = "1" ] || [ "$CHALLENGE_DATA" = "1" ] || [ "$FILTER_REGISTRY" = "1" ]; then
     echo "WARNING: Partial initialization detected. Re-initializing to ensure consistency..."
   fi
   echo "Initializing Redis data structures..."
@@ -108,7 +108,7 @@ if [ "$ACTIVE_SESSIONS_INDEX" = "0" ] || [ "$SESSION_DATA" = "0" ] || [ "$FUNC_D
   fi
 else
   echo "Redis data already exists, skipping initialization"
-  echo "Verified presence of: sessions index, session data, function data, and endpoint data"
+  echo "Verified presence of: session data, user statuses, challenge data, and filter registry"
 fi
 
 # Continue with the main application

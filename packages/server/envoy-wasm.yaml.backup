@@ -67,16 +67,62 @@ static_resources:
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.redis_proxy.v3.RedisProxy
                 stat_prefix: redis_stats
+                cluster: redis_cluster
                 settings:
                   op_timeout: 5s
                   enable_redirection: true
                   enable_command_stats: true
-                downstream_auth_passwords:
-                  - inline_string: ""
-                prefix_routes:
-                  routes:
-                    - prefix: ""
-                      cluster: redis_cluster
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: backend
+                      domains: ["*"]
+                      cors:
+                        allow_origin_string_match:
+                          - prefix: "http://localhost"
+                          - prefix: "https://localhost"
+                          - exact: "https://sfdc-example.incmix.com"
+                          - exact: "https://pzero-envoy-wasm.incmix.com"
+                          - suffix: ".incmix.com"
+                        allow_methods: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+                        allow_headers: "content-type,x-challenge-id,x-challenge-answer,authorization,traceparent,x-proxy-target-id,x-client-type"
+                        expose_headers: "x-challenge-id,x-challenge"
+                        allow_credentials: true
+                        max_age: "86400"
+                      routes:
+                        # All routes go to server_cluster
+                        # Public route bypass is handled by WASM filter, not Envoy config
+                        - match: { prefix: "/" }
+                          route: { cluster: server_cluster }
+                http_filters:
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                  - name: envoy.filters.http.wasm
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                      config:
+                        name: "challenge_authz"
+                        root_id: "challenge_authz"
+                        fail_open: false
+                        vm_config:
+                          vm_id: "challenge_authz_vm"
+                          runtime: "envoy.wasm.runtime.v8"
+                          code:
+                            local:
+                              filename: "/etc/envoy/wasm/challenge-authz.wasm"
+                          allow_precompiled: true
+                        configuration:
+                          "@type": type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            centrifugo_secret=default-secret-key-change-in-production_FILTER_AUTH
+                            filter_id=pzero-envoy-wasm-filter-1
+                            jwt_secret=your_super_secret_jwt_key_change_this_in_production
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
     - name: server_cluster
       connect_timeout: 10s
@@ -113,7 +159,7 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: pzero-dragonfly
+                      address: localhost
                       port_value: 6379
 
 admin:

@@ -109,7 +109,7 @@ services:
       - ./envoy.yaml:/etc/envoy/envoy.yaml
 
   pzero-envoy-wasm:
-    image: ${SERVER_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/envoy-wasm-filter:latest}
+    image: ${RUST_WASM_FILTER_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/rust-wasm-filter:latest}
     container_name: pzero-envoy-wasm-proxy
     ports:
       - "8182:8081" # External port for client requests

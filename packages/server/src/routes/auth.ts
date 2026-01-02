@@ -1,10 +1,6 @@
+import { randomInt } from "node:crypto";
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
-import {
-  type AuthenticatedRequest,
-  type ErrorResponse,
-  generateHandleFromEmail,
-  type UserResponse
-} from "@pzero/shared";
+import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail, type UserResponse } from "@pzero/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
@@ -12,6 +8,22 @@ import { authenticateToken } from "../middleware/auth.js";
 import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
+
+async function deleteUserSession(request: FastifyRequest, reply: FastifyReply) {
+  const userId = extractUserIdFromToken(request);
+  if (userId) {
+    await userService.deleteUserStatusFromCache(userId);
+  }
+
+  // Clear JWT cookies
+  reply.clearCookie("accessToken", {
+    path: "/",
+  });
+
+  reply.clearCookie("refreshToken", {
+    path: "/",
+  });
+}
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -77,152 +89,133 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    * GET /auth/login
    * Initiate GitHub OAuth flow
    */
-  fastify.get(
-    "/auth/login",
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const githubOAuth2 = fastify.githubOAuth2;
-        // Redirect to GitHub OAuth
-        const authUrl = await githubOAuth2.generateAuthorizationUri(
-          request,
-          reply,
-        );
+  fastify.get("/auth/login", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const githubOAuth2 = fastify.githubOAuth2;
+      // Redirect to GitHub OAuth
+      const authUrl = await githubOAuth2.generateAuthorizationUri(request, reply);
 
-        return reply.code(200).send({ authUrl });
-      } catch (error) {
-        console.error("Login initiation error:", error);
-        return reply.status(500).send({
-          error: "Internal Server Error",
-          message: "Failed to initiate OAuth flow",
-        } as ErrorResponse);
-      }
-    },
-  );
+      return reply.code(200).send({ authUrl });
+    } catch (error) {
+      console.error("Login initiation error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "Failed to initiate OAuth flow",
+      } as ErrorResponse);
+    }
+  });
 
   /**
    * GET /auth/callback
    * Handle OAuth callback from GitHub
    */
-  fastify.get(
-    "/auth/callback",
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const { code, state } = request.query as {
-          code: string;
-          state: string;
-        };
+  fastify.get("/auth/callback", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { code, state } = request.query as {
+        code: string;
+        state: string;
+      };
 
-        // Validate state parameter
-        if (!state) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Invalid state parameter",
-          } as ErrorResponse);
-        }
-        const storedState = request.cookies.oauth_state;
-        if (!storedState || state !== storedState) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Invalid state parameter",
-          } as ErrorResponse);
-        }
-
-        // Clear state cookie
-        reply.clearCookie("oauth_state");
-
-        if (!code) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Authorization code missing",
-          } as ErrorResponse);
-        }
-
-        // Exchange code for access token
-        const tokenResponse =
-          await fastify.githubOAuth2.getAccessTokenFromAuthorizationCodeFlow(
-            request,
-          );
-
-        if (!tokenResponse.token.access_token) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Failed to obtain access token",
-          } as ErrorResponse);
-        }
-
-        // Fetch user profile from GitHub
-        const githubUserResponse = await fetch("https://api.github.com/user", {
-          headers: {
-            Authorization: `Bearer ${tokenResponse.token.access_token}`,
-            Accept: "application/vnd.github.v3+json",
-            "User-Agent": "Dashboard-App",
-          },
-        });
-
-        if (!githubUserResponse.ok) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Failed to fetch user profile from GitHub",
-          } as ErrorResponse);
-        }
-
-        const githubUserData = await githubUserResponse.json();
-        const githubUser = userService.validateGitHubUser(githubUserData);
-
-        if (!githubUser) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Invalid user data from GitHub",
-          } as ErrorResponse);
-        }
-
-        // Create or update user in database
-        const user = await userService.upsertUserFromGitHub(githubUser);
-
-        // Generate JWT tokens
-        const { accessToken, refreshToken } = authService.generateTokenPair(
-          user.id,
-          user.github_id,
-          user.email,
-        );
-
-        if (config.NODE_ENV !== "production") {
-          console.log(
-            "Setting cookies - accessToken:",
-            accessToken?.substring(0, 20) + "...",
-          );
-          console.log("Setting cookies - environment:", config.NODE_ENV);
-          console.log("Setting cookies - domain:", config.DOMAIN);
-        }
-
-        reply.setCookie("accessToken", accessToken, {
-          httpOnly: true,
-          secure: config.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 3600, // 1 hour
-        });
-        reply.setCookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: config.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 3600 * 24 * 30, // 30 days
-        });
-
-        return reply.send({
-          message: "Login successful",
-          user,
-        });
-      } catch (error) {
-        console.error("OAuth callback error:", error);
-        return reply.status(500).send({
-          error: "Internal Server Error",
-          message: "OAuth callback failed",
+      // Validate state parameter
+      if (!state) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Invalid state parameter",
         } as ErrorResponse);
       }
-    },
-  );
+      const storedState = request.cookies.oauth_state;
+      if (!storedState || state !== storedState) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Invalid state parameter",
+        } as ErrorResponse);
+      }
+
+      // Clear state cookie
+      reply.clearCookie("oauth_state");
+
+      if (!code) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Authorization code missing",
+        } as ErrorResponse);
+      }
+
+      // Exchange code for access token
+      const tokenResponse = await fastify.githubOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
+
+      if (!tokenResponse.token.access_token) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Failed to obtain access token",
+        } as ErrorResponse);
+      }
+
+      // Fetch user profile from GitHub
+      const githubUserResponse = await fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${tokenResponse.token.access_token}`,
+          Accept: "application/vnd.github.v3+json",
+          "User-Agent": "Dashboard-App",
+        },
+      });
+
+      if (!githubUserResponse.ok) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Failed to fetch user profile from GitHub",
+        } as ErrorResponse);
+      }
+
+      const githubUserData = await githubUserResponse.json();
+      const githubUser = userService.validateGitHubUser(githubUserData);
+
+      if (!githubUser) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Invalid user data from GitHub",
+        } as ErrorResponse);
+      }
+
+      // Create or update user in database
+      const user = await userService.upsertUserFromGitHub(githubUser);
+
+      // Generate JWT tokens
+      const { accessToken, refreshToken } = authService.generateTokenPair(user.id, user.github_id, user.email);
+
+      if (config.NODE_ENV !== "production") {
+        console.log("Setting cookies - accessToken:", accessToken?.substring(0, 20) + "...");
+        console.log("Setting cookies - environment:", config.NODE_ENV);
+        console.log("Setting cookies - domain:", config.DOMAIN);
+      }
+
+      reply.setCookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: config.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 3600, // 1 hour
+      });
+      reply.setCookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: config.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 3600 * 24 * 30, // 30 days
+      });
+
+      return reply.send({
+        message: "Login successful",
+        user,
+      });
+    } catch (error) {
+      console.error("OAuth callback error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "OAuth callback failed",
+      } as ErrorResponse);
+    }
+  });
 
   /**
    * GET /auth/me
@@ -235,11 +228,15 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const response: UserResponse = {
-          user: (request as unknown as AuthenticatedRequest).user,
-        };
-
-        return reply.send(response);
+        const user = (request as unknown as AuthenticatedRequest).user as UserWithStatus;
+        if (user.status !== "ACTIVE") {
+          await deleteUserSession(request, reply);
+          return reply.status(403).send({
+            error: "Forbidden",
+            message: `User Account is ${user.status ?? "INACTIVE"}`,
+          } as ErrorResponse);
+        }
+        return reply.send({ user });
       } catch (error) {
         console.error("Get user info error:", error);
         return reply.status(500).send({
@@ -247,593 +244,536 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           message: "Failed to get user information",
         } as ErrorResponse);
       }
-    },
+    }
   );
 
   /**
    * POST /auth/refresh
    * Refresh access token using refresh token from cookies
    */
-  fastify.post(
-    "/auth/refresh",
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        // Extract refresh token from cookies instead of request body
-        const refreshToken = authService.extractRefreshTokenFromCookies(
-          request.cookies,
-        );
+  fastify.post("/auth/refresh", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      // Extract refresh token from cookies instead of request body
+      const refreshToken = authService.extractRefreshTokenFromCookies(request.cookies);
 
-        if (!refreshToken) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Refresh token is required",
-          } as ErrorResponse);
-        }
-
-        const payload = authService.verifyRefreshToken(refreshToken);
-
-        if (!payload) {
-          return reply.status(401).send({
-            error: "Unauthorized",
-            message: "Invalid or expired refresh token",
-          } as ErrorResponse);
-        }
-
-        // Get user from database
-        const user = await userService.getUserById(payload.userId.toString());
-
-        if (!user) {
-          return reply.status(401).send({
-            error: "Unauthorized",
-            message: "User not found",
-          } as ErrorResponse);
-        }
-
-        // Generate new token pair
-        const { accessToken, refreshToken: newRefreshToken } =
-          authService.generateTokenPair(
-            user.id.toString(),
-            user.github_id,
-            user.email,
-          );
-
-        // Set JWT tokens as cookies
-        reply.setCookie("accessToken", accessToken, {
-          httpOnly: true,
-          secure: config.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 3600, // 1 hour
-        });
-
-        reply.setCookie("refreshToken", newRefreshToken, {
-          httpOnly: true,
-          secure: config.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 3600 * 24 * 30, // 30 days
-        });
-
-        return reply.send({
-          accessToken,
-          user,
-        });
-      } catch (error) {
-        console.error("Token refresh error:", error);
-        return reply.status(500).send({
-          error: "Internal Server Error",
-          message: "Token refresh failed",
+      if (!refreshToken) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Refresh token is required",
         } as ErrorResponse);
       }
-    },
-  );
+
+      const payload = authService.verifyRefreshToken(refreshToken);
+
+      if (!payload) {
+        return reply.status(401).send({
+          error: "Unauthorized",
+          message: "Invalid or expired refresh token",
+        } as ErrorResponse);
+      }
+
+      // Get user from database
+      const user = await userService.getUserById(payload.userId.toString());
+
+      if (!user) {
+        return reply.status(401).send({
+          error: "Unauthorized",
+          message: "User not found",
+        } as ErrorResponse);
+      }
+
+      // Generate new token pair
+      const { accessToken, refreshToken: newRefreshToken } = authService.generateTokenPair(user.id.toString(), user.github_id, user.email);
+
+      // Set JWT tokens as cookies
+      reply.setCookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: config.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 3600, // 1 hour
+      });
+
+      reply.setCookie("refreshToken", newRefreshToken, {
+        httpOnly: true,
+        secure: config.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 3600 * 24 * 30, // 30 days
+      });
+
+      return reply.send({
+        accessToken,
+        user,
+      });
+    } catch (error) {
+      console.error("Token refresh error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "Token refresh failed",
+      } as ErrorResponse);
+    }
+  });
 
   /**
    * POST /auth/logout
    * Logout user (invalidate tokens)
    */
-  fastify.post(
-    "/auth/logout",
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        // Extract user ID from token before clearing cookies
-        const userId = extractUserIdFromToken(request);
-        if (userId) {
-          await userService.deleteUserStatusFromCache(userId);
-        }
+  fastify.post("/auth/logout", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      await deleteUserSession(request, reply);
 
-        // Clear JWT cookies
-        reply.clearCookie("accessToken", {
-          path: "/",
-        });
-
-        reply.clearCookie("refreshToken", {
-          path: "/",
-        });
-
-        // In a production app, you might want to blacklist the token
-        // For now, we'll just return a success message
-        return reply.send({
-          message: "Logged out successfully",
-        });
-      } catch (error) {
-        console.error("Logout error:", error);
-        return reply.status(500).send({
-          error: "Internal Server Error",
-          message: "Logout failed",
-        } as ErrorResponse);
-      }
-    },
-  );
+      // In a production app, you might want to blacklist the token
+      // For now, we'll just return a success message
+      return reply.send({
+        message: "Logged out successfully",
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "Logout failed",
+      } as ErrorResponse);
+    }
+  });
 
   /**
    * GET /auth/logout
    * Logout user (invalidate tokens) - GET version for compatibility
    */
-  fastify.get(
-    "/auth/logout",
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        // Extract user ID from token before clearing cookies
-        const userId = extractUserIdFromToken(request);
-        if (userId) {
-          await userService.deleteUserStatusFromCache(userId);
-        }
-
-        // Clear JWT cookies
-        reply.clearCookie("accessToken", {
-          path: "/",
-        });
-
-        reply.clearCookie("refreshToken", {
-          path: "/",
-        });
-
-        // Return success message
-        return reply.send({
-          message: "Logged out successfully",
-        });
-      } catch (error) {
-        console.error("Logout error:", error);
-        return reply.status(500).send({
-          error: "Internal Server Error",
-          message: "Logout failed",
-        } as ErrorResponse);
-      }
-    },
-  );
+  fastify.get("/auth/logout", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      await deleteUserSession(request, reply);
+      // Return success message
+      return reply.send({
+        message: "Logged out successfully",
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "Logout failed",
+      } as ErrorResponse);
+    }
+  });
 
   /**
    * POST /auth/register
    * Register new user with email
    */
-  fastify.post(
-    "/auth/register",
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const { email, name, device, handle, grid } = request.body as {
-          email: string;
-          name?: string;
-          device?: any
-          handle?: string
-          grid?: number[][]
-        };
+  fastify.post("/auth/register", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { email, name, device, handle, grid } = request.body as {
+        email: string;
+        name?: string;
+        device?: any;
+        handle?: string;
+        grid?: number[][];
+      };
 
-        console.log('Registration request received:', {
-          email,
-          name,
-          handle: handle ?? generateHandleFromEmail(email),
-          deviceInfo: device ? {
-            id: device.id,
-            deviceId: device.deviceId,
-            deviceName: device.deviceName,
-            model: device.model,
-            os: device.os || device.systemName,
-            type: device.type
-          } : 'No device info provided'
-        });
+      console.log("Registration request received:", {
+        email: config.NODE_ENV === "production" ? "[REDACTED]" : email,
+        name,
+        handle: handle ?? generateHandleFromEmail(email),
+        deviceInfo: device
+          ? {
+              id: device.id,
+              deviceId: device.deviceId,
+              deviceName: device.deviceName,
+              model: device.model,
+              os: device.os || device.systemName,
+              type: device.type,
+            }
+          : "No device info provided",
+      });
 
-        // Validate required fields
-        if (!email || !name) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Name and email are required",
-          } as ErrorResponse);
-        }
-
-        // Validate email format
-        if (!emailService.validateEmailFormat(email)) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Invalid email address",
-          } as ErrorResponse);
-        }
-
-        // Check rate limiting for registration attempts - 1 attempt per email every 60 seconds
-        const rateLimitKey = `email_registration_rate:${email}`;
-        const ttl = await redis.ttl(rateLimitKey);
-
-        if (ttl > 0) {
-          return reply.status(429).send({
-            error: "Too Many Requests",
-            message: `Please wait ${ttl} seconds before requesting another verification email`,
-          } as ErrorResponse);
-        }
-
-        // Check if user already exists
-        const existingUser = await userService.getUserByEmail(email);
-        if (existingUser) {
-          return reply.status(409).send({
-            error: "Conflict",
-            message: "User with this email already exists",
-          } as ErrorResponse);
-        }
-
-        // Generate verification code
-        const verificationCode = Math.floor(
-          100000 + Math.random() * 900000,
-        ).toString();
-        const expirySeconds = config.EMAIL_EXPIRY_MINUTES * 60;
-        // Store verification data in Redis with 10 minute expiration
-        const redisKey = `email_registration:${email}`;
-        const registrationData = {
-          code: verificationCode,
-          name,
-          device,
-          grid,
-          createdAt: new Date().toISOString(),
-        };
-        
-        console.log('Storing registration data in Redis:', {
-          key: redisKey,
-          name,
-          hasDevice: !!device,
-          deviceType: device?.type,
-          expirySeconds
-        });
-        
-        await redis.set(
-          redisKey,
-          JSON.stringify(registrationData),
-          expirySeconds,
-        );
-
-        // Send verification email with confirmation code
-        await emailService.sendConfirmationCodeEmail({
-          to: email,
-          confirmationCode: verificationCode,
-          recipientName: name || "",
-        });
-
-        // Set rate limit after successful email send (60 seconds)
-        await redis.set(rateLimitKey, "1", 60);
-
-        return reply.send({
-          message: "Verification code sent to email",
-          email,
-          expiresIn: expirySeconds,
-        });
-      } catch (error) {
-        console.error("Registration error:", error);
-        return reply.status(500).send({
-          error: "Internal Server Error",
-          message: "Registration failed",
+      // Validate required fields
+      if (!email || !name) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Name and email are required",
         } as ErrorResponse);
       }
-    },
-  );
+
+      // Validate email format
+      if (!emailService.validateEmailFormat(email)) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Invalid email address",
+        } as ErrorResponse);
+      }
+
+      // Check rate limiting for registration attempts - 1 attempt per email every 60 seconds
+      const rateLimitKey = `email_registration_rate:${email}`;
+      const ttl = await redis.ttl(rateLimitKey);
+
+      if (ttl > 0) {
+        return reply.status(429).send({
+          error: "Too Many Requests",
+          message: `Please wait ${ttl} seconds before requesting another verification email`,
+        } as ErrorResponse);
+      }
+
+      // Check if user already exists
+      const existingUser = await userService.getUserByEmail(email);
+      if (existingUser) {
+        return reply.status(409).send({
+          error: "Conflict",
+          message: "User with this email already exists",
+        } as ErrorResponse);
+      }
+
+      // Generate verification code
+      const verificationCode = randomInt(100000, 1000000).toString();
+      const expirySeconds = config.EMAIL_EXPIRY_MINUTES * 60;
+      // Store verification data in Redis with 10 minute expiration
+      const redisKey = `email_registration:${email}`;
+      const registrationData = {
+        code: verificationCode,
+        name,
+        device,
+        grid,
+        createdAt: new Date().toISOString(),
+      };
+
+      console.log("Storing registration data in Redis:", {
+        key: redisKey,
+        name,
+        hasDevice: !!device,
+        deviceType: device?.type,
+        expirySeconds,
+      });
+
+      await redis.set(redisKey, JSON.stringify(registrationData), expirySeconds);
+
+      // Send verification email with confirmation code
+      await emailService.sendConfirmationCodeEmail({
+        to: email,
+        confirmationCode: verificationCode,
+        recipientName: name || "",
+      });
+
+      // Set rate limit after successful email send (60 seconds)
+      await redis.set(rateLimitKey, "1", 60);
+
+      return reply.send({
+        message: "Verification code sent to email",
+        email,
+        expiresIn: expirySeconds,
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "Registration failed",
+      } as ErrorResponse);
+    }
+  });
 
   /**
    * POST /auth/register/verify
    * Verify email and complete registration
    */
-  fastify.post(
-    "/auth/register/verify",
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const { email, code } = request.body as { email: string; code: string };
+  fastify.post("/auth/register/verify", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { email, code } = request.body as { email: string; code: string };
 
-        // Validate inputs
-        if (!email || !code) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Email and verification code are required",
-          } as ErrorResponse);
-        }
-
-        // Check rate limiting for verification attempts - allow attempts only once every 60 seconds per email
-        const rateLimitKey = `email_register_verify_rate:${email}`;
-        const ttl = await redis.ttl(rateLimitKey);
-
-        if (ttl > 0) {
-          return reply.status(429).send({
-            error: "Too Many Requests",
-            message: `Please wait ${ttl} seconds before attempting verification again`,
-          } as ErrorResponse);
-        }
-
-        // Get registration data from Redis
-        const redisKey = `email_registration:${email}`;
-        const registrationData = await redis.get(redisKey);
-
-        if (!registrationData) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Invalid or expired verification code",
-          } as ErrorResponse);
-        }
-
-        const { code: storedCode, handle, name, device, grid } = JSON.parse(registrationData);
-
-        console.log('Registration verification attempt:', {
-          email,
-          name,
-          handle: handle ?? generateHandleFromEmail(email),
-          hasDevice: !!device,
-          deviceDetails: device ? {
-            id: device.id,
-            deviceId: device.deviceId,
-            deviceName: device.deviceName,
-            model: device.model,
-            os: device.os || device.systemName,
-            type: device.type
-          } : 'No device info'
-        });
-
-        // Verify code
-        if (code !== storedCode) {
-          // Set rate limit to prevent brute-force attacks (60 seconds)
-          await redis.set(rateLimitKey, "1", 60);
-
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Invalid verification code",
-          } as ErrorResponse);
-        }
-
-        // Create user
-        const user = await userService.createUserFromEmail({
-          email,
-          name: name || email.split("@")[0],
-          email_verified: true,
-          handle,
-          grid
-        });
-
-        if (!user) {
-          return reply.status(500).send({
-            error: "Internal Server Error",
-            message: "Failed to create user account",
-          } as ErrorResponse);
-        }
-
-        // Cache user status if available
-        // createUser joins all_users which includes status, but return type is User
-        // Fetch user with status to ensure we have the status field
-        const userWithStatus = await userService.getUserByEmail(email);
-        if (userWithStatus) {
-          await userService.setUserStatusInCache(user.id, userWithStatus.status);
-        }
-
-        // Delete registration data from Redis
-        await redis.delete(redisKey);
-
-        // Generate JWT tokens
-        const { accessToken, refreshToken } = authService.generateTokenPair(
-          user.id.toString(),
-          "", // No GitHub ID for email users
-          user.email,
-        );
-
-        // Set JWT tokens as cookies
-        reply.setCookie("accessToken", accessToken, {
-          httpOnly: true,
-          secure: config.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 3600, // 1 hour
-        });
-
-        reply.setCookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: config.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 3600 * 24 * 30, // 30 days
-        });
-
-        return reply.send({
-          message: "Registration successful",
-          user,
-          accessToken,
-        });
-      } catch (error) {
-        console.error("Registration verification error:", error);
-        return reply.status(500).send({
-          error: "Internal Server Error",
-          message: "Failed to complete registration",
+      // Validate inputs
+      if (!email || !code) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Email and verification code are required",
         } as ErrorResponse);
       }
-    },
-  );
+
+      // Check rate limiting for verification attempts - allow attempts only once every 60 seconds per email
+      const rateLimitKey = `email_register_verify_rate:${email}`;
+      const ttl = await redis.ttl(rateLimitKey);
+
+      if (ttl > 0) {
+        return reply.status(429).send({
+          error: "Too Many Requests",
+          message: `Please wait ${ttl} seconds before attempting verification again`,
+        } as ErrorResponse);
+      }
+
+      // Get registration data from Redis
+      const redisKey = `email_registration:${email}`;
+      const registrationData = await redis.get(redisKey);
+
+      if (!registrationData) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Invalid or expired verification code",
+        } as ErrorResponse);
+      }
+
+      const { code: storedCode, handle, name, device, grid } = JSON.parse(registrationData);
+
+      console.log("Registration verification attempt:", {
+        email: config.NODE_ENV === "production" ? "[REDACTED]" : email,
+        name,
+        handle: handle ?? generateHandleFromEmail(email),
+        hasDevice: !!device,
+        deviceDetails: device
+          ? {
+              id: device.id,
+              deviceId: device.deviceId,
+              deviceName: device.deviceName,
+              model: device.model,
+              os: device.os || device.systemName,
+              type: device.type,
+            }
+          : "No device info",
+      });
+
+      // Verify code
+      if (code !== storedCode) {
+        // Set rate limit to prevent brute-force attacks (60 seconds)
+        await redis.set(rateLimitKey, "1", 60);
+
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Invalid verification code",
+        } as ErrorResponse);
+      }
+
+      // Create user
+      const user = await userService.createUserFromEmail({
+        email,
+        name: name || email.split("@")[0],
+        email_verified: true,
+        handle,
+        grid,
+      });
+
+      if (!user) {
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Failed to create user account",
+        } as ErrorResponse);
+      }
+
+      // Cache user status if available
+      // createUser joins all_users which includes status, but return type is User
+      // Fetch user with status to ensure we have the status field
+      const userWithStatus = await userService.getUserByEmail(email);
+      if (userWithStatus) {
+        await userService.setUserStatusInCache(user.id, userWithStatus.status);
+      }
+
+      // Delete registration data from Redis
+      await redis.delete(redisKey);
+
+      // Generate JWT tokens
+      const { accessToken, refreshToken } = authService.generateTokenPair(
+        user.id.toString(),
+        "", // No GitHub ID for email users
+        user.email
+      );
+
+      // Set JWT tokens as cookies
+      reply.setCookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: config.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 3600, // 1 hour
+      });
+
+      reply.setCookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: config.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 3600 * 24 * 30, // 30 days
+      });
+
+      return reply.send({
+        message: "Registration successful",
+        user,
+        accessToken,
+      });
+    } catch (error) {
+      console.error("Registration verification error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "Failed to complete registration",
+      } as ErrorResponse);
+    }
+  });
 
   /**
    * POST /auth/login
    * Login with email (sends verification code)
    */
-  fastify.post(
-    "/auth/login",
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const { email } = request.body as { email: string };
+  fastify.post("/auth/login", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { email } = request.body as { email: string };
 
-        // Validate email format
-        if (!email || !emailService.validateEmailFormat(email)) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Invalid email address",
-          } as ErrorResponse);
-        }
-
-        // Check rate limiting for login attempts - 1 attempt per email every 60 seconds
-        const rateLimitKey = `email_login_rate:${email}`;
-        const ttl = await redis.ttl(rateLimitKey);
-
-        if (ttl > 0) {
-          return reply.status(429).send({
-            error: "Too Many Requests",
-            message: `Please wait ${ttl} seconds before requesting another verification code`,
-          } as ErrorResponse);
-        }
-
-        // Check if user exists
-        const user = await userService.getUserByEmail(email);
-        if (!user) {
-          return reply.status(404).send({
-            error: "Not Found",
-            message: "No account found with this email",
-          } as ErrorResponse);
-        }
-
-        // Generate verification code
-        const verificationCode = Math.floor(
-          100000 + Math.random() * 900000,
-        ).toString();
-
-        // Store verification code in Redis
-        const expirySeconds = config.EMAIL_EXPIRY_MINUTES * 60;
-        const redisKey = `email_login:${email}`;
-        await redis.set(redisKey, verificationCode, expirySeconds);
-
-        // Send verification email
-        await emailService.sendConfirmationCodeEmail({
-          to: email,
-          confirmationCode: verificationCode,
-          recipientName: user.name,
-        });
-
-        // Set rate limit after successful email send (60 seconds)
-        await redis.set(rateLimitKey, "1", 60);
-
-        return reply.send({
-          message: "Verification code sent to email",
-          email,
-          expiresIn: expirySeconds,
-        });
-      } catch (error) {
-        console.error("Login error:", error);
-        return reply.status(500).send({
-          error: "Internal Server Error",
-          message: "Login failed",
+      // Validate email format
+      if (!email || !emailService.validateEmailFormat(email)) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Invalid email address",
         } as ErrorResponse);
       }
-    },
-  );
+
+      // Check rate limiting for login attempts - 1 attempt per email every 60 seconds
+      const rateLimitKey = `email_login_rate:${email}`;
+      const ttl = await redis.ttl(rateLimitKey);
+
+      if (ttl > 0) {
+        return reply.status(429).send({
+          error: "Too Many Requests",
+          message: `Please wait ${ttl} seconds before requesting another verification code`,
+        } as ErrorResponse);
+      }
+
+      // Check if user exists
+      const user = await userService.getUserByEmail(email);
+      if (!user) {
+        return reply.status(404).send({
+          error: "Not Found",
+          message: "No account found with this email",
+        } as ErrorResponse);
+      }
+      if (user.status != "ACTIVE") {
+        return reply.status(403).send({
+          error: "Forbidden",
+          message: `User Account is ${user.status ?? "INACTIVE"}`,
+        } as ErrorResponse);
+      }
+
+      // Generate verification code
+      const verificationCode = randomInt(100000, 1000000).toString();
+
+      // Store verification code in Redis
+      const expirySeconds = config.EMAIL_EXPIRY_MINUTES * 60;
+      const redisKey = `email_login:${email}`;
+      await redis.set(redisKey, verificationCode, expirySeconds);
+
+      // Send verification email
+      await emailService.sendConfirmationCodeEmail({
+        to: email,
+        confirmationCode: verificationCode,
+        recipientName: user.name,
+      });
+
+      // Set rate limit after successful email send (60 seconds)
+      await redis.set(rateLimitKey, "1", 60);
+
+      return reply.send({
+        message: "Verification code sent to email",
+        email,
+        expiresIn: expirySeconds,
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "Login failed",
+      } as ErrorResponse);
+    }
+  });
 
   /**
    * POST /auth/login/verify
    * Verify email login code
    */
-  fastify.post(
-    "/auth/login/verify",
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const { email, code } = request.body as { email: string; code: string };
+  fastify.post("/auth/login/verify", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { email, code } = request.body as { email: string; code: string };
 
-        // Validate inputs
-        if (!email || !code) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Email and verification code are required",
-          } as ErrorResponse);
-        }
-
-        // Check rate limiting - allow verification attempts only once every 60 seconds per email
-        const rateLimitKey = `email_login_verify_rate:${email}`;
-        const ttl = await redis.ttl(rateLimitKey);
-
-        if (ttl > 0) {
-          return reply.status(429).send({
-            error: "Too Many Requests",
-            message: `Please wait ${ttl} seconds before attempting verification again`,
-          } as ErrorResponse);
-        }
-
-        // Get verification code from Redis
-        const redisKey = `email_login:${email}`;
-        const storedCode = await redis.get(redisKey);
-
-        if (!storedCode) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Invalid or expired verification code",
-          } as ErrorResponse);
-        }
-
-        // Verify code
-        if (code !== storedCode) {
-          // Set rate limit to prevent brute-force attacks (60 seconds)
-          await redis.set(rateLimitKey, "1", 60);
-
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Invalid verification code",
-          } as ErrorResponse);
-        }
-
-        // Get user
-        const user = await userService.getUserByEmail(email);
-        if (!user) {
-          return reply.status(404).send({
-            error: "Not Found",
-            message: "User not found",
-          } as ErrorResponse);
-        }
-
-        // Cache user status if available
-        await userService.setUserStatusInCache(user.id, user.status);
-
-        // Delete verification code from Redis
-        await redis.delete(redisKey);
-
-        // Generate JWT tokens
-        const { accessToken, refreshToken } = authService.generateTokenPair(
-          user.id.toString(),
-          user.github_id || "",
-          user.email,
-        );
-
-        // Set JWT tokens as cookies
-        reply.setCookie("accessToken", accessToken, {
-          httpOnly: true,
-          secure: config.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 3600, // 1 hour
-        });
-
-        reply.setCookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: config.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 3600 * 24 * 30, // 30 days
-        });
-
-        return reply.send({
-          message: "Login successful",
-          user,
-          accessToken,
-        });
-      } catch (error) {
-        console.error("Login verification error:", error);
-        return reply.status(500).send({
-          error: "Internal Server Error",
-          message: "Failed to complete login",
+      // Validate inputs
+      if (!email || !code) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Email and verification code are required",
         } as ErrorResponse);
       }
-    },
-  );
+
+      // Check rate limiting - allow verification attempts only once every 60 seconds per email
+      const rateLimitKey = `email_login_verify_rate:${email}`;
+      const ttl = await redis.ttl(rateLimitKey);
+
+      if (ttl > 0) {
+        return reply.status(429).send({
+          error: "Too Many Requests",
+          message: `Please wait ${ttl} seconds before attempting verification again`,
+        } as ErrorResponse);
+      }
+
+      // Get verification code from Redis
+      const redisKey = `email_login:${email}`;
+      const storedCode = await redis.get(redisKey);
+
+      if (!storedCode) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Invalid or expired verification code",
+        } as ErrorResponse);
+      }
+
+      // Verify code
+      if (code !== storedCode) {
+        // Set rate limit to prevent brute-force attacks (60 seconds)
+        await redis.set(rateLimitKey, "1", 60);
+
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Invalid verification code",
+        } as ErrorResponse);
+      }
+
+      // Get user
+      const user = await userService.getUserByEmail(email);
+      if (!user) {
+        return reply.status(404).send({
+          error: "Not Found",
+          message: "User not found",
+        } as ErrorResponse);
+      }
+
+      // Cache user status if available
+      await userService.setUserStatusInCache(user.id, user.status);
+
+      // Delete verification code from Redis
+      await redis.delete(redisKey);
+
+      // Generate JWT tokens
+      const { accessToken, refreshToken } = authService.generateTokenPair(user.id.toString(), user.github_id || "", user.email);
+
+      // Set JWT tokens as cookies
+      reply.setCookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: config.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 3600, // 1 hour
+      });
+
+      reply.setCookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: config.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 3600 * 24 * 30, // 30 days
+      });
+
+      return reply.send({
+        message: "Login successful",
+        user,
+        accessToken,
+      });
+    } catch (error) {
+      console.error("Login verification error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "Failed to complete login",
+      } as ErrorResponse);
+    }
+  });
 
   // Centrifuge authentication validation endpoint
   fastify.post(
@@ -876,10 +816,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         },
       },
     },
-    async (
-      request: FastifyRequest<{ Body: { token: string } }>,
-      reply: FastifyReply,
-    ) => {
+    async (request: FastifyRequest<{ Body: { token: string } }>, reply: FastifyReply) => {
       try {
         const { token } = request.body;
 
@@ -918,7 +855,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           error: "Token validation failed",
         });
       }
-    },
+    }
   );
 
   /**
@@ -926,65 +863,57 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    * Reset user's grid password (requires authentication)
    */
   fastify.post<{
-    Body: { grid: number[][] }
-  }>(
-    "/auth/reset",
-    { preHandler: authenticateToken },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const userId = (request as unknown as AuthenticatedRequest).user?.id;
-        const { grid } = request.body as { grid: number[][] };
-        
-        if (!userId) {
-          return reply.status(401).send({
-            error: "Unauthorized",
-            message: "Authentication required",
-          } as ErrorResponse);
-        }
+    Body: { grid: number[][] };
+  }>("/auth/reset", { preHandler: authenticateToken }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const userId = (request as unknown as AuthenticatedRequest).user?.id;
+      const { grid } = request.body as { grid: number[][] };
 
-        if (!grid || !Array.isArray(grid)) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Grid is required",
-          } as ErrorResponse);
-        }
+      if (!userId) {
+        return reply.status(401).send({
+          error: "Unauthorized",
+          message: "Authentication required",
+        } as ErrorResponse);
+      }
 
-        // Validate grid is 5x5 and contains only positive numbers
-        if (
-          grid.length !== 5 || 
-          !grid.every(row => 
-            Array.isArray(row) && 
-            row.length === 5 && 
-            row.every(cell => typeof cell === 'number' && !isNaN(cell) && cell > 0)
-          )
-        ) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Grid must be a 5x5 matrix of positive numbers",
-          } as ErrorResponse);
-        }
-        
-        // Update the user's grid in the database
-        const updated = await userService.updateUserGrid(userId, grid);
-        
-        if (!updated) {
-          return reply.status(500).send({
-            error: "Internal Server Error",
-            message: "Failed to reset grid",
-          } as ErrorResponse);
-        }
+      if (!grid || !Array.isArray(grid)) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Grid is required",
+        } as ErrorResponse);
+      }
 
-        return reply.send({
-          message: "Grid successfully reset",
-          success: true,
-        });
-      } catch (error) {
-        console.error("Grid reset error:", error);
+      // Validate grid is 5x5 and contains only positive numbers
+      if (
+        grid.length !== 5 ||
+        !grid.every((row) => Array.isArray(row) && row.length === 5 && row.every((cell) => typeof cell === "number" && !isNaN(cell) && cell > 0))
+      ) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "Grid must be a 5x5 matrix of positive numbers",
+        } as ErrorResponse);
+      }
+
+      // Update the user's grid in the database
+      const updated = await userService.updateUserGrid(userId, grid);
+
+      if (!updated) {
         return reply.status(500).send({
           error: "Internal Server Error",
           message: "Failed to reset grid",
         } as ErrorResponse);
       }
-    },
-  );
+
+      return reply.send({
+        message: "Grid successfully reset",
+        success: true,
+      });
+    } catch (error) {
+      console.error("Grid reset error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "Failed to reset grid",
+      } as ErrorResponse);
+    }
+  });
 }
