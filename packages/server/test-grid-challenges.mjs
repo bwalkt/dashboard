@@ -1,5 +1,5 @@
-import { redis } from './src/config/redis.js';
-import { ChallengeService } from './src/services/challenge.service.js';
+import { redis } from './dist/config/redis.js';
+import { ChallengeService } from './dist/services/challenge.service.js';
 
 async function testGridChallenges() {
   try {
@@ -8,7 +8,7 @@ async function testGridChallenges() {
     // Initialize Redis connection
     await redis.initialize();
     
-    const testUserId = 'test_grid_user_789';
+    const testUserId = '019b824c-d634-7de6-bee3-c0ccd6e45873'; // Real UUID from database
     
     // Clear existing challenges for test user
     await ChallengeService.clearUserChallenges(testUserId);
@@ -16,7 +16,7 @@ async function testGridChallenges() {
     
     // Test: Create grid-based challenges for user
     console.log('\n📝 Test: Creating grid-based challenges...');
-    console.log('Note: Database not available, will use fallback grid generation');
+    console.log('Testing with real user UUID and database grid data');
     
     const challenges = await ChallengeService.createChallenges({
       userId: testUserId,

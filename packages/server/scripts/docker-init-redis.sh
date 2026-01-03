@@ -61,6 +61,41 @@ fi
 
 echo "Redis is ready!"
 
+# Wait for PostgreSQL to be ready before running migrations
+echo "Waiting for PostgreSQL to be ready..."
+PG_MAX_RETRIES=30
+PG_RETRY_COUNT=0
+
+until PGPASSWORD="$POSTGRES_PASSWORD" pg_isready -h "${POSTGRES_HOST:-localhost}" -p "${POSTGRES_PORT:-5432}" -U "${POSTGRES_USER:-postgres}" > /dev/null 2>&1 || [ $PG_RETRY_COUNT -ge $PG_MAX_RETRIES ]; do
+  echo "PostgreSQL is unavailable - sleeping (attempt $((PG_RETRY_COUNT + 1))/$PG_MAX_RETRIES)"
+  sleep 1
+  PG_RETRY_COUNT=$((PG_RETRY_COUNT + 1))
+done
+
+if [ $PG_RETRY_COUNT -ge $PG_MAX_RETRIES ]; then
+  echo "ERROR: PostgreSQL failed to become ready after ${PG_MAX_RETRIES} seconds"
+  exit 1
+fi
+
+echo "PostgreSQL is ready!"
+
+# Run database migrations
+echo "Running database migrations..."
+if [ -f "/app/packages/server/scripts/run-migrations.js" ]; then
+  cd /app/packages/server
+  if node scripts/run-migrations.js; then
+    echo "Database migrations completed successfully!"
+  else
+    echo "ERROR: Database migrations failed!" >&2
+    echo "The migration script exited with an error." >&2
+    exit 1
+  fi
+else
+  echo "ERROR: Migration script not found at /app/packages/server/scripts/run-migrations.js" >&2
+  echo "Cannot run database migrations." >&2
+  exit 1
+fi
+
 # Check if all required data structures exist for better idempotency
 # This prevents partial initialization issues if the script failed mid-execution
 echo "Checking existing Redis data structures..."
