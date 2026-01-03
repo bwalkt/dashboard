@@ -244,7 +244,6 @@ impl HttpContext for ChallengeAuthzHttp {
             return Action::Pause;
         }
         
-        
         Action::Continue
     }
 }
