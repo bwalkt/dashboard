@@ -340,9 +340,9 @@ try {
   for (const challenge of challenges) {
     const challengeKey = `challenge:${challenge.id}`;
     await redis.set(challengeKey, challenge.answer);
-    // Set shorter TTL for challenges (5 minutes)
-    await redis.expire(challengeKey, 300);
-    console.log(`  Set challenge: ${challenge.id} = ${challenge.answer}`);
+    // No TTL - challenges persist indefinitely for testing
+    // await redis.expire(challengeKey, 300);  // Commented out - was 5 minutes
+    console.log(`  Set challenge: ${challenge.id} = ${challenge.answer} (no expiry)`);
   }
 
   // Display summary
