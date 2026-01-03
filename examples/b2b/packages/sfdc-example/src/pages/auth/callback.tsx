@@ -18,14 +18,14 @@ const CallbackPage = () => {
         toast.error('Invalid auth state')
         return null
       }
-      
+
       try {
         console.log('Calling auth callback with code:', code, 'state:', state)
         const data = await api.get<{ user: User; message: string }>(
           `/auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`,
         )
         console.log('Auth callback response:', data)
-        
+
         if (data?.user?.id) {
           // Invalidate user query to refetch user data in AuthContext
           queryClient.invalidateQueries({ queryKey: ['user'] })
