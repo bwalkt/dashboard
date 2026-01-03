@@ -34,12 +34,20 @@ async function gatewayHandler(
     const gatewayPath = request.url.replace(/^\/gateway\/?/, "");
     let targetPath = "/" + gatewayPath;
 
-    // Default to the configured backend service (sfdc-vanilla-server)
-    const serviceBaseURL = BACKEND_SERVICES.default;
+    // Check for x-gateway-target header from WASM filter
+    const gatewayTarget = request.headers['x-gateway-target'] as string | undefined;
+    console.log('Gateway headers:', JSON.stringify(request.headers));
+    
+    // Use the target from header if provided, otherwise use default
+    const serviceBaseURL = gatewayTarget 
+      ? `http://${gatewayTarget}`
+      : BACKEND_SERVICES.default;
+    
     const targetURL = `${serviceBaseURL}${targetPath}`;
 
     console.log(
       `Gateway: Forwarding ${request.method} ${request.url} -> ${targetURL}`,
+      gatewayTarget ? `(via x-gateway-target: ${gatewayTarget})` : '(default)',
     );
 
     // Prepare headers for forwarding (remove hop-by-hop headers)
