@@ -20,14 +20,10 @@ export function MobileUserNav() {
   const handleSignOut = async () => {
     try {
       await signOut()
-      if (signOutError) {
-        toast.error('Failed to sign out: ' + signOutError.message)
-      } else {
-        toast.success('Signed out successfully')
-        navigate('/auth/sign-in')
-      }
+      toast.success('Signed out successfully')
+      navigate('/auth/sign-in')
     } catch (error) {
-      toast.error('An unexpected error occurred')
+      toast.error('Failed to sign out')
       console.error('Sign out error:', error)
     }
   }

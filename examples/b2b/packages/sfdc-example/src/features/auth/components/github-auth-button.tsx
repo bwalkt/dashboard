@@ -16,11 +16,7 @@ export default function GithubSignInButton() {
     try {
       if (isTauri) {
         await tauriSignIn()
-        if (tauriError) {
-          toast.error('Failed to sign in with GitHub: ' + tauriError)
-        } else {
-          toast.success('Opening GitHub authentication...')
-        }
+        toast.success('Opening GitHub authentication...')
       } else {
         const { error } = await webSignIn()
         if (error) {
@@ -30,7 +26,7 @@ export default function GithubSignInButton() {
         }
       }
     } catch (error) {
-      toast.error('An unexpected error occurred')
+      toast.error('Failed to sign in with GitHub')
       console.error('GitHub sign in error:', error)
     }
   }

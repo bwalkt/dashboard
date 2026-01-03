@@ -67,16 +67,14 @@ export default function AppSidebar() {
 
   const handleSignOut = async () => {
     try {
+      console.log('Starting sign out...')
       await signOut()
-      if (signOutError) {
-        toast.error('Failed to sign out: ' + signOutError.message)
-      } else {
-        toast.success('Signed out successfully')
-        navigate('/auth/sign-in')
-      }
+      console.log('Sign out successful')
+      toast.success('Signed out successfully')
+      navigate('/auth/sign-in')
     } catch (error) {
-      toast.error('An unexpected error occurred')
-      console.error('Sign out error:', error)
+      console.error('Sign out error details:', error)
+      toast.error('Failed to sign out: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 
@@ -195,16 +193,18 @@ export default function AppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>
-                  <IconUserCircle className="mr-2 h-4 w-4" />
-                  <span>Home</span>
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>
                   <IconLogout className="mr-2 h-4 w-4" />
                   <span>Sign Out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handleSignOut} tooltip="Sign Out">
+              <IconLogout />
+              <span>Sign Out</span>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

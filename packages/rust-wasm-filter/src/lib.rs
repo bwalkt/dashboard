@@ -57,6 +57,12 @@ const PUBLIC_ROUTES: &[&str] = &[
     "/proxy/auth/refresh",
     "/proxy/auth/logout",
     "/proxy/auth/me",
+    "/auth/login",
+    "/auth/register",
+    "/auth/callback",
+    "/auth/refresh",
+    "/auth/logout",
+    "/auth/me",
     "/health",
     "/ready",
 ];
@@ -183,10 +189,12 @@ impl HttpContext for ChallengeAuthzHttp {
         }
 
         // Check if route is public
+        info!("[Rust WASM Filter] Checking if public route: {} {}", method, path);
         if is_public_route(&path, &method) {
             info!("[Rust WASM Filter] Public route, bypassing validation: {} {}", method, path);
             return Action::Continue;
         }
+        info!("[Rust WASM Filter] Not a public route, checking auth: {} {}", method, path);
 
         // Extract and validate access token from cookie
         let cookie_header = self.get_http_request_header("cookie").unwrap_or_default();
@@ -243,7 +251,9 @@ impl HttpContext for ChallengeAuthzHttp {
 
 // Helper functions
 fn is_public_route(path: &str, _method: &str) -> bool {
-    PUBLIC_ROUTES.iter().any(|&route| path.starts_with(route))
+    // Strip query parameters if present
+    let path_without_query = path.split('?').next().unwrap_or(path);
+    PUBLIC_ROUTES.iter().any(|&route| path_without_query.starts_with(route))
 }
 
 /// Constant-time comparison to prevent timing attacks on challenge answers
