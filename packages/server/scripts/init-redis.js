@@ -139,11 +139,11 @@ try {
     const sessionKey = `filter:sessions:data:${session.sid}`;
     
     // Store session data (only stringify complex objects, not primitives)
+    // Note: sid is not stored in hash since it's already the key
     await redis.hset(sessionKey,
       'uid', session.uid,
       'email', session.email,
       'name', session.name,
-      'sid', session.sid,
       'c_at', session.c_at.toString(),
       'last_seen', session.last_seen.toString(),
       'data', JSON.stringify(session.data)  // Complex object needs JSON serialization

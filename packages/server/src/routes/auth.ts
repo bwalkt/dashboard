@@ -6,13 +6,17 @@ import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { authService } from "../services/auth.service.js";
+import { ChallengeService } from "../services/challenge.service.js";
 import { emailService } from "../services/email.service.js";
+import { SessionService } from "../services/session.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
 
 async function deleteUserSession(request: FastifyRequest, reply: FastifyReply) {
   const userId = extractUserIdFromToken(request);
   if (userId) {
     await userService.deleteUserStatusFromCache(userId);
+    // Clean up all Redis sessions for this user
+    await SessionService.deleteUserSessions(userId);
   }
 
   // Clear JWT cookies
@@ -183,10 +187,26 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       // Generate JWT tokens
       const { accessToken, refreshToken } = authService.generateTokenPair(user.id, user.github_id, user.email);
 
+      // Create session for WASM filter
+      const clientIP = (request.headers["x-forwarded-for"] as string)?.split(',')[0]?.trim() || 
+                       (request.headers["x-real-ip"] as string) || 
+                       request.ip || 
+                       'unknown';
+      const userAgent = request.headers["user-agent"] || '';
+      
+      const sessionId = await SessionService.createSession({
+        userId: user.id,
+        email: user.email,
+        name: user.name || 'Unknown',
+        ip: clientIP,
+        userAgent,
+      });
+
       if (config.NODE_ENV !== "production") {
         console.log("Setting cookies - accessToken:", accessToken?.substring(0, 20) + "...");
         console.log("Setting cookies - environment:", config.NODE_ENV);
         console.log("Setting cookies - domain:", config.DOMAIN);
+        console.log("Created session:", sessionId, "for user:", user.id);
       }
 
       reply.setCookie("accessToken", accessToken, {
@@ -204,9 +224,33 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         maxAge: 3600 * 24 * 30, // 30 days
       });
 
+      // Add session ID to response header for client use
+      reply.header("x-session-id", sessionId);
+
+      // Generate challenges for the user
+      let nextChallenge = await ChallengeService.getNextChallenge(user.id);
+      
+      // If no challenges exist, create them
+      if (!nextChallenge) {
+        await ChallengeService.createChallenges({
+          userId: user.id,
+          count: undefined // Use default count from config
+        });
+        nextChallenge = await ChallengeService.getNextChallenge(user.id);
+      }
+
+      // Don't send the answer to the client
+      const challengeForClient = nextChallenge ? {
+        id: nextChallenge.id,
+        func: nextChallenge.func,
+        c_at: nextChallenge.c_at
+      } : null;
+
       return reply.send({
         message: "Login successful",
         user,
+        sessionId, // Include session ID in response body
+        challenge: challengeForClient // Include next challenge
       });
     } catch (error) {
       console.error("OAuth callback error:", error);

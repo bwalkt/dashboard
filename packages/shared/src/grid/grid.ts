@@ -38,7 +38,7 @@ import { StatisticalFunctions } from '../math/statisticalFunctions.js'
 import { TimeSeries } from '../math/timeSeries.js'
 import { getRandomInt } from '../utils/crypto.js'
 import { toFullCompact, toFullVerbose } from '../utils/functionShorthand.js'
-
+import { uuid } from '../uuid.js'
 export function genGrid(size: number = 5) {
   // Use cryptographically secure random for bounds
   const min = getRandomInt(1, 100)
@@ -622,12 +622,7 @@ export function genFunction(complexity?: number, size?: number) {
   const endTime = Date.now()
 
   // Generate unique identifier
-  const functionId = Math.abs(
-    expression.split('').reduce((a, b) => {
-      a = (a << 5) - a + b.charCodeAt(0)
-      return a & a
-    }, 0),
-  )
+  const functionId = uuid()
 
   const uniqueFunctions = Array.from(new Set(operations))
   const readable = `Expression: ${expression} with x=grid[${xCell.row}][${xCell.col}], y=grid[${yCell.row}][${yCell.col}]`
