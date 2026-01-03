@@ -31,7 +31,7 @@ const CallbackPage = () => {
           queryClient.invalidateQueries({ queryKey: ['user'] })
           // Navigate directly to dashboard overview
           toast.success('Login successful!')
-          navigate('/dashboard/overview')
+          navigate('/dashboard/overview', { replace: true })
         }
         return data
       } catch (error) {

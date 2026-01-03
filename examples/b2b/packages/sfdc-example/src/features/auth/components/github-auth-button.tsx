@@ -6,7 +6,7 @@ import { useTauriAuth } from '@/hooks/use-tauri-auth'
 
 export default function GithubSignInButton() {
   const { signInWithGitHub: webSignIn, signInWithGitHubLoading } = useAuth()
-  const { signInWithGitHub: tauriSignIn, error: tauriError, isLoading: tauriLoading } = useTauriAuth()
+  const { signInWithGitHub: tauriSignIn, isLoading: tauriLoading } = useTauriAuth()
 
   const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__
 
@@ -14,11 +14,20 @@ export default function GithubSignInButton() {
 
   const handleGitHubSignIn = async () => {
     try {
+      console.log('[GithubSignIn] Starting GitHub authentication...', { isTauri })
+
       if (isTauri) {
-        await tauriSignIn()
-        toast.success('Opening GitHub authentication...')
+        const result = await tauriSignIn()
+        console.log('[GithubSignIn] Tauri sign-in result:', result)
+        // Check if tauriSignIn returns an error object
+        if (result && typeof result === 'object' && 'error' in result && result.error) {
+          toast.error('Failed to sign in with GitHub: ' + result.error.message)
+        } else {
+          toast.success('Opening GitHub authentication...')
+        }
       } else {
         const { error } = await webSignIn()
+        console.log('[GithubSignIn] Web sign-in result:', { error })
         if (error) {
           toast.error('Failed to sign in with GitHub: ' + error.message)
         } else {
@@ -26,8 +35,8 @@ export default function GithubSignInButton() {
         }
       }
     } catch (error) {
-      toast.error('Failed to sign in with GitHub')
-      console.error('GitHub sign in error:', error)
+      console.error('[GithubSignIn] GitHub sign-in error:', error)
+      toast.error('Failed to sign in with GitHub: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 

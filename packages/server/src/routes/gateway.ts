@@ -16,6 +16,39 @@ const BACKEND_SERVICES = {
   // "/api": "http://localhost:3001"
 } as const;
 
+// Whitelist of allowed gateway targets for security (prevent SSRF)
+const ALLOWED_GATEWAY_TARGETS = new Set([
+  "localhost:8080",
+  "pzero-server:8090", 
+  "pzero-sfdc-server:3000",
+  // Add other legitimate internal services here as needed
+]);
+
+/**
+ * Validates gateway target to prevent SSRF attacks
+ * Only allows whitelisted internal service endpoints
+ */
+function isValidGatewayTarget(target: string): boolean {
+  // Check against whitelist
+  if (ALLOWED_GATEWAY_TARGETS.has(target)) {
+    return true;
+  }
+  
+  // Also allow Docker service names with port (internal DNS pattern)
+  // Must be alphanumeric/hyphen hostname with port, no dots (no external domains)
+  const internalServicePattern = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?:\d{1,5}$/;
+  if (internalServicePattern.test(target)) {
+    // Additional check: no suspicious patterns
+    const suspicious = [
+      "metadata", "169.254", "127.0", "localhost:22", 
+      "redis", "postgres", "mysql", "mongo", "elastic"
+    ];
+    return !suspicious.some(pattern => target.toLowerCase().includes(pattern));
+  }
+  
+  return false;
+}
+
 // For now, everything defaults to current server (admin portal)
 // except explicit /gateway/* routes which go to backend services
 
@@ -37,6 +70,15 @@ async function gatewayHandler(
     // Check for x-gateway-target header from WASM filter
     const gatewayTarget = request.headers['x-gateway-target'] as string | undefined;
     console.log('Gateway headers:', JSON.stringify(request.headers));
+    
+    // Validate gateway target if provided (defense against SSRF)
+    if (gatewayTarget && !isValidGatewayTarget(gatewayTarget)) {
+      console.warn(`Gateway: Invalid x-gateway-target header: ${gatewayTarget}`);
+      return reply.code(400).send({
+        error: "Bad Request",
+        message: "Invalid gateway target",
+      });
+    }
     
     // Use the target from header if provided, otherwise use default
     const serviceBaseURL = gatewayTarget 

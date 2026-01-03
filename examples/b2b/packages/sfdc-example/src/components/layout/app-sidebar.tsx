@@ -58,7 +58,7 @@ export default function AppSidebar() {
   const location = useLocation()
   const pathname = location.pathname
   const { isOpen } = useMediaQuery()
-  const { data: authUser, signOut, signOutError } = useUser()
+  const { data: authUser, signOut } = useUser()
   const navigate = useNavigate()
 
   const handleSwitchTenant = (_tenantId: string) => {
@@ -67,13 +67,13 @@ export default function AppSidebar() {
 
   const handleSignOut = async () => {
     try {
-      console.log('Starting sign out...')
+      console.log('[AppSidebar] Starting sign out...')
       await signOut()
-      console.log('Sign out successful')
+      console.log('[AppSidebar] Sign out successful')
       toast.success('Signed out successfully')
       navigate('/auth/sign-in')
     } catch (error) {
-      console.error('Sign out error details:', error)
+      console.error('[AppSidebar] Sign out error:', error)
       toast.error('Failed to sign out: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
@@ -199,12 +199,6 @@ export default function AppSidebar() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleSignOut} tooltip="Sign Out">
-              <IconLogout />
-              <span>Sign Out</span>
-            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
