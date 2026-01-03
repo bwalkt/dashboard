@@ -23,7 +23,10 @@ export function getRandomInt(min: number, max: number): number {
   }
 
   // Browser/Worker environment
-  const crypto = globalThis.crypto || self?.crypto || (typeof window !== 'undefined' ? window.crypto : null)
+  const crypto =
+    globalThis.crypto ||
+    (typeof self !== 'undefined' ? self?.crypto : null) ||
+    (typeof window !== 'undefined' ? window.crypto : null)
 
   if (crypto && crypto.getRandomValues) {
     const range = max - min + 1

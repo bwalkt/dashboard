@@ -233,8 +233,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       // If no challenges exist, create them
       if (!nextChallenge) {
         await ChallengeService.createChallenges({
-          userId: user.id,
-          count: undefined // Use default count from config
+          userId: user.id
         });
         nextChallenge = await ChallengeService.getNextChallenge(user.id);
       }

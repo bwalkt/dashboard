@@ -39,10 +39,11 @@ export async function challengeRoutes(fastify: FastifyInstance): Promise<void> {
       }
       
       // Generate challenges
-      const challenges = await ChallengeService.createChallenges({
-        userId: targetUserId,
-        count
-      });
+      const requestData: { userId: string; count?: number } = { userId: targetUserId! };
+      if (count !== undefined) {
+        requestData.count = count;
+      }
+      const challenges = await ChallengeService.createChallenges(requestData);
       
       return reply.send({
         success: true,
@@ -100,8 +101,7 @@ export async function challengeRoutes(fastify: FastifyInstance): Promise<void> {
         console.log(`No challenges found for user ${userId}, generating new ones...`);
         
         await ChallengeService.createChallenges({
-          userId,
-          count: undefined // Use default count
+          userId
         });
         
         challenge = await ChallengeService.getNextChallenge(userId);
@@ -169,9 +169,9 @@ export async function challengeRoutes(fastify: FastifyInstance): Promise<void> {
     {
       preHandler: authenticateToken // Require authentication for this endpoint
     },
-    async (request: FastifyRequest<{ Params: { userId: string } }>, reply: FastifyReply) => {
+    async (request, reply) => {
       try {
-        const { userId } = request.params;
+        const { userId } = request.params as { userId: string };
         
         await ChallengeService.clearUserChallenges(userId);
         

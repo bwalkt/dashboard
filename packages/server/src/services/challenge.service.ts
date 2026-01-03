@@ -1,4 +1,6 @@
 import { randomInt } from 'node:crypto';
+import { genFunctionAsJson } from '@pzero/shared/grid';
+import { db } from '../config/database.js';
 import { config } from '../config/env.js';
 import { redis } from '../config/redis.js';
 
@@ -23,44 +25,83 @@ export class ChallengeService {
   private static readonly DEFAULT_CHALLENGE_COUNT = parseInt(config.CHALLENGE_COUNT || '10', 10);
 
   /**
-   * Generate a simple math challenge
-   * In production, this could call an external service or use more complex logic
+   * Fetch user's grid from database
    */
-  private static generateChallenge(): { id: string; func: string; answer: string } {
-    const operations = ['+', '-', '*'];
-    const op = operations[Math.floor(Math.random() * operations.length)];
-    const num1 = randomInt(1, 100);
-    const num2 = randomInt(1, 50);
-    
-    let answer: number;
-    let func: string;
-    
-    switch (op) {
-      case '+':
-        func = `${num1} + ${num2}`;
-        answer = num1 + num2;
-        break;
-      case '-':
-        func = `${num1} - ${num2}`;
-        answer = num1 - num2;
-        break;
-      case '*':
-        func = `${num1} * ${num2}`;
-        answer = num1 * num2;
-        break;
-      default:
-        func = `${num1} + ${num2}`;
-        answer = num1 + num2;
+  private static async getUserGrid(userId: string): Promise<number[][] | null> {
+    try {
+      const query = 'SELECT data->\'grid\' as grid FROM pzero.all_users WHERE id = $1';
+      const result = await db.query(query, [userId]);
+      
+      if (result.rows.length === 0) {
+        console.warn(`No user found with id ${userId}`);
+        return null;
+      }
+      
+      const gridData = result.rows[0].grid;
+      
+      if (!gridData) {
+        console.warn(`No grid data found for user ${userId}`);
+        return null;
+      }
+      
+      // Validate grid data structure
+      if (!Array.isArray(gridData) || !Array.isArray(gridData[0])) {
+        console.warn(`Invalid grid data structure for user ${userId}`);
+        return null;
+      }
+      
+      return gridData as number[][];
+    } catch (error) {
+      console.error(`Error fetching grid for user ${userId}:`, error);
+      return null;
     }
-    
-    // Generate unique challenge ID
-    const id = `challenge_${Date.now()}_${randomInt(1000, 9999)}`;
-    
-    return {
-      id,
-      func,
-      answer: answer.toString()
-    };
+  }
+
+  /**
+   * Generate default grid if database grid is not available
+   */
+  private static generateDefaultGrid(size: number = 5): number[][] {
+    const grid: number[][] = [];
+    for (let i = 0; i < size; i++) {
+      const row: number[] = [];
+      for (let j = 0; j < size; j++) {
+        row.push(randomInt(1, 100));
+      }
+      grid.push(row);
+    }
+    return grid;
+  }
+
+  /**
+   * Generate a grid-based challenge using genFunctionAsJson
+   */
+  private static async generateChallenge(grid: number[][]): Promise<{ id: string; func: string; answer: string }> {
+    try {
+      // Use genFunctionAsJson to create the challenge
+      const functionData = genFunctionAsJson(grid);
+      
+      // Generate unique challenge ID
+      const id = `challenge_${Date.now()}_${randomInt(1000, 9999)}`;
+      
+      return {
+        id,
+        func: functionData.function?.expression || 'Error: Unable to generate function',
+        answer: functionData.result?.value?.toString() || '0'
+      };
+    } catch (error) {
+      console.error('Error generating grid-based challenge:', error);
+      
+      // Fallback to simple math if grid generation fails
+      const num1 = randomInt(1, 100);
+      const num2 = randomInt(1, 50);
+      const answer = num1 + num2;
+      
+      return {
+        id: `challenge_${Date.now()}_${randomInt(1000, 9999)}`,
+        func: `${num1} + ${num2}`,
+        answer: answer.toString()
+      };
+    }
   }
 
   /**
@@ -70,6 +111,17 @@ export class ChallengeService {
     const count = request.count || this.DEFAULT_CHALLENGE_COUNT;
     const challenges: Challenge[] = [];
     const now = Date.now();
+    
+    // Fetch user's grid from database
+    let grid = await this.getUserGrid(request.userId);
+    
+    // Fallback to default grid if database grid is not available
+    if (!grid) {
+      console.log(`Using default grid for user ${request.userId} (database grid not available)`);
+      grid = this.generateDefaultGrid();
+    } else {
+      console.log(`Using database grid for user ${request.userId}`);
+    }
     
     // Get current max sequence number for user
     const existingKeys = await redisClient.keys(`next_funcs:${request.userId}:*`);
@@ -88,7 +140,7 @@ export class ChallengeService {
     
     for (let i = 0; i < count; i++) {
       const seqNo = maxSeqNo + i + 1;
-      const challengeData = this.generateChallenge();
+      const challengeData = await this.generateChallenge(grid);
       
       const challenge: Challenge = {
         id: challengeData.id,
@@ -139,14 +191,17 @@ export class ChallengeService {
     for (const key of keys) {
       const challengeData = await redisClient.hgetall(key);
       
-      if (challengeData && !challengeData.a_at) {
-        return {
+      if (challengeData && !challengeData.a_at && challengeData.id && challengeData.func && challengeData.answer && challengeData.c_at) {
+        const challenge: Challenge = {
           id: challengeData.id,
           func: challengeData.func,
           answer: challengeData.answer,
-          c_at: parseInt(challengeData.c_at, 10),
-          a_at: challengeData.a_at ? parseInt(challengeData.a_at, 10) : undefined
+          c_at: parseInt(challengeData.c_at, 10)
         };
+        if (challengeData.a_at) {
+          challenge.a_at = parseInt(challengeData.a_at, 10);
+        }
+        return challenge;
       }
     }
     
@@ -212,14 +267,17 @@ export class ChallengeService {
     for (const key of keys) {
       const challengeData = await redisClient.hgetall(key);
       
-      if (challengeData) {
-        challenges.push({
+      if (challengeData && challengeData.id && challengeData.func && challengeData.answer && challengeData.c_at) {
+        const challenge: Challenge = {
           id: challengeData.id,
           func: challengeData.func,
           answer: challengeData.answer,
-          c_at: parseInt(challengeData.c_at, 10),
-          a_at: challengeData.a_at ? parseInt(challengeData.a_at, 10) : undefined
-        });
+          c_at: parseInt(challengeData.c_at, 10)
+        };
+        if (challengeData.a_at) {
+          challenge.a_at = parseInt(challengeData.a_at, 10);
+        }
+        challenges.push(challenge);
       }
     }
     
