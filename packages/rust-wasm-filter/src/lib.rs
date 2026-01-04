@@ -264,10 +264,54 @@ impl Context for ChallengeAuthzHttp {
                     
                     // Parse Redis response (constant-time comparison to prevent timing attacks)
                     if constant_time_compare(body_str.trim().as_bytes(), challenge_answer.as_bytes()) {
-                        info!("[Rust WASM Filter] Challenge validated via Redis: {}", challenge_id);
+                        info!("[Rust WASM Filter] ✅ CORRECT: Challenge validated via Redis: {}", challenge_id);
+                        
+                        // Apply routing transformations before resuming
+                        // Extract path components to determine routing
+                        let path = self.get_http_request_header(":path").unwrap_or_default();
+                        
+                        // Check if this is a Salesforce route
+                        if path.starts_with("/salesforce/") || path.starts_with("/salesforce") {
+                            // Transform to gateway path
+                            let new_path = format!("/gateway{}", path);
+                            self.set_http_request_header(":path", Some(&new_path));
+                            
+                            // Add gateway target header for Salesforce
+                            self.set_http_request_header("x-gateway-target", Some("pzero-sfdc-server:3000"));
+                            
+                            info!("[Rust WASM Filter] Routing to Salesforce: {} -> {}", path, new_path);
+                        } else if let Some(proxy_target_id) = self.get_http_request_header("x-proxy-target-id") {
+                            // Check for proxy target header and modify request to route directly
+                            info!("[Rust WASM Filter] Request has proxy target ID: {}", proxy_target_id);
+                            
+                            // Look up the proxy target from our cache
+                            if let Some(target) = self.proxy_targets.get(&proxy_target_id) {
+                                // Format target address with optional port
+                                let target_address = match target.port {
+                                    Some(port) => format!("{}:{}", target.url, port),
+                                    None => target.url.clone(),
+                                };
+                                info!("[Rust WASM Filter] Found proxy target: {} -> {}", target.name, target_address);
+                                
+                                // Modify the path to use gateway routing
+                                let new_path = format!("/gateway{}", path);
+                                self.set_http_request_header(":path", Some(&new_path));
+                                
+                                // Add header to indicate target service dynamically
+                                self.set_http_request_header("x-gateway-target", Some(&target_address));
+                                
+                                info!("[Rust WASM Filter] Modified path to {} for gateway routing to {}", new_path, target_address);
+                            } else {
+                                warn!("[Rust WASM Filter] Proxy target not found in cache: {}", proxy_target_id);
+                                // Use gateway routing without specific target
+                                let new_path = format!("/gateway{}", path);
+                                self.set_http_request_header(":path", Some(&new_path));
+                            }
+                        }
+                        
                         self.resume_http_request();
                     } else {
-                        warn!("[Rust WASM Filter] Challenge validation failed: {}", challenge_id);
+                        warn!("[Rust WASM Filter] ⚠️ WRONG: Challenge validation failed: {}", challenge_id);
                         self.send_forbidden_response("invalid challenge answer");
                     }
                 }
@@ -356,54 +400,41 @@ impl HttpContext for ChallengeAuthzHttp {
             return Action::Pause;
         }
 
-        // Check challenge in Redis via direct validation
-        // Since Redis HTTP proxy is complex, validate directly using hardcoded challenges
-        let is_valid_challenge = validate_hardcoded_challenge(&challenge_id, &challenge_answer);
+        // Query Redis for challenge validation
+        info!("[Rust WASM Filter] Querying Redis for challenge: {}", challenge_id);
         
-        if is_valid_challenge {
-            info!("[Rust WASM Filter] ✅ Challenge PASSED (hardcoded): id={}, answer={}", challenge_id, challenge_answer);
-            
-            // Check for proxy target header and modify request to route directly
-            if let Some(proxy_target_id) = self.get_http_request_header("x-proxy-target-id") {
-                info!("[Rust WASM Filter] Request has proxy target ID: {}", proxy_target_id);
-                
-                // Look up the proxy target from our cache
-                if let Some(target) = self.proxy_targets.get(&proxy_target_id) {
-                    // Format target address with optional port
-                    let target_address = match target.port {
-                        Some(port) => format!("{}:{}", target.url, port),
-                        None => target.url.clone(),
-                    };
-                    info!("[Rust WASM Filter] Found proxy target: {} -> {}", target.name, target_address);
-                    
-                    // Modify the path to use gateway routing
-                    let current_path = self.get_http_request_header(":path").unwrap_or_default();
-                    let new_path = format!("/gateway{}", current_path);
-                    self.set_http_request_header(":path", Some(&new_path));
-                    
-                    // Add header to indicate target service dynamically
-                    self.set_http_request_header("x-gateway-target", Some(&target_address));
-                    
-                    info!("[Rust WASM Filter] Modified path to {} for gateway routing to {}", new_path, target_address);
-                } else {
-                    warn!("[Rust WASM Filter] Proxy target not found in cache: {}", proxy_target_id);
-                    // Hardcode sfdc-server as fallback for testing
-                    let current_path = self.get_http_request_header(":path").unwrap_or_default();
-                    let new_path = format!("/gateway{}", current_path);
-                    self.set_http_request_header(":path", Some(&new_path));
-                    
-                    // Hardcode sfdc-server address
-                    self.set_http_request_header("x-gateway-target", Some("pzero-sfdc-server:3000"));
-                    info!("[Rust WASM Filter] Using hardcoded sfdc-server address: pzero-sfdc-server:3000");
-                }
+        // Store pending challenge data for validation in callback
+        self.pending_challenge_id = Some(challenge_id.clone());
+        self.pending_challenge_answer = Some(challenge_answer.clone());
+        
+        // Dispatch HTTP call to Redis endpoint
+        let redis_path = format!("/redis/get/challenge:{}", challenge_id);
+        let headers = vec![
+            (":method", "GET"),
+            (":path", &redis_path),
+            (":authority", "pzero-server"),
+        ];
+        
+        match self.dispatch_http_call(
+            "server_cluster",
+            headers,
+            None,
+            vec![],
+            std::time::Duration::from_secs(5),
+        ) {
+            Ok(call_id) => {
+                info!("[Rust WASM Filter] Redis query dispatched with call_id: {}", call_id);
+                self.pending_call_id = Some(call_id);
+                // Pause the request until we get Redis response
+                Action::Pause
             }
-        } else {
-            warn!("[Rust WASM Filter] ❌ Challenge FAILED (hardcoded): id={}, answer={}", challenge_id, challenge_answer);
-            self.send_forbidden_response("invalid challenge answer");
-            return Action::Pause;
+            Err(status) => {
+                warn!("[Rust WASM Filter] Failed to query Redis: {:?}", status);
+                // Fallback: reject the request
+                self.send_forbidden_response("challenge validation failed");
+                Action::Pause
+            }
         }
-        
-        Action::Continue
     }
 }
 
@@ -452,17 +483,6 @@ fn validate_challenge_format(id: &str, answer: &str) -> bool {
     !id.is_empty() && !answer.is_empty() && id.len() < 256 && answer.len() < 256
 }
 
-/// Validate challenge using hardcoded values (temporary solution)
-fn validate_hardcoded_challenge(challenge_id: &str, challenge_answer: &str) -> bool {
-    // Use constant-time comparison to prevent timing attacks
-    match challenge_id {
-        "1" => constant_time_compare(challenge_answer.as_bytes(), b"1"),
-        "test123" => constant_time_compare(challenge_answer.as_bytes(), b"answer123"),
-        "challenge_001" => constant_time_compare(challenge_answer.as_bytes(), b"correct_answer_1"),
-        "challenge_002" => constant_time_compare(challenge_answer.as_bytes(), b"correct_answer_2"),
-        _ => false, // Unknown challenge ID
-    }
-}
 
 impl ChallengeAuthzHttp {
     fn send_forbidden_response(&mut self, reason: &str) {
