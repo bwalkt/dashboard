@@ -19,3 +19,4 @@ export {
   suggestAlternativeHandles,
 } from './utils/handles.js'
 export * from './validator/index.js'
+export { decrypt, decryptGrid } from './utils/crypto.js'
