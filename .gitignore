@@ -19,6 +19,7 @@ dist
 dist-ssr
 *.local
 target/
+*.wasm
 routeTreegen.ts 
 packages/portal/src/routeTreegen.ts
 # Editor directories and files
