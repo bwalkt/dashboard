@@ -70,12 +70,14 @@ export async function decrypt(encryptedData: EncryptedData | string, secret: str
       const ciphertext = hexToBuffer(data.encrypted)
 
       // Combine ciphertext and authTag for Web Crypto API
-      const combined = new Uint8Array(ciphertext.length + authTag.length)
+      const combinedBuffer = new ArrayBuffer(ciphertext.length + authTag.length)
+      const combined = new Uint8Array(combinedBuffer)
       combined.set(ciphertext, 0)
       combined.set(authTag, ciphertext.length)
 
       // Decrypt
-      const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, combined)
+      // @ts-ignore - TypeScript has issues with ArrayBufferLike vs ArrayBuffer
+      const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, combinedBuffer)
 
       // Convert to string and parse JSON
       const decoder = new TextDecoder()
