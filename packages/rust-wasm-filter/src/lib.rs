@@ -186,6 +186,9 @@ impl ChallengeAuthzRoot {
         }
     }
 }
+// TODO - revisit. 
+// The callback response from fetch_proxy_targets is never handled. The dispatch_http_call is made during on_configure, but there's no RootContext implementation of on_http_call_response to process the returned proxy targets. This means proxy_targets will always remain empty, and the dynamic routing feature won't work. You need to implement on_http_call_response in the RootContext trait for ChallengeAuthzRoot to handle the response and populate proxy_targets.
+
 
 impl RootContext for ChallengeAuthzRoot {
     fn on_configure(&mut self, _: usize) -> bool {
