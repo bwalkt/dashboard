@@ -55,6 +55,7 @@ static_resources:
                             centrifugo_secret=default-secret-key-change-in-production_FILTER_AUTH
                             filter_id=pzero-envoy-wasm-filter-1
                             jwt_secret=your_super_secret_jwt_key_change_this_in_production
+                            proxy_targets_authority=pzero-server
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

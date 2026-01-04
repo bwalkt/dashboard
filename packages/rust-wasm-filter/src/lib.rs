@@ -39,8 +39,9 @@ struct FilterConfig {
     /// Default: 4096 bytes (4KB) - should be sufficient for challenge answers.
     /// Configure via redis_response_buffer_size=<bytes> in filter config.
     redis_response_buffer_size: usize,
-    /// Authority for fetching proxy targets (e.g., "pzero-server:8090")
-    /// Configure via proxy_targets_authority=<host:port> in filter config.
+    /// Authority (hostname) for fetching proxy targets (e.g., "pzero-server")
+    /// The port is determined by the Envoy cluster configuration.
+    /// Configure via proxy_targets_authority=<hostname> in filter config.
     proxy_targets_authority: String,
 }
 
@@ -51,7 +52,7 @@ impl Default for FilterConfig {
             filter_id: String::new(),
             centrifugo_secret: String::new(),
             redis_response_buffer_size: 4096, // Default 4KB buffer for Redis responses
-            proxy_targets_authority: "pzero-server:8090".to_string(), // Default authority
+            proxy_targets_authority: "pzero-server".to_string(), // Default authority (port from cluster config)
         }
     }
 }
@@ -154,7 +155,7 @@ impl ChallengeAuthzRoot {
         // Fetch proxy targets from Redis cache
         // Using Redis HTTP proxy endpoint to get proxy targets
         let authority = if self.config.proxy_targets_authority.is_empty() {
-            "pzero-server:8090" // Fallback default
+            "pzero-server" // Fallback default (port from cluster config)
         } else {
             &self.config.proxy_targets_authority
         };
