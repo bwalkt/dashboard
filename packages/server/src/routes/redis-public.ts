@@ -2,8 +2,12 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { redis } from "../config/redis.js";
 
 /**
- * Public Redis routes for WASM filter challenge validation
- * These routes bypass all authentication
+ * Registers a public GET endpoint at /redis/get/:key that returns the raw Redis value as plain text for WASM filter challenge validation and bypasses authentication.
+ *
+ * The route fetches the requested key from Redis and:
+ * - responds with the key's value as plain text if found,
+ * - responds with HTTP 404 and an empty body if the key is not present,
+ * - responds with HTTP 500 and an empty body on errors.
  */
 export async function redisPublicRoutes(
   fastify: FastifyInstance,
