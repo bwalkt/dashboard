@@ -18,7 +18,7 @@ export async function decrypt(encryptedData: EncryptedData | string, secret: str
   // Node.js environment
   if (typeof process !== 'undefined' && process.versions?.node) {
     try {
-      const crypto = require('crypto')
+      const crypto = await import('crypto')
 
       // Create key from secret
       const secretKey = crypto.createHash('sha256').update(String(secret)).digest()
@@ -107,7 +107,7 @@ export async function encrypt(data: any, secret: string): Promise<string> {
   // Node.js environment
   if (typeof process !== 'undefined' && process.versions?.node) {
     try {
-      const crypto = require('crypto')
+      const crypto = await import('crypto')
 
       // Create key from secret
       const secretKey = crypto.createHash('sha256').update(String(secret)).digest()
