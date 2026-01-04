@@ -383,10 +383,14 @@ impl HttpContext for ChallengeAuthzHttp {
                     info!("[Rust WASM Filter] Modified path to {} for gateway routing to {}", new_path, target_address);
                 } else {
                     warn!("[Rust WASM Filter] Proxy target not found in cache: {}", proxy_target_id);
-                    // Still modify path for gateway but let server use default
+                    // Hardcode sfdc-server as fallback for testing
                     let current_path = self.get_http_request_header(":path").unwrap_or_default();
                     let new_path = format!("/gateway{}", current_path);
                     self.set_http_request_header(":path", Some(&new_path));
+                    
+                    // Hardcode sfdc-server address
+                    self.set_http_request_header("x-gateway-target", Some("pzero-sfdc-server:3000"));
+                    info!("[Rust WASM Filter] Using hardcoded sfdc-server address: pzero-sfdc-server:3000");
                 }
             }
         } else {
