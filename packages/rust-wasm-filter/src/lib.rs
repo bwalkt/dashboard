@@ -108,6 +108,7 @@ const PUBLIC_ROUTES: &[&str] = &[
 // Route patterns that should be treated as public
 // Anything starting with these prefixes bypasses authentication
 const PUBLIC_ROUTE_PATTERNS: &[&str] = &[
+    "/auth/",
     "/assets/",
     "/public/",
     "/docs/",
