@@ -2,6 +2,7 @@ export * from './math/index.js'
 export * from './mock/data-table.js'
 export * from './phone/index.js'
 export * from './types/index.js'
+export { decrypt, decryptGrid } from './utils/crypto.js'
 export * from './utils/functionHeader.js'
 export * from './utils/functionShorthand.js'
 export * from './utils/gridShorthand.js'
@@ -19,4 +20,3 @@ export {
   suggestAlternativeHandles,
 } from './utils/handles.js'
 export * from './validator/index.js'
-export { decrypt, decryptGrid } from './utils/crypto.js'
