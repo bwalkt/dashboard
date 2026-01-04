@@ -5,13 +5,19 @@ import { createValidator } from '@pzero/shared/validator/ajv'
 // =============================================================================
 
 export interface User {
-  id: number
+  id: number | string
   github_id: string
   name: string
   email: string
+  phone?: string | null
   avatar: string
   created_at: string
   updated_at: string
+  c_at?: string
+  data?: {
+    grid?: string // Encrypted grid data
+    [key: string]: any
+  }
 }
 
 export interface CreateUserData {
