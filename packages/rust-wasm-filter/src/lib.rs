@@ -245,6 +245,34 @@ impl RootContext for ChallengeAuthzRoot {
 }
 
 impl Context for ChallengeAuthzHttp {
+    /// Handle the response for an outstanding HTTP call used to validate a Redis-backed challenge.
+    ///
+    /// Verifies that `token_id` matches the stored pending call id, reads the HTTP call response body
+    /// (using `config.redis_response_buffer_size`) and, if present, performs a constant-time comparison
+    /// of the response against the stored challenge answer. If the comparison succeeds, applies routing
+    /// transformations and resumes the original HTTP request:
+    /// - Requests whose path starts with `/salesforce` are rewritten to `/gateway{path}` and routed to
+    ///   `pzero-sfdc-server:3000` via an `x-gateway-target` header.
+    /// - If the request includes an `x-proxy-target-id` header and a matching entry exists in
+    ///   `proxy_targets`, the request path is rewritten to `/gateway{path}` and `x-gateway-target` is
+    ///   set to the target's address (including port when present). If no matching target is found,
+    ///   the path is still rewritten to `/gateway{path}`.
+    /// If the challenge comparison fails, sends a 403 response with reason `"invalid challenge answer"`.
+    /// If no response body is available from Redis, resumes the request to allow backend validation.
+    /// In all handled cases, clears the pending challenge id, answer, and call id.
+    ///
+    /// Parameters:
+    /// - `token_id`: identifier of the HTTP call whose response is being processed; ignored if it does
+    ///   not match the stored pending call id.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// // Assume `ctx` is a mutable ChallengeAuthzHttp populated with pending_challenge_id,
+    /// // pending_challenge_answer and pending_call_id.
+    /// // The runtime will call this when the HTTP call response arrives:
+    /// ctx.on_http_call_response(42, 0, 0, 0);
+    /// ```
     fn on_http_call_response(&mut self, token_id: u32, _: usize, _: usize, _: usize) {
         // Verify this is the expected call response
         if self.pending_call_id != Some(token_id) {
@@ -331,6 +359,22 @@ impl Context for ChallengeAuthzHttp {
 }
 
 impl HttpContext for ChallengeAuthzHttp {
+    /// Processes incoming HTTP request headers: handles CORS preflight, allows public routes, validates the access token and challenge headers, and dispatches an asynchronous Redis request to validate the challenge while pausing the request.
+    ///
+    /// On OPTIONS requests this sends a 204 CORS response and pauses. If the route is public the request continues. For non-public routes it extracts an `accessToken` cookie and performs a basic JWT-format check; it then validates presence and basic format of `x-challenge-id` and `x-challenge-answer`. If validation succeeds it stores the pending challenge state and dispatches an HTTP GET to the Redis endpoint `/redis/get/challenge:{id}` on `server_cluster`, then pauses waiting for the Redis response. If any validation or dispatch step fails the function sends a 403 JSON forbidden response and pauses.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Pseudocode example illustrating intended usage:
+    /// // let mut ctx = ChallengeAuthzHttp::new(...);
+    /// // let action = ctx.on_http_request_headers(0, false);
+    /// // match action {
+    /// //     Action::Pause => { /* waiting for Redis validation or CORS handled */ }
+    /// //     Action::Continue => { /* public route or validation bypassed */ }
+    /// //     _ => {}
+    /// // }
+    /// ```
     fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
         // Get request path and method
         let path = self.get_http_request_header(":path")
@@ -478,6 +522,23 @@ fn validate_jwt_format(token: &str) -> bool {
     parts.len() == 3 && parts.iter().all(|part| !part.is_empty())
 }
 
+/// Validates that a challenge id and answer are present and within the allowed length.
+///
+/// Ensures neither `id` nor `answer` is empty and that both have fewer than 256 characters.
+///
+/// # Examples
+///
+/// ```
+/// assert!(validate_challenge_format("challenge123", "answer456"));
+/// assert!(!validate_challenge_format("", "answer"));
+/// assert!(!validate_challenge_format("id", ""));
+/// let long = "a".repeat(256);
+/// assert!(!validate_challenge_format(&long, "ans"));
+/// ```
+///
+/// # Returns
+///
+/// `true` if both `id` and `answer` are non-empty and have length less than 256, `false` otherwise.
 fn validate_challenge_format(id: &str, answer: &str) -> bool {
     // Basic validation - non-empty and reasonable length
     !id.is_empty() && !answer.is_empty() && id.len() < 256 && answer.len() < 256
@@ -485,6 +546,20 @@ fn validate_challenge_format(id: &str, answer: &str) -> bool {
 
 
 impl ChallengeAuthzHttp {
+    /// Send a 403 Forbidden response with a JSON error body and CORS headers.
+    ///
+    /// The response body will be `{"error": <reason>}`. The `Access-Control-Allow-Origin` header
+    /// is set from the request `Origin` header when present, otherwise `"*"`. The response
+    /// also includes `Content-Type: application/json` and `Access-Control-Allow-Credentials: true`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Construct the same JSON body produced by `send_forbidden_response`.
+    /// let reason = "invalid challenge answer";
+    /// let body = serde_json::json!({ "error": reason }).to_string();
+    /// assert_eq!(body, r#"{"error":"invalid challenge answer"}"#);
+    /// ```
     fn send_forbidden_response(&mut self, reason: &str) {
         let origin = self.get_http_request_header("origin")
             .unwrap_or_else(|| "*".to_string());
