@@ -52,5 +52,5 @@ export const PUBLIC_ROUTE_PATTERNS = [
   "/public/", // All public paths
   "/docs/", // Documentation paths
   "/proxy/", // Proxy paths
-  "/redis/get/", // Redis GET for wasm filter challenges
+  "/redis/get/", // Redis GET for wasm filter challenges ONLY (handler restricts to 'challenge:*' keys)
 ] as const;

@@ -43,6 +43,13 @@ struct FilterConfig {
     /// The port is determined by the Envoy cluster configuration.
     /// Configure via proxy_targets_authority=<hostname> in filter config.
     proxy_targets_authority: String,
+    /// Salesforce server target address (e.g., "pzero-sfdc-server:3000")
+    /// Configure via salesforce_target=<address> in filter config.
+    salesforce_target: String,
+    /// Allowed CORS origins (comma-separated list)
+    /// Configure via allowed_origins=<origin1,origin2> in filter config.
+    /// If empty, reflects the origin header (current behavior).
+    allowed_origins: Vec<String>,
 }
 
 impl Default for FilterConfig {
@@ -53,6 +60,8 @@ impl Default for FilterConfig {
             centrifugo_secret: String::new(),
             redis_response_buffer_size: 4096, // Default 4KB buffer for Redis responses
             proxy_targets_authority: "pzero-server".to_string(), // Default authority (port from cluster config)
+            salesforce_target: "pzero-sfdc-server:3000".to_string(), // Default Salesforce target
+            allowed_origins: Vec::new(), // Empty = allow all origins (backward compatible)
         }
     }
 }
@@ -186,9 +195,6 @@ impl ChallengeAuthzRoot {
         }
     }
 }
-// TODO - revisit. 
-// The callback response from fetch_proxy_targets is never handled. The dispatch_http_call is made during on_configure, but there's no RootContext implementation of on_http_call_response to process the returned proxy targets. This means proxy_targets will always remain empty, and the dynamic routing feature won't work. You need to implement on_http_call_response in the RootContext trait for ChallengeAuthzRoot to handle the response and populate proxy_targets.
-
 
 impl RootContext for ChallengeAuthzRoot {
     fn on_configure(&mut self, _: usize) -> bool {
@@ -215,6 +221,13 @@ impl RootContext for ChallengeAuthzRoot {
                             config.redis_response_buffer_size = value.parse().unwrap_or(4096);
                         }
                         "proxy_targets_authority" => config.proxy_targets_authority = value.to_string(),
+                        "salesforce_target" => config.salesforce_target = value.to_string(),
+                        "allowed_origins" => {
+                            config.allowed_origins = value.split(',')
+                                .map(|s| s.trim().to_string())
+                                .filter(|s| !s.is_empty())
+                                .collect();
+                        }
                         _ => {}
                     }
                 }
@@ -276,10 +289,11 @@ impl Context for ChallengeAuthzHttp {
                             let new_path = format!("/gateway{}", path);
                             self.set_http_request_header(":path", Some(&new_path));
                             
-                            // Add gateway target header for Salesforce
-                            self.set_http_request_header("x-gateway-target", Some("pzero-sfdc-server:3000"));
+                            // Add gateway target header for Salesforce (using configurable target)
+                            self.set_http_request_header("x-gateway-target", Some(&self.config.salesforce_target));
                             
-                            info!("[Rust WASM Filter] Routing to Salesforce: {} -> {}", path, new_path);
+                            info!("[Rust WASM Filter] Routing to Salesforce ({}): {} -> {}", 
+                                  self.config.salesforce_target, path, new_path);
                         } else if let Some(proxy_target_id) = self.get_http_request_header("x-proxy-target-id") {
                             // Check for proxy target header and modify request to route directly
                             info!("[Rust WASM Filter] Request has proxy target ID: {}", proxy_target_id);
@@ -330,6 +344,30 @@ impl Context for ChallengeAuthzHttp {
     }
 }
 
+impl ChallengeAuthzHttp {
+    fn validate_cors_origin(&self, origin: &str) -> String {
+        // If no allowed origins configured, reflect the origin (backward compatible)
+        if self.config.allowed_origins.is_empty() {
+            return origin.to_string();
+        }
+        
+        // Check if origin is in the allowlist
+        if self.config.allowed_origins.iter().any(|allowed| {
+            allowed == origin || allowed == "*"
+        }) {
+            origin.to_string()
+        } else {
+            // Return the first allowed origin or deny with empty string
+            self.config.allowed_origins.first()
+                .cloned()
+                .unwrap_or_else(|| {
+                    warn!("[Rust WASM Filter] CORS origin {} not in allowlist", origin);
+                    "".to_string()
+                })
+        }
+    }
+}
+
 impl HttpContext for ChallengeAuthzHttp {
     fn on_http_request_headers(&mut self, _: usize, _: bool) -> Action {
         // Get request path and method
@@ -344,16 +382,28 @@ impl HttpContext for ChallengeAuthzHttp {
         if method == "OPTIONS" {
             let origin = self.get_http_request_header("origin")
                 .unwrap_or_else(|| "*".to_string());
-            self.send_http_response(
-                204,
-                vec![
-                    ("access-control-allow-origin", &origin),
-                    ("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH"),
-                    ("access-control-allow-headers", "content-type,x-challenge-id,x-challenge-answer,authorization"),
-                    ("access-control-allow-credentials", "true"),
-                ],
-                None,
-            );
+            let allowed_origin = self.validate_cors_origin(&origin);
+            
+            // Only send CORS headers if origin is allowed
+            if !allowed_origin.is_empty() {
+                self.send_http_response(
+                    204,
+                    vec![
+                        ("access-control-allow-origin", &allowed_origin),
+                        ("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH"),
+                        ("access-control-allow-headers", "content-type,x-challenge-id,x-challenge-answer,authorization"),
+                        ("access-control-allow-credentials", "true"),
+                    ],
+                    None,
+                );
+            } else {
+                // Origin not allowed, send 403
+                self.send_http_response(
+                    403,
+                    vec![],
+                    Some(b"CORS origin not allowed"),
+                );
+            }
             return Action::Pause;
         }
 
