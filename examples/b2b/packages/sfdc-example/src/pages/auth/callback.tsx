@@ -18,16 +18,28 @@ const CallbackPage = () => {
         toast.error('Invalid auth state')
         return null
       }
-      const data = await api.get<{ user: User; message: string }>(
-        `/auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`,
-      )
-      if (data?.user.id) {
-        // Invalidate user query to refetch user data in AuthContext
-        queryClient.invalidateQueries({ queryKey: ['user'] })
-        // Navigate directly to dashboard overview
-        navigate('/dashboard/overview')
+
+      try {
+        console.log('Calling auth callback with code:', code, 'state:', state)
+        const data = await api.get<{ user: User; message: string }>(
+          `/auth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`,
+        )
+        console.log('Auth callback response:', data)
+
+        if (data?.user?.id) {
+          // Invalidate user query to refetch user data in AuthContext
+          queryClient.invalidateQueries({ queryKey: ['user'] })
+          // Navigate directly to dashboard overview
+          toast.success('Login successful!')
+          navigate('/dashboard/overview', { replace: true })
+        }
+        return data
+      } catch (error) {
+        console.error('Auth callback error:', error)
+        toast.error('Authentication failed: ' + (error instanceof Error ? error.message : 'Unknown error'))
+        navigate('/auth/sign-in', { replace: true })
+        throw error
       }
-      return data
     },
     retry: false,
   })

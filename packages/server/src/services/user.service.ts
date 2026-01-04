@@ -11,6 +11,7 @@ import { redis } from "../config/redis.js";
  */
 export type UserWithStatus = User & {
   status?: 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'DELETED' | 'PENDING' | 'BLOCKED' | null;
+  data?: any;
 };
 
 import { encryptionService } from "../utils/encryption.js";
@@ -42,7 +43,7 @@ export class UserService {
     schema: string = "pzero",
   ): Promise<UserWithStatus | null> {
     const result = await db.pool.query(
-      `SELECT a.*, u.status
+      `SELECT a.*, u.status, u.data
        FROM ${schema}.all_auth a
        LEFT JOIN ${schema}.all_users u ON a.id = u.id AND a.is_act = u.is_act
        WHERE a.email = $1 AND a.is_act = true

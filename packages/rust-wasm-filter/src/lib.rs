@@ -3,16 +3,27 @@ use proxy_wasm::traits::*;
 use proxy_wasm::types::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::time::Duration;
+use std::collections::HashMap;
+
+// Proxy target structure
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct ProxyTarget {
+    id: String,
+    name: String,
+    url: String,
+    port: Option<u16>,  // Allow null port to match TypeScript interface
+}
 
 // Root context for the filter
 struct ChallengeAuthzRoot {
     config: FilterConfig,
+    proxy_targets: HashMap<String, ProxyTarget>,
 }
 
 // HTTP context for each request
 struct ChallengeAuthzHttp {
     config: FilterConfig,
+    proxy_targets: HashMap<String, ProxyTarget>,
     pending_challenge_id: Option<String>,
     pending_challenge_answer: Option<String>,
     pending_call_id: Option<u32>,
@@ -28,6 +39,10 @@ struct FilterConfig {
     /// Default: 4096 bytes (4KB) - should be sufficient for challenge answers.
     /// Configure via redis_response_buffer_size=<bytes> in filter config.
     redis_response_buffer_size: usize,
+    /// Authority (hostname) for fetching proxy targets (e.g., "pzero-server")
+    /// The port is determined by the Envoy cluster configuration.
+    /// Configure via proxy_targets_authority=<hostname> in filter config.
+    proxy_targets_authority: String,
 }
 
 impl Default for FilterConfig {
@@ -37,6 +52,7 @@ impl Default for FilterConfig {
             filter_id: String::new(),
             centrifugo_secret: String::new(),
             redis_response_buffer_size: 4096, // Default 4KB buffer for Redis responses
+            proxy_targets_authority: "pzero-server".to_string(), // Default authority (port from cluster config)
         }
     }
 }
@@ -49,20 +65,130 @@ struct ChallengeHeaders {
 }
 
 // Public routes that bypass authentication
-// Make these configureable TODO
+// Should be kept in sync with packages/server/src/constants/routes.ts
 const PUBLIC_ROUTES: &[&str] = &[
+    // Auth routes (registration, login, etc.)
+    "/auth/register",
+    "/auth/register/verify",
+    "/auth/login",
+    "/auth/login/verify",
+    "/auth/logout",
+    "/auth/callback",
+    "/auth/callback/github",
+    "/auth/refresh",
+    // Legacy proxy auth routes
     "/proxy/auth/login",
     "/proxy/auth/register", 
     "/proxy/auth/callback",
     "/proxy/auth/refresh",
     "/proxy/auth/logout",
     "/proxy/auth/me",
+    // Centrifugo proxy routes
+    "/centrifugo/connect",
+    "/centrifugo/refresh",
+    "/centrifugo/subscribe",
+    "/centrifugo/publish",
+    // SMS verification routes
+    "/sms/verify",
+    "/sms/verify/confirm",
+    "/sms/verify/resend",
+    // Email routes
+    "/email/verify",
+    // Static assets and health checks
     "/health",
     "/ready",
+    "/public",
+    "/docs",
+    "/assets",
+    // User-facing pages
+    "/faq",
+    "/terms",
+    "/privacy",
+];
+
+// Route patterns that should be treated as public
+// Anything starting with these prefixes bypasses authentication
+const PUBLIC_ROUTE_PATTERNS: &[&str] = &[
+    "/auth/",
+    "/assets/",
+    "/public/",
+    "/docs/",
+    "/proxy/",
 ];
 
 
-impl Context for ChallengeAuthzRoot {}
+impl Context for ChallengeAuthzRoot {
+    fn on_http_call_response(&mut self, token_id: u32, _: usize, _: usize, _: usize) {
+        info!("[Rust WASM Filter] Root context received HTTP call response: {}", token_id);
+        
+        // Get response body from server
+        let response_body = self.get_http_call_response_body(0, 8192);
+        
+        match response_body {
+            Some(body) => {
+                let body_str = String::from_utf8_lossy(&body);
+                info!("[Rust WASM Filter] Fetched proxy targets from server");
+                
+                // Parse JSON array of proxy targets
+                if let Ok(targets) = serde_json::from_str::<Vec<ProxyTarget>>(&body_str) {
+                    for target in targets {
+                        let addr = match target.port {
+                            Some(port) => format!("{}:{}", target.url, port),
+                            None => target.url.clone(),
+                        };
+                        info!("[Rust WASM Filter] Loaded proxy target: {} -> {}", target.id, addr);
+                        self.proxy_targets.insert(target.id.clone(), target);
+                    }
+                } else {
+                    warn!("[Rust WASM Filter] Failed to parse proxy targets JSON: {}", body_str);
+                }
+            }
+            None => {
+                warn!("[Rust WASM Filter] No proxy targets response body");
+            }
+        }
+    }
+}
+
+impl ChallengeAuthzRoot {
+    fn fetch_proxy_targets(&mut self) {
+        // Fetch proxy targets from Redis cache
+        // Using Redis HTTP proxy endpoint to get proxy targets
+        let authority = if self.config.proxy_targets_authority.is_empty() {
+            "pzero-server" // Fallback default (port from cluster config)
+        } else {
+            &self.config.proxy_targets_authority
+        };
+        
+        let headers = vec![
+            (":method", "GET"),
+            (":path", "/proxy-targets"),
+            (":authority", authority),
+            ("content-type", "application/json"),
+        ];
+        
+        info!("[Rust WASM Filter] Fetching proxy targets from {}", authority);
+        
+        match self.dispatch_http_call(
+            "server_cluster",
+            headers,
+            None,
+            vec![],
+            std::time::Duration::from_secs(5),
+        ) {
+            Ok(call_id) => {
+                info!("[Rust WASM Filter] Fetching proxy targets from {}, call_id: {}", authority, call_id);
+            }
+            Err(status) => {
+                warn!("[Rust WASM Filter] Failed to fetch proxy targets from {}: {:?}", authority, status);
+                // Don't hardcode any fallback - let the gateway handle defaults
+            }
+        }
+    }
+}
+// TODO - revisit. 
+// The callback response from fetch_proxy_targets is never handled. The dispatch_http_call is made during on_configure, but there's no RootContext implementation of on_http_call_response to process the returned proxy targets. This means proxy_targets will always remain empty, and the dynamic routing feature won't work. You need to implement on_http_call_response in the RootContext trait for ChallengeAuthzRoot to handle the response and populate proxy_targets.
+
 
 impl RootContext for ChallengeAuthzRoot {
     fn on_configure(&mut self, _: usize) -> bool {
@@ -88,6 +214,7 @@ impl RootContext for ChallengeAuthzRoot {
                         "redis_response_buffer_size" => {
                             config.redis_response_buffer_size = value.parse().unwrap_or(4096);
                         }
+                        "proxy_targets_authority" => config.proxy_targets_authority = value.to_string(),
                         _ => {}
                     }
                 }
@@ -96,12 +223,16 @@ impl RootContext for ChallengeAuthzRoot {
             info!("[Rust WASM Filter] Configuration loaded - filter_id: {}", config.filter_id);
             self.config = config;
         }
+        
+        // Fetch proxy targets from Redis on initialization
+        self.fetch_proxy_targets();
         true
     }
 
     fn create_http_context(&self, _: u32) -> Option<Box<dyn HttpContext>> {
         Some(Box::new(ChallengeAuthzHttp {
             config: self.config.clone(),
+            proxy_targets: self.proxy_targets.clone(),
             pending_challenge_id: None,
             pending_challenge_answer: None,
             pending_call_id: None,
@@ -121,7 +252,7 @@ impl Context for ChallengeAuthzHttp {
             return;
         }
         
-        // Handle Redis response
+        // Handle Redis response for challenge validation
         if let (Some(challenge_id), Some(challenge_answer)) = (&self.pending_challenge_id, &self.pending_challenge_answer) {
             // Get response body from Redis using configurable buffer size
             let response_body = self.get_http_call_response_body(0, self.config.redis_response_buffer_size);
@@ -183,10 +314,12 @@ impl HttpContext for ChallengeAuthzHttp {
         }
 
         // Check if route is public
+        info!("[Rust WASM Filter] Checking if public route: {} {}", method, path);
         if is_public_route(&path, &method) {
             info!("[Rust WASM Filter] Public route, bypassing validation: {} {}", method, path);
             return Action::Continue;
         }
+        info!("[Rust WASM Filter] Not a public route, checking auth: {} {}", method, path);
 
         // Extract and validate access token from cookie
         let cookie_header = self.get_http_request_header("cookie").unwrap_or_default();
@@ -229,13 +362,46 @@ impl HttpContext for ChallengeAuthzHttp {
         
         if is_valid_challenge {
             info!("[Rust WASM Filter] ✅ Challenge PASSED (hardcoded): id={}, answer={}", challenge_id, challenge_answer);
-            // Continue to backend
+            
+            // Check for proxy target header and modify request to route directly
+            if let Some(proxy_target_id) = self.get_http_request_header("x-proxy-target-id") {
+                info!("[Rust WASM Filter] Request has proxy target ID: {}", proxy_target_id);
+                
+                // Look up the proxy target from our cache
+                if let Some(target) = self.proxy_targets.get(&proxy_target_id) {
+                    // Format target address with optional port
+                    let target_address = match target.port {
+                        Some(port) => format!("{}:{}", target.url, port),
+                        None => target.url.clone(),
+                    };
+                    info!("[Rust WASM Filter] Found proxy target: {} -> {}", target.name, target_address);
+                    
+                    // Modify the path to use gateway routing
+                    let current_path = self.get_http_request_header(":path").unwrap_or_default();
+                    let new_path = format!("/gateway{}", current_path);
+                    self.set_http_request_header(":path", Some(&new_path));
+                    
+                    // Add header to indicate target service dynamically
+                    self.set_http_request_header("x-gateway-target", Some(&target_address));
+                    
+                    info!("[Rust WASM Filter] Modified path to {} for gateway routing to {}", new_path, target_address);
+                } else {
+                    warn!("[Rust WASM Filter] Proxy target not found in cache: {}", proxy_target_id);
+                    // Hardcode sfdc-server as fallback for testing
+                    let current_path = self.get_http_request_header(":path").unwrap_or_default();
+                    let new_path = format!("/gateway{}", current_path);
+                    self.set_http_request_header(":path", Some(&new_path));
+                    
+                    // Hardcode sfdc-server address
+                    self.set_http_request_header("x-gateway-target", Some("pzero-sfdc-server:3000"));
+                    info!("[Rust WASM Filter] Using hardcoded sfdc-server address: pzero-sfdc-server:3000");
+                }
+            }
         } else {
             warn!("[Rust WASM Filter] ❌ Challenge FAILED (hardcoded): id={}, answer={}", challenge_id, challenge_answer);
             self.send_forbidden_response("invalid challenge answer");
             return Action::Pause;
         }
-        
         
         Action::Continue
     }
@@ -243,7 +409,16 @@ impl HttpContext for ChallengeAuthzHttp {
 
 // Helper functions
 fn is_public_route(path: &str, _method: &str) -> bool {
-    PUBLIC_ROUTES.iter().any(|&route| path.starts_with(route))
+    // Strip query parameters if present
+    let path_without_query = path.split('?').next().unwrap_or(path);
+    
+    // Check exact matches first
+    if PUBLIC_ROUTES.iter().any(|&route| path_without_query == route) {
+        return true;
+    }
+    
+    // Check pattern matches (prefixes)
+    PUBLIC_ROUTE_PATTERNS.iter().any(|&pattern| path_without_query.starts_with(pattern))
 }
 
 /// Constant-time comparison to prevent timing attacks on challenge answers
@@ -312,6 +487,7 @@ proxy_wasm::main! {{
     proxy_wasm::set_root_context(|_| -> Box<dyn RootContext> {
         Box::new(ChallengeAuthzRoot {
             config: FilterConfig::default(),
+            proxy_targets: HashMap::new(),
         })
     });
 }}

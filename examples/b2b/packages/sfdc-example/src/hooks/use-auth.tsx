@@ -50,16 +50,24 @@ export function useUser() {
     error: signOutError,
   } = useMutation({
     mutationFn: async () => {
-      await api.post('/auth/logout', undefined, { skipRefresh: true })
-      queryClient.clear()
-      clearUser() // Clear zustand store
-      return { error: null }
+      console.log('Calling logout API...')
+      try {
+        const response = await api.post('/auth/logout', undefined, { skipRefresh: true })
+        console.log('Logout API response:', response)
+        queryClient.clear()
+        clearUser() // Clear zustand store
+        return { error: null }
+      } catch (error) {
+        console.error('Logout API error:', error)
+        throw error
+      }
     },
     onSuccess: () => {
+      console.log('Logout successful, redirecting...')
       window.location.href = '/auth/sign-in'
     },
     onError: error => {
-      console.error(error)
+      console.error('Logout mutation error:', error)
     },
   })
 

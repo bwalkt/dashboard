@@ -15,20 +15,18 @@ import { useUser } from '@/hooks/use-auth'
 
 export function MobileUserNav() {
   const navigate = useNavigate()
-  const { data: user, signOut, signOutError } = useUser()
+  const { data: user, signOut } = useUser()
 
   const handleSignOut = async () => {
     try {
+      console.log('[MobileUserNav] Starting sign out...')
       await signOut()
-      if (signOutError) {
-        toast.error('Failed to sign out: ' + signOutError.message)
-      } else {
-        toast.success('Signed out successfully')
-        navigate('/auth/sign-in')
-      }
+      console.log('[MobileUserNav] Sign out successful')
+      toast.success('Signed out successfully')
+      navigate('/auth/sign-in')
     } catch (error) {
-      toast.error('An unexpected error occurred')
-      console.error('Sign out error:', error)
+      console.error('[MobileUserNav] Sign out error:', error)
+      toast.error('Failed to sign out: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 

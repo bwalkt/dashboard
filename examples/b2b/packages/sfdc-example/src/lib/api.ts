@@ -366,6 +366,10 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
   if (storedChallenge) {
     updatedHeaders[CHALLENGE_ID_HEADER] = storedChallenge.challengeId
     updatedHeaders[CHALLENGE_ANSWER_HEADER] = storedChallenge.challengeAnswer
+  } else if (getUseWasm()) {
+    // Hardcoded challenge for testing WASM proxy mode
+    updatedHeaders[CHALLENGE_ID_HEADER] = '1'
+    updatedHeaders[CHALLENGE_ANSWER_HEADER] = '1'
   }
 
   // Prepare the request configuration
