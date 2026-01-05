@@ -22,6 +22,7 @@ import { privacyRoutes } from "./routes/privacy.js";
 import { proxyRoutes } from "./routes/proxy.js";
 import { proxyTargetsRoutes } from "./routes/proxy-targets.js";
 import { redisProxyRoutes } from "./routes/redis-proxy.js";
+import { redisPublicRoutes } from "./routes/redis-public.js";
 import { signozRoutes } from "./routes/signoz.js";
 import { smsRoutes } from "./routes/sms.js";
 import { termsRoutes } from "./routes/terms.js";
@@ -188,6 +189,7 @@ export default async function (
   await fastify.register(proxyRoutes);
   await fastify.register(proxyTargetsRoutes);
   await fastify.register(redisProxyRoutes);
+  await fastify.register(redisPublicRoutes);
   await fastify.register(signozRoutes);
   await fastify.register(smsRoutes);
   await fastify.register(termsRoutes);
