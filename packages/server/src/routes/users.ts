@@ -1,6 +1,6 @@
 
 import { generateHandleFromEmail, type User } from "@pzero/shared/pzero";
-
+import { validateEmail } from "@pzero/shared/validator";
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../config/database.js";
@@ -465,18 +465,27 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
 
   /**
    * Internal user routes for WASM filter
-   * These routes are only accessible from the filter (not public)
+   * TODO: Add proper authentication mechanism to verify requests from WASM filter
+   * TODO: Consider using shared secret or internal network restriction
+   * TODO: Implement request origin verification
    */
   
   // Get user by email - called by WASM filter
   fastify.get<{
     Params: { email: string }
-  }>("/internal/user/by-email/:email", async (request, reply) => {
+  }>("/internal/user/by-email/:email", {
+    config: {
+      rateLimit: {
+        max: 20, // 20 requests
+        timeWindow: '1 minute' // per minute per IP
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { email } = request.params;
       
       // Validate email format
-      if (!email || !email.includes('@')) {
+      if (!email || !validateEmail(email)) {
         return reply.status(400).send({ error: "Invalid email format" });
       }
       
@@ -509,7 +518,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       };
       
       // Cache in Redis with TTL (5 minutes)
-      await redis.set(cacheKey, JSON.stringify(userForCache), 300);
+      await redis.set(cacheKey, JSON.stringify(userForCache), 'EX', 300);
       fastify.log.info({ email }, "User cached in Redis with 5min TTL");
       
       return reply.send(userForCache);

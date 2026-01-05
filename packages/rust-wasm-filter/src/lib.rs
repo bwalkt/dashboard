@@ -585,22 +585,6 @@ impl ChallengeAuthzHttp {
             }
         }
     }
-    
-    fn apply_routing_if_needed(&mut self) {
-        let path = self.get_http_request_header(":path").unwrap_or_default();
-        
-        // Check if this is a Salesforce route
-        if path.starts_with("/salesforce/") || path.starts_with("/salesforce") {
-            // Transform to gateway path
-            let new_path = format!("/gateway{}", path);
-            self.set_http_request_header(":path", Some(&new_path));
-            
-            // Add gateway target header for Salesforce
-            self.set_http_request_header("x-gateway-target", Some(&self.config.salesforce_target));
-            
-            info!("[Rust WASM Filter] Routing to Salesforce: {} -> {}", path, new_path);
-        }
-    }
 }
 
 impl ChallengeAuthzHttp {
@@ -792,7 +776,17 @@ fn validate_challenge_format(id: &str, answer: &str) -> bool {
     !id.is_empty() && !answer.is_empty() && id.len() < 256 && answer.len() < 256
 }
 
-/// Decode JWT and extract claims (without signature verification for now)
+/// Decode JWT and extract claims
+/// CRITICAL SECURITY WARNING: JWT signature is NOT verified
+/// TODO: Implement proper JWT signature verification using HMAC-SHA256
+/// This allows anyone to craft fake JWTs - DO NOT use in production without fixing!
+/// 
+/// Note: Standard JWT libraries like jsonwebtoken may not work in WASM environment
+/// due to dependency on std::time and other unavailable features.
+/// Options:
+/// 1. Implement manual HMAC-SHA256 verification using sha2/hmac crates (if WASM compatible)
+/// 2. Delegate JWT verification to the backend server (current user validation does this)
+/// 3. Use a lightweight WASM-compatible JWT library
 fn decode_jwt_claims(token: &str) -> Option<JwtClaims> {
     let parts: Vec<&str> = token.split('.').collect();
     if parts.len() != 3 {

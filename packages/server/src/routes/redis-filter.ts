@@ -2,10 +2,11 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { redis } from "../config/redis.js";
 
 /**
- * Public Redis routes for WASM filter challenge validation
- * These routes bypass all authentication but are rate-limited
+ * Redis routes for WASM filter challenge and user validation
+ * These routes bypass authentication but are rate-limited and restricted
+ * to specific key patterns for security
  */
-export async function redisPublicRoutes(
+export async function redisFilterRoutes(
   fastify: FastifyInstance,
   opts: FastifyPluginOptions,
 ): Promise<void> {
