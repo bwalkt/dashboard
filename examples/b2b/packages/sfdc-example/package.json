@@ -108,6 +108,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "crypto-browserify": "^3.12.1",
     "tw-animate-css": "catalog:",
     "vite": "^7.2.6"
   },
