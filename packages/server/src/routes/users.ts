@@ -518,7 +518,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       };
       
       // Cache in Redis with TTL (5 minutes)
-      await redis.set(cacheKey, JSON.stringify(userForCache), 'EX', 300);
+      await redis.set(cacheKey, JSON.stringify(userForCache), 300);
       fastify.log.info({ email }, "User cached in Redis with 5min TTL");
       
       return reply.send(userForCache);
