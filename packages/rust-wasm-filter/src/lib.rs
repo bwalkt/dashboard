@@ -672,6 +672,9 @@ impl HttpContext for ChallengeAuthzHttp {
         }
         
         // Decode JWT to get user email
+        // TODO: CRITICAL SECURITY - JWT signature is NOT verified before extracting claims
+        // This allows anyone to craft fake JWTs with any email/userId
+        // Must implement HMAC-SHA256 signature verification with jwt_secret
         let email = match decode_jwt_claims(&access_token) {
             Some(claims) => {
                 if let Some(email) = claims.email {
