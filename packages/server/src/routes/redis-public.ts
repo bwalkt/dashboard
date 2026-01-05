@@ -26,16 +26,16 @@ export async function redisPublicRoutes(
       const { key } = request.params;
       
       // Security validations:
-      // 1. Only allow access to challenge keys
-      if (!key.startsWith('challenge:')) {
-        fastify.log.warn({ key }, 'Blocked access to non-challenge key');
+      // 1. Only allow access to challenge and user keys
+      if (!key.startsWith('challenge:') && !key.startsWith('user:')) {
+        fastify.log.warn({ key }, 'Blocked access to non-allowed key');
         return reply.status(403).send("");
       }
       
       // 2. Validate key format (prevent injection attacks)
-      // Challenge keys should be: challenge:<alphanumeric_id>
-      const challengeKeyPattern = /^challenge:[a-zA-Z0-9_-]+$/;
-      if (!challengeKeyPattern.test(key)) {
+      // Allowed keys: challenge:<id> or user:<email>
+      const allowedKeyPattern = /^(challenge:[a-zA-Z0-9_-]+|user:[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/;
+      if (!allowedKeyPattern.test(key)) {
         fastify.log.warn({ key }, 'Invalid key format');
         return reply.status(400).send("");
       }
