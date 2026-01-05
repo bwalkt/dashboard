@@ -1,9 +1,10 @@
 
 import { generateHandleFromEmail, type User } from "@pzero/shared/pzero";
-
+import { validateEmail } from "@pzero/shared/validator";
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../config/database.js";
+import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { userService } from "../services/user.service.js";
 
@@ -461,4 +462,87 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       }
     },
   );
+
+  /**
+   * Internal user routes for WASM filter
+   * TODO: Add proper authentication mechanism to verify requests from WASM filter
+   * TODO: Consider using shared secret or internal network restriction
+   * TODO: Implement request origin verification
+   */
+  
+  // Get user by email - called by WASM filter
+  fastify.get<{
+    Params: { email: string }
+  }>("/internal/user/by-email/:email", {
+    config: {
+      rateLimit: {
+        max: 20, // 20 requests
+        timeWindow: '1 minute' // per minute per IP
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { email } = request.params;
+      
+      // Validate email format
+      if (!email || !validateEmail(email)) {
+        return reply.status(400).send({ error: "Invalid email format" });
+      }
+      
+      fastify.log.info({ email }, "Fetching user by email for WASM filter");
+      
+      // Check Redis cache first
+      const cacheKey = `user:${email}`;
+      const cachedUser = await redis.get(cacheKey);
+      
+      if (cachedUser) {
+        fastify.log.debug({ email }, "User found in Redis cache");
+        return reply.send(JSON.parse(cachedUser));
+      }
+      
+      // Query PostgreSQL
+      const user = await userService.getUserByEmail(email);
+      
+      if (!user) {
+        fastify.log.warn({ email }, "User not found in database");
+        return reply.status(404).send({ error: "User not found" });
+      }
+      
+      // Prepare user object for caching (match WASM filter expectations)
+      const userForCache = {
+        userId: user.id,  // WASM filter expects userId, not id
+        email: user.email,
+        is_act: true, // Always true since we query with is_act = true
+        status: user.status,
+        data: user.data,
+      };
+      
+      // Cache in Redis with TTL (5 minutes)
+      await redis.set(cacheKey, JSON.stringify(userForCache), 300);
+      fastify.log.info({ email }, "User cached in Redis with 5min TTL");
+      
+      return reply.send(userForCache);
+    } catch (error) {
+      fastify.log.error({ err: error, email: request.params.email }, "Error fetching user by email");
+      return reply.status(500).send({ error: "Internal server error" });
+    }
+  });
+  
+  // Invalidate user cache - called when user is updated
+  fastify.delete<{
+    Params: { email: string }
+  }>("/internal/user/cache/:email", async (request, reply) => {
+    try {
+      const { email } = request.params;
+      const cacheKey = `user:${email}`;
+      
+      await redis.delete(cacheKey);
+      fastify.log.info({ email }, "User cache invalidated");
+      
+      return reply.send({ success: true });
+    } catch (error) {
+      fastify.log.error({ err: error, email: request.params.email }, "Error invalidating user cache");
+      return reply.status(500).send({ error: "Internal server error" });
+    }
+  });
 }

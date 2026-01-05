@@ -2,10 +2,11 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { redis } from "../config/redis.js";
 
 /**
- * Public Redis routes for WASM filter challenge validation
- * These routes bypass all authentication but are rate-limited
+ * Redis routes for WASM filter challenge and user validation
+ * These routes bypass authentication but are rate-limited and restricted
+ * to specific key patterns for security
  */
-export async function redisPublicRoutes(
+export async function redisFilterRoutes(
   fastify: FastifyInstance,
   opts: FastifyPluginOptions,
 ): Promise<void> {
@@ -26,16 +27,16 @@ export async function redisPublicRoutes(
       const { key } = request.params;
       
       // Security validations:
-      // 1. Only allow access to challenge keys
-      if (!key.startsWith('challenge:')) {
-        fastify.log.warn({ key }, 'Blocked access to non-challenge key');
+      // 1. Only allow access to challenge and user keys
+      if (!key.startsWith('challenge:') && !key.startsWith('user:')) {
+        fastify.log.warn({ key }, 'Blocked access to non-allowed key');
         return reply.status(403).send("");
       }
       
       // 2. Validate key format (prevent injection attacks)
-      // Challenge keys should be: challenge:<alphanumeric_id>
-      const challengeKeyPattern = /^challenge:[a-zA-Z0-9_-]+$/;
-      if (!challengeKeyPattern.test(key)) {
+      // Allowed keys: challenge:<id> or user:<email>
+      const allowedKeyPattern = /^(challenge:[a-zA-Z0-9_-]+|user:[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/;
+      if (!allowedKeyPattern.test(key)) {
         fastify.log.warn({ key }, 'Invalid key format');
         return reply.status(400).send("");
       }

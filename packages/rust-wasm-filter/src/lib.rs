@@ -4,6 +4,7 @@ use proxy_wasm::types::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
+use base64::{Engine as _, engine::general_purpose};
 
 // Proxy target structure
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -27,6 +28,17 @@ struct ChallengeAuthzHttp {
     pending_challenge_id: Option<String>,
     pending_challenge_answer: Option<String>,
     pending_call_id: Option<u32>,
+    pending_user_email: Option<String>,
+    pending_user_call_id: Option<u32>,
+    call_type: CallType,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum CallType {
+    None,
+    Challenge,
+    UserFetch,
+    UserCache,
 }
 
 // Filter configuration
@@ -73,6 +85,34 @@ struct ChallengeHeaders {
     challenge_answer: String,
 }
 
+// JWT Claims structure
+#[derive(Debug, Deserialize, Serialize)]
+struct JwtClaims {
+    email: Option<String>,
+    #[serde(rename = "githubId")]
+    github_id: Option<String>,
+    #[serde(rename = "userId")]
+    user_id: Option<String>,
+    handle: Option<String>,
+    #[serde(rename = "orgId")]
+    org_id: Option<String>,
+}
+
+// User structure from database
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct User {
+    #[serde(rename = "userId")]
+    user_id: String,
+    email: String,
+    #[serde(rename = "githubId")]
+    github_id: Option<String>,
+    handle: Option<String>,
+    is_act: bool,
+    #[serde(rename = "orgId")]
+    org_id: Option<String>,
+    role: Option<String>,
+}
+
 // Public routes that bypass authentication
 // Should be kept in sync with packages/server/src/constants/routes.ts
 const PUBLIC_ROUTES: &[&str] = &[
@@ -85,6 +125,7 @@ const PUBLIC_ROUTES: &[&str] = &[
     "/auth/callback",
     "/auth/callback/github",
     "/auth/refresh",
+    "/auth/me",
     // Legacy proxy auth routes
     "/proxy/auth/login",
     "/proxy/auth/register", 
@@ -249,6 +290,9 @@ impl RootContext for ChallengeAuthzRoot {
             pending_challenge_id: None,
             pending_challenge_answer: None,
             pending_call_id: None,
+            pending_user_email: None,
+            pending_user_call_id: None,
+            call_type: CallType::None,
         }))
     }
 
@@ -259,13 +303,38 @@ impl RootContext for ChallengeAuthzRoot {
 
 impl Context for ChallengeAuthzHttp {
     fn on_http_call_response(&mut self, token_id: u32, _: usize, _: usize, _: usize) {
-        // Verify this is the expected call response
-        if self.pending_call_id != Some(token_id) {
-            warn!("[Rust WASM Filter] Unexpected call response: {}", token_id);
-            return;
+        // Handle different types of calls
+        match self.call_type {
+            CallType::Challenge => {
+                if self.pending_call_id != Some(token_id) {
+                    warn!("[Rust WASM Filter] Unexpected challenge call response: {}", token_id);
+                    return;
+                }
+                self.handle_challenge_response();
+            }
+            CallType::UserFetch => {
+                if self.pending_user_call_id != Some(token_id) {
+                    warn!("[Rust WASM Filter] Unexpected user fetch call response: {}", token_id);
+                    return;
+                }
+                self.handle_user_fetch_response();
+            }
+            CallType::UserCache => {
+                if self.pending_user_call_id != Some(token_id) {
+                    warn!("[Rust WASM Filter] Unexpected user cache call response: {}", token_id);
+                    return;
+                }
+                self.handle_user_cache_response();
+            }
+            _ => {
+                warn!("[Rust WASM Filter] Unexpected call type for response: {}", token_id);
+            }
         }
-        
-        // Handle Redis response for challenge validation
+    }
+}
+
+impl ChallengeAuthzHttp {
+    fn handle_challenge_response(&mut self) {
         if let (Some(challenge_id), Some(challenge_answer)) = (&self.pending_challenge_id, &self.pending_challenge_answer) {
             // Get response body from Redis using configurable buffer size
             let response_body = self.get_http_call_response_body(0, self.config.redis_response_buffer_size);
@@ -340,6 +409,180 @@ impl Context for ChallengeAuthzHttp {
             self.pending_challenge_id = None;
             self.pending_challenge_answer = None;
             self.pending_call_id = None;
+            self.call_type = CallType::None;
+        }
+    }
+    
+    fn handle_user_fetch_response(&mut self) {
+        // Get response body from server
+        let response_body = self.get_http_call_response_body(0, 8192);
+        
+        match response_body {
+            Some(body) => {
+                let body_str = String::from_utf8_lossy(&body);
+                info!("[Rust WASM Filter] User fetch response received");
+                
+                // Parse user response
+                match serde_json::from_str::<User>(&body_str) {
+                    Ok(user) => {
+                        info!("[Rust WASM Filter] User fetched: {}, is_act: {}", user.email, user.is_act);
+                        
+                        // Check if user is active
+                        if !user.is_act {
+                            warn!("[Rust WASM Filter] User is inactive: {}", user.email);
+                            self.send_forbidden_response("user account is inactive");
+                            return;
+                        }
+                        
+                        // User is active, now check challenge
+                        info!("[Rust WASM Filter] User is active, now checking challenge");
+                        self.validate_challenge();
+                    }
+                    Err(e) => {
+                        // Check if it's a 404 (user not found)
+                        if body_str.contains("User not found") {
+                            warn!("[Rust WASM Filter] User not found in database");
+                            self.send_forbidden_response("user not found");
+                        } else {
+                            warn!("[Rust WASM Filter] Failed to parse user response: {}", e);
+                            self.send_forbidden_response("internal error");
+                        }
+                    }
+                }
+            }
+            None => {
+                warn!("[Rust WASM Filter] No user fetch response body");
+                self.send_forbidden_response("internal error");
+            }
+        }
+        
+        // Clear pending context
+        self.pending_user_email = None;
+        self.pending_user_call_id = None;
+        self.call_type = CallType::None;
+    }
+    
+    fn handle_user_cache_response(&mut self) {
+        // Get response body from Redis
+        let response_body = self.get_http_call_response_body(0, 8192);
+        
+        match response_body {
+            Some(body) => {
+                let body_str = String::from_utf8_lossy(&body);
+                
+                // If empty (user not in cache), fetch from server
+                if body_str.trim().is_empty() {
+                    info!("[Rust WASM Filter] User not in cache, fetching from server");
+                    self.fetch_user_from_server();
+                } else {
+                    // Parse cached user
+                    match serde_json::from_str::<User>(&body_str) {
+                        Ok(user) => {
+                            info!("[Rust WASM Filter] User found in cache: {}, is_act: {}", user.email, user.is_act);
+                            
+                            // Check if user is active
+                            if !user.is_act {
+                                warn!("[Rust WASM Filter] Cached user is inactive: {}", user.email);
+                                self.send_forbidden_response("user account is inactive");
+                                return;
+                            }
+                            
+                            // User is active, now check challenge
+                            info!("[Rust WASM Filter] Cached user is active, now checking challenge");
+                            self.validate_challenge();
+                        }
+                        Err(e) => {
+                            warn!("[Rust WASM Filter] Failed to parse cached user: {}", e);
+                            // Fallback: fetch from server
+                            self.fetch_user_from_server();
+                        }
+                    }
+                }
+            }
+            None => {
+                warn!("[Rust WASM Filter] No Redis cache response");
+                // Fallback: fetch from server
+                self.fetch_user_from_server();
+            }
+        }
+    }
+    
+    fn fetch_user_from_server(&mut self) {
+        if let Some(email) = &self.pending_user_email.clone() {
+            let path = format!("/internal/user/by-email/{}", email);
+            let headers = vec![
+                (":method", "GET"),
+                (":path", &path),
+                (":authority", "pzero-server"),
+            ];
+            
+            info!("[Rust WASM Filter] Fetching user from server: {}", email);
+            
+            match self.dispatch_http_call(
+                "server_cluster",
+                headers,
+                None,
+                vec![],
+                std::time::Duration::from_secs(5),
+            ) {
+                Ok(call_id) => {
+                    info!("[Rust WASM Filter] User fetch dispatched with call_id: {}", call_id);
+                    self.pending_user_call_id = Some(call_id);
+                    self.call_type = CallType::UserFetch;
+                }
+                Err(status) => {
+                    warn!("[Rust WASM Filter] Failed to fetch user: {:?}", status);
+                    self.send_forbidden_response("internal error");
+                }
+            }
+        }
+    }
+    
+    fn validate_challenge(&mut self) {
+        // Get challenge headers (already stored during initial request)
+        let challenge_id = self.pending_challenge_id.clone().unwrap_or_default();
+        let challenge_answer = self.pending_challenge_answer.clone().unwrap_or_default();
+        
+        // Validate challenge headers presence
+        if challenge_id.is_empty() || challenge_answer.is_empty() {
+            warn!("[Rust WASM Filter] Missing challenge headers");
+            self.send_forbidden_response("missing challenge headers");
+            return;
+        }
+        
+        // Validate challenge format
+        if !validate_challenge_format(&challenge_id, &challenge_answer) {
+            warn!("[Rust WASM Filter] Invalid challenge format");
+            self.send_forbidden_response("invalid challenge format");
+            return;
+        }
+        
+        // Query Redis for challenge validation
+        info!("[Rust WASM Filter] Querying Redis for challenge: {}", challenge_id);
+        
+        let redis_path = format!("/redis/get/challenge:{}", challenge_id);
+        let headers = vec![
+            (":method", "GET"),
+            (":path", &redis_path),
+            (":authority", "pzero-server"),
+        ];
+        
+        match self.dispatch_http_call(
+            "server_cluster",
+            headers,
+            None,
+            vec![],
+            std::time::Duration::from_secs(5),
+        ) {
+            Ok(call_id) => {
+                info!("[Rust WASM Filter] Challenge query dispatched with call_id: {}", call_id);
+                self.pending_call_id = Some(call_id);
+                self.call_type = CallType::Challenge;
+            }
+            Err(status) => {
+                warn!("[Rust WASM Filter] Failed to query Redis for challenge: {:?}", status);
+                self.send_forbidden_response("challenge validation failed");
+            }
         }
     }
 }
@@ -403,13 +646,13 @@ impl HttpContext for ChallengeAuthzHttp {
             return Action::Pause;
         }
 
-        // Check if route is public
+        // Check if route is public (includes /auth/me and other auth routes)
         info!("[Rust WASM Filter] Checking if public route: {} {}", method, path);
         if is_public_route(&path, &method) {
-            info!("[Rust WASM Filter] Public route, bypassing validation: {} {}", method, path);
+            info!("[Rust WASM Filter] Public route, bypassing all validation: {} {}", method, path);
             return Action::Continue;
         }
-        info!("[Rust WASM Filter] Not a public route, checking auth: {} {}", method, path);
+        info!("[Rust WASM Filter] Not a public route, checking auth and user: {} {}", method, path);
 
         // Extract and validate access token from cookie
         let cookie_header = self.get_http_request_header("cookie").unwrap_or_default();
@@ -427,60 +670,67 @@ impl HttpContext for ChallengeAuthzHttp {
             self.send_forbidden_response("invalid access token");
             return Action::Pause;
         }
-
-        // Extract challenge headers
-        let challenge_id = self.get_http_request_header("x-challenge-id").unwrap_or_default();
-        let challenge_answer = self.get_http_request_header("x-challenge-answer").unwrap_or_default();
-
-        // Validate challenge headers presence
-        if challenge_id.is_empty() || challenge_answer.is_empty() {
-            warn!("[Rust WASM Filter] Missing challenge headers");
-            self.send_forbidden_response("missing challenge headers");
-            return Action::Pause;
-        }
-
-        // Validate challenge format (basic validation)
-        if !validate_challenge_format(&challenge_id, &challenge_answer) {
-            warn!("[Rust WASM Filter] Invalid challenge format");
-            self.send_forbidden_response("invalid challenge format");
-            return Action::Pause;
-        }
-
-        // Query Redis for challenge validation
-        info!("[Rust WASM Filter] Querying Redis for challenge: {}", challenge_id);
         
-        // Store pending challenge data for validation in callback
-        self.pending_challenge_id = Some(challenge_id.clone());
-        self.pending_challenge_answer = Some(challenge_answer.clone());
+        // Decode JWT to get user email
+        // TODO: CRITICAL SECURITY - JWT signature is NOT verified before extracting claims
+        // This allows anyone to craft fake JWTs with any email/userId
+        // Must implement HMAC-SHA256 signature verification with jwt_secret
+        let email = match decode_jwt_claims(&access_token) {
+            Some(claims) => {
+                if let Some(email) = claims.email {
+                    info!("[Rust WASM Filter] JWT email: {}", email);
+                    email
+                } else {
+                    warn!("[Rust WASM Filter] JWT missing email claim");
+                    self.send_forbidden_response("invalid JWT claims");
+                    return Action::Pause;
+                }
+            }
+            None => {
+                warn!("[Rust WASM Filter] Failed to decode JWT");
+                self.send_forbidden_response("invalid JWT");
+                return Action::Pause;
+            }
+        };
         
-        // Dispatch HTTP call to Redis endpoint
-        let redis_path = format!("/redis/get/challenge:{}", challenge_id);
-        let headers = vec![
+        // Check user in Redis cache first
+        self.pending_user_email = Some(email.clone());
+        let redis_user_path = format!("/redis/get/user:{}", email);
+        let user_headers = vec![
             (":method", "GET"),
-            (":path", &redis_path),
+            (":path", &redis_user_path),
             (":authority", "pzero-server"),
         ];
         
+        info!("[Rust WASM Filter] Checking user cache for: {}", email);
+        
         match self.dispatch_http_call(
             "server_cluster",
-            headers,
+            user_headers,
             None,
             vec![],
             std::time::Duration::from_secs(5),
         ) {
             Ok(call_id) => {
-                info!("[Rust WASM Filter] Redis query dispatched with call_id: {}", call_id);
-                self.pending_call_id = Some(call_id);
-                // Pause the request until we get Redis response
-                Action::Pause
+                info!("[Rust WASM Filter] User cache check dispatched with call_id: {}", call_id);
+                self.pending_user_call_id = Some(call_id);
+                self.call_type = CallType::UserCache;
+                
+                // Store challenge data for later validation
+                self.pending_challenge_id = Some(self.get_http_request_header("x-challenge-id").unwrap_or_default());
+                self.pending_challenge_answer = Some(self.get_http_request_header("x-challenge-answer").unwrap_or_default());
+                
+                // Pause until we validate user
+                return Action::Pause;
             }
             Err(status) => {
-                warn!("[Rust WASM Filter] Failed to query Redis: {:?}", status);
-                // Fallback: reject the request
-                self.send_forbidden_response("challenge validation failed");
-                Action::Pause
+                warn!("[Rust WASM Filter] Failed to check user cache: {:?}", status);
+                self.send_forbidden_response("internal error");
+                return Action::Pause;
             }
         }
+        
+        // Challenge validation is now handled after user validation in callbacks
     }
 }
 
@@ -527,6 +777,32 @@ fn validate_jwt_format(token: &str) -> bool {
 fn validate_challenge_format(id: &str, answer: &str) -> bool {
     // Basic validation - non-empty and reasonable length
     !id.is_empty() && !answer.is_empty() && id.len() < 256 && answer.len() < 256
+}
+
+/// Decode JWT and extract claims
+/// CRITICAL SECURITY WARNING: JWT signature is NOT verified
+/// TODO: Implement proper JWT signature verification using HMAC-SHA256
+/// This allows anyone to craft fake JWTs - DO NOT use in production without fixing!
+/// 
+/// Note: Standard JWT libraries like jsonwebtoken may not work in WASM environment
+/// due to dependency on std::time and other unavailable features.
+/// Options:
+/// 1. Implement manual HMAC-SHA256 verification using sha2/hmac crates (if WASM compatible)
+/// 2. Delegate JWT verification to the backend server (current user validation does this)
+/// 3. Use a lightweight WASM-compatible JWT library
+fn decode_jwt_claims(token: &str) -> Option<JwtClaims> {
+    let parts: Vec<&str> = token.split('.').collect();
+    if parts.len() != 3 {
+        return None;
+    }
+    
+    // Decode the payload (second part)
+    let payload = parts.get(1)?;
+    let decoded = general_purpose::URL_SAFE_NO_PAD.decode(payload).ok()?;
+    let payload_str = String::from_utf8(decoded).ok()?;
+    
+    // Parse JSON
+    serde_json::from_str(&payload_str).ok()
 }
 
 
