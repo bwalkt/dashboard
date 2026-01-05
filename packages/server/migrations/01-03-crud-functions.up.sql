@@ -360,6 +360,7 @@ if grid:
     user_data['grid'] = grid
 # remove device_data from user_data if present
 if 'device' in user_data:
+    device_data = user_data['device']
     del user_data['device']
 # Extract c_by from data.meta.c_by if provided
 
