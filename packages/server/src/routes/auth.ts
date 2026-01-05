@@ -1,6 +1,7 @@
-import { randomInt } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail, type UserResponse } from "@pzero/shared";
+import { genFunctionAsJson } from "@pzero/shared/grid";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
@@ -236,12 +237,106 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
             message: `User Account is ${user.status ?? "INACTIVE"}`,
           } as ErrorResponse);
         }
-        return reply.send({ user });
+        
+        // Generate a new challenge for this user
+        const decryptedGrid = [
+          [10, 20, 30, 40, 50],
+          [60, 70, 80, 90, 100],
+          [110, 120, 130, 140, 150],
+          [160, 170, 180, 190, 200],
+          [210, 220, 230, 240, 250]
+        ];
+        
+        const challengeId = randomUUID();
+        const complexity = randomInt(1, 4);
+        const challengeData = genFunctionAsJson(decryptedGrid, complexity);
+        
+        // Store the challenge answer in Redis
+        const challengeKey = `challenge:${challengeId}`;
+        const challengePayload = {
+          answer: challengeData.result.value,
+          uid: user.id,
+          used: false,
+          c_at: new Date().toISOString()
+        };
+        console.log(`[/auth/me] Storing challenge in Redis: ${challengeKey}`, challengePayload);
+        await redis.set(challengeKey, JSON.stringify(challengePayload));
+        console.log(`[/auth/me] Challenge stored successfully`);
+        
+        // Return user with challenge headers
+        return reply
+          .header("X-Challenge-Id", challengeId)
+          .header("X-Challenge-Question", challengeData.function.expression)
+          .header("X-Challenge-Params", `x=${challengeData.parameters.x},y=${challengeData.parameters.y}`)
+          .send({ user });
       } catch (error) {
         console.error("Get user info error:", error);
         return reply.status(500).send({
           error: "Internal Server Error",
           message: "Failed to get user information",
+        } as ErrorResponse);
+      }
+    }
+  );
+
+  /**
+   * GET /auth/challenge
+   * Generate a new challenge for the authenticated user
+   */
+  fastify.get(
+    "/auth/challenge",
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const user = (request as unknown as AuthenticatedRequest).user as UserWithStatus;
+        
+        // For now, use a test grid (in production, this would come from user's encrypted_grid)
+        // TODO: Add encrypted_grid field to User type and store/retrieve from database
+        const decryptedGrid = [
+          [10, 20, 30, 40, 50],
+          [60, 70, 80, 90, 100],
+          [110, 120, 130, 140, 150],
+          [160, 170, 180, 190, 200],
+          [210, 220, 230, 240, 250]
+        ];
+        
+        // Generate a unique challenge ID
+        const challengeId = randomUUID();
+        
+        // Generate a mathematical function with random complexity (1-3)
+        const complexity = randomInt(1, 4); // 1, 2, or 3
+        const challengeData = genFunctionAsJson(decryptedGrid, complexity);
+        
+        // Store the challenge answer in Redis (no TTL)
+        const challengeKey = `challenge:${challengeId}`;
+        const challengePayload = {
+          answer: challengeData.result.value,
+          uid: user.id,
+          used: false,
+          c_at: new Date().toISOString()
+        };
+        console.log(`[/auth/challenge] Storing challenge in Redis: ${challengeKey}`, challengePayload);
+        await redis.set(challengeKey, JSON.stringify(challengePayload)); // No TTL
+        console.log(`[/auth/challenge] Challenge stored successfully`);
+        
+        // Return challenge headers
+        return reply
+          .header("X-Challenge-Id", challengeId)
+          .header("X-Challenge-Question", challengeData.function.expression)
+          .header("X-Challenge-Params", `x=${challengeData.parameters.x},y=${challengeData.parameters.y}`)
+          .send({
+            challengeId,
+            question: challengeData.function.expression,
+            parameters: challengeData.parameters,
+            complexity: challengeData.function.complexity
+          });
+      } catch (error) {
+        console.error("Challenge generation error:", error);
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Failed to generate challenge",
         } as ErrorResponse);
       }
     }
