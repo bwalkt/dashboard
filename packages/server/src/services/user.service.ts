@@ -1,9 +1,9 @@
 import type { CreateUserData, GitHubUser, User } from "@pzero/shared";
+import{ genGrid } from "@pzero/shared/grid";
 import { generateHandleFromEmail } from '@pzero/shared/pzero'
 import { db } from "../config/database.js";
 import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
-import{ genGrid } from "@pzero/shared/grid";
 /**
  * User with status field from all_users table
  * This type represents the data returned by getUserByEmail which joins
