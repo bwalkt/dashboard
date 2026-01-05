@@ -357,13 +357,9 @@ impl ChallengeAuthzHttp {
         }) {
             origin.to_string()
         } else {
-            // Return the first allowed origin or deny with empty string
-            self.config.allowed_origins.first()
-                .cloned()
-                .unwrap_or_else(|| {
-                    warn!("[Rust WASM Filter] CORS origin {} not in allowlist", origin);
-                    "".to_string()
-                })
+            // Origin not allowed - return empty string to deny
+            warn!("[Rust WASM Filter] CORS origin {} not in allowlist", origin);
+            "".to_string()
         }
     }
 }
