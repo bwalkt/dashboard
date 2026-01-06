@@ -3,7 +3,7 @@ import type {
   AuthResult,
   ProcessingRequest,
   ProcessingResponse,
-} from "@pzero/shared/grpc";
+} from "@pzero/shared/http";
 import {
   createAuthHeaders,
   createResponseTrackingHeaders,
@@ -11,7 +11,7 @@ import {
   GrpcStatus,
   isPublicPath,
   ProcessingStatus,
-} from "@pzero/shared/grpc";
+} from "@pzero/shared/http";
 import { AuthProxy } from "../../auth-proxy.js";
 
 export function createExtProcService(authProxy: AuthProxy) {
@@ -225,4 +225,4 @@ export function createExtProcService(authProxy: AuthProxy) {
   };
 }
 
-// These utility functions are now imported from @pzero/shared/grpc
+// These utility functions are now imported from @pzero/shared/http

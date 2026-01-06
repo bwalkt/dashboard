@@ -59,6 +59,10 @@
       "import": "./dist/grid/index.js",
       "types": "./dist/grid/index.d.ts"
     },
+    "./challenge": {
+      "import": "./dist/grid/challenge.js",
+      "types": "./dist/grid/challenge.d.ts"
+    },
     "./actor": {
       "import": "./dist/actor/index.js",
       "types": "./dist/actor/index.d.ts"
@@ -111,9 +115,9 @@
       "import": "./dist/sql/index.js",
       "types": "./dist/sql/index.d.ts"
     },
-    "./grpc": {
-      "import": "./dist/grpc/index.js",
-      "types": "./dist/grpc/index.d.ts"
+    "./http": {
+      "import": "./dist/http/index.js",
+      "types": "./dist/http/index.d.ts"
     },
     "./data-table": {
       "import": "./dist/utils/data-table/index.js",

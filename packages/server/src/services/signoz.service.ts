@@ -3,6 +3,7 @@
  * Handles communication with the SigNoz query_range API endpoint
  */
 
+import { extractHeaders } from "@pzero/shared/http";
 import type { BuilderQuery, RawDataResponse, SelectField, SigNozFilters, SigNozPagination, SigNozQueryOptions, SigNozQueryPayload } from "@pzero/shared/types";
 import { config } from "../config/env.js";
 
@@ -135,10 +136,6 @@ function buildFilterExpression(filters: SigNozFilters): string | undefined {
         conditions.push(`timing.transfer <= ${transfer}`);
       }
     }
-  }
-
-  if (conditions.length === 0) {
-    return undefined;
   }
 
   return conditions.join(" AND ");
@@ -304,35 +301,8 @@ function transformSigNozResponse(apiResponse: any, pagination: SigNozPagination)
     const item = row.data || row;
 
     // Extract request and response headers if they exist
-    const requestHeaders: Record<string, string> = {};
-    const responseHeaders: Record<string, string> = {};
-
-    // Check and extract request headers (only if non-empty)
-    if (
-      item["req_headers.x-challenge-answer"] !== undefined &&
-      item["req_headers.x-challenge-answer"] !== null &&
-      item["req_headers.x-challenge-answer"] !== ""
-    ) {
-      requestHeaders["x-challenge-answer"] = item["req_headers.x-challenge-answer"];
-    }
-    if (item["req_headers.x-challenge-id"] !== undefined && item["req_headers.x-challenge-id"] !== null && item["req_headers.x-challenge-id"] !== "") {
-      requestHeaders["x-challenge-id"] = item["req_headers.x-challenge-id"];
-    }
-
-    // Check and extract response headers (only if non-empty)
-    if (item["res_headers.content-length"] !== undefined && item["res_headers.content-length"] !== null && item["res_headers.content-length"] !== "") {
-      responseHeaders["content-length"] = item["res_headers.content-length"];
-    }
-    if (item["res_headers.content-type"] !== undefined && item["res_headers.content-type"] !== null && item["res_headers.content-type"] !== "") {
-      responseHeaders["content-type"] = item["res_headers.content-type"];
-    }
-    if (
-      item["res_headers.timing-allow-origin"] !== undefined &&
-      item["res_headers.timing-allow-origin"] !== null &&
-      item["res_headers.timing-allow-origin"] !== ""
-    ) {
-      responseHeaders["timing-allow-origin"] = item["res_headers.timing-allow-origin"];
-    }
+    const requestHeaders: Record<string, string> = extractHeaders(item, ["x-challenge-answer", "x-challenge-id"], "req_headers");
+    const responseHeaders: Record<string, string> = extractHeaders(item, ["content-length", "content-type", "timing-allow-origin"], "res_headers");
 
     // Remove header attributes and durationNano from item
     const {

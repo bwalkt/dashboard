@@ -1,4 +1,4 @@
-import type { AuthResult, AuthUser } from "@pzero/shared/grpc";
+import type { AuthResult, AuthUser } from "@pzero/shared/http";
 import axios from "axios";
 import { JWTService } from "../services/jwt.service.js";
 import { centrifugeConfig } from "./config.js";

@@ -1,8 +1,27 @@
 // Utility functions for gRPC processing
 
+import { HttpMethod } from '../types'
+
 /**
  * Extract token from cookie header
  */
+export const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
+export const HTTP_STATUS = ['200', '201', '204', '400', '401', '403', '404', '500', '502', '503', '504']
+export const HttpStatusText = {
+  '200': 'OK',
+  '201': 'Created',
+  '204': 'No Content',
+  '400': 'Bad Request',
+  '401': 'Unauthorized',
+  '403': 'Forbidden',
+  '404': 'Not Found',
+  '500': 'Internal Server Error',
+  '502': 'Bad Gateway',
+  '503': 'Service Unavailable',
+  '504': 'Gateway Timeout',
+} as const
+export type HttpStatusCode = keyof typeof HttpStatusText
+export const HTTP_STATUS_CODES: HttpStatusCode[] = Object.keys(HttpStatusText) as HttpStatusCode[]
 export function extractTokenFromCookie(cookieHeader: string): string | null {
   if (!cookieHeader) return null
 
@@ -114,4 +133,29 @@ export function createResponseTrackingHeaders(): Array<{ header: string; value: 
       append: false,
     },
   ]
+}
+
+export function getHeaderValue(item: Record<string, any>, key: string): string | undefined {
+  const value = item[key]
+  return value !== undefined && value !== null && value.trim() !== '' ? value : undefined
+}
+
+export const isCorrectAnswer = (item: Record<string, any>, challengeAnswer: string | undefined): boolean => {
+  const value = getHeaderValue(item, 'req_headers.x-correct-answer')
+  if (!!!value) {
+    return false
+  }
+  return value === challengeAnswer
+}
+
+export const extractHeaders = (item: any, keys: string[], prefix: string): Record<string, string> => {
+  const result: Record<string, string> = {}
+  for (const key of keys) {
+    const value = getHeaderValue(item, `${prefix}.${key}`)
+    console.log(`Extracting header ${prefix}.${key}:`, value)
+    if (value) {
+      result[key] = value
+    }
+  }
+  return result
 }
