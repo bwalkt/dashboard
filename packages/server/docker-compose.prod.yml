@@ -73,10 +73,10 @@ services:
       - TWILIO_MESSAGE=${TWILIO_MESSAGE}
       - SIGNOZ_API_URL=${SIGNOZ_API_URL}
       - SIGNOZ_API_KEY=${SIGNOZ_API_KEY}
+      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-pzero}
     depends_on:
       postgres:
         condition: service_healthy
-
 
   pzero-envoy-wasm:
     image: ${RUST_WASM_FILTER_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/rust-wasm-filter:latest}
