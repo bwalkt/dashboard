@@ -16,28 +16,6 @@ import { getUseWasm } from './proxy-config'
 const VALIDATION_HEADER = 'X-Test-Eval'
 const PROXY_TARGET_ID_HEADER = 'x-proxy-target-id'
 
-/**
- * Extract and solve challenge from response headers
- * Stores the solution in localStorage for future requests
- */
-async function handleChallengeHeaders(response: Response, userData?: any): Promise<void> {
-  // Extract the grid-based challenge
-  const challenge = challengeManager.extractChallengeFromHeaders(response)
-
-  if (challenge) {
-    // Store user grid if provided (from /auth/me response)
-    if (userData?.grid) {
-      challengeManager.storeUserGrid(userData.grid)
-    }
-
-    // Try to solve immediately
-    const answer = challengeManager.solveChallenge()
-    if (answer !== null) {
-      console.log('[Challenge] Pre-solved challenge for future requests:', answer)
-    }
-  }
-}
-
 export interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
   body?: any
   baseUrl?: string
@@ -184,8 +162,18 @@ async function parseResponse<T>(response: Response): Promise<T | undefined> {
     }
   }
 
-  // Handle challenge headers from response (pass user data for grid extraction)
-  await handleChallengeHeaders(response, data)
+  // Handle challenge headers from response only when using WASM proxy
+  if (getUseWasm()) {
+    // If this is /auth/me response with grid data, store it
+    if (url.includes('/auth/me') && data && typeof data === 'object' && 'user' in data) {
+      const userData = data as any
+      if (userData.user?.grid) {
+        console.log('[API] Storing user grid from /auth/me response')
+        challengeManager.storeUserGrid(userData.user.grid)
+      }
+    }
+    await challengeManager.handleChallengeHeaders(response, data)
+  }
 
   return data
 }
@@ -211,7 +199,9 @@ async function refreshToken(): Promise<void> {
         throw new ApiError('Token refresh failed', response.status, response.statusText, response)
       }
       storeValidationHeader(response)
-      await handleChallengeHeaders(response, undefined)
+      if (getUseWasm()) {
+        await challengeManager.handleChallengeHeaders(response, undefined)
+      }
     } catch (error) {
       throw error
     } finally {
@@ -263,7 +253,14 @@ const storeValidationHeader = (response: Response) => {
  * @returns Promise resolving to the response data
  */
 export async function apiRequest<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options
+  let baseUrl
+  try {
+    baseUrl = options.baseUrl || getBackendUrl()
+  } catch (error) {
+    console.error('Failed to get backend URL:', error)
+    throw new Error(`Failed to get backend URL: ${error.message}`)
+  }
+  const { body, headers = {}, skipRefresh = false, ...fetchOptions } = options
   console.log('baseUrl', baseUrl)
   console.log('endpoint', endpoint)
   console.log('headers', headers)
@@ -283,13 +280,17 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
     updatedHeaders[VALIDATION_HEADER] = storedValidationHeader
   }
 
-  // Add grid-based challenge headers
-  const headersWithChallenge = challengeManager.addChallengeHeaders(updatedHeaders)
-
-  // For WASM proxy mode fallback (if no grid challenge available)
-  if (getUseWasm() && !headersWithChallenge['X-Challenge-Answer']) {
-    headersWithChallenge['X-Challenge-Id'] = '1'
-    headersWithChallenge['X-Challenge-Answer'] = '1'
+  // Only add challenge headers when using WASM proxy
+  let headersWithChallenge = updatedHeaders
+  const isWasmEnabled = getUseWasm()
+  console.log('[API] WASM mode enabled:', isWasmEnabled)
+  if (isWasmEnabled) {
+    console.log('[API] Adding challenge headers to request:', endpoint)
+    headersWithChallenge = challengeManager.addChallengeHeaders(updatedHeaders)
+    console.log('[API] Headers after challenge addition:', {
+      hasChallenge: 'x-challenge-id' in headersWithChallenge,
+      hasAnswer: 'x-challenge-answer' in headersWithChallenge,
+    })
   }
 
   // Prepare the request configuration

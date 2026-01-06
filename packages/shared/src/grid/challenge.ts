@@ -5,11 +5,11 @@
 
 import { evalFuncAsJSON } from './index.js'
 
-// Challenge headers
-export const CHALLENGE_ID_HEADER = 'X-Challenge-Id'
-export const CHALLENGE_QUESTION_HEADER = 'X-Challenge-Question'
-export const CHALLENGE_PARAMS_HEADER = 'X-Challenge-Params'
-export const CHALLENGE_ANSWER_HEADER = 'X-Challenge-Answer'
+// Challenge headers (lowercase for WASM filter compatibility)
+export const CHALLENGE_ID_HEADER = 'x-challenge-id'
+export const CHALLENGE_QUESTION_HEADER = 'x-challenge-question'
+export const CHALLENGE_PARAMS_HEADER = 'x-challenge-params'
+export const CHALLENGE_ANSWER_HEADER = 'x-challenge-answer'
 
 // Storage keys
 const CHALLENGE_STORAGE_KEY = 'pzero_challenge'
@@ -274,6 +274,34 @@ export class ChallengeManager {
   }
 
   /**
+   * Extract and handle challenge from response headers
+   * Stores the solution in localStorage for future requests
+   * This is the async version that can be used in API responses
+   */
+  async handleChallengeHeaders(response: Response, userData?: any): Promise<void> {
+    // Extract the grid-based challenge
+    const challenge = this.extractChallengeFromHeaders(response)
+
+    if (challenge) {
+      // Store user grid if provided (from /auth/me response)
+      if (userData?.grid) {
+        this.storeUserGrid(userData.grid)
+      }
+
+      // Try to solve immediately
+      const answer = this.solveChallenge()
+      if (answer !== null) {
+        console.log('[Challenge Client] Pre-solved challenge for future requests:', {
+          challengeId: challenge.id,
+          question: challenge.question,
+          answer,
+          answerType: typeof answer,
+        })
+      }
+    }
+  }
+
+  /**
    * Clear all challenge-related data
    */
   clearAll(): void {
@@ -320,3 +348,5 @@ export const solveChallenge = () => challengeManager.solveChallenge()
 export const addChallengeHeaders = (headers: Record<string, string>) => challengeManager.addChallengeHeaders(headers)
 export const handleAuthMeResponse = (response: Response, userData?: any) =>
   challengeManager.handleAuthMeResponse(response, userData)
+export const handleChallengeHeaders = (response: Response, userData?: any) =>
+  challengeManager.handleChallengeHeaders(response, userData)
