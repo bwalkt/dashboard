@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/envoy-wasm-filter/**'
-      - '.github/workflows/envoy-wasm-filter.yml'
+      - "packages/rust-wasm-filter/**"
+      - ".github/workflows/rust-wasm-filter.yml"
   workflow_dispatch:
 
 permissions:
@@ -27,14 +27,13 @@ jobs:
         id: build
         uses: ./.github/actions/docker-build-push
         with:
-          dockerfile: packages/envoy-wasm-filter/Dockerfile
+          dockerfile: packages/rust-wasm-filter/Dockerfile
           context: .
-          image-name: ${{ env.GITHUB_OWNER }}/envoy-wasm-filter
+          image-name: ${{ env.GITHUB_OWNER }}/rust-wasm-filter
           image-tags: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || (github.ref_name == 'main' && format('{0},latest', github.ref_name)) || github.ref_name }}
           registry: ${{ env.REGISTRY_URL }}
           registry-username: ${{ github.actor }}
           registry-password: ${{ secrets.GITHUB_TOKEN }}
           push: ${{ github.event_name != 'pull_request' }}
-          cache-from: ${{ env.REGISTRY_URL }}/${{ env.GITHUB_OWNER }}/envoy-wasm-filter:cache
-          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}/envoy-wasm-filter:cache,mode=max', env.REGISTRY_URL, env.GITHUB_OWNER) || '' }}
-
+          cache-from: ${{ env.REGISTRY_URL }}/${{ env.GITHUB_OWNER }}/rust-wasm-filter:cache
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}/rust-wasm-filter:cache,mode=max', env.REGISTRY_URL, env.GITHUB_OWNER) || '' }}
