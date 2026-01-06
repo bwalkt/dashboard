@@ -91,7 +91,7 @@ services:
       - TWILIO_MESSAGE=${TWILIO_MESSAGE}
       - SIGNOZ_API_KEY=${SIGNOZ_API_KEY}
       - SIGNOZ_API_URL=${SIGNOZ_API_URL}
-      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET}
+      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-pzero}
     depends_on:
       postgres:
         condition: service_healthy
