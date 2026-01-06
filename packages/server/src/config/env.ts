@@ -183,6 +183,7 @@ export function validateEnvironment(): void {
     "GITHUB_CLIENT_SECRET",
     "FRONTEND_URL",
     "JWT_SECRET",
+    "ENCRYPTION_SECRET",
     "BREVO_API_KEY",
     "BREVO_SENDER_EMAIL",
     "TWILIO_ACCOUNT_SID",

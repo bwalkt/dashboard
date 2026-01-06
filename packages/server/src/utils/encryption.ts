@@ -9,9 +9,11 @@ export class EncryptionService {
   private secretKey: Buffer;
 
   constructor() {
-    // Use a secret from environment or generate one
-    // In production, this should come from environment variables
-    const secret = config.ENCRYPTION_SECRET || 'default-encryption-secret-32chr';
+    // ENCRYPTION_SECRET is required - no fallback
+    if (!config.ENCRYPTION_SECRET) {
+      throw new Error('ENCRYPTION_SECRET environment variable is required');
+    }
+    const secret = config.ENCRYPTION_SECRET;
     
     // Ensure the secret is 32 bytes for AES-256
     this.secretKey = crypto.createHash('sha256')
