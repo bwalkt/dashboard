@@ -1,4 +1,4 @@
-import { HTTP_METHODS, HTTP_STATUS } from '@pzero/shared/http';
+import { HTTP_METHODS, HTTP_STATUS } from '@pzero/shared/http'
 import {
   createParser,
   createSearchParamsCache,
