@@ -10,9 +10,9 @@ import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
+import { refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
 import { encryptionService } from '../utils/encryption.js'
-import { refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 
 async function deleteUserSession(request: FastifyRequest, reply: FastifyReply) {
   const userId = extractUserIdFromToken(request);

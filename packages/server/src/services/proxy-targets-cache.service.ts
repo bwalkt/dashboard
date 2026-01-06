@@ -134,6 +134,24 @@ export async function getProxyTargetById(
 }
 
 /**
+ * Get proxy target by URL from cache
+ * If cache is expired or missing, fetches from database and refreshes cache
+ * @param url Proxy target URL
+ * @returns Proxy target or null if not found
+ * @throws ProxyTargetsCacheUnavailableError if cache or database is unavailable
+ */
+export async function getProxyTargetByUrl(
+  url: string,
+): Promise<ProxyTarget | null> {
+  // Use getProxyTargetsFromCache which handles cache expiration automatically
+  // This will throw ProxyTargetsCacheUnavailableError on cache/DB failures
+  const targets = await getProxyTargetsFromCache();
+  
+  // If targets array is empty or target not found, return null (genuine "not found")
+  return targets.find((target) => target.url === url) || null;
+}
+
+/**
  * Clear the proxy targets cache
  */
 export async function clearProxyTargetsCache(): Promise<void> {

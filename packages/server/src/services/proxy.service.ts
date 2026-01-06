@@ -1,17 +1,17 @@
 import type { FastifyRequest } from "fastify";
 import {
-  getProxyTargetById,
+  getProxyTargetByUrl,
   ProxyTargetsCacheUnavailableError,
 } from "./proxy-targets-cache.service.js";
 
-const PROXY_TARGET_ID_HEADER = 'x-proxy-target-id';
+const PROXY_TARGET_ID_HEADER = 'x-proxy-target';
 
-async function getProxyTarget(id: string) {
+async function getProxyTarget(url: string) {
   try {
-    const target = await getProxyTargetById(id);
+    const target = await getProxyTargetByUrl(url);
     if (!target) {
-      // Genuine "not found" case - target ID doesn't exist
-      throw new Error(`Proxy target with id ${id} not found`);
+      // Genuine "not found" case - target URL doesn't exist
+      throw new Error(`Proxy target with url ${url} not found`);
     }
     return target;
   } catch (error) {
@@ -25,16 +25,16 @@ async function getProxyTarget(id: string) {
 }
 
 export async function constructProxyURL(request: FastifyRequest): Promise<string> {
-  const id = request.headers[PROXY_TARGET_ID_HEADER];
-  if (!id) {
-    throw new Error(`Proxy target id is required in ${PROXY_TARGET_ID_HEADER} header`);
+  const targetUrl = request.headers[PROXY_TARGET_ID_HEADER];
+  if (!targetUrl) {
+    throw new Error(`Proxy target is required in ${PROXY_TARGET_ID_HEADER} header`);
   }
 
-  if (typeof id !== 'string') {
-    throw new Error(`Proxy target id must be a string in ${PROXY_TARGET_ID_HEADER} header`);
+  if (typeof targetUrl !== 'string') {
+    throw new Error(`Proxy target must be a string in ${PROXY_TARGET_ID_HEADER} header`);
   }
 
-  const target = await getProxyTarget(id);
+  const target = await getProxyTarget(targetUrl);
   console.log(request.raw.url,request.url)
   const url = new URL(request.raw.url as string, process.env.SERVER_BASE_URL || "http://localhost:8090");
   let path = url.pathname.replace(/^\/proxy\//, '');
