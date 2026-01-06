@@ -1,7 +1,6 @@
+import { queryTraces, queryTracesSummary } from "@/services/signoz.service";
 import type { RawDataResponse, SigNozFilters, SigNozPagination } from "@pzero/shared/types";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-import { BaseChartSchema } from "@/components/infinite-data-table";
-import { queryTraces, queryTracesSummary } from "@/services/signoz.service";
 import type { SignozTraceSchema } from "./schema";
 import { type SearchParamsType, searchParamsSerializer } from "./search-params";
 
@@ -96,7 +95,7 @@ export const dataOptions = (search: SearchParamsType) => {
     }): Promise<{
       data: {
         traces: SignozTraceSchema[];
-        summary: BaseChartSchema[];
+        // summary: BaseChartSchema[];
       };
       total: number;
       limit: number;
@@ -120,10 +119,13 @@ export const dataOptions = (search: SearchParamsType) => {
         sampleItem: transformedData[0],
       });
 
-      const summaryData = transformTraceDataToSummary(transformedData);
+      // const summaryData = transformTraceDataToSummary(transformedData);
 
       return {
-        data: { traces: transformedData, summary: summaryData },
+        data: {
+          traces: transformedData,
+          // summary: summaryData
+        },
         total: response.total || 0,
         limit: response.limit || pagination.limit,
         offset: response.offset || pagination.offset,

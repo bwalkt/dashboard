@@ -17,8 +17,9 @@ import { ARRAY_DELIMITER, SLIDER_DELIMITER, SORT_DELIMITER } from "@/lib/delimit
 export const parseAsSort = createParser({
   parse(queryValue) {
     const [id, desc] = queryValue.split(SORT_DELIMITER);
-    if (!id && !desc) return null;
-    return { id, desc: desc === "desc" };
+    const trimmedId = id.trim();
+    if (!trimmedId) return null;
+    return { id: trimmedId, desc: desc === "desc" };
   },
   serialize(value) {
     return `${value.id}.${value.desc ? "desc" : "asc"}`;
