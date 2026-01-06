@@ -8,6 +8,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { onSendHook } from "../middleware/challenge.js";
 import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
@@ -229,6 +230,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     "/auth/me",
     {
       preHandler: authenticateToken,
+      onSend: onSendHook,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -256,14 +258,30 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           used: false,
           c_at: new Date().toISOString()
         };
-        console.log(`[/auth/me] Storing challenge in Redis: ${challengeKey}`, challengePayload);
+        
+        // Enhanced logging for challenge debugging
+        console.log(`[/auth/me] Challenge Generation:`, {
+          challengeId,
+          question: challengeData.function.expression,
+          params: { x: challengeData.parameters.x, y: challengeData.parameters.y },
+          expectedAnswer: challengeData.result.value,
+          complexity,
+          userId: user.id
+        });
 
         await redis.set(challengeKey, JSON.stringify(challengePayload));
+        
+        // Send user with decrypted grid so client can solve challenges
+        const userWithGrid = {
+          ...user,
+          grid  // Include decrypted grid for client to solve challenges
+        };
+        
         return reply
           .header("X-Challenge-Id", challengeId)
           .header("X-Challenge-Question", challengeData.function.expression)
           .header("X-Challenge-Params", `x=${challengeData.parameters.x},y=${challengeData.parameters.y}`)
-          .send({ user });
+          .send({ user: userWithGrid });
       } catch (error) {
         console.error("Get user info error:", error);
         return reply.status(500).send({
@@ -891,7 +909,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    */
   fastify.post<{
     Body: { grid: number[][] };
-  }>("/auth/reset", { preHandler: authenticateToken }, async (request: FastifyRequest, reply: FastifyReply) => {
+  }>("/auth/reset", { preHandler: authenticateToken, onSend: onSendHook }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as unknown as AuthenticatedRequest).user?.id;
       const { grid } = request.body as { grid: number[][] };

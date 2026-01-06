@@ -344,9 +344,37 @@ impl ChallengeAuthzHttp {
                     let body_str = String::from_utf8_lossy(&body);
                     info!("[Rust WASM Filter] Redis response: {}", body_str);
                     
-                    // Parse Redis response (constant-time comparison to prevent timing attacks)
-                    if constant_time_compare(body_str.trim().as_bytes(), challenge_answer.as_bytes()) {
+                    // Parse JSON response from Redis to extract the answer field and check if already used
+                    let (challenge_valid, already_used) = if let Ok(redis_data) = serde_json::from_str::<serde_json::Value>(&body_str) {
+                        let used = redis_data.get("used").and_then(|v| v.as_bool()).unwrap_or(false);
+                        if used {
+                            warn!("[Rust WASM Filter] Challenge already used: {}", challenge_id);
+                            (false, true)
+                        } else if let Some(stored_answer) = redis_data.get("answer").and_then(|v| v.as_str()) {
+                            info!("[Rust WASM Filter] Comparing answers - Expected: '{}', Received: '{}'", stored_answer, challenge_answer);
+                            // Use constant-time comparison to prevent timing attacks
+                            let valid = constant_time_compare(stored_answer.as_bytes(), challenge_answer.as_bytes());
+                            (valid, false)
+                        } else {
+                            warn!("[Rust WASM Filter] No 'answer' field in Redis response");
+                            (false, false)
+                        }
+                    } else {
+                        warn!("[Rust WASM Filter] Failed to parse Redis response as JSON");
+                        (false, false)
+                    };
+                    
+                    if already_used {
+                        warn!("[Rust WASM Filter] ❌ REJECTED: Challenge already used: {}", challenge_id);
+                        self.send_forbidden_response("challenge already used");
+                        return;
+                    }
+                    
+                    if challenge_valid {
                         info!("[Rust WASM Filter] ✅ CORRECT: Challenge validated via Redis: {}", challenge_id);
+                        
+                        // Mark challenge as used in Redis
+                        self.mark_challenge_as_used(challenge_id.clone());
                         
                         // Apply routing transformations before resuming
                         // Extract path components to determine routing
@@ -394,7 +422,7 @@ impl ChallengeAuthzHttp {
                         
                         self.resume_http_request();
                     } else {
-                        warn!("[Rust WASM Filter] ⚠️ WRONG: Challenge validation failed: {}", challenge_id);
+                        warn!("[Rust WASM Filter] ⚠️ WRONG: Challenge validation failed for challenge_id: {}", challenge_id);
                         self.send_forbidden_response("invalid challenge answer");
                     }
                 }
@@ -503,6 +531,40 @@ impl ChallengeAuthzHttp {
                 warn!("[Rust WASM Filter] No Redis cache response");
                 // Fallback: fetch from server
                 self.fetch_user_from_server();
+            }
+        }
+    }
+    
+    fn mark_challenge_as_used(&mut self, challenge_id: String) {
+        // Update Redis to mark challenge as used
+        let redis_path = format!("/redis/set/challenge:{}", challenge_id);
+        
+        // Create updated challenge data with used=true
+        let updated_data = r#"{"used":true}"#;
+        
+        let headers = vec![
+            (":method", "POST"),
+            (":path", &redis_path),
+            (":authority", "pzero-server"),
+            ("content-type", "application/json"),
+        ];
+        
+        info!("[Rust WASM Filter] Marking challenge as used: {}", challenge_id);
+        
+        // Fire and forget - we don't wait for response
+        match self.dispatch_http_call(
+            "server_cluster",
+            headers,
+            Some(updated_data.as_bytes()),
+            vec![],
+            std::time::Duration::from_secs(1),
+        ) {
+            Ok(_) => {
+                info!("[Rust WASM Filter] Marked challenge as used: {}", challenge_id);
+            }
+            Err(status) => {
+                warn!("[Rust WASM Filter] Failed to mark challenge as used: {:?}", status);
+                // Continue anyway - the challenge was valid
             }
         }
     }

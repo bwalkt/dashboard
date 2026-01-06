@@ -6,6 +6,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../config/database.js";
 import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { onSendHook } from "../middleware/challenge.js";
 import { userService } from "../services/user.service.js";
 
 export interface CreateUserPayload {
@@ -34,6 +35,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     "/users",
     {
       preHandler: authenticateToken,
+      onSend: onSendHook,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -83,6 +85,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     "/api/users/create-verified",
     {
       preHandler: authenticateToken,
+      onSend: onSendHook,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -134,6 +137,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     "/api/users",
     {
       preHandler: authenticateToken,
+      onSend: onSendHook,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -163,6 +167,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     "/api/users/:id",
     {
       preHandler: authenticateToken,
+      onSend: onSendHook,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -195,6 +200,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     "/api/users/:id",
     {
       preHandler: authenticateToken,
+      onSend: onSendHook,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -228,6 +234,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     "/api/users/:id",
     {
       preHandler: authenticateToken,
+      onSend: onSendHook,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -267,6 +274,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     "/api/users/:id/verify-email",
     {
       preHandler: authenticateToken,
+      onSend: onSendHook,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -320,7 +328,8 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post(
     "/api/users/:id/mark-verified",
     {
-      preHandler: authenticateToken, // TODO: Add requireAdminRole when available
+      preHandler: authenticateToken,
+      onSend: onSendHook, // TODO: Add requireAdminRole when available
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -360,6 +369,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     "/api/users/:id/associate-org",
     {
       preHandler: authenticateToken,
+      onSend: onSendHook,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -404,7 +414,8 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.patch(
     "/api/users/:id/status",
     {
-      preHandler: authenticateToken, // TODO: Add requireAdminRole when available
+      preHandler: authenticateToken,
+      onSend: onSendHook, // TODO: Add requireAdminRole when available
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
