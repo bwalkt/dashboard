@@ -87,10 +87,10 @@ export class EncryptionService {
   /**
    * Encrypt grid specifically
    */
-  encryptGrid(grid: number[][]): string {
+  encryptGrid(grid: number[][]): { encrypted: string; iv: string; authTag: string } {
     const encryptedData = this.encrypt(grid);
-    // Store as a single JSON string containing all encryption data
-    return JSON.stringify(encryptedData);
+    // Return the encryption object directly (will be stored as JSONB)
+    return encryptedData;
   }
 
   /**
