@@ -174,11 +174,6 @@ async function refreshToken(): Promise<void> {
  */
 export async function apiRequest<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
   const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options
-  console.log('baseUrl', baseUrl)
-  console.log('endpoint', endpoint)
-  console.log('headers', headers)
-  console.log('skipRefresh', skipRefresh)
-  console.log('fetchOptions', fetchOptions)
   // Construct the full URL
   const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
 

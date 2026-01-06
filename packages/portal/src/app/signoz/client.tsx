@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useQueryStates } from 'nuqs'
 import * as React from 'react'
 import type { DataTableFilterField } from '@/components/data-table/types'
@@ -6,7 +6,7 @@ import { DataTableInfinite } from '@/components/infinite-data-table/data-table-i
 import { useHotKey } from '@/hooks/use-hot-key'
 import { columns } from './columns'
 import { filterFields as defaultFilterFields, sheetFields } from './constants'
-import { dataOptions } from './query-options'
+import { dataOptions, summaryOptions } from './query-options'
 import type { SignozTraceSchema } from './schema'
 import { searchParamsParser } from './search-params'
 
@@ -33,9 +33,7 @@ export function SignozClient() {
     return data?.pages?.flatMap(page => page.data.traces ?? []) ?? []
   }, [data?.pages])
 
-  const summaryData = React.useMemo(() => {
-    return data?.pages?.flatMap(page => page.data.summary ?? []) ?? []
-  }, [data?.pages])
+  const { data: summaryData } = useQuery(summaryOptions())
 
   // Get metadata from the last page (all pages should have the same total)
   const lastPage = data?.pages?.[data?.pages.length - 1]
@@ -46,31 +44,16 @@ export function SignozClient() {
   // Note: We don't add date filter here because we filter by startTime/endTime at the API level
   // Adding it as a column filter would cause double-filtering and might filter out all rows
   // Only include filters that correspond to actual table columns
-  const { sort, traceId, httpMethod, serviceName } = search
+  const { sort, spanId, ...filters } = search
 
-  // Valid column IDs that exist in the table
-  const validColumnIds = new Set(['date', 'trace_id', 'serviceName', 'name', 'durationMs', 'responseStatusCode'])
-
-  const defaultColumnFilters = [
-    // Map httpMethod to 'name' column filter (API uses httpMethod, but table filters 'name' column)
-    ...(httpMethod
-      ? [
-          {
-            id: 'http_method',
-            value: [`HTTP ${httpMethod}`] as string[],
-          },
-        ]
-      : []),
-    // Add serviceName filter if it exists and is a valid column
-    ...(serviceName && validColumnIds.has('serviceName')
-      ? [
-          {
-            id: 'serviceName',
-            value: serviceName,
-          },
-        ]
-      : []),
-  ]
+  const defaultColumnFilters = React.useMemo(() => {
+    return Object.entries(filters)
+      .map(([key, value]) => ({
+        id: key,
+        value,
+      }))
+      .filter(({ value }) => value != null && (!Array.isArray(value) || value.length > 0))
+  }, [filters])
 
   return (
     <DataTableInfinite
@@ -85,7 +68,7 @@ export function SignozClient() {
       totalRowsFetched={totalRowsFetched}
       defaultColumnFilters={defaultColumnFilters}
       defaultColumnSorting={sort ? [sort] : undefined}
-      defaultRowSelection={traceId ? { [traceId]: true } : undefined}
+      defaultRowSelection={spanId ? { [spanId]: true } : undefined}
       defaultColumnVisibility={{
         'timingPhases.dns': false,
         'timingPhases.connection': false,

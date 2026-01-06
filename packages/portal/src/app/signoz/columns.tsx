@@ -200,7 +200,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
                   const value = timing[phase]
                   const formattedValue = new Intl.NumberFormat('en-US', {
                     maximumFractionDigits: 3,
-                  }).format(timing[phase])
+                  }).format(value)
                   return (
                     <div key={phase} className="grid grid-cols-2 gap-4 text-xs">
                       <div className="flex items-center gap-2">

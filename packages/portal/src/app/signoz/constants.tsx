@@ -29,7 +29,7 @@ export const filterFields = [
     label: 'HTTP Method',
     value: 'http_method',
     type: 'checkbox',
-    options: HTTP_METHODS.map(method => ({ label: method, value: `HTTP ${method}` })),
+    options: HTTP_METHODS.map(method => ({ label: method, value: method })),
     component: (props: Option) => {
       return <span className="font-mono">{props.value}</span>
     },
@@ -49,21 +49,21 @@ export const filterFields = [
     value: 'responseStatusCode',
     type: 'checkbox',
     options: [
-      { label: '200', value: 200 },
-      { label: '201', value: 201 },
-      { label: '400', value: 400 },
-      { label: '401', value: 401 },
-      { label: '403', value: 403 },
-      { label: '404', value: 404 },
-      { label: '500', value: 500 },
-      { label: '502', value: 502 },
-      { label: '503', value: 503 },
+      { label: '200', value: '200' },
+      { label: '201', value: '201' },
+      { label: '400', value: '400' },
+      { label: '401', value: '401' },
+      { label: '403', value: '403' },
+      { label: '404', value: '404' },
+      { label: '500', value: '500' },
+      { label: '502', value: '502' },
+      { label: '503', value: '503' },
     ],
     component: (props: Option) => {
       if (typeof props.value === 'boolean') return null
       if (typeof props.value === 'undefined') return null
-      if (typeof props.value === 'string') return null
-      return <span className={cn('font-mono', getStatusColor(props.value).text)}>{props.value}</span>
+      if (typeof props.value === 'number') return null
+      return <span className={cn('font-mono', getStatusColor(parseInt(props.value)).text)}>{props.value}</span>
     },
   },
   {

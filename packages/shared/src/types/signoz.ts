@@ -128,7 +128,19 @@ export interface SigNozQueryPayload {
  */
 export interface SigNozFilters {
   serviceName?: string
-  httpMethod?: HttpMethod
+  httpMethod?: HttpMethod | HttpMethod[] // Can be single value or array for checkbox filters
+  http_host?: string
+  http_url?: string
+  responseStatusCode?: string | number | (string | number)[] // Can be single value or array for checkbox filters
+  durationMs?: number | [number, number] // Single number or [min, max] range for slider
+  timingPhases?: {
+    dns?: number | [number, number]
+    connection?: number | [number, number]
+    tls?: number | [number, number]
+    ttfb?: number | [number, number]
+    transfer?: number | [number, number]
+  }
+
   startTime: number // Epoch timestamp in milliseconds
   endTime: number // Epoch timestamp in milliseconds
 }

@@ -1,11 +1,8 @@
 import type { RawDataResponse, SigNozFilters, SigNozPagination } from '@pzero/shared/types'
-import { infiniteQueryOptions, keepPreviousData } from '@tanstack/react-query'
-import { BaseChartSchema } from '@/components/infinite-data-table'
-import { queryTraces } from '@/services/signoz.service'
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
+import { queryTraces, queryTracesSummary } from '@/services/signoz.service'
 import type { SignozTraceSchema } from './schema'
 import { type SearchParamsType, searchParamsSerializer } from './search-params'
-
-export type SignozTraceMeta = Record<string, unknown>
 
 /**
  * Transform RawDataResponse to SignozTraceSchema format
@@ -47,9 +44,41 @@ function buildSignozFilters(search: SearchParamsType): SigNozFilters {
   const now = Date.now()
   const oneHourAgo = now - 60 * 60 * 1000
 
+  // Helper to convert array or single value to the appropriate type
+  const getArrayOrValue = <T>(value: T | T[] | null | undefined): T | T[] | undefined => {
+    if (value === null || value === undefined) return undefined
+    return value
+  }
+
+  // Helper to convert slider range (array of 2 numbers) or single number
+  const getSliderValue = (value: number[] | number | null | undefined): number | [number, number] | undefined => {
+    if (value === null || value === undefined) return undefined
+    if (Array.isArray(value) && value.length === 2) {
+      return [value[0], value[1]] as [number, number]
+    }
+    if (typeof value === 'number') {
+      return value
+    }
+    return undefined
+  }
+
+  const timingPhases = {
+    dns: getSliderValue(search['timingPhases.dns']),
+    connection: getSliderValue(search['timingPhases.connection']),
+    tls: getSliderValue(search['timingPhases.tls']),
+    ttfb: getSliderValue(search['timingPhases.ttfb']),
+    transfer: getSliderValue(search['timingPhases.transfer']),
+  }
+  const hasTimingPhases = Object.values(timingPhases).some(v => v !== undefined)
+
   return {
     serviceName: search.serviceName || undefined,
-    httpMethod: search.httpMethod || undefined,
+    http_method: getArrayOrValue(search.http_method),
+    http_host: search.http_host || undefined,
+    http_url: search.http_url || undefined,
+    responseStatusCode: getArrayOrValue(search.responseStatusCode),
+    durationMs: getSliderValue(search.durationMs),
+    timingPhases: hasTimingPhases ? timingPhases : undefined,
     startTime: search.startTime || oneHourAgo,
     endTime: search.endTime || now,
   }
@@ -68,7 +97,7 @@ export const dataOptions = (search: SearchParamsType) => {
     }): Promise<{
       data: {
         traces: SignozTraceSchema[]
-        summary: BaseChartSchema[]
+        // summary: BaseChartSchema[];
       }
       total: number
       limit: number
@@ -84,18 +113,13 @@ export const dataOptions = (search: SearchParamsType) => {
 
       const transformedData = transformTraceData(response.data)
 
-      console.log('Query response:', {
-        rawDataLength: response.data?.length,
-        transformedDataLength: transformedData.length,
-        total: response.total,
-        offset: pagination.offset,
-        sampleItem: transformedData[0],
-      })
-
-      const summaryData = transformTraceDataToSummary(transformedData)
+      // const summaryData = transformTraceDataToSummary(transformedData);
 
       return {
-        data: { traces: transformedData, summary: summaryData },
+        data: {
+          traces: transformedData,
+          // summary: summaryData
+        },
         total: response.total || 0,
         limit: response.limit || pagination.limit,
         offset: response.offset || pagination.offset,
@@ -117,7 +141,7 @@ export const dataOptions = (search: SearchParamsType) => {
     },
     refetchOnWindowFocus: false,
     enabled: Boolean(search.startTime && search.endTime), // Only run query when time range is set
-    placeholderData: keepPreviousData,
+    // placeholderData: keepPreviousData,
   })
 }
 
@@ -126,7 +150,7 @@ export const dataOptions = (search: SearchParamsType) => {
  * Groups by hour if all data is within 24 hours, otherwise groups by date
  */
 function transformTraceDataToSummary(
-  rawData: any[],
+  rawData: RawDataResponse['data'],
 ): { timestamp: number; success: number; warning: number; error: number }[] {
   if (!rawData || !Array.isArray(rawData)) return []
 
@@ -212,20 +236,17 @@ function transformTraceDataToSummary(
   return Array.from(groupMap.values()).sort((a, b) => a.timestamp - b.timestamp)
 }
 
-// /**
-//  * Query options for Signoz traces summary
-//  */
-// export const summaryOptions = () => {
-//   return queryOptions({
-//     queryKey: ['signoz-traces-summary'],
-//     queryFn: async (): Promise<{ data: { timestamp: number; success: number; warning: number; error: number }[] }> => {
-//       const response = await queryTracesSummary()
-//       const transformedData = transformTraceDataToSummary(response.data || [])
-//       return {
-//         data: transformedData,
-//       }
-//     },
-//     refetchOnWindowFocus: false,
-//     enabled: true,
-//   })
-// }
+/**
+ * Query options for Signoz traces summary
+ */
+export const summaryOptions = () => {
+  return queryOptions({
+    queryKey: ['signoz-traces-summary'],
+    queryFn: async (): Promise<{ timestamp: number; success: number; warning: number; error: number }[]> => {
+      const response = await queryTracesSummary()
+      const transformedData = transformTraceDataToSummary(response.data || [])
+      return transformedData
+    },
+    refetchOnWindowFocus: false,
+  })
+}

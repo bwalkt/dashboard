@@ -17,6 +17,7 @@
     "build:proto:disabled": "echo 'Protobuf generation disabled - using manual TypeScript interfaces in src/centrifuge/grpc/services/ext-proc.ts'",
     "start": "fastify start dist/index.js --port 8090",
     "dev": "tsx watch src/server.ts",
+    "local": "DATABASE_URL=postgresql://postgres@localhost:5432/pzero tsx watch src/server.ts",
     "dev:centrifuge": "tsx watch src/centrifuge/app.ts",
     "dev:both": "concurrently \"pnpm run dev\" \"pnpm run dev:centrifuge\"",
     "dev:fastify": "fastify start dist/index.js --watch --port 8090",
@@ -25,8 +26,8 @@
     "migrations:down": "node scripts/rollback-migrations.js",
     "migrations:rollback": "node scripts/rollback-migrations.js",
     "docker:down": "docker compose down --remove-orphans",
-    "docker:up": "docker compose up -d",
-    "docker:postgres": "docker compose up -d pzero-postgres"
+    "docker:up": "./docker-start.sh",
+    "docker:postgres": "./docker-start.sh postgres"
   },
   "keywords": [],
   "author": "",
