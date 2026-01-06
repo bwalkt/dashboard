@@ -166,7 +166,7 @@ export const config: EnvironmentConfig = {
   REDIS_STATUS_NAMESPACE: process.env.REDIS_STATUS_NAMESPACE || "APP:auth:status:",
   REDIS_STATUS_TTL_SECONDS: parseInt(process.env.REDIS_STATUS_TTL_SECONDS || "86400", 10), // Default: 24 hours
   STATS_API_KEY: process.env.STATS_API_KEY,
-  ...(process.env.ENCRYPTION_SECRET ? { ENCRYPTION_SECRET: process.env.ENCRYPTION_SECRET } : {}),
+  ENCRYPTION_SECRET: process.env.ENCRYPTION_SECRET || 'pzero',
 };
 
 /**
@@ -183,6 +183,7 @@ export function validateEnvironment(): void {
     "GITHUB_CLIENT_SECRET",
     "FRONTEND_URL",
     "JWT_SECRET",
+    "ENCRYPTION_SECRET",
     "BREVO_API_KEY",
     "BREVO_SENDER_EMAIL",
     "TWILIO_ACCOUNT_SID",

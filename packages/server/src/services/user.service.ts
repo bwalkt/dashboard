@@ -1,9 +1,9 @@
 import type { CreateUserData, GitHubUser, User } from "@pzero/shared";
+import{ genGrid } from "@pzero/shared/grid";
 import { generateHandleFromEmail } from '@pzero/shared/pzero'
 import { db } from "../config/database.js";
 import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
-
 /**
  * User with status field from all_users table
  * This type represents the data returned by getUserByEmail which joins
@@ -12,6 +12,7 @@ import { redis } from "../config/redis.js";
 export type UserWithStatus = User & {
   status?: 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'DELETED' | 'PENDING' | 'BLOCKED' | null;
   data?: any;
+  is_act?: boolean;
 };
 
 import { encryptionService } from "../utils/encryption.js";
@@ -50,6 +51,10 @@ export class UserService {
        LIMIT 1`,
       [email],
     );
+    if (result.rows[0]) {
+      const rec = result.rows[0] as UserWithStatus;
+      return rec;
+    }
     return result.rows[0] || null;
   }
 
@@ -167,7 +172,9 @@ export class UserService {
           email: userData.email,
           handle: handle,
           avatar: userData.avatar || null,
-          grid: encryptedGrid,
+          data: {
+            grid: encryptedGrid,
+          },
           email_verified: userData.email_verified ?? false,
           device: JSON.stringify(userData.device || {})
         }),

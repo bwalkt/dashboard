@@ -1,6 +1,9 @@
 import { randomInt } from "node:crypto";
+
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail, type UserResponse } from "@pzero/shared";
+import { genFunctionAsJson, genGrid } from "@pzero/shared/grid";
+import { uuid } from "@pzero/shared/uuid";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
@@ -8,6 +11,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
+import { encryptionService } from '../utils/encryption.js'
 
 async function deleteUserSession(request: FastifyRequest, reply: FastifyReply) {
   const userId = extractUserIdFromToken(request);
@@ -228,15 +232,38 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const user = (request as unknown as AuthenticatedRequest).user as UserWithStatus;
-        if (user.status !== "ACTIVE") {
+        let user = (request as unknown as AuthenticatedRequest).user as UserWithStatus;
+        if (!user?.data?.grid || user.is_act === undefined) {
+          user = await userService.getUserByEmail(user.email) as UserWithStatus;
+        }
+        if (!user?.data?.grid || !user.is_act) {
+          console.log("Error - Grid for user not found, or status not ACTIVE:", user);
           await deleteUserSession(request, reply);
           return reply.status(403).send({
             error: "Forbidden",
             message: `User Account is ${user.status ?? "INACTIVE"}`,
           } as ErrorResponse);
         }
-        return reply.send({ user });
+        console.log("Fetched user info for:", user);
+        const grid = encryptionService.decrypt(user.data.grid);
+        const challengeId =  uuid();
+        const complexity = randomInt(1, 4);
+        const challengeData = genFunctionAsJson(grid, complexity);
+         const challengeKey = `challenge:${challengeId}`;
+        const challengePayload = {
+          answer: challengeData.result.value,
+          uid: user.id,
+          used: false,
+          c_at: new Date().toISOString()
+        };
+        console.log(`[/auth/me] Storing challenge in Redis: ${challengeKey}`, challengePayload);
+
+        await redis.set(challengeKey, JSON.stringify(challengePayload));
+        return reply
+          .header("X-Challenge-Id", challengeId)
+          .header("X-Challenge-Question", challengeData.function.expression)
+          .header("X-Challenge-Params", `x=${challengeData.parameters.x},y=${challengeData.parameters.y}`)
+          .send({ user });
       } catch (error) {
         console.error("Get user info error:", error);
         return reply.status(500).send({

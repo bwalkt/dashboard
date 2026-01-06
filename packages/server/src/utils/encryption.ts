@@ -9,9 +9,8 @@ export class EncryptionService {
   private secretKey: Buffer;
 
   constructor() {
-    // Use a secret from environment or generate one
-    // In production, this should come from environment variables
-    const secret = config.ENCRYPTION_SECRET || 'default-encryption-secret-32chr';
+    // Use ENCRYPTION_SECRET from config (defaults to 'pzero' if not set)
+    const secret = config.ENCRYPTION_SECRET;
     
     // Ensure the secret is 32 bytes for AES-256
     this.secretKey = crypto.createHash('sha256')
@@ -85,10 +84,10 @@ export class EncryptionService {
   /**
    * Encrypt grid specifically
    */
-  encryptGrid(grid: number[][]): string {
+  encryptGrid(grid: number[][]): { encrypted: string; iv: string; authTag: string } {
     const encryptedData = this.encrypt(grid);
-    // Store as a single JSON string containing all encryption data
-    return JSON.stringify(encryptedData);
+    // Return the encryption object directly (will be stored as JSONB)
+    return encryptedData;
   }
 
   /**
