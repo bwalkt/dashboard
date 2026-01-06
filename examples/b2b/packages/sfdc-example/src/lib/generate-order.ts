@@ -4,6 +4,37 @@ import { OrderCreateRequest, PaymentMethod } from '@/types'
 import { api } from './api'
 
 /**
+ * Generate a date within the last 30 days with higher probability for the last 2 days.
+ * 70% chance of being in the last 2 days, 30% chance of being in days 3-30.
+ * Returns date formatted as YYYY-MM-DD.
+ */
+function generateRecentDate(): string {
+  const now = Date.now()
+  const twoDaysAgo = now - 2 * 24 * 60 * 60 * 1000
+  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000
+
+  // 70% chance of being in last 2 days, 30% chance of being in days 3-30
+  const useRecentDays = faker.datatype.boolean({ probability: 0.7 })
+
+  let date: Date
+  if (useRecentDays) {
+    // Last 2 days
+    date = faker.date.between({
+      from: new Date(twoDaysAgo),
+      to: new Date(now),
+    })
+  } else {
+    // Days 3-30
+    date = faker.date.between({
+      from: new Date(thirtyDaysAgo),
+      to: new Date(twoDaysAgo),
+    })
+  }
+
+  return date.toISOString().split('T')[0]
+}
+
+/**
  * Generate a random order using fakerjs with proper required and optional fields
  *
  * Required fields:
@@ -22,18 +53,8 @@ import { api } from './api'
  * not names or other text values.
  */
 export function generateRandomOrder(productIds: string[]): OrderCreateRequest {
-  // Get yesterday's date
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-
-  // Generate effective date between today and last 30 days
-  const effectiveDate = faker.date
-    .between({
-      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-      to: new Date(), // today
-    })
-    .toISOString()
-    .split('T')[0] // Format as YYYY-MM-DD
+  // Generate effective date within last 30 days (higher probability for last 2 days)
+  const effectiveDate = generateRecentDate()
 
   // Required fields
   const order: OrderCreateRequest = {
@@ -138,13 +159,7 @@ export function generateRandomOrder(productIds: string[]): OrderCreateRequest {
   if (faker.datatype.boolean({ probability: 0.2 })) {
     // Set EffectiveDate (if not already set) to a date within the last 30 days
     if (!order.EffectiveDate) {
-      order.EffectiveDate = faker.date
-        .between({
-          from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-          to: new Date(), // today
-        })
-        .toISOString()
-        .split('T')[0]
+      order.EffectiveDate = generateRecentDate()
     }
     // Parse EffectiveDate as a Date
     const effectiveDate = new Date(order.EffectiveDate)
@@ -157,33 +172,15 @@ export function generateRandomOrder(productIds: string[]): OrderCreateRequest {
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.PoDate = faker.date
-      .between({
-        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-        to: new Date(), // today
-      })
-      .toISOString()
-      .split('T')[0]
+    order.PoDate = generateRecentDate()
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.Order_Date__c = faker.date
-      .between({
-        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-        to: new Date(), // today
-      })
-      .toISOString()
-      .split('T')[0]
+    order.Order_Date__c = generateRecentDate()
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.Ship_Date__c = faker.date
-      .between({
-        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-        to: new Date(), // today
-      })
-      .toISOString()
-      .split('T')[0]
+    order.Ship_Date__c = generateRecentDate()
   }
 
   // Set Product_Id__c with guard against empty productIds array

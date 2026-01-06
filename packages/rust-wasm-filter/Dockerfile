@@ -23,7 +23,7 @@ RUN cargo build --target wasm32-wasi --release
 RUN cp target/wasm32-wasi/release/rust_wasm_filter.wasm filter.wasm
 
 # Output stage
-FROM envoyproxy/envoy:v1.33-latest AS runner
+FROM envoyproxy/envoy:v1.36-latest AS runner
 
 COPY --from=builder /build/filter.wasm /etc/envoy/wasm/challenge-authz.wasm
 EXPOSE 8081

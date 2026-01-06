@@ -1,36 +1,47 @@
-import type { HttpMethod } from '@pzero/shared/types'
+import type { HttpMethod } from "@pzero/shared/types";
 import {
   createParser,
   createSearchParamsCache,
   createSerializer,
   type inferParserType,
-  parseAsBoolean,
+  parseAsArrayOf,
   parseAsInteger,
   parseAsString,
   parseAsStringLiteral,
-} from 'nuqs/server'
+} from "nuqs/server";
 // Note: import from 'nuqs/server' to avoid the "use client" directive
-import { SORT_DELIMITER } from '@/lib/delimiters'
+import { ARRAY_DELIMITER, SLIDER_DELIMITER, SORT_DELIMITER } from "@/lib/delimiters";
 
 // https://logs.run/i?sort=latency.desc
 
 export const parseAsSort = createParser({
   parse(queryValue) {
-    const [id, desc] = queryValue.split(SORT_DELIMITER)
-    if (!id && !desc) return null
-    return { id, desc: desc === 'desc' }
+    const [id, desc] = queryValue.split(SORT_DELIMITER);
+    if (!id && !desc) return null;
+    return { id, desc: desc === "desc" };
   },
   serialize(value) {
-    return `${value.id}.${value.desc ? 'desc' : 'asc'}`
+    return `${value.id}.${value.desc ? "desc" : "asc"}`;
   },
-})
+});
 
-const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
+const HTTP_METHODS: HttpMethod[] = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"];
+
+const HTTP_STATUS = ["200", "201", "204", "400", "401", "403", "404", "500", "502", "503", "504"];
 
 export const searchParamsParser = {
   // SIGNOZ FILTERS
   serviceName: parseAsString,
-  httpMethod: parseAsStringLiteral(HTTP_METHODS),
+  http_method: parseAsArrayOf(parseAsStringLiteral(HTTP_METHODS), ARRAY_DELIMITER),
+  http_host: parseAsString,
+  http_url: parseAsString,
+  responseStatusCode: parseAsArrayOf(parseAsStringLiteral(HTTP_STATUS), ARRAY_DELIMITER),
+  durationMs: parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  "timingPhases.dns": parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  "timingPhases.connection": parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  "timingPhases.tls": parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  "timingPhases.ttfb": parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  "timingPhases.transfer": parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
   startTime: parseAsInteger,
   endTime: parseAsInteger,
   // PAGINATION
@@ -41,10 +52,10 @@ export const searchParamsParser = {
   // REQUIRED FOR SELECTION
   traceId: parseAsString,
   spanId: parseAsString,
-}
+};
 
-export const searchParamsCache = createSearchParamsCache(searchParamsParser)
+export const searchParamsCache = createSearchParamsCache(searchParamsParser);
 
-export const searchParamsSerializer = createSerializer(searchParamsParser)
+export const searchParamsSerializer = createSerializer(searchParamsParser);
 
-export type SearchParamsType = inferParserType<typeof searchParamsParser>
+export type SearchParamsType = inferParserType<typeof searchParamsParser>;
