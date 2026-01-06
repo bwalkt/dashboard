@@ -47,8 +47,8 @@ function buildFilterExpression(filters: SigNozFilters): string | undefined {
     conditions.push(`serviceName = '${escapedServiceName}'`);
   }
 
-  if (filters.http_method) {
-    const methods = Array.isArray(filters.http_method) ? filters.http_method : [filters.http_method];
+  if (filters.httpMethod) {
+    const methods = Array.isArray(filters.httpMethod) ? filters.httpMethod : [filters.httpMethod];
     const escapedMethods = methods.map((method) => escapeSingleQuotes(method)).map((method) => `'${method}'`);
     conditions.push(`http_method IN [${escapedMethods.join(", ")}]`);
   } else {
