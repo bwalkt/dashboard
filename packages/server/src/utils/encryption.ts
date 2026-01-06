@@ -9,10 +9,7 @@ export class EncryptionService {
   private secretKey: Buffer;
 
   constructor() {
-    // ENCRYPTION_SECRET is required - no fallback
-    if (!config.ENCRYPTION_SECRET) {
-      throw new Error('ENCRYPTION_SECRET environment variable is required');
-    }
+    // Use ENCRYPTION_SECRET from config (defaults to 'pzero' if not set)
     const secret = config.ENCRYPTION_SECRET;
     
     // Ensure the secret is 32 bytes for AES-256
