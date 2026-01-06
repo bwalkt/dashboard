@@ -10,12 +10,11 @@
  * - Challenge solving and header attachment
  */
 
-import { getUseWasm } from './proxy-config'
 import { challengeManager } from '@pzero/shared/challenge'
+import { getUseWasm } from './proxy-config'
 
 const VALIDATION_HEADER = 'X-Test-Eval'
 const PROXY_TARGET_ID_HEADER = 'x-proxy-target-id'
-
 
 /**
  * Extract and solve challenge from response headers
@@ -24,13 +23,13 @@ const PROXY_TARGET_ID_HEADER = 'x-proxy-target-id'
 async function handleChallengeHeaders(response: Response, userData?: any): Promise<void> {
   // Extract the grid-based challenge
   const challenge = challengeManager.extractChallengeFromHeaders(response)
-  
+
   if (challenge) {
     // Store user grid if provided (from /auth/me response)
     if (userData?.grid) {
       challengeManager.storeUserGrid(userData.grid)
     }
-    
+
     // Try to solve immediately
     const answer = challengeManager.solveChallenge()
     if (answer !== null) {
@@ -167,10 +166,10 @@ function serializeBody(body: any, headers: Record<string, string>): { body: any;
  */
 async function parseResponse<T>(response: Response): Promise<T | undefined> {
   storeValidationHeader(response)
-  
+
   // Parse response first to get potential user data with grid
   let data: T | undefined
-  
+
   // Handle empty responses (e.g., 204 No Content)
   if (response.status === 204 || response.headers.get('content-length') === '0') {
     data = undefined
@@ -184,10 +183,10 @@ async function parseResponse<T>(response: Response): Promise<T | undefined> {
       data = (await response.text()) as T
     }
   }
-  
+
   // Handle challenge headers from response (pass user data for grid extraction)
   await handleChallengeHeaders(response, data)
-  
+
   return data
 }
 
@@ -286,7 +285,7 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
 
   // Add grid-based challenge headers
   const headersWithChallenge = challengeManager.addChallengeHeaders(updatedHeaders)
-  
+
   // For WASM proxy mode fallback (if no grid challenge available)
   if (getUseWasm() && !headersWithChallenge['X-Challenge-Answer']) {
     headersWithChallenge['X-Challenge-Id'] = '1'

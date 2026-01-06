@@ -61,7 +61,7 @@
     },
     "./challenge": {
       "import": "./dist/grid/challenge.js",
-      "types": "./dist/challenge.d.ts"
+      "types": "./dist/grid/challenge.d.ts"
     },
     "./actor": {
       "import": "./dist/actor/index.js",
