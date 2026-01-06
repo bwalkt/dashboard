@@ -111,14 +111,6 @@ export const dataOptions = (search: SearchParamsType) => {
 
       const transformedData = transformTraceData(response.data);
 
-      console.log("Query response:", {
-        rawDataLength: response.data?.length,
-        transformedDataLength: transformedData.length,
-        total: response.total,
-        offset: pagination.offset,
-        sampleItem: transformedData[0],
-      });
-
       // const summaryData = transformTraceDataToSummary(transformedData);
 
       return {

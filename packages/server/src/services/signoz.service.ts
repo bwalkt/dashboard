@@ -252,8 +252,13 @@ function getTimingObject(eventStrings: string[]): TimingPhases {
 
   // Parse strings and convert nanoseconds to milliseconds
   eventStrings.forEach((str) => {
-    const parsed = JSON.parse(str) as { name: EventNames; timeUnixNano: string };
-    events[parsed.name] = Number(parsed.timeUnixNano) / 1_000_000;
+    try {
+      const parsed = JSON.parse(str) as { name: EventNames; timeUnixNano: string };
+      events[parsed.name] = Number(parsed.timeUnixNano) / 1_000_000;
+    } catch (error) {
+      console.error("Failed to parse event string:", str, error);
+      // Skip this event and continue processing other events
+    }
   });
 
   const tlsStart = events["secureConnectionStart"];

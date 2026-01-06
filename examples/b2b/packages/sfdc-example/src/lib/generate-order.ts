@@ -112,16 +112,6 @@ export function generateRandomOrder(productIds: string[]): OrderCreateRequest {
       "a00ak00001Gc1MSAAZ",
       "a00ak00001Gc1MTAAZ",
       "a00ak00001Gc1MUAAZ",
-      "a00ak00001Gc1MLAAZ",
-      "a00ak00001Gc1MMAAZ",
-      "a00ak00001Gc1MNAAZ",
-      "a00ak00001Gc1MOAAZ",
-      "a00ak00001Gc1MPAAZ",
-      "a00ak00001Gc1MQAAZ",
-      "a00ak00001Gc1MRAAZ",
-      "a00ak00001Gc1MSAAZ",
-      "a00ak00001Gc1MTAAZ",
-      "a00ak00001Gc1MUAAZ",
     ]);
   }
 
@@ -168,15 +158,42 @@ export function generateRandomOrder(productIds: string[]): OrderCreateRequest {
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.PoDate = generateRecentDate();
+    // PoDate should be on or before EffectiveDate
+    const effectiveDateObj = new Date(order.EffectiveDate);
+    const fiveDayBefore = new Date(effectiveDateObj.getTime() - 5 * 24 * 60 * 60 * 1000);
+    order.PoDate = faker.date
+      .between({
+        from: fiveDayBefore,
+        to: effectiveDateObj,
+      })
+      .toISOString()
+      .split("T")[0];
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.Order_Date__c = generateRecentDate();
+    // Order_Date__c should be on or after EffectiveDate
+    const effectiveDateObj = new Date(order.EffectiveDate);
+    const fiveDaysAfter = new Date(effectiveDateObj.getTime() + 5 * 24 * 60 * 60 * 1000);
+    order.Order_Date__c = faker.date
+      .between({
+        from: effectiveDateObj,
+        to: fiveDaysAfter,
+      })
+      .toISOString()
+      .split("T")[0];
   }
 
   if (faker.datatype.boolean({ probability: 0.1 })) {
-    order.Ship_Date__c = generateRecentDate();
+    // Ship_Date__c should be after Order_Date__c if it exists, otherwise after EffectiveDate
+    const baseDate = order.Order_Date__c ? new Date(order.Order_Date__c) : new Date(order.EffectiveDate);
+    const twoDaysAfter = new Date(baseDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+    order.Ship_Date__c = faker.date
+      .between({
+        from: baseDate,
+        to: twoDaysAfter,
+      })
+      .toISOString()
+      .split("T")[0];
   }
 
   // Set Product_Id__c with guard against empty productIds array
