@@ -142,10 +142,7 @@ export function getHeaderValue(item: Record<string, any>, key: string): string |
 
 export const isCorrectAnswer = (item: Record<string, any>, challengeAnswer: string | undefined): boolean => {
   const value = getHeaderValue(item, 'req_headers.x-correct-answer')
-  if (!!!value) {
-    return false
-  }
-  return value === challengeAnswer
+  return value !== undefined && value === challengeAnswer
 }
 
 export const extractHeaders = (item: any, keys: string[], prefix: string): Record<string, string> => {

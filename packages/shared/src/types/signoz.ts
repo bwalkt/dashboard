@@ -128,7 +128,7 @@ export interface SigNozQueryPayload {
  */
 export interface SigNozFilters {
   serviceName?: string
-  http_method?: HttpMethod | HttpMethod[] // Can be single value or array for checkbox filters
+  httpMethod?: HttpMethod | HttpMethod[] // Can be single value or array for checkbox filters
   http_host?: string
   http_url?: string
   responseStatusCode?: string | number | (string | number)[] // Can be single value or array for checkbox filters
