@@ -256,7 +256,16 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           used: false,
           c_at: new Date().toISOString()
         };
-        console.log(`[/auth/me] Storing challenge in Redis: ${challengeKey}`, challengePayload);
+        
+        // Enhanced logging for challenge debugging
+        console.log(`[/auth/me] Challenge Generation:`, {
+          challengeId,
+          question: challengeData.function.expression,
+          params: { x: challengeData.parameters.x, y: challengeData.parameters.y },
+          expectedAnswer: challengeData.result.value,
+          complexity,
+          userId: user.id
+        });
 
         await redis.set(challengeKey, JSON.stringify(challengePayload));
         return reply
