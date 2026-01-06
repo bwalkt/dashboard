@@ -1,7 +1,7 @@
 import { db } from "../config/database.js";
 import { redis } from "../config/redis.js";
 
-const PROXY_TARGETS_CACHE_KEY = "proxy_targets:all";
+export const PROXY_TARGETS_CACHE_KEY = "proxy_targets:all";
 
 export interface ProxyTarget {
   id: string;
@@ -71,26 +71,10 @@ export async function refreshProxyTargetsCache(): Promise<ProxyTarget[]> {
  */
 export async function getProxyTargetsFromCache(): Promise<ProxyTarget[]> {
   try {
-    // Check if cache exists
-    const cacheExists = await redis.exists(PROXY_TARGETS_CACHE_KEY);
-    
-    // If cache doesn't exist, refresh from database
-    if (!cacheExists) {
-      console.log('Proxy targets cache missing, refreshing from database...');
-      try {
-        return await refreshProxyTargetsCache();
-      } catch (error) {
-        console.error('Failed to refresh proxy targets cache:', error);
-        throw new ProxyTargetsCacheUnavailableError(
-          'Failed to refresh proxy targets cache from database'
-        );
-      }
-    }
-    
     const cachedData = await redis.get(PROXY_TARGETS_CACHE_KEY);
     if (!cachedData) {
-      // Cache exists but data is missing - try to refresh from database
-      console.log('Proxy targets cache data missing, refreshing from database...');
+      // Cache missing or empty - refresh from database
+      console.log('Proxy targets cache missing, refreshing from database...');
       try {
         return await refreshProxyTargetsCache();
       } catch (error) {

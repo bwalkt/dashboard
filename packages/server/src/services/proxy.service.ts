@@ -4,34 +4,25 @@ import {
   ProxyTargetsCacheUnavailableError,
 } from "./proxy-targets-cache.service.js";
 
-const PROXY_TARGET_ID_HEADER = 'x-proxy-target';
+const PROXY_TARGET_HEADER = 'x-proxy-target';
 
 async function getProxyTarget(url: string) {
-  try {
-    const target = await getProxyTargetByUrl(url);
-    if (!target) {
-      // Genuine "not found" case - target URL doesn't exist
-      throw new Error(`Proxy target with url ${url} not found`);
-    }
-    return target;
-  } catch (error) {
-    // Re-throw ProxyTargetsCacheUnavailableError to distinguish infrastructure failures
-    if (error instanceof ProxyTargetsCacheUnavailableError) {
-      throw error;
-    }
-    // Re-throw other errors (including "not found" errors)
-    throw error;
+  const target = await getProxyTargetByUrl(url);
+  if (!target) {
+    // Genuine "not found" case - target URL doesn't exist
+    throw new Error(`Proxy target with url ${url} not found`);
   }
+  return target;
 }
 
 export async function constructProxyURL(request: FastifyRequest): Promise<string> {
-  const targetUrl = request.headers[PROXY_TARGET_ID_HEADER];
+  const targetUrl = request.headers[PROXY_TARGET_HEADER];
   if (!targetUrl) {
-    throw new Error(`Proxy target is required in ${PROXY_TARGET_ID_HEADER} header`);
+    throw new Error(`Proxy target is required in ${PROXY_TARGET_HEADER} header`);
   }
 
   if (typeof targetUrl !== 'string') {
-    throw new Error(`Proxy target must be a string in ${PROXY_TARGET_ID_HEADER} header`);
+    throw new Error(`Proxy target must be a string in ${PROXY_TARGET_HEADER} header`);
   }
 
   const target = await getProxyTarget(targetUrl);

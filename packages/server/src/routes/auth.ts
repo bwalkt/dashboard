@@ -10,7 +10,7 @@ import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
-import { refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
+import { PROXY_TARGETS_CACHE_KEY, refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
 import { encryptionService } from '../utils/encryption.js'
 
@@ -248,8 +248,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         console.log("Fetched user info for:", user);
         
         // Check and populate proxy_targets cache if not exists
-        const proxyTargetsCacheKey = "proxy_targets:all";
-        const cacheExists = await redis.exists(proxyTargetsCacheKey);
+        const cacheExists = await redis.exists(PROXY_TARGETS_CACHE_KEY);
         if (!cacheExists) {
           console.log("Proxy targets cache not found, populating from database...");
           try {
