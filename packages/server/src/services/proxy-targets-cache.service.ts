@@ -2,7 +2,6 @@ import { db } from "../config/database.js";
 import { redis } from "../config/redis.js";
 
 const PROXY_TARGETS_CACHE_KEY = "proxy_targets:all";
-const CACHE_TTL_SECONDS = 3600; // 1 hour
 
 export interface ProxyTarget {
   id: string;
@@ -47,15 +46,14 @@ export async function refreshProxyTargetsCache(): Promise<ProxyTarget[]> {
       port: row.port,
     }));
 
-    // Cache in Redis with 1 hour TTL
+    // Cache in Redis without TTL
     await redis.set(
       PROXY_TARGETS_CACHE_KEY,
-      JSON.stringify(proxyTargets),
-      CACHE_TTL_SECONDS,
+      JSON.stringify(proxyTargets)
     );
 
     console.log(
-      `✅ Cached ${proxyTargets.length} proxy target(s) in Redis (TTL: ${CACHE_TTL_SECONDS}s)`,
+      `✅ Cached ${proxyTargets.length} proxy target(s) in Redis (no TTL)`,
     );
 
     return proxyTargets;
@@ -73,13 +71,12 @@ export async function refreshProxyTargetsCache(): Promise<ProxyTarget[]> {
  */
 export async function getProxyTargetsFromCache(): Promise<ProxyTarget[]> {
   try {
-    // Check if cache exists and is not expired
+    // Check if cache exists
     const cacheExists = await redis.exists(PROXY_TARGETS_CACHE_KEY);
-    const ttl = await redis.ttl(PROXY_TARGETS_CACHE_KEY);
     
-    // If cache doesn't exist or is expired (TTL <= 0), refresh from database
-    if (!cacheExists || ttl <= 0) {
-      console.log('Proxy targets cache expired or missing, refreshing from database...');
+    // If cache doesn't exist, refresh from database
+    if (!cacheExists) {
+      console.log('Proxy targets cache missing, refreshing from database...');
       try {
         return await refreshProxyTargetsCache();
       } catch (error) {
