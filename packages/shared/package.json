@@ -59,6 +59,10 @@
       "import": "./dist/grid/index.js",
       "types": "./dist/grid/index.d.ts"
     },
+    "./challenge": {
+      "import": "./dist/grid/challenge.js",
+      "types": "./dist/challenge.d.ts"
+    },
     "./actor": {
       "import": "./dist/actor/index.js",
       "types": "./dist/actor/index.d.ts"
