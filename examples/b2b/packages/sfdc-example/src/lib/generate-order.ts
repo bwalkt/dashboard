@@ -10,24 +10,24 @@ import { api } from "./api";
  */
 function generateRecentDate(): string {
   const now = Date.now();
-  const twoDaysAgo = now - 2 * 24 * 60 * 60 * 1000;
+  const oneDayAgo = now - 1 * 24 * 60 * 60 * 1000;
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
-  // 70% chance of being in last 2 days, 30% chance of being in days 3-30
-  const useRecentDays = faker.datatype.boolean({ probability: 0.7 });
+  // 80% chance of being in last 2 days, 20% chance of being in days 3-30
+  const useRecentDays = faker.datatype.boolean({ probability: 0.8 });
 
   let date: Date;
   if (useRecentDays) {
     // Last 2 days
     date = faker.date.between({
-      from: new Date(twoDaysAgo),
+      from: new Date(oneDayAgo),
       to: new Date(now),
     });
   } else {
     // Days 3-30
     date = faker.date.between({
       from: new Date(thirtyDaysAgo),
-      to: new Date(twoDaysAgo),
+      to: new Date(oneDayAgo),
     });
   }
 
