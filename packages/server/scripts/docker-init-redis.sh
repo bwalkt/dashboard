@@ -22,7 +22,9 @@ redis_cli() {
   fi
 }
 
-# Extract and set REDIS_PASSWORD if needed
+# Extract and set Redis connection details from REDIS_URL when provided.
+# This is critical inside Docker networks where "localhost" is wrong; we need the
+# service hostname (e.g., dragonfly) and port so redis-cli can reach Redis.
 if [ -n "$REDIS_URL" ]; then
   # Extract password from redis://:password@host:port or redis://username:password@host:port
   # This expects URL-encoded passwords (e.g., %40 for @, %3A for :, %20 for space)
@@ -37,6 +39,18 @@ if [ -n "$REDIS_URL" ]; then
       exit 1
     fi
     export REDIS_PASSWORD
+  fi
+
+  # Derive host and port from the URL when not explicitly set.
+  if [ -z "$REDIS_HOST" ] || [ -z "$REDIS_PORT" ]; then
+    REDIS_PARSED=$(node -e "try{const u=new URL(process.argv[1]);console.log((u.hostname||'')+' '+(u.port||'6379'));}catch(e){process.exit(1);}" "$REDIS_URL")
+    if [ $? -ne 0 ] || [ -z "$REDIS_PARSED" ]; then
+      echo "ERROR: Failed to parse Redis host/port from REDIS_URL" >&2
+      exit 1
+    fi
+    REDIS_HOST=${REDIS_HOST:-$(echo "$REDIS_PARSED" | awk '{print $1}')}
+    REDIS_PORT=${REDIS_PORT:-$(echo "$REDIS_PARSED" | awk '{print $2}')}
+    export REDIS_HOST REDIS_PORT
   fi
 elif [ -n "$REDIS_PASSWORD" ]; then
   # REDIS_PASSWORD is already set, just export it
