@@ -55,9 +55,6 @@ struct FilterConfig {
     /// The port is determined by the Envoy cluster configuration.
     /// Configure via proxy_targets_authority=<hostname> in filter config.
     proxy_targets_authority: String,
-    /// Salesforce server target address (e.g., "pzero-sfdc-server:3000")
-    /// Configure via salesforce_target=<address> in filter config.
-    salesforce_target: String,
     /// Allowed CORS origins (comma-separated list)
     /// Configure via allowed_origins=<origin1,origin2> in filter config.
     /// If empty, reflects the origin header (current behavior).
@@ -72,7 +69,6 @@ impl Default for FilterConfig {
             centrifugo_secret: String::new(),
             redis_response_buffer_size: 4096, // Default 4KB buffer for Redis responses
             proxy_targets_authority: "pzero-server".to_string(), // Default authority (port from cluster config)
-            salesforce_target: "pzero-sfdc-server:3000".to_string(), // Default Salesforce target
             allowed_origins: Vec::new(), // Empty = allow all origins (backward compatible)
         }
     }
@@ -262,7 +258,6 @@ impl RootContext for ChallengeAuthzRoot {
                             config.redis_response_buffer_size = value.parse().unwrap_or(4096);
                         }
                         "proxy_targets_authority" => config.proxy_targets_authority = value.to_string(),
-                        "salesforce_target" => config.salesforce_target = value.to_string(),
                         "allowed_origins" => {
                             config.allowed_origins = value.split(',')
                                 .map(|s| s.trim().to_string())
@@ -352,23 +347,14 @@ impl ChallengeAuthzHttp {
                         // Extract path components to determine routing
                         let path = self.get_http_request_header(":path").unwrap_or_default();
                         
-                        // Check if this is a Salesforce route
-                        if path.starts_with("/salesforce/") || path.starts_with("/salesforce") {
-                            // Transform to gateway path
-                            let new_path = format!("/gateway{}", path);
-                            self.set_http_request_header(":path", Some(&new_path));
-                            
-                            // Add gateway target header for Salesforce (using configurable target)
-                            self.set_http_request_header("x-gateway-target", Some(&self.config.salesforce_target));
-                            
-                            info!("[Rust WASM Filter] Routing to Salesforce ({}): {} -> {}", 
-                                  self.config.salesforce_target, path, new_path);
-                        } else if let Some(proxy_target_id) = self.get_http_request_header("x-proxy-target-id") {
+                        // Always check for proxy target first
+                        if let Some(proxy_target) = self.get_http_request_header("x-proxy-target") {
                             // Check for proxy target header and modify request to route directly
-                            info!("[Rust WASM Filter] Request has proxy target ID: {}", proxy_target_id);
+                            info!("[Rust WASM Filter] Request has proxy target: {}", proxy_target);
                             
-                            // Look up the proxy target from our cache
-                            if let Some(target) = self.proxy_targets.get(&proxy_target_id) {
+                            // Look up the proxy target from our cache by URL
+                            let target_entry = self.proxy_targets.values().find(|t| t.url == proxy_target);
+                            if let Some(target) = target_entry {
                                 // Format target address with optional port
                                 let target_address = match target.port {
                                     Some(port) => format!("{}:{}", target.url, port),
@@ -385,11 +371,18 @@ impl ChallengeAuthzHttp {
                                 
                                 info!("[Rust WASM Filter] Modified path to {} for gateway routing to {}", new_path, target_address);
                             } else {
-                                warn!("[Rust WASM Filter] Proxy target not found in cache: {}", proxy_target_id);
-                                // Use gateway routing without specific target
-                                let new_path = format!("/gateway{}", path);
-                                self.set_http_request_header(":path", Some(&new_path));
+                                warn!("[Rust WASM Filter] Proxy target not found in cache: {}", proxy_target);
+                                // Forward to backend proxy endpoint to handle routing
+                                // The backend will look up the target and handle the proxying
+                                let proxy_path = format!("/proxy{}", path);
+                                self.set_http_request_header(":path", Some(&proxy_path));
+                                // Pass the proxy-target through for the backend to handle
+                                self.set_http_request_header("x-proxy-target", Some(&proxy_target));
+                                info!("[Rust WASM Filter] Forwarding to backend proxy handler: {} with target: {}", proxy_path, proxy_target);
                             }
+                        } else {
+                            // No proxy target specified, let request continue as-is
+                            info!("[Rust WASM Filter] No proxy target specified, continuing with original path: {}", path);
                         }
                         
                         self.resume_http_request();
@@ -630,7 +623,7 @@ impl HttpContext for ChallengeAuthzHttp {
                     vec![
                         ("access-control-allow-origin", &allowed_origin),
                         ("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH"),
-                        ("access-control-allow-headers", "content-type,x-challenge-id,x-challenge-answer,authorization"),
+                        ("access-control-allow-headers", "content-type,x-challenge-id,x-challenge-answer,authorization,x-proxy-target"),
                         ("access-control-allow-credentials", "true"),
                     ],
                     None,

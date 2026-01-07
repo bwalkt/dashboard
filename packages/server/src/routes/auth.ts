@@ -10,6 +10,7 @@ import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
+import { PROXY_TARGETS_CACHE_KEY, refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
 import { encryptionService } from '../utils/encryption.js'
 
@@ -245,6 +246,20 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
         console.log("Fetched user info for:", user);
+        
+        // Check and populate proxy_targets cache if not exists
+        const cacheExists = await redis.exists(PROXY_TARGETS_CACHE_KEY);
+        if (!cacheExists) {
+          console.log("Proxy targets cache not found, populating from database...");
+          try {
+            await refreshProxyTargetsCache();
+            console.log("Proxy targets cache populated successfully");
+          } catch (error) {
+            console.error("Failed to populate proxy targets cache:", error);
+            // Continue with auth/me flow even if cache population fails
+          }
+        }
+        
         const grid = encryptionService.decrypt(user.data.grid);
         const challengeId =  uuid();
         const complexity = randomInt(1, 4);

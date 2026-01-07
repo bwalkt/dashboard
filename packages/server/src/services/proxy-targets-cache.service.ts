@@ -1,8 +1,7 @@
 import { db } from "../config/database.js";
 import { redis } from "../config/redis.js";
 
-const PROXY_TARGETS_CACHE_KEY = "proxy_targets:all";
-const CACHE_TTL_SECONDS = 3600; // 1 hour
+export const PROXY_TARGETS_CACHE_KEY = "proxy_targets:all";
 
 export interface ProxyTarget {
   id: string;
@@ -47,15 +46,20 @@ export async function refreshProxyTargetsCache(): Promise<ProxyTarget[]> {
       port: row.port,
     }));
 
-    // Cache in Redis with 1 hour TTL
+    // Cache in Redis without TTL
+    // TODO: Cache invalidation strategy:
+    // - API routes (create/update/delete) trigger refreshProxyTargetsCache()
+    // - Cache auto-refreshes on cache miss
+    // WARNING: Direct database updates (migrations, SQL scripts, admin tools) won't
+    // invalidate cache automatically. Ensure such operations explicitly call
+    // refreshProxyTargetsCache() or restart the server to avoid serving stale data.
     await redis.set(
       PROXY_TARGETS_CACHE_KEY,
-      JSON.stringify(proxyTargets),
-      CACHE_TTL_SECONDS,
+      JSON.stringify(proxyTargets)
     );
 
     console.log(
-      `✅ Cached ${proxyTargets.length} proxy target(s) in Redis (TTL: ${CACHE_TTL_SECONDS}s)`,
+      `✅ Cached ${proxyTargets.length} proxy target(s) in Redis (no TTL)`,
     );
 
     return proxyTargets;
@@ -63,6 +67,14 @@ export async function refreshProxyTargetsCache(): Promise<ProxyTarget[]> {
     console.error("Error refreshing proxy targets cache:", error);
     throw error;
   }
+}
+
+export async function getProxyTargetBy<K extends keyof ProxyTarget>(
+  field: K,
+  value: ProxyTarget[K],
+): Promise<ProxyTarget | null> {
+  const targets = await getProxyTargetsFromCache();
+  return targets.find((target) => target[field] === value) || null;
 }
 
 /**
@@ -73,27 +85,10 @@ export async function refreshProxyTargetsCache(): Promise<ProxyTarget[]> {
  */
 export async function getProxyTargetsFromCache(): Promise<ProxyTarget[]> {
   try {
-    // Check if cache exists and is not expired
-    const cacheExists = await redis.exists(PROXY_TARGETS_CACHE_KEY);
-    const ttl = await redis.ttl(PROXY_TARGETS_CACHE_KEY);
-    
-    // If cache doesn't exist or is expired (TTL <= 0), refresh from database
-    if (!cacheExists || ttl <= 0) {
-      console.log('Proxy targets cache expired or missing, refreshing from database...');
-      try {
-        return await refreshProxyTargetsCache();
-      } catch (error) {
-        console.error('Failed to refresh proxy targets cache:', error);
-        throw new ProxyTargetsCacheUnavailableError(
-          'Failed to refresh proxy targets cache from database'
-        );
-      }
-    }
-    
     const cachedData = await redis.get(PROXY_TARGETS_CACHE_KEY);
     if (!cachedData) {
-      // Cache exists but data is missing - try to refresh from database
-      console.log('Proxy targets cache data missing, refreshing from database...');
+      // Cache missing or empty - refresh from database
+      console.log('Proxy targets cache missing, refreshing from database...');
       try {
         return await refreshProxyTargetsCache();
       } catch (error) {
@@ -129,11 +124,23 @@ export async function getProxyTargetById(
   id: string,
 ): Promise<ProxyTarget | null> {
   // Use getProxyTargetsFromCache which handles cache expiration automatically
+  // This will throw ProxyTargetsCacheUnavailableError on cache/DB failuresll;
+  return getProxyTargetBy('id', id);
+}
+
+/**
+ * Get proxy target by URL from cache
+ * If cache is expired or missing, fetches from database and refreshes cache
+ * @param url Proxy target URL
+ * @returns Proxy target or null if not found
+ * @throws ProxyTargetsCacheUnavailableError if cache or database is unavailable
+ */
+export async function getProxyTargetByUrl(
+  url: string,
+): Promise<ProxyTarget | null> {
+  // Use getProxyTargetsFromCache which handles cache expiration automatically
   // This will throw ProxyTargetsCacheUnavailableError on cache/DB failures
-  const targets = await getProxyTargetsFromCache();
-  
-  // If targets array is empty or target not found, return null (genuine "not found")
-  return targets.find((target) => target.id === id) || null;
+  return getProxyTargetBy('url', url);
 }
 
 /**

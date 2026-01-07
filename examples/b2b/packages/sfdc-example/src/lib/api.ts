@@ -13,7 +13,7 @@
 import { getUseWasm } from './proxy-config'
 
 const VALIDATION_HEADER = 'X-Test-Eval'
-const PROXY_TARGET_ID_HEADER = 'x-proxy-target-id'
+const PROXY_TARGET_HEADER = 'x-proxy-target'
 const CHALLENGE_ID_HEADER = 'x-challenge-id'
 const CHALLENGE_HEADER = 'x-challenge'
 const CHALLENGE_ANSWER_HEADER = 'x-challenge-answer'
@@ -172,7 +172,7 @@ function getBackendUrl(): string {
 function getDefaultHeaders(): HeadersInit {
   return getUseWasm()
     ? {
-        [PROXY_TARGET_ID_HEADER]: import.meta.env.VITE_PROXY_TARGET,
+        [PROXY_TARGET_HEADER]: import.meta.env.VITE_PROXY_TARGET,
       }
     : {}
 }
