@@ -9,97 +9,28 @@
  * - Built-in retry logic for authentication failures
  * - Challenge solving and header attachment
  */
-
+import { challengeManager } from '@pzero/shared/challenge'
+import {
+  ApiError,
+  ApiRequestOptions,
+  ApiResponse,
+  CHALLENGE_ANSWER_HEADER,
+  CHALLENGE_HEADER,
+  CHALLENGE_ID_HEADER,
+  extractErrorMessage,
+  headersToObject,
+  PROXY_TARGET_HEADER,
+  serializeBody,
+  VALIDATION_HEADER,
+} from '@pzero/shared/http'
+import { de } from 'date-fns/locale'
 import { getUseWasm } from './proxy-config'
-
-const VALIDATION_HEADER = 'X-Test-Eval'
-const PROXY_TARGET_HEADER = 'x-proxy-target'
-const CHALLENGE_ID_HEADER = 'x-challenge-id'
-const CHALLENGE_HEADER = 'x-challenge'
-const CHALLENGE_ANSWER_HEADER = 'x-challenge-answer'
-
-// LocalStorage keys
-const CHALLENGE_ID_STORAGE_KEY = 'challenge_id'
-const CHALLENGE_ANSWER_STORAGE_KEY = 'challenge_answer'
 
 /**
  * Get the challenge secret from environment variables
  * This should match the CHALLENGE_SECRET on the server
  * @throws Error if VITE_CHALLENGE_SECRET is not set in non-development environments
  */
-function getChallengeSecret(): string {
-  const secret = import.meta.env.VITE_CHALLENGE_SECRET
-
-  if (!secret) {
-    // In development, allow missing secret with a warning
-    if (import.meta.env.DEV || import.meta.env.MODE === 'development') {
-      console.warn(
-        '⚠️ VITE_CHALLENGE_SECRET is not set. Using default secret for development only. ' +
-          'This should be set in production environments.',
-      )
-      return 'default-secret-change-in-production'
-    }
-
-    // In non-development environments, fail fast
-    throw new Error(
-      'VITE_CHALLENGE_SECRET is required but not set. ' +
-        'Please set VITE_CHALLENGE_SECRET in your environment variables.',
-    )
-  }
-
-  return secret
-}
-
-/**
- * Validate that VITE_CHALLENGE_SECRET is set at startup
- * This should be called before any API requests are made
- * @throws Error if VITE_CHALLENGE_SECRET is not set in non-development environments
- */
-export function validateChallengeSecret(): void {
-  // Call getChallengeSecret() which will throw if missing in non-dev environments
-  getChallengeSecret()
-}
-
-/**
- * Solve the challenge by computing SHA256(challengeId + secret)
- * @param challengeId - The challenge ID from the server
- * @returns The computed challenge answer (SHA256 hash)
- */
-async function solveChallenge(challengeId: string): Promise<string> {
-  const secret = getChallengeSecret()
-  const message = challengeId + secret
-
-  // Use Web Crypto API for SHA256 hashing
-  const encoder = new TextEncoder()
-  const data = encoder.encode(message)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-
-  return hashHex
-}
-
-/**
- * Store challenge data in localStorage
- */
-function storeChallenge(challengeId: string, challengeAnswer: string): void {
-  localStorage.setItem(CHALLENGE_ID_STORAGE_KEY, challengeId)
-  localStorage.setItem(CHALLENGE_ANSWER_STORAGE_KEY, challengeAnswer)
-}
-
-/**
- * Get stored challenge data from localStorage
- */
-function getStoredChallenge(): { challengeId: string; challengeAnswer: string } | null {
-  const challengeId = localStorage.getItem(CHALLENGE_ID_STORAGE_KEY)
-  const challengeAnswer = localStorage.getItem(CHALLENGE_ANSWER_STORAGE_KEY)
-
-  if (challengeId && challengeAnswer) {
-    return { challengeId, challengeAnswer }
-  }
-
-  return null
-}
 
 /**
  * Extract and solve challenge from response headers
@@ -108,42 +39,18 @@ function getStoredChallenge(): { challengeId: string; challengeAnswer: string } 
 async function handleChallengeHeaders(response: Response): Promise<void> {
   const challengeId = response.headers.get(CHALLENGE_ID_HEADER)
   const challenge = response.headers.get(CHALLENGE_HEADER)
-
+  debugger
   if (challengeId && challenge) {
+    debugger
     try {
       // Solve the challenge
-      const challengeAnswer = await solveChallenge(challengeId)
       // Store in localStorage
-      storeChallenge(challengeId, challengeAnswer)
-      console.log('Challenge solved and stored:', { challengeId, challenge })
+      challengeManager.storeChallenge({ id: challengeId, question: challenge, params: { x: '0,0', y: '0,0' } })
+      const challengeAnswer = challengeManager.solveChallenge(challengeId)
+      console.log('Challenge solved and stored:', { challengeId, challenge, challengeAnswer })
     } catch (error) {
       console.error('Failed to solve challenge:', error)
     }
-  }
-}
-
-export interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
-  body?: any
-  baseUrl?: string
-  skipRefresh?: boolean // Skip automatic token refresh for this request
-}
-
-export interface ApiResponse<T = any> {
-  success: boolean
-  data?: T
-  message?: string
-  error?: string
-}
-
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-    public statusText: string,
-    public response?: Response,
-  ) {
-    super(message)
-    this.name = 'ApiError'
   }
 }
 
@@ -191,81 +98,24 @@ let isRefreshing = false
 let refreshPromise: Promise<void> | null = null
 
 /**
- * Extract error message from a response, falling back to status text
- */
-async function extractErrorMessage(response: Response): Promise<string> {
-  let errorMessage = `Request failed: ${response.status} ${response.statusText}`
-  try {
-    const errorData = await response.json()
-    errorMessage = errorData.message || errorData.error || errorMessage
-  } catch {
-    // If we can't parse the error response, use the default message
-  }
-  return errorMessage
-}
-
-/**
- * Convert HeadersInit to a plain object
- */
-function headersToObject(headers: HeadersInit): Record<string, string> {
-  if (Array.isArray(headers)) {
-    return Object.fromEntries(headers)
-  }
-  if (headers instanceof Headers) {
-    return Object.fromEntries(headers.entries())
-  }
-  return (headers as Record<string, string>) || {}
-}
-
-/**
- * Serialize request body based on its type
- */
-function serializeBody(body: any, headers: Record<string, string>): { body: any; headers: Record<string, string> } {
-  if (body === undefined) {
-    const updatedHeaders = { ...headers }
-    delete updatedHeaders['Content-Type']
-    return { body: undefined, headers: updatedHeaders }
-  }
-
-  const updatedHeaders = { ...headers }
-
-  if (body instanceof FormData) {
-    // Don't set Content-Type for FormData, let the browser set it with boundary
-    delete updatedHeaders['Content-Type']
-    return { body, headers: updatedHeaders }
-  }
-
-  if (typeof body === 'object') {
-    // Add Content-Type header for JSON body
-    updatedHeaders['Content-Type'] = 'application/json'
-    // JSON.stringify for direct requests
-    return { body: JSON.stringify(body), headers: updatedHeaders }
-  }
-
-  return { body, headers: updatedHeaders }
-}
-
-/**
  * Parse an API response
  */
-async function parseResponse<T>(response: Response): Promise<T | undefined> {
+async function parseResponse<T>(response: Response): Promise<T> {
   storeValidationHeader(response)
   // Handle challenge headers from response
   await handleChallengeHeaders(response)
 
   // Handle empty responses (e.g., 204 No Content)
   if (response.status === 204 || response.headers.get('content-length') === '0') {
-    return undefined
+    return undefined as T
   }
-
-  // Parse JSON response
   const contentType = response.headers.get('content-type')
-  if (contentType && contentType.includes('application/json')) {
-    return await response.json()
-  }
-
-  // Return text response for non-JSON content
-  return (await response.text()) as T
+  const data = (await (contentType && contentType.includes('application/json')
+    ? response.json()
+    : response.text())) as T
+  debugger
+  challengeManager.handleResponse(response)
+  return data
 }
 
 /**
@@ -362,14 +212,25 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
   }
 
   // Attach challenge headers if available
-  const storedChallenge = getStoredChallenge()
-  if (storedChallenge) {
-    updatedHeaders[CHALLENGE_ID_HEADER] = storedChallenge.challengeId
-    updatedHeaders[CHALLENGE_ANSWER_HEADER] = storedChallenge.challengeAnswer
-  } else if (getUseWasm()) {
+  if (getUseWasm()) {
+    const challengeId = headersObj ? headersObj[CHALLENGE_ID_HEADER] : undefined
+    const storedChallenge = challengeManager.getChallenge(challengeId)
+    if (storedChallenge && storedChallenge.answer !== undefined) {
+      updatedHeaders[CHALLENGE_ID_HEADER] = storedChallenge.id
+      updatedHeaders[CHALLENGE_ANSWER_HEADER] = storedChallenge.answer as string
+      console.log('Attaching stored challenge headers:', {
+        [CHALLENGE_ID_HEADER]: storedChallenge.id,
+        [CHALLENGE_ANSWER_HEADER]: storedChallenge.answer,
+      })
+    }
+  } else {
     // Hardcoded challenge for testing WASM proxy mode
     updatedHeaders[CHALLENGE_ID_HEADER] = '1'
     updatedHeaders[CHALLENGE_ANSWER_HEADER] = '1'
+    console.log('Attaching hardcoded challenge headers for WASM proxy mode:', {
+      [CHALLENGE_ID_HEADER]: '1',
+      [CHALLENGE_ANSWER_HEADER]: '1',
+    })
   }
 
   // Prepare the request configuration

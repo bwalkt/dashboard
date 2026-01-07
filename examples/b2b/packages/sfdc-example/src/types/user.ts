@@ -13,7 +13,7 @@ export interface User {
   c_at: string
   u_at?: string
   data: {
-    grid?: number
+    grid?: number[][]
     meta: {
       c_at: string
     }

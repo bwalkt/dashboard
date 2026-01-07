@@ -2,9 +2,11 @@ import { randomInt } from "node:crypto";
 
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail, type UserResponse } from "@pzero/shared";
+import { challengeManager } from '@pzero/shared/challenge'
 import { genFunctionAsJson, genGrid } from "@pzero/shared/grid";
 import { uuid } from "@pzero/shared/uuid";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import response from "twilio/lib/http/response.js";
 import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -245,8 +247,10 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
             message: `User Account is ${user.status ?? "INACTIVE"}`,
           } as ErrorResponse);
         }
-        console.log("Fetched user info for:", user);
-        
+        const grid = encryptionService.decrypt(user.data.grid) as number[][];
+        challengeManager.storeUserGrid(grid);
+        console.log("Fetched user info for:", {...user, ...grid});
+        const challengeData = genFunctionAsJson(grid)
         // Check and populate proxy_targets cache if not exists
         const cacheExists = await redis.exists(PROXY_TARGETS_CACHE_KEY);
         if (!cacheExists) {
@@ -260,15 +264,13 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           }
         }
         
-        const grid = encryptionService.decrypt(user.data.grid);
         const challengeId =  uuid();
-        const complexity = randomInt(1, 4);
-        const challengeData = genFunctionAsJson(grid, complexity);
          const challengeKey = `challenge:${challengeId}`;
         const challengePayload = {
           answer: challengeData.result.value,
           uid: user.id,
           used: false,
+          id: challengeId,
           c_at: new Date().toISOString()
         };
         console.log(`[/auth/me] Storing challenge in Redis: ${challengeKey}`, challengePayload);
@@ -283,12 +285,13 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
             grid: grid // Send the decrypted grid
           }
         };
-        
-        return reply
+        const replyObj = reply
           .header("X-Challenge-Id", challengeId)
           .header("X-Challenge-Question", challengeData.function.expression)
           .header("X-Challenge-Params", `x=${challengeData.parameters.x},y=${challengeData.parameters.y}`)
-          .send({ user: userWithDecryptedGrid });
+        console.log(`[/auth/me] Sending challenge headers: X-Challenge-Id=${challengeId}, X-Challenge-Question=${challengeData.function.expression}, X-Challenge-Params=x=${challengeData.parameters.x},y=${challengeData.parameters.y}`);
+        return replyObj.send({ user: userWithDecryptedGrid });
+    
       } catch (error) {
         console.error("Get user info error:", error);
         return reply.status(500).send({

@@ -1,7 +1,8 @@
 import { challengeManager } from '@pzero/shared/challenge'
+import { ApiError } from '@pzero/shared/http'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { ApiError, api } from '@/lib/api'
+import { api } from '@/lib/api'
 import { AUTH_CACHE_TIME_MS, AUTH_STALE_TIME_MS } from '@/lib/constants'
 import { useAuthStore } from '@/stores/auth-store'
 import { User } from '@/types'
@@ -36,7 +37,8 @@ export function useUser() {
       console.log('user /auth/me response:', user)
       debugger
       if (user?.data.grid) {
-        console.log('[API] Storing user grid from /auth/me response')
+        console.log('[API] Storing user grid from /auth/me response', user.data.grid)
+        debugger
         challengeManager.storeUserGrid(user.data.grid)
       }
       return user

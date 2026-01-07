@@ -2,17 +2,16 @@
 import './tracing'
 
 // Validate challenge secret before any API requests are made
-import { validateChallengeSecret } from './lib/api'
-// Initialize proxy and WASM settings from localStorage before any API requests are made
-import { initializeProxySettings } from './lib/proxy-config'
-
-initializeProxySettings()
-validateChallengeSecret()
-
+import { getChallengeSecret } from '@pzero/shared/http'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import ErrorBoundary from './ErrorBoundary'
+// Initialize proxy and WASM settings from localStorage before any API requests are made
+import { initializeProxySettings } from './lib/proxy-config'
+
+initializeProxySettings()
+getChallengeSecret()
 
 // Environment detection removed - app now works universally
 

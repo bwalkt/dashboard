@@ -2,6 +2,12 @@
 
 import { HttpMethod } from '../types'
 
+export const VALIDATION_HEADER = 'X-Test-Eval'
+export const PROXY_TARGET_HEADER = 'x-proxy-target'
+export const CHALLENGE_ID_HEADER = 'x-challenge-id'
+export const CHALLENGE_HEADER = 'x-challenge'
+export const CHALLENGE_ANSWER_HEADER = 'x-challenge-answer'
+export const CHALLENGER_HEADERS = [CHALLENGE_ID_HEADER, CHALLENGE_HEADER, CHALLENGE_ANSWER_HEADER]
 /**
  * Extract token from cookie header
  */
@@ -22,6 +28,99 @@ export const HttpStatusText = {
 } as const
 export type HttpStatusCode = keyof typeof HttpStatusText
 export const HTTP_STATUS_CODES: HttpStatusCode[] = Object.keys(HttpStatusText) as HttpStatusCode[]
+export interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
+  body?: any
+  baseUrl?: string
+  skipRefresh?: boolean // Skip automatic token refresh for this request
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean
+  data?: T
+  message?: string
+  error?: string
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public statusText: string,
+    public response?: Response,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+export function getChallengeSecret(): string {
+  const secret =
+    typeof window !== 'undefined'
+      ? ((import.meta as any).env?.VITE_CHALLENGE_SECRET ?? 'pzero')
+      : (process.env.VITE_CHALLENGE_SECRET ?? 'pzero')
+  return secret
+}
+
+/**
+ * Convert HeadersInit to a plain object
+ */
+export function headersToObject(headers: HeadersInit): Record<string, string> {
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers)
+  }
+  if (headers instanceof Headers) {
+    const obj: Record<string, string> = {}
+    headers.forEach((value, key) => {
+      obj[key] = value
+    })
+    return obj
+  }
+  return (headers as Record<string, string>) || {}
+}
+/**
+ * Serialize request body based on its type
+ */
+export function serializeBody(
+  body: any,
+  headers: Record<string, string>,
+): { body: any; headers: Record<string, string> } {
+  if (body === undefined) {
+    const updatedHeaders = { ...headers }
+    delete updatedHeaders['Content-Type']
+    return { body: undefined, headers: updatedHeaders }
+  }
+
+  const updatedHeaders = { ...headers }
+
+  if (body instanceof FormData) {
+    // Don't set Content-Type for FormData, let the browser set it with boundary
+    delete updatedHeaders['Content-Type']
+    return { body, headers: updatedHeaders }
+  }
+
+  if (typeof body === 'object') {
+    // Add Content-Type header for JSON body
+    updatedHeaders['Content-Type'] = 'application/json'
+    // JSON.stringify for direct requests
+    return { body: JSON.stringify(body), headers: updatedHeaders }
+  }
+
+  return { body, headers: updatedHeaders }
+}
+
+/**
+ * Extract error message from a response, falling back to status text
+ */
+export async function extractErrorMessage(response: Response): Promise<string> {
+  let errorMessage = `Request failed: ${response.status} ${response.statusText}`
+  try {
+    const errorData = await response.json()
+    errorMessage = errorData.message || errorData.error || errorMessage
+  } catch {
+    // If we can't parse the error response, use the default message
+  }
+  return errorMessage
+}
 export function extractTokenFromCookie(cookieHeader: string): string | null {
   if (!cookieHeader) return null
 
