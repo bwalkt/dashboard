@@ -4,6 +4,7 @@ import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail, type UserResponse } from "@pzero/shared";
 import { challengeManager } from '@pzero/shared/challenge'
 import { genFunctionAsJson, genGrid } from "@pzero/shared/grid";
+import { CHALLENGE_HEADER, CHALLENGE_ID_HEADER } from "@pzero/shared/http";
 import { uuid } from "@pzero/shared/uuid";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import response from "twilio/lib/http/response.js";

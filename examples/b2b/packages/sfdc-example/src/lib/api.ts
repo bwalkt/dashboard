@@ -23,7 +23,6 @@ import {
   serializeBody,
   VALIDATION_HEADER,
 } from '@pzero/shared/http'
-import { de } from 'date-fns/locale'
 import { getUseWasm } from './proxy-config'
 
 /**
@@ -39,13 +38,15 @@ import { getUseWasm } from './proxy-config'
 async function handleChallengeHeaders(response: Response): Promise<void> {
   const challengeId = response.headers.get(CHALLENGE_ID_HEADER)
   const challenge = response.headers.get(CHALLENGE_HEADER)
+  const params = response.headers.get(CHALLENGE_ANSWER_HEADER)
+  console.log('handleChallengeHeaders', { challengeId, challenge, params })
   debugger
   if (challengeId && challenge) {
     debugger
     try {
       // Solve the challenge
       // Store in localStorage
-      challengeManager.storeChallenge({ id: challengeId, question: challenge, params: { x: '0,0', y: '0,0' } })
+      challengeManager.storeChallenge({ id: challengeId, question: challenge })
       const challengeAnswer = challengeManager.solveChallenge(challengeId)
       console.log('Challenge solved and stored:', { challengeId, challenge, challengeAnswer })
     } catch (error) {
