@@ -47,6 +47,12 @@ export async function refreshProxyTargetsCache(): Promise<ProxyTarget[]> {
     }));
 
     // Cache in Redis without TTL
+    // TODO: Cache invalidation strategy:
+    // - API routes (create/update/delete) trigger refreshProxyTargetsCache()
+    // - Cache auto-refreshes on cache miss
+    // WARNING: Direct database updates (migrations, SQL scripts, admin tools) won't
+    // invalidate cache automatically. Ensure such operations explicitly call
+    // refreshProxyTargetsCache() or restart the server to avoid serving stale data.
     await redis.set(
       PROXY_TARGETS_CACHE_KEY,
       JSON.stringify(proxyTargets)
@@ -61,6 +67,14 @@ export async function refreshProxyTargetsCache(): Promise<ProxyTarget[]> {
     console.error("Error refreshing proxy targets cache:", error);
     throw error;
   }
+}
+
+export async function getProxyTargetBy<K extends keyof ProxyTarget>(
+  field: K,
+  value: ProxyTarget[K],
+): Promise<ProxyTarget | null> {
+  const targets = await getProxyTargetsFromCache();
+  return targets.find((target) => target[field] === value) || null;
 }
 
 /**
@@ -110,11 +124,8 @@ export async function getProxyTargetById(
   id: string,
 ): Promise<ProxyTarget | null> {
   // Use getProxyTargetsFromCache which handles cache expiration automatically
-  // This will throw ProxyTargetsCacheUnavailableError on cache/DB failures
-  const targets = await getProxyTargetsFromCache();
-  
-  // If targets array is empty or target not found, return null (genuine "not found")
-  return targets.find((target) => target.id === id) || null;
+  // This will throw ProxyTargetsCacheUnavailableError on cache/DB failuresll;
+  return getProxyTargetBy('id', id);
 }
 
 /**
@@ -129,10 +140,7 @@ export async function getProxyTargetByUrl(
 ): Promise<ProxyTarget | null> {
   // Use getProxyTargetsFromCache which handles cache expiration automatically
   // This will throw ProxyTargetsCacheUnavailableError on cache/DB failures
-  const targets = await getProxyTargetsFromCache();
-  
-  // If targets array is empty or target not found, return null (genuine "not found")
-  return targets.find((target) => target.url === url) || null;
+  return getProxyTargetBy('url', url);
 }
 
 /**
