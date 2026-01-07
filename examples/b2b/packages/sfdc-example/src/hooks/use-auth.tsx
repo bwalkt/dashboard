@@ -1,10 +1,10 @@
+import { challengeManager } from '@pzero/shared/challenge'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { ApiError, api } from '@/lib/api'
 import { AUTH_CACHE_TIME_MS, AUTH_STALE_TIME_MS } from '@/lib/constants'
 import { useAuthStore } from '@/stores/auth-store'
 import { User } from '@/types'
-
 /**
  * Synchronizes and exposes the current authenticated user from React Query and the auth store, and provides sign-out and refetch controls.
  *
@@ -33,6 +33,12 @@ export function useUser() {
           'X-Client-Type': 'web',
         },
       })
+      console.log('user /auth/me response:', user)
+      debugger
+      if (user?.data.grid) {
+        console.log('[API] Storing user grid from /auth/me response')
+        challengeManager.storeUserGrid(user.data.grid)
+      }
       return user
     },
     // Only fetch if we don't have data or it's stale

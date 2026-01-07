@@ -274,11 +274,21 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         console.log(`[/auth/me] Storing challenge in Redis: ${challengeKey}`, challengePayload);
 
         await redis.set(challengeKey, JSON.stringify(challengePayload));
+        
+        // Send decrypted grid to client (not the encrypted one)
+        const userWithDecryptedGrid = {
+          ...user,
+          data: {
+            ...user.data,
+            grid: grid // Send the decrypted grid
+          }
+        };
+        
         return reply
           .header("X-Challenge-Id", challengeId)
           .header("X-Challenge-Question", challengeData.function.expression)
           .header("X-Challenge-Params", `x=${challengeData.parameters.x},y=${challengeData.parameters.y}`)
-          .send({ user });
+          .send({ user: userWithDecryptedGrid });
       } catch (error) {
         console.error("Get user info error:", error);
         return reply.status(500).send({

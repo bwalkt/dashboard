@@ -30,7 +30,7 @@ export interface Storage {
 
 export class ChallengeManager {
   private storage: Storage
-
+  grid: number[][] | null = null
   constructor(storage: Storage = typeof localStorage !== 'undefined' ? localStorage : new MemoryStorage()) {
     this.storage = storage
   }
@@ -67,28 +67,20 @@ export class ChallengeManager {
    * Store user's grid (should be stored after decrypting from server)
    */
   storeUserGrid(grid: number[][]): void {
-    this.storage.setItem(USER_GRID_KEY, JSON.stringify(grid))
+    this.grid = grid
   }
 
   /**
    * Get user's grid
    */
   getUserGrid(): number[][] | null {
-    const stored = this.storage.getItem(USER_GRID_KEY)
-    if (!stored) return null
-
-    try {
-      return JSON.parse(stored) as number[][]
-    } catch {
-      return null
-    }
+    return this.grid
   }
-
   /**
    * Clear user's grid
    */
   clearUserGrid(): void {
-    this.storage.removeItem(USER_GRID_KEY)
+    this.grid = null
   }
 
   /**

@@ -10,8 +10,14 @@ export interface User {
   name: string
   email: string
   avatar: string
-  created_at: string
-  updated_at: string
+  c_at: string
+  u_at?: string
+  data: {
+    grid?: number
+    meta: {
+      c_at: string
+    }
+  }
 }
 
 export interface CreateUserData {
