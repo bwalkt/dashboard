@@ -121,14 +121,12 @@ const PUBLIC_ROUTES: &[&str] = &[
     "/auth/callback",
     "/auth/callback/github",
     "/auth/refresh",
-    "/auth/me",
     // Legacy proxy auth routes
     "/proxy/auth/login",
     "/proxy/auth/register", 
     "/proxy/auth/callback",
     "/proxy/auth/refresh",
     "/proxy/auth/logout",
-    "/proxy/auth/me",
     // Centrifugo proxy routes
     "/centrifugo/connect",
     "/centrifugo/refresh",
