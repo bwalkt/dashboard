@@ -1,0 +1,69 @@
+import { genFunctionAsJson  } from "@pzero/shared/grid";
+import { uuid } from "@pzero/shared/uuid";
+import { redis } from "../config/redis.js";
+export type ChallengePayload = {
+    answer: string;
+    uid: string;
+    used: boolean;
+    question: string;
+    params: { x: string; y: string };
+    c_at: number;
+    next?: string;
+}
+export async function getChallenge(grid: number[][], uid: string) {
+    const challengeData = genFunctionAsJson(grid);
+    const challengeId = uuid();
+    const challengeKey = `challenge:${challengeId}`
+    const nextChallengeData = genFunctionAsJson(grid);
+    const nextChallengeId = uuid();
+    const nextChallengeKey = `challenge:${nextChallengeId}`
+    const challengePayload: ChallengePayload = {
+        answer: challengeData.result.value,
+        uid: uid,
+        used: false,
+        question: challengeData.function.expression,
+        params: challengeData.parameters,
+        c_at: Date.now(),
+        next: nextChallengeId
+    };
+    const nextChallengePayload: ChallengePayload = {
+        answer: nextChallengeData.result.value,
+        uid: uid,
+        used: false,
+        question: nextChallengeData.function.expression,
+        params: nextChallengeData.parameters,
+        next: nextChallengeId,
+        c_at: Date.now()
+    };
+    console.log(`get Current challenge in Redis: ${challengeKey}`, challengePayload);
+    await redis.set(challengeKey, JSON.stringify(challengePayload));
+    console.log(`get Next challenge in Redis: ${nextChallengeKey}`, nextChallengePayload);
+    await redis.set(nextChallengeKey, JSON.stringify(nextChallengePayload));
+    return {
+        id: challengeId,
+        ...challengePayload
+    };
+}
+
+export async function markChallengeUsed(challengeId: string) {
+    const challengeKey = `challenge:${challengeId}`;
+    const challengeData = await redis.get(challengeKey);
+    if (challengeData) {
+        const challengePayload: ChallengePayload = JSON.parse(challengeData);
+        challengePayload.used = true;
+        await redis.set(challengeKey, JSON.stringify(challengePayload));
+        console.log(`markChallengeUsed: Marked challenge ${challengeId} as used.`);
+    } else {
+        console.warn(`markChallengeUsed: Challenge ${challengeId} not found in Redis.`);
+    }
+}
+
+export async function getChallengePayload(challengeId: string): Promise<ChallengePayload | null> {
+    const challengeKey = `challenge:${challengeId}`;
+    const challengeData = await redis.get(challengeKey);
+    if (challengeData) {
+        const challengePayload: ChallengePayload = JSON.parse(challengeData);
+        return challengePayload;
+    }
+    return null;
+}

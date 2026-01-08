@@ -8,7 +8,12 @@ export const CHALLENGE_ID_HEADER = 'x-challenge-id'
 export const CHALLENGE_HEADER = 'x-challenge'
 export const CHALLENGE_ANSWER_HEADER = 'x-challenge-answer'
 export const CHALLENGE_PARAMS_HEADER = 'x-challenge-params'
-export const CHALLENGER_HEADERS = [CHALLENGE_ID_HEADER, CHALLENGE_HEADER, CHALLENGE_ANSWER_HEADER]
+export const CHALLENGER_HEADERS = [
+  CHALLENGE_ID_HEADER,
+  CHALLENGE_HEADER,
+  CHALLENGE_ANSWER_HEADER,
+  CHALLENGE_PARAMS_HEADER,
+]
 /**
  * Extract token from cookie header
  */
