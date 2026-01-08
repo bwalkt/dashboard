@@ -2,7 +2,7 @@ use log::{info, warn};
 use proxy_wasm::traits::*;
 use proxy_wasm::types::*;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use base64::{Engine as _, engine::general_purpose};
 
@@ -30,6 +30,10 @@ struct ChallengeAuthzHttp {
     pending_call_id: Option<u32>,
     pending_user_email: Option<String>,
     pending_user_call_id: Option<u32>,
+    pending_cookie_header: Option<String>,
+    pending_next_call_id: Option<u32>,
+    pending_next_challenge_headers: Option<NextChallengeHeaders>,
+    is_auth_me_request: bool,
     call_type: CallType,
 }
 
@@ -39,6 +43,8 @@ enum CallType {
     Challenge,
     UserFetch,
     UserCache,
+    AuthMeProxy,
+    AuthNext,
 }
 
 // Filter configuration
@@ -81,6 +87,26 @@ struct ChallengeHeaders {
     challenge_answer: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct NextChallengeHeaders {
+    challenge_id: String,
+    challenge_question: String,
+    challenge_params: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ChallengePayload {
+    answer: Value,
+    next: Option<String>,
+    uid: Option<String>,
+    email: Option<String>,
+    used: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct AuthMeResponse {
+    user: Value,
+}
 // JWT Claims structure
 #[derive(Debug, Deserialize, Serialize)]
 struct JwtClaims {
@@ -285,6 +311,10 @@ impl RootContext for ChallengeAuthzRoot {
             pending_call_id: None,
             pending_user_email: None,
             pending_user_call_id: None,
+            pending_cookie_header: None,
+            pending_next_call_id: None,
+            pending_next_challenge_headers: None,
+            is_auth_me_request: false,
             call_type: CallType::None,
         }))
     }
@@ -319,6 +349,20 @@ impl Context for ChallengeAuthzHttp {
                 }
                 self.handle_user_cache_response();
             }
+            CallType::AuthMeProxy => {
+                if self.pending_user_call_id != Some(token_id) {
+                    warn!("[Rust WASM Filter] Unexpected auth/me proxy response: {}", token_id);
+                    return;
+                }
+                self.handle_auth_me_proxy_response();
+            }
+            CallType::AuthNext => {
+                if self.pending_next_call_id != Some(token_id) {
+                    warn!("[Rust WASM Filter] Unexpected auth/next response: {}", token_id);
+                    return;
+                }
+                self.handle_auth_next_response();
+            }
             _ => {
                 warn!("[Rust WASM Filter] Unexpected call type for response: {}", token_id);
             }
@@ -336,10 +380,56 @@ impl ChallengeAuthzHttp {
                 Some(body) => {
                     let body_str = String::from_utf8_lossy(&body);
                     info!("[Rust WASM Filter] Redis response: {}", body_str);
-                    
-                    // Parse Redis response (constant-time comparison to prevent timing attacks)
-                    if constant_time_compare(body_str.trim().as_bytes(), challenge_answer.as_bytes()) {
+
+                    // Parse Redis response (supports JSON payloads and legacy string answers)
+                    let (answer_match, next_challenge, already_used) = match serde_json::from_str::<ChallengePayload>(&body_str) {
+                        Ok(payload) => {
+                            let used = payload.used.unwrap_or(false);
+                            // Validate the challenge belongs to the user if metadata is present
+                            if let Some(user_email) = &self.pending_user_email {
+                                if let Some(payload_email) = &payload.email {
+                                    if payload_email != user_email {
+                                        warn!("[Rust WASM Filter] Challenge email mismatch: {} != {}", payload_email, user_email);
+                                        (false, payload.next, used)
+                                    } else {
+                                        (challenge_answer_matches(&payload.answer, challenge_answer), payload.next, used)
+                                    }
+                                } else {
+                                    (challenge_answer_matches(&payload.answer, challenge_answer), payload.next, used)
+                                }
+                            } else {
+                                (challenge_answer_matches(&payload.answer, challenge_answer), payload.next, used)
+                            }
+                        }
+                        Err(_) => {
+                            // Legacy format - plain text answer
+                            (constant_time_compare(body_str.trim().as_bytes(), challenge_answer.as_bytes()), None, false)
+                        }
+                    };
+
+                    if already_used {
+                        warn!("[Rust WASM Filter] ⚠️ Challenge already used: {}", challenge_id);
+                        self.send_forbidden_response("challenge already used");
+                        self.pending_challenge_id = None;
+                        self.pending_challenge_answer = None;
+                        self.pending_call_id = None;
+                        self.call_type = CallType::None;
+                        return;
+                    }
+
+                    if answer_match {
                         info!("[Rust WASM Filter] ✅ CORRECT: Challenge validated via Redis: {}", challenge_id);
+
+                        // If we have a chained challenge, fetch the next one before proceeding
+                        if next_challenge.is_some() {
+                            if self.dispatch_auth_next(challenge_id) {
+                                // Clear pending challenge context, wait for /auth/next response
+                                self.pending_challenge_id = None;
+                                self.pending_challenge_answer = None;
+                                self.pending_call_id = None;
+                                return;
+                            }
+                        }
                         
                         // Apply routing transformations before resuming
                         // Extract path components to determine routing
@@ -413,20 +503,16 @@ impl ChallengeAuthzHttp {
                 let body_str = String::from_utf8_lossy(&body);
                 info!("[Rust WASM Filter] User fetch response received");
                 
-                // Parse user response
-                match serde_json::from_str::<User>(&body_str) {
-                    Ok(user) => {
-                        info!("[Rust WASM Filter] User fetched: {}, is_act: {}", user.email, user.is_act);
-                        
-                        // Check if user is active
-                        if !user.is_act {
-                            warn!("[Rust WASM Filter] User is inactive: {}", user.email);
+                // Parse user response from /auth/me ({ user: ... })
+                match serde_json::from_str::<AuthMeResponse>(&body_str) {
+                    Ok(user_response) => {
+                        if !is_user_active(&user_response.user) {
+                            warn!("[Rust WASM Filter] User is inactive");
                             self.send_forbidden_response("user account is inactive");
                             return;
                         }
-                        
-                        // User is active, now check challenge
-                        info!("[Rust WASM Filter] User is active, now checking challenge");
+
+                        info!("[Rust WASM Filter] User fetched and active, now checking challenge");
                         self.validate_challenge();
                     }
                     Err(e) => {
@@ -464,20 +550,33 @@ impl ChallengeAuthzHttp {
                 // If empty (user not in cache), fetch from server
                 if body_str.trim().is_empty() {
                     info!("[Rust WASM Filter] User not in cache, fetching from server");
-                    self.fetch_user_from_server();
+                    if self.is_auth_me_request {
+                        self.fetch_auth_me_proxy();
+                    } else {
+                        self.fetch_user_from_server();
+                    }
                 } else {
                     // Parse cached user
-                    match serde_json::from_str::<User>(&body_str) {
-                        Ok(user) => {
-                            info!("[Rust WASM Filter] User found in cache: {}, is_act: {}", user.email, user.is_act);
-                            
+                    match serde_json::from_str::<Value>(&body_str) {
+                        Ok(user_value) => {
+                            let cached_email = user_value.get("email")
+                                .and_then(|value| value.as_str())
+                                .unwrap_or("(unknown)");
+                            info!("[Rust WASM Filter] User found in cache: {}", cached_email);
+
                             // Check if user is active
-                            if !user.is_act {
-                                warn!("[Rust WASM Filter] Cached user is inactive: {}", user.email);
+                            if !is_user_active(&user_value) {
+                                warn!("[Rust WASM Filter] Cached user is inactive: {}", cached_email);
                                 self.send_forbidden_response("user account is inactive");
                                 return;
                             }
-                            
+
+                            if self.is_auth_me_request {
+                                info!("[Rust WASM Filter] Cached user is active, proxying /auth/me");
+                                self.fetch_auth_me_proxy();
+                                return;
+                            }
+
                             // User is active, now check challenge
                             info!("[Rust WASM Filter] Cached user is active, now checking challenge");
                             self.validate_challenge();
@@ -485,7 +584,11 @@ impl ChallengeAuthzHttp {
                         Err(e) => {
                             warn!("[Rust WASM Filter] Failed to parse cached user: {}", e);
                             // Fallback: fetch from server
-                            self.fetch_user_from_server();
+                            if self.is_auth_me_request {
+                                self.fetch_auth_me_proxy();
+                            } else {
+                                self.fetch_user_from_server();
+                            }
                         }
                     }
                 }
@@ -493,38 +596,131 @@ impl ChallengeAuthzHttp {
             None => {
                 warn!("[Rust WASM Filter] No Redis cache response");
                 // Fallback: fetch from server
-                self.fetch_user_from_server();
+                if self.is_auth_me_request {
+                    self.fetch_auth_me_proxy();
+                } else {
+                    self.fetch_user_from_server();
+                }
             }
         }
     }
     
     fn fetch_user_from_server(&mut self) {
-        if let Some(email) = &self.pending_user_email.clone() {
-            let path = format!("/internal/user/by-email/{}", email);
-            let headers = vec![
-                (":method", "GET"),
-                (":path", &path),
-                (":authority", "pzero-server"),
-            ];
-            
-            info!("[Rust WASM Filter] Fetching user from server: {}", email);
-            
-            match self.dispatch_http_call(
-                "server_cluster",
-                headers,
-                None,
-                vec![],
-                std::time::Duration::from_secs(5),
-            ) {
-                Ok(call_id) => {
-                    info!("[Rust WASM Filter] User fetch dispatched with call_id: {}", call_id);
-                    self.pending_user_call_id = Some(call_id);
-                    self.call_type = CallType::UserFetch;
-                }
-                Err(status) => {
-                    warn!("[Rust WASM Filter] Failed to fetch user: {:?}", status);
-                    self.send_forbidden_response("internal error");
-                }
+        let cookie_header = match self.pending_cookie_header.clone() {
+            Some(cookie) => cookie,
+            None => {
+                warn!("[Rust WASM Filter] Missing cookie header for /auth/me fetch");
+                self.send_forbidden_response("missing access token");
+                return;
+            }
+        };
+
+        let headers = vec![
+            (":method", "POST"),
+            (":path", "/auth/me"),
+            (":authority", "pzero-server"),
+            ("cookie", &cookie_header),
+        ];
+
+        info!("[Rust WASM Filter] Fetching user from server via /auth/me");
+
+        match self.dispatch_http_call(
+            "server_cluster",
+            headers,
+            None,
+            vec![],
+            std::time::Duration::from_secs(5),
+        ) {
+            Ok(call_id) => {
+                info!("[Rust WASM Filter] /auth/me fetch dispatched with call_id: {}", call_id);
+                self.pending_user_call_id = Some(call_id);
+                self.call_type = CallType::UserFetch;
+            }
+            Err(status) => {
+                warn!("[Rust WASM Filter] Failed to fetch user via /auth/me: {:?}", status);
+                self.send_forbidden_response("internal error");
+            }
+        }
+    }
+
+    fn fetch_auth_me_proxy(&mut self) {
+        let cookie_header = match self.pending_cookie_header.clone() {
+            Some(cookie) => cookie,
+            None => {
+                warn!("[Rust WASM Filter] Missing cookie header for /auth/me proxy");
+                self.send_forbidden_response("missing access token");
+                return;
+            }
+        };
+
+        let headers = vec![
+            (":method", "POST"),
+            (":path", "/auth/me"),
+            (":authority", "pzero-server"),
+            ("cookie", &cookie_header),
+        ];
+
+        info!("[Rust WASM Filter] Proxying /auth/me to server");
+
+        match self.dispatch_http_call(
+            "server_cluster",
+            headers,
+            None,
+            vec![],
+            std::time::Duration::from_secs(5),
+        ) {
+            Ok(call_id) => {
+                info!("[Rust WASM Filter] /auth/me proxy dispatched with call_id: {}", call_id);
+                self.pending_user_call_id = Some(call_id);
+                self.call_type = CallType::AuthMeProxy;
+            }
+            Err(status) => {
+                warn!("[Rust WASM Filter] Failed to proxy /auth/me: {:?}", status);
+                self.send_forbidden_response("internal error");
+            }
+        }
+    }
+
+    fn dispatch_auth_next(&mut self, challenge_id: &str) -> bool {
+        let cookie_header = match self.pending_cookie_header.clone() {
+            Some(cookie) => cookie,
+            None => {
+                warn!("[Rust WASM Filter] Missing cookie header for /auth/next");
+                return false;
+            }
+        };
+
+        if challenge_id.is_empty() {
+            warn!("[Rust WASM Filter] Missing challenge id for /auth/next");
+            return false;
+        }
+
+        let path = format!("/auth/next/{}", challenge_id);
+        let headers = vec![
+            (":method", "POST"),
+            (":path", &path),
+            (":authority", "pzero-server"),
+            ("cookie", &cookie_header),
+        ];
+
+        info!("[Rust WASM Filter] Fetching next challenge via /auth/next: {}", challenge_id);
+
+        match self.dispatch_http_call(
+            "server_cluster",
+            headers,
+            None,
+            vec![],
+            std::time::Duration::from_secs(5),
+        ) {
+            Ok(call_id) => {
+                info!("[Rust WASM Filter] /auth/next dispatched with call_id: {}", call_id);
+                self.pending_next_call_id = Some(call_id);
+                self.call_type = CallType::AuthNext;
+                true
+            }
+            Err(status) => {
+                warn!("[Rust WASM Filter] Failed to fetch next challenge: {:?}", status);
+                false
             }
         }
     }
@@ -575,6 +771,75 @@ impl ChallengeAuthzHttp {
                 self.send_forbidden_response("challenge validation failed");
             }
         }
+    }
+
+    fn handle_auth_me_proxy_response(&mut self) {
+        let response_body = self.get_http_call_response_body(0, 8192);
+        let response_headers = self.get_http_call_response_headers();
+
+        let status = response_headers
+            .iter()
+            .find(|(name, _)| *name == ":status")
+            .and_then(|(_, value)| value.parse::<u16>().ok())
+            .unwrap_or(200);
+
+        let mut headers: Vec<(&str, &str)> = Vec::new();
+        if let Some(origin) = self.get_http_request_header("origin") {
+            let allowed_origin = self.validate_cors_origin(&origin);
+            if !allowed_origin.is_empty() {
+                headers.push(("access-control-allow-origin", &allowed_origin));
+                headers.push(("access-control-allow-credentials", "true"));
+            }
+        }
+
+        let mut content_type = "application/json";
+        for (name, value) in &response_headers {
+            if *name == "content-type" {
+                content_type = value;
+            }
+            if *name == "x-challenge-id"
+                || *name == "x-challenge-question"
+                || *name == "x-challenge-params"
+            {
+                headers.push((name, value));
+            }
+        }
+        headers.push(("content-type", content_type));
+
+        let body = response_body.map(|b| b.to_vec()).unwrap_or_default();
+        self.send_http_response(status, headers, Some(&body));
+
+        self.pending_user_call_id = None;
+        self.pending_user_email = None;
+        self.call_type = CallType::None;
+    }
+
+    fn handle_auth_next_response(&mut self) {
+        let response_headers = self.get_http_call_response_headers();
+        let challenge_id = response_headers
+            .iter()
+            .find(|(name, _)| *name == "x-challenge-id")
+            .map(|(_, value)| value.to_string());
+        let challenge_question = response_headers
+            .iter()
+            .find(|(name, _)| *name == "x-challenge-question")
+            .map(|(_, value)| value.to_string());
+        let challenge_params = response_headers
+            .iter()
+            .find(|(name, _)| *name == "x-challenge-params")
+            .map(|(_, value)| value.to_string());
+
+        if let (Some(id), Some(question), Some(params)) = (challenge_id, challenge_question, challenge_params) {
+            self.pending_next_challenge_headers = Some(NextChallengeHeaders {
+                challenge_id: id,
+                challenge_question: question,
+                challenge_params: params,
+            });
+        }
+
+        self.pending_next_call_id = None;
+        self.call_type = CallType::None;
+        self.resume_http_request();
     }
 }
 
@@ -637,9 +902,13 @@ impl HttpContext for ChallengeAuthzHttp {
             return Action::Pause;
         }
 
-        // Check if route is public (includes /auth/me and other auth routes)
+        let path_without_query = path.split('?').next().unwrap_or(&path);
+        self.is_auth_me_request = path_without_query == "/auth/me";
+        let is_auth_next_request = path_without_query.starts_with("/auth/next");
+
+        // Check if route is public (auth/me is handled by the filter)
         info!("[Rust WASM Filter] Checking if public route: {} {}", method, path);
-        if is_public_route(&path, &method) {
+        if !self.is_auth_me_request && !is_auth_next_request && is_public_route(&path, &method) {
             info!("[Rust WASM Filter] Public route, bypassing all validation: {} {}", method, path);
             return Action::Continue;
         }
@@ -648,6 +917,7 @@ impl HttpContext for ChallengeAuthzHttp {
         // Extract and validate access token from cookie
         let cookie_header = self.get_http_request_header("cookie").unwrap_or_default();
         let access_token = extract_access_token(&cookie_header);
+        self.pending_cookie_header = Some(cookie_header);
         
         if access_token.is_empty() {
             warn!("[Rust WASM Filter] Missing access token");
@@ -707,9 +977,11 @@ impl HttpContext for ChallengeAuthzHttp {
                 self.pending_user_call_id = Some(call_id);
                 self.call_type = CallType::UserCache;
                 
-                // Store challenge data for later validation
-                self.pending_challenge_id = Some(self.get_http_request_header("x-challenge-id").unwrap_or_default());
-                self.pending_challenge_answer = Some(self.get_http_request_header("x-challenge-answer").unwrap_or_default());
+                if !self.is_auth_me_request {
+                    // Store challenge data for later validation
+                    self.pending_challenge_id = Some(self.get_http_request_header("x-challenge-id").unwrap_or_default());
+                    self.pending_challenge_answer = Some(self.get_http_request_header("x-challenge-answer").unwrap_or_default());
+                }
                 
                 // Pause until we validate user
                 return Action::Pause;
@@ -722,6 +994,17 @@ impl HttpContext for ChallengeAuthzHttp {
         }
         
         // Challenge validation is now handled after user validation in callbacks
+    }
+
+    fn on_http_response_headers(&mut self, _: usize, _: bool) -> Action {
+        if let Some(next_headers) = self.pending_next_challenge_headers.take() {
+            if self.get_http_response_header("x-challenge-id").is_none() {
+                self.set_http_response_header("x-challenge-id", Some(&next_headers.challenge_id));
+                self.set_http_response_header("x-challenge-question", Some(&next_headers.challenge_question));
+                self.set_http_response_header("x-challenge-params", Some(&next_headers.challenge_params));
+            }
+        }
+        Action::Continue
     }
 }
 
@@ -745,6 +1028,26 @@ fn constant_time_compare(a: &[u8], b: &[u8]) -> bool {
         return false;
     }
     a.iter().zip(b.iter()).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
+fn challenge_answer_matches(answer_value: &Value, provided: &str) -> bool {
+    match answer_value {
+        Value::String(s) => constant_time_compare(s.as_bytes(), provided.as_bytes()),
+        Value::Number(n) => constant_time_compare(n.to_string().as_bytes(), provided.as_bytes()),
+        Value::Bool(b) => constant_time_compare(b.to_string().as_bytes(), provided.as_bytes()),
+        Value::Null => false,
+        Value::Array(_) | Value::Object(_) => false,
+    }
+}
+
+fn is_user_active(user_value: &Value) -> bool {
+    if let Some(is_act) = user_value.get("is_act").and_then(|v| v.as_bool()) {
+        return is_act;
+    }
+    if let Some(status) = user_value.get("status").and_then(|v| v.as_str()) {
+        return status == "ACTIVE";
+    }
+    true
 }
 
 fn extract_access_token(cookie_header: &str) -> String {

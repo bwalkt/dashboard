@@ -16,7 +16,7 @@ import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
 import { PROXY_TARGETS_CACHE_KEY, refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
-import { getChallenge } from "../utils/challenge.js";
+import { type ChallengePayload, getChallenge } from "../utils/challenge.js";
 import { encryptionService } from '../utils/encryption.js'
 
 async function deleteUserSession(request: FastifyRequest, reply: FastifyReply) {
@@ -265,7 +265,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
             grid: grid // Send the decrypted grid
           }
       };
-      const userKey = `users:${user.email}`;
+      const userKey = `user:${user.email}`;
       await redis.set(userKey, JSON.stringify(userWithDecryptedGrid)); // Cache for 5 minutes
       const replyObj = reply
           .header(CHALLENGE_ID_HEADER, challengeData.id)
@@ -280,6 +280,37 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         message: "Failed to get user information",
       } as ErrorResponse);
     }
+  }
+
+  async function getChallengeRecord(challengeId: string): Promise<ChallengePayload | null> {
+    const redisKey = `challenge:${challengeId}`;
+    const raw = await redis.get(redisKey);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as ChallengePayload;
+    } catch (error) {
+      console.warn("Failed to parse challenge payload:", challengeId, error);
+      return null;
+    }
+  }
+
+  async function storeChallengeRecord(challengeId: string, payload: ChallengePayload): Promise<void> {
+    const redisKey = `challenge:${challengeId}`;
+    await redis.set(redisKey, JSON.stringify(payload));
+  }
+
+  function buildChallengePayload(grid: number[][], uid: string): { id: string; payload: ChallengePayload } {
+    const challengeData = genFunctionAsJson(grid);
+    const challengeId = uuid();
+    const payload: ChallengePayload = {
+      answer: challengeData.result.value,
+      uid,
+      used: false,
+      question: challengeData.function.expression,
+      params: challengeData.parameters,
+      c_at: Date.now(),
+    };
+    return { id: challengeId, payload };
   }
   /**
    * GET /auth/me
@@ -309,14 +340,85 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    * Get current user info (protected route)
    */
   fastify.post(
-    "/auth/next",
+    "/auth/next/:challengeId",
     {
       preHandler: authenticateToken,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const user = (request as unknown as AuthenticatedRequest).user as UserWithStatus;
-        return await nextHelper(user, request, reply);
+        const { challengeId } = request.params as { challengeId: string };
+
+        if (!challengeId) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "challengeId is required",
+          } as ErrorResponse);
+        }
+
+        if (!user?.data?.grid || user.is_act === undefined) {
+          user = await userService.getUserByEmail(user.email) as UserWithStatus;
+        }
+        if (!user?.data?.grid || !user.is_act) {
+          console.log("Error - Grid for user not found, or status not ACTIVE:", user);
+          await deleteUserSession(request, reply);
+          return reply.status(403).send({
+            error: "Forbidden",
+            message: `User Account is ${user.status ?? "INACTIVE"}`,
+          } as ErrorResponse);
+        }
+
+        const grid = encryptionService.decrypt(user.data.grid) as number[][];
+        challengeManager.storeUserGrid(grid);
+
+        const currentChallenge = await getChallengeRecord(challengeId);
+        if (!currentChallenge) {
+          return reply.status(404).send({
+            error: "Not Found",
+            message: "Challenge not found",
+          } as ErrorResponse);
+        }
+
+        if (currentChallenge.uid !== user.id) {
+          return reply.status(403).send({
+            error: "Forbidden",
+            message: "Challenge does not belong to user",
+          } as ErrorResponse);
+        }
+
+        if (currentChallenge.used) {
+          return reply.status(409).send({
+            error: "Conflict",
+            message: "Challenge already used",
+          } as ErrorResponse);
+        }
+
+        let nextChallengeId = currentChallenge.next;
+        let nextChallenge = nextChallengeId ? await getChallengeRecord(nextChallengeId) : null;
+
+        if (!nextChallenge || nextChallenge.used || nextChallengeId === challengeId || nextChallenge.uid !== user.id) {
+          const generated = buildChallengePayload(grid, user.id);
+          nextChallengeId = generated.id;
+          nextChallenge = generated.payload;
+          await storeChallengeRecord(nextChallengeId, nextChallenge);
+        }
+
+        if (!nextChallenge.next || nextChallenge.next === nextChallengeId) {
+          const future = buildChallengePayload(grid, user.id);
+          nextChallenge.next = future.id;
+          await storeChallengeRecord(future.id, future.payload);
+        }
+
+        currentChallenge.used = true;
+        currentChallenge.next = nextChallengeId;
+        await storeChallengeRecord(challengeId, currentChallenge);
+        await storeChallengeRecord(nextChallengeId, nextChallenge);
+
+        const replyObj = reply
+          .header(CHALLENGE_ID_HEADER, nextChallengeId)
+          .header(CHALLENGE_HEADER, nextChallenge.question)
+          .header(CHALLENGE_PARAMS_HEADER, `x=${nextChallenge.params.x},y=${nextChallenge.params.y}`);
+        return replyObj.send({ challengeId: nextChallengeId });
       } catch (error) {
         console.error("Get user info error:", error);
         return reply.status(500).send({

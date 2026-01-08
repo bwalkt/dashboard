@@ -28,9 +28,13 @@ export interface Storage {
 }
 
 export class ChallengeManager {
+  private storage: Storage
   grid: number[][] | null = null
   challenges: Map<string, Challenge> = new Map()
-  constructor(grid?: number[][]) {
+  constructor(storage: localStorage !== 'undefined' ? localStorage : new MemoryStorage()) {
+    this.storage = storage
+  }
+  grid?: number[][]) {
     if (grid) {
       this.grid = grid
     }
