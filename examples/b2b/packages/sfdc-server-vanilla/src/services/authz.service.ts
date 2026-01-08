@@ -1,4 +1,4 @@
-import { CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER } from '@pzero/shared/http'
+import { CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER } from '@pzero/shared/challenge'
 
 export interface ChallengeResponse {
   challengeId: string

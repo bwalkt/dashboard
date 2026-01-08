@@ -97,6 +97,11 @@ class RedisManager {
     return this.client.ping();
   }
 
+  /**
+   * Execute a Lua script via Redis EVAL.
+   * Note: This method expects scripts that return scalar values (string, number, or null).
+   * For scripts returning arrays, use getClient().eval() directly.
+   */
   public async eval(
     script: string,
     keys: string[],
