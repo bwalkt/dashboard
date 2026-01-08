@@ -1,5 +1,6 @@
 screenshots
 # Logs
+cookies*.txt
 logs
 *.log
 *.zip

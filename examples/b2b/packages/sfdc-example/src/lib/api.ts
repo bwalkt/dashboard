@@ -9,14 +9,10 @@
  * - Built-in retry logic for authentication failures
  * - Challenge solving and header attachment
  */
-import { CHALLENGE_PARAMS_HEADER, challengeManager } from '@pzero/shared/challenge'
+import { challengeManager } from '@pzero/shared/challenge'
 import {
   ApiError,
   ApiRequestOptions,
-  ApiResponse,
-  CHALLENGE_ANSWER_HEADER,
-  CHALLENGE_HEADER,
-  CHALLENGE_ID_HEADER,
   extractErrorMessage,
   headersToObject,
   PROXY_TARGET_HEADER,
@@ -35,31 +31,8 @@ import { getUseWasm } from './proxy-config'
  * Extract and solve challenge from response headers
  * Stores the solution in localStorage for future requests
  */
-async function handleChallengeHeaders(response: Response): Promise<void> {
-  const challengeId = response.headers.get(CHALLENGE_ID_HEADER)
-  const challenge = response.headers.get(CHALLENGE_HEADER)
-  const params = response.headers.get(CHALLENGE_PARAMS_HEADER)
-  console.log('handleChallengeHeaders', { challengeId, challenge, params })
-  if (challengeId && challenge) {
-    try {
-      // Parse params or use default values
-      let parsedParams = { x: '0', y: '0' }
-      if (params) {
-        try {
-          parsedParams = JSON.parse(params)
-        } catch (error) {
-          console.warn('Failed to parse challenge params, using defaults:', error)
-        }
-      }
-
-      // Solve the challenge
-      // Store in localStorage
-      const answer = challengeManager.storeChallenge({ id: challengeId, question: challenge, params: parsedParams })
-      console.log('Challenge solved and stored:', { challengeId, challenge, answer })
-    } catch (error) {
-      console.error('Failed to solve challenge:', error)
-    }
-  }
+async function handleChallengeHeaders(response: Response, data?: any): Promise<void> {
+  challengeManager.handleResponse(response, data)
 }
 
 /**
@@ -111,17 +84,18 @@ let refreshPromise: Promise<void> | null = null
 async function parseResponse<T>(response: Response): Promise<T> {
   storeValidationHeader(response)
   // Handle challenge headers from response
-  await handleChallengeHeaders(response)
+  let data: T
 
   // Handle empty responses (e.g., 204 No Content)
   if (response.status === 204 || response.headers.get('content-length') === '0') {
-    return undefined as T
+    data = undefined as T
+  } else {
+    const contentType = response.headers.get('content-type')
+    data = (await (contentType && contentType.includes('application/json') ? response.json() : response.text())) as T
   }
-  const contentType = response.headers.get('content-type')
-  const data = (await (contentType && contentType.includes('application/json')
-    ? response.json()
-    : response.text())) as T
-  challengeManager.handleResponse(response)
+
+  const userData = typeof data === 'object' && data ? (data as any).user?.data : undefined
+  await handleChallengeHeaders(response, userData)
   return data
 }
 
@@ -199,11 +173,6 @@ const storeValidationHeader = (response: Response) => {
  */
 export async function apiRequest<T = any>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
   const { baseUrl = getBackendUrl(), body, headers = {}, skipRefresh = false, ...fetchOptions } = options
-  console.log('baseUrl', baseUrl)
-  console.log('endpoint', endpoint)
-  console.log('headers', headers)
-  console.log('skipRefresh', skipRefresh)
-  console.log('fetchOptions', fetchOptions)
   // Construct the full URL
   const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
 
@@ -220,24 +189,7 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
 
   // Attach challenge headers if available
   if (getUseWasm()) {
-    const challengeId = headersObj ? headersObj[CHALLENGE_ID_HEADER] : undefined
-    const storedChallenge = challengeManager.getChallenge(challengeId)
-    if (storedChallenge && storedChallenge.answer !== undefined) {
-      updatedHeaders[CHALLENGE_ID_HEADER] = storedChallenge.id
-      updatedHeaders[CHALLENGE_ANSWER_HEADER] = storedChallenge.answer as string
-      console.log('Attaching stored challenge headers:', {
-        [CHALLENGE_ID_HEADER]: storedChallenge.id,
-        [CHALLENGE_ANSWER_HEADER]: storedChallenge.answer,
-      })
-    }
-  } else {
-    // Hardcoded challenge for testing WASM proxy mode
-    updatedHeaders[CHALLENGE_ID_HEADER] = '1'
-    updatedHeaders[CHALLENGE_ANSWER_HEADER] = '1'
-    console.log('Attaching hardcoded challenge headers for WASM proxy mode:', {
-      [CHALLENGE_ID_HEADER]: '1',
-      [CHALLENGE_ANSWER_HEADER]: '1',
-    })
+    Object.assign(updatedHeaders, challengeManager.addChallengeHeaders(updatedHeaders))
   }
 
   // Prepare the request configuration

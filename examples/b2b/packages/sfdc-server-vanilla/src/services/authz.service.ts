@@ -1,3 +1,5 @@
+import { CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER } from '@pzero/shared/challenge'
+
 export interface ChallengeResponse {
   challengeId: string
   challenge: string
@@ -93,8 +95,8 @@ export class AuthzService {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-challenge-id': challengeId,
-              'x-challenge-answer': challengeAnswer,
+              [CHALLENGE_ID_HEADER]: challengeId,
+              [CHALLENGE_ANSWER_HEADER]: challengeAnswer,
             },
             signal: controller.signal,
           })

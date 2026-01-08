@@ -7,7 +7,7 @@ import { evalFuncAsJSON } from './grid.js'
 
 // Challenge headers (lowercase for WASM filter compatibility)
 export const CHALLENGE_ID_HEADER = 'x-challenge-id'
-export const CHALLENGE_QUESTION_HEADER = 'x-challenge-question'
+export const CHALLENGE_QUESTION_HEADER = 'x-challenge'
 export const CHALLENGE_PARAMS_HEADER = 'x-challenge-params'
 export const CHALLENGE_ANSWER_HEADER = 'x-challenge-answer'
 // TODO CONFIG AS ENV VAR

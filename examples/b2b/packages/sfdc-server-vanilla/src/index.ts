@@ -1,5 +1,6 @@
 import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
+import { CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER, CHALLENGE_QUESTION_HEADER } from '@pzero/shared/challenge'
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import { VALIDATION_HEADER_NAME } from './config/constants.js'
 import { config, validateEnvironment } from './config/env.js'
@@ -44,8 +45,8 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
       'x-client-type',
       VALIDATION_HEADER_NAME,
       // Challenge headers for authz-service
-      'x-challenge-id',
-      'x-challenge-answer',
+      CHALLENGE_ID_HEADER,
+      CHALLENGE_ANSWER_HEADER,
       // OpenTelemetry trace context headers for distributed tracing
       'traceparent',
       'tracestate',
@@ -55,8 +56,8 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
       'X-Content-Range',
       VALIDATION_HEADER_NAME,
       // Challenge headers sent in responses
-      'x-challenge-id',
-      'x-challenge',
+      CHALLENGE_ID_HEADER,
+      CHALLENGE_QUESTION_HEADER,
       'timing-allow-origin',
     ],
     maxAge: 86400, // Cache preflight response for 1 day

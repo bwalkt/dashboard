@@ -29,14 +29,12 @@ export function useUser() {
   } = useQuery<User>({
     queryKey: ['user'],
     queryFn: async () => {
-      const { user } = await api.post<{ user: User }>('/auth/me', {
+      const { user } = await api.post<{ user: User }>('/auth/me', undefined, {
         headers: {
           'X-Client-Type': 'web',
         },
       })
-      console.log('user /auth/me response:', user)
-      if (user?.data.grid) {
-        console.log('[API] Storing user grid from /auth/me response', user.data.grid)
+      if (user?.data?.grid) {
         challengeManager.storeUserGrid(user.data.grid)
       }
       return user
@@ -56,10 +54,8 @@ export function useUser() {
     error: signOutError,
   } = useMutation({
     mutationFn: async () => {
-      console.log('Calling logout API...')
       try {
         const response = await api.post('/auth/logout', undefined, { skipRefresh: true })
-        console.log('Logout API response:', response)
         queryClient.clear()
         clearUser() // Clear zustand store
         return { error: null }
@@ -69,7 +65,6 @@ export function useUser() {
       }
     },
     onSuccess: () => {
-      console.log('Logout successful, redirecting...')
       window.location.href = '/auth/sign-in'
     },
     onError: error => {

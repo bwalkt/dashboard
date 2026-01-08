@@ -2,9 +2,8 @@ import { randomInt } from "node:crypto";
 
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail, type UserResponse } from "@pzero/shared";
-import { challengeManager } from '@pzero/shared/challenge'
+import { CHALLENGE_ID_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_QUESTION_HEADER, challengeManager } from '@pzero/shared/challenge'
 import { genFunctionAsJson, genGrid } from "@pzero/shared/grid";
-import { CHALLENGE_ANSWER_HEADER, CHALLENGE_HEADER, CHALLENGE_ID_HEADER, CHALLENGE_PARAMS_HEADER } from "@pzero/shared/http";
 import { uuid } from "@pzero/shared/uuid";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import request from "twilio/lib/http/request.js";
@@ -280,10 +279,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         }
       }
       const replyObj = reply
-          .header(CHALLENGE_ID_HEADER, challengeData.id)
-          .header(CHALLENGE_HEADER, challengeData.question)
-          .header(CHALLENGE_PARAMS_HEADER, `x=${challengeData.params.x},y=${challengeData.params.y}`)
-      console.log(`[/auth/me] Sending challenge headers: X-Challenge-Id=${challengeData.id}, X-Challenge-Question=${challengeData.question}, X-Challenge-Params=x=${challengeData.params.x},y=${challengeData.params.y}`);
+        .header(CHALLENGE_ID_HEADER, challengeData.id)
+        .header(CHALLENGE_QUESTION_HEADER, challengeData.question)
+        .header(CHALLENGE_PARAMS_HEADER, `x=${challengeData.params.x},y=${challengeData.params.y}`)
+      console.log(
+        `[/auth/me] Sending challenge headers: ${CHALLENGE_ID_HEADER}=${challengeData.id}, ${CHALLENGE_QUESTION_HEADER}=${challengeData.question}, ${CHALLENGE_PARAMS_HEADER}=x=${challengeData.params.x},y=${challengeData.params.y}`
+      )
       return sendUser? replyObj.send({ user: userWithDecryptedGrid }) : replyObj.send({challengeId: challengeData.id});
     } catch (error) {
       console.error("Get user info error:", error);

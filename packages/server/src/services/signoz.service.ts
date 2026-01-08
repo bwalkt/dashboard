@@ -3,6 +3,7 @@
  * Handles communication with the SigNoz query_range API endpoint
  */
 
+import { CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER } from "@pzero/shared/challenge";
 import { extractHeaders } from "@pzero/shared/http";
 import type { BuilderQuery, RawDataResponse, SelectField, SigNozFilters, SigNozPagination, SigNozQueryOptions, SigNozQueryPayload } from "@pzero/shared/types";
 import { config } from "../config/env.js";
@@ -157,8 +158,8 @@ function getDefaultTraceSelectFields(): SelectField[] {
     { name: "http_host" },
     { name: "http_url" },
     { name: "events" },
-    { name: "req_headers.x-challenge-answer" },
-    { name: "req_headers.x-challenge-id" },
+    { name: `req_headers.${CHALLENGE_ANSWER_HEADER}` },
+    { name: `req_headers.${CHALLENGE_ID_HEADER}` },
     { name: "res_headers.content-length" },
     { name: "res_headers.content-type" },
     { name: "res_headers.timing-allow-origin" },
@@ -301,13 +302,17 @@ function transformSigNozResponse(apiResponse: any, pagination: SigNozPagination)
     const item = row.data || row;
 
     // Extract request and response headers if they exist
-    const requestHeaders: Record<string, string> = extractHeaders(item, ["x-challenge-answer", "x-challenge-id"], "req_headers");
+    const requestHeaders: Record<string, string> = extractHeaders(
+      item,
+      [CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER],
+      "req_headers",
+    );
     const responseHeaders: Record<string, string> = extractHeaders(item, ["content-length", "content-type", "timing-allow-origin"], "res_headers");
 
     // Remove header attributes and durationNano from item
     const {
-      "req_headers.x-challenge-answer": _reqChallengeAnswer,
-      "req_headers.x-challenge-id": _reqChallengeId,
+      [`req_headers.${CHALLENGE_ANSWER_HEADER}`]: _reqChallengeAnswer,
+      [`req_headers.${CHALLENGE_ID_HEADER}`]: _reqChallengeId,
       "res_headers.content-length": _resContentLength,
       "res_headers.content-type": _resContentType,
       "res_headers.timing-allow-origin": _resTimingAllowOrigin,

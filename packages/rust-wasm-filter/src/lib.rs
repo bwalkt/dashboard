@@ -902,7 +902,7 @@ impl HttpContext for ChallengeAuthzHttp {
                     vec![
                         ("access-control-allow-origin", &allowed_origin),
                         ("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH"),
-                        ("access-control-allow-headers", "content-type,x-challenge-id,x-challenge-answer,authorization,x-proxy-target"),
+                        ("access-control-allow-headers", "content-type,x-challenge-id,x-challenge-answer,x-challenge,x-challenge-params,authorization,x-proxy-target"),
                         ("access-control-allow-credentials", "true"),
                     ],
                     None,
