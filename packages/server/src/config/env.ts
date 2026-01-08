@@ -72,13 +72,13 @@ const DEFAULT_ALLOWED_HEADERS = [
   "x-grpc-web",
   "x-grpc-web-accept-encoding",
   "X-Custom-Header",
-  "X-Test-Eval",
+  "x-test-eval",
 ];
 
 const DEFAULT_EXPOSED_HEADERS = [
   "Content-Range",
   "X-Content-Range",
-  "X-Test-Eval",
+  "x-test-eval",
 ];
 function parserOnlyArray(envVar: string | undefined, def?: string[]): string[] {
   if (!envVar) {

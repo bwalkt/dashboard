@@ -97,7 +97,6 @@ export async function proxyRoutes(fastify: FastifyInstance): Promise<void> {
             for (const [key, value] of responseHeaders) {
               reply.header(key, value);
             }
-            
             return reply.status(response.status).send(jsonData);
           } catch (jsonError) {
             // JSON parsing failed - log and return error

@@ -97,6 +97,14 @@ class RedisManager {
     return this.client.ping();
   }
 
+  public async eval(
+    script: string,
+    keys: string[],
+    args: Array<string | number> = [],
+  ): Promise<string | number | null> {
+    return this.client.eval(script, keys.length, ...keys, ...args) as Promise<string | number | null>;
+  }
+
   public async getMemoryInfo(): Promise<{ used: number; maxmemory: number }> {
     const info = await this.client.info('memory');
     const lines = info.split('\r\n');

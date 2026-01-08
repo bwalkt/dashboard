@@ -79,7 +79,7 @@ services:
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:1420,http://localhost:1430}
       - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-false}
       - CORS_EXPOSED_HEADERS=${CORS_EXPOSED_HEADERS:-Content-Range,X-Content-Range,X-Test-Eval,x-challenge-id,x-challenge,x-challenge-params}
-      - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS:-Content-Type,Authorization,X-Requested-With,Accept,traceparent,x-client-type,x-auth-token,tracestate,X-Custom-Auth,x-grpc-web,x-grpc-web-accept-encoding,X-Custom-Header,X-Test-Eval,x-challenge-id,x-challenge,x-challenge-params,x-challenge-answer}
+      - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS:-Content-Type,Authorization,X-Requested-With,Accept,traceparent,x-client-type,x-auth-token,tracestate,X-Custom-Auth,x-grpc-web,x-grpc-web-accept-encoding,X-Custom-Header,x-test-eval,x-challenge-id,x-challenge,x-challenge-params,x-challenge-answer}
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
       - ENVIRONMENT=${ENVIRONMENT:-development}

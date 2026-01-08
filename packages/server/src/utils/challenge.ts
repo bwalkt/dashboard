@@ -47,14 +47,22 @@ export async function getChallenge(grid: number[][], uid: string) {
 
 export async function markChallengeUsed(challengeId: string) {
     const challengeKey = `challenge:${challengeId}`;
-    const challengeData = await redis.get(challengeKey);
-    if (challengeData) {
-        const challengePayload: ChallengePayload = JSON.parse(challengeData);
-        challengePayload.used = true;
-        await redis.set(challengeKey, JSON.stringify(challengePayload));
-        console.log(`markChallengeUsed: Marked challenge ${challengeId} as used.`);
-    } else {
+    const script = `
+        local data = redis.call('GET', KEYS[1])
+        if not data then return nil end
+        local payload = cjson.decode(data)
+        if payload.used then return 'already_used' end
+        payload.used = true
+        redis.call('SET', KEYS[1], cjson.encode(payload))
+        return 'ok'
+    `;
+    const result = await redis.eval(script, [challengeKey]);
+    if (result === 'already_used') {
+        console.warn(`markChallengeUsed: Challenge ${challengeId} already used.`);
+    } else if (result === null) {
         console.warn(`markChallengeUsed: Challenge ${challengeId} not found in Redis.`);
+    } else {
+        console.log(`markChallengeUsed: Marked challenge ${challengeId} as used.`);
     }
 }
 
