@@ -192,7 +192,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    * GET /auth/me
    * Get current user info (protected route)
    */
-  fastify.get(
+  fastify.post(
     '/auth/me',
     {
       preHandler: authenticateToken,

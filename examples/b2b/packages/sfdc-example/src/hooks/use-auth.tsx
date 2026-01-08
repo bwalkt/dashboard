@@ -29,16 +29,14 @@ export function useUser() {
   } = useQuery<User>({
     queryKey: ['user'],
     queryFn: async () => {
-      const { user } = await api.get<{ user: User }>('/auth/me', {
+      const { user } = await api.post<{ user: User }>('/auth/me', {
         headers: {
           'X-Client-Type': 'web',
         },
       })
       console.log('user /auth/me response:', user)
-      debugger
       if (user?.data.grid) {
         console.log('[API] Storing user grid from /auth/me response', user.data.grid)
-        debugger
         challengeManager.storeUserGrid(user.data.grid)
       }
       return user
