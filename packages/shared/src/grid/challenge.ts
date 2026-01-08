@@ -36,7 +36,7 @@ export class ChallengeManager {
   challenges: Map<string, Challenge> = new Map()
   constructor(storage: Storage = typeof localStorage !== 'undefined' ? localStorage : new MemoryStorage()) {
     this.storage = storage
-    const grid = (this.storage.getItem('user:grid'))
+    const grid = this.storage.getItem('user:grid')
     this.grid = grid ? JSON.parse(grid) : null
     // Load challenges from storage
     if (storage instanceof MemoryStorage) {

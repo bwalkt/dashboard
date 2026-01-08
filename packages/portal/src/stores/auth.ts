@@ -149,7 +149,7 @@ const useAuthStoreBase = create<AuthState>()(
         get().setLoading(true)
 
         try {
-          const response = await api.get<{ user: User }>('/auth/me')
+          const response = await api.post<{ user: User }>('/auth/me')
           const { user } = response
 
           if (user) {

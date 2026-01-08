@@ -40,20 +40,18 @@ async function handleChallengeHeaders(response: Response): Promise<void> {
   const challenge = response.headers.get(CHALLENGE_HEADER)
   const params = response.headers.get(CHALLENGE_PARAMS_HEADER)
   console.log('handleChallengeHeaders', { challengeId, challenge, params })
-  debugger
   if (challengeId && challenge) {
-    debugger
     try {
       // Parse params or use default values
       let parsedParams = { x: '0', y: '0' }
       if (params) {
-        try {   
+        try {
           parsedParams = JSON.parse(params)
         } catch (error) {
           console.warn('Failed to parse challenge params, using defaults:', error)
         }
       }
-      
+
       // Solve the challenge
       // Store in localStorage
       const answer = challengeManager.storeChallenge({ id: challengeId, question: challenge, params: parsedParams })
@@ -123,7 +121,6 @@ async function parseResponse<T>(response: Response): Promise<T> {
   const data = (await (contentType && contentType.includes('application/json')
     ? response.json()
     : response.text())) as T
-  debugger
   challengeManager.handleResponse(response)
   return data
 }

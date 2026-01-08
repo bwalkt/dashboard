@@ -182,8 +182,7 @@ const PUBLIC_ROUTE_PATTERNS: &[&str] = &[
     "/auth/",
     "/assets/",
     "/public/",
-    "/docs/",
-    "/proxy/",
+    "/docs/"
 ];
 
 
@@ -802,14 +801,16 @@ impl ChallengeAuthzHttp {
 
         let mut content_type = "application/json".to_string();
         for (name, value) in &response_headers {
-            if *name == "content-type" {
+            let normalized = name.to_ascii_lowercase();
+            if normalized == "content-type" {
                 content_type = value.to_string();
             }
-            if *name == "x-challenge-id"
-                || *name == "x-challenge-question"
-                || *name == "x-challenge-params"
+            if normalized == "x-challenge-id"
+                || normalized == "x-challenge-question"
+                || normalized == "x-challenge-params"
+                || normalized == "x-challenge"
             {
-                owned_headers.push((name.to_string(), value.to_string()));
+                owned_headers.push((normalized, value.to_string()));
             }
         }
         owned_headers.push(("content-type".to_string(), content_type));
@@ -828,18 +829,21 @@ impl ChallengeAuthzHttp {
 
     fn handle_auth_next_response(&mut self) {
         let response_headers = self.get_http_call_response_headers();
-        let challenge_id = response_headers
-            .iter()
-            .find(|(name, _)| *name == "x-challenge-id")
-            .map(|(_, value)| value.to_string());
-        let challenge_question = response_headers
-            .iter()
-            .find(|(name, _)| *name == "x-challenge-question")
-            .map(|(_, value)| value.to_string());
-        let challenge_params = response_headers
-            .iter()
-            .find(|(name, _)| *name == "x-challenge-params")
-            .map(|(_, value)| value.to_string());
+        let mut challenge_id = None;
+        let mut challenge_question = None;
+        let mut challenge_params = None;
+        for (name, value) in &response_headers {
+            let normalized = name.to_ascii_lowercase();
+            if normalized == "x-challenge-id" {
+                challenge_id = Some(value.to_string());
+            } else if normalized == "x-challenge-question" || normalized == "x-challenge" {
+                if challenge_question.is_none() {
+                    challenge_question = Some(value.to_string());
+                }
+            } else if normalized == "x-challenge-params" {
+                challenge_params = Some(value.to_string());
+            }
+        }
 
         if let (Some(id), Some(question), Some(params)) = (challenge_id, challenge_question, challenge_params) {
             self.pending_next_challenge_headers = Some(NextChallengeHeaders {
@@ -915,10 +919,12 @@ impl HttpContext for ChallengeAuthzHttp {
         }
 
         let path_without_query = path.split('?').next().unwrap_or(&path);
-        self.is_auth_me_request = path_without_query == "/auth/me";
+        self.is_auth_me_request = path_without_query == "/auth/me"
+            || path_without_query == "/proxy/auth/me"
+            || path_without_query.ends_with("/auth/me");
         let is_auth_next_request = path_without_query.starts_with("/auth/next");
 
-        // Check if route is public (auth/me is handled by the filter)
+        // Check if route is public (auth/me and proxy auth/me are handled by the filter)
         info!("[Rust WASM Filter] Checking if public route: {} {}", method, path);
         if !self.is_auth_me_request && !is_auth_next_request && is_public_route(&path, &method) {
             info!("[Rust WASM Filter] Public route, bypassing all validation: {} {}", method, path);
@@ -1012,7 +1018,14 @@ impl HttpContext for ChallengeAuthzHttp {
         if let Some(next_headers) = self.pending_next_challenge_headers.take() {
             if self.get_http_response_header("x-challenge-id").is_none() {
                 self.set_http_response_header("x-challenge-id", Some(&next_headers.challenge_id));
+            }
+            if self.get_http_response_header("x-challenge-question").is_none() {
                 self.set_http_response_header("x-challenge-question", Some(&next_headers.challenge_question));
+            }
+            if self.get_http_response_header("x-challenge").is_none() {
+                self.set_http_response_header("x-challenge", Some(&next_headers.challenge_question));
+            }
+            if self.get_http_response_header("x-challenge-params").is_none() {
                 self.set_http_response_header("x-challenge-params", Some(&next_headers.challenge_params));
             }
         }
