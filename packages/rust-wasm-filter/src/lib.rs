@@ -924,7 +924,15 @@ impl HttpContext for ChallengeAuthzHttp {
 
         // Extract and validate access token from cookie
         let cookie_header = self.get_http_request_header("cookie").unwrap_or_default();
-        let access_token = extract_access_token(&cookie_header);
+        let auth_header = self
+            .get_http_request_header("authorization")
+            .unwrap_or_default();
+        let access_token = extract_bearer_token(&auth_header)
+            .or_else(|| {
+                let token = extract_access_token(&cookie_header);
+                if token.is_empty() { None } else { Some(token) }
+            })
+            .unwrap_or_default();
         self.pending_cookie_header = Some(cookie_header);
         
         if access_token.is_empty() {
@@ -1080,6 +1088,19 @@ fn extract_access_token(cookie_header: &str) -> String {
         }
     }
     String::new()
+}
+
+fn extract_bearer_token(auth_header: &str) -> Option<String> {
+    let trimmed = auth_header.trim();
+    if trimmed.len() < 7 {
+        return None;
+    }
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.starts_with("bearer ") {
+        Some(trimmed[7..].trim().to_string())
+    } else {
+        None
+    }
 }
 
 fn validate_jwt_format(token: &str) -> bool {
