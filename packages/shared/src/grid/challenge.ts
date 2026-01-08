@@ -100,10 +100,10 @@ export class ChallengeManager {
     for (const key of keys) {
       const challenge = this.challenges.get(key)
       if (challenge) {
-        if (challenge.solved === false) {
+        if (challenge.solved !== true) {
           return challenge as Challenge
         }
-        if (challenge.solved && max_prune > 0) {
+        if (max_prune > 0) {
           this.challenges.delete(key)
           max_prune--
           continue
@@ -283,40 +283,49 @@ export class ChallengeManager {
    * Returns updated headers with challenge ID and answer if available
    */
   addChallengeHeaders(headers: Record<string, string>, challengeId?: string): Record<string, string> {
-    const challenge = this.getChallenge(challengeId)
-    if (!challenge || !challengeId) {
-      return headers
-    }
-    if (challenge.solved) {
-      console.warn('[Challenge Client] Challenge already solved, skipping adding headers:', {
-        challengeId: challenge.id,
-      })
-      return headers
-    }
-    // Solve the challenge if we haven't already
-    if (challenge.answer === undefined) {
-      const answer = this.solveChallenge(challenge.id)
-      if (answer === null) {
-        console.warn('[Challenge] Unable to solve challenge, sending request without answer')
+    let attempts = 0
+    while (attempts < MAX_CHALLENGES) {
+      const challenge = this.getChallenge(challengeId)
+      if (!challenge) {
         return headers
       }
-      challenge.answer = answer
-      this.markSolved(challenge.id)
+      const challengeIdValue = challenge.id
+      if (challenge.solved) {
+        console.warn('[Challenge Client] Challenge already solved, skipping adding headers:', {
+          challengeId: challengeIdValue,
+        })
+        return headers
+      }
+      // Solve the challenge if we haven't already
+      if (challenge.answer === undefined) {
+        const answer = this.solveChallenge(challenge.id)
+        if (answer === null) {
+          console.warn('[Challenge] Unable to solve challenge, clearing and trying next')
+          this.clearChallenge(challenge.id)
+          attempts++
+          challengeId = undefined
+          continue
+        }
+        challenge.answer = answer
+        this.markSolved(challenge.id)
+      }
+
+      const updatedHeaders = {
+        ...headers,
+        [CHALLENGE_ID_HEADER]: challengeIdValue,
+        [CHALLENGE_ANSWER_HEADER]: String(challenge.answer),
+      }
+
+      console.log('[Challenge Client] Adding headers to request:', {
+        challengeId: challengeIdValue,
+        answer: challenge.answer,
+        answerType: typeof challenge.answer,
+      })
+
+      return updatedHeaders
     }
 
-    const updatedHeaders = {
-      ...headers,
-      [CHALLENGE_ID_HEADER]: challenge.id,
-      [CHALLENGE_ANSWER_HEADER]: String(challenge.answer),
-    }
-
-    console.log('[Challenge Client] Adding headers to request:', {
-      challengeId: challenge.id,
-      answer: challenge.answer,
-      answerType: typeof challenge.answer,
-    })
-
-    return updatedHeaders
+    return headers
   }
   clearAllChallenges(): void {
     this.challenges.clear()

@@ -1037,6 +1037,11 @@ impl HttpContext for ChallengeAuthzHttp {
 fn is_public_route(path: &str, _method: &str) -> bool {
     // Strip query parameters if present
     let path_without_query = path.split('?').next().unwrap_or(path);
+
+    // Never bypass /proxy/* routes except for explicit auth endpoints.
+    if path_without_query.starts_with("/proxy/") {
+        return PUBLIC_ROUTES.iter().any(|&route| path_without_query == route);
+    }
     
     // Check exact matches first
     if PUBLIC_ROUTES.iter().any(|&route| path_without_query == route) {
