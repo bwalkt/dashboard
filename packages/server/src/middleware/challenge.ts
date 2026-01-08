@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto";
 import type { AuthenticatedRequest } from "@pzero/shared";
+import { CHALLENGE_ID_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_QUESTION_HEADER } from "@pzero/shared/challenge";
 import { genFunctionAsJson } from "@pzero/shared/grid";
 import { uuid } from "@pzero/shared/uuid";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -53,9 +54,9 @@ export async function addChallengeHeaders(
     await redis.set(challengeKey, JSON.stringify(challengePayload), 300);
     
     // Add challenge headers to response
-    reply.header("X-Challenge-Id", challengeId);
-    reply.header("X-Challenge-Question", challengeData.function.expression);
-    reply.header("X-Challenge-Params", `x=${challengeData.parameters.x},y=${challengeData.parameters.y}`);
+    reply.header(CHALLENGE_ID_HEADER, challengeId);
+    reply.header(CHALLENGE_QUESTION_HEADER, challengeData.function.expression);
+    reply.header(CHALLENGE_PARAMS_HEADER, `x=${challengeData.parameters.x},y=${challengeData.parameters.y}`);
     
     console.log(`[Challenge Middleware] Generated new challenge:`, {
       challengeId,

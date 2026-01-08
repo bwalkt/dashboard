@@ -2,9 +2,12 @@ import { randomInt } from "node:crypto";
 
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail, type UserResponse } from "@pzero/shared";
+import { CHALLENGE_ID_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_QUESTION_HEADER, challengeManager } from '@pzero/shared/challenge'
 import { genFunctionAsJson, genGrid } from "@pzero/shared/grid";
 import { uuid } from "@pzero/shared/uuid";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import request from "twilio/lib/http/request.js";
+import response from "twilio/lib/http/response.js";
 import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -12,6 +15,7 @@ import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
 import { PROXY_TARGETS_CACHE_KEY, refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
+import { type ChallengePayload, getChallenge, getChallengePayload } from "../utils/challenge.js";
 import { encryptionService } from '../utils/encryption.js'
 
 async function deleteUserSession(request: FastifyRequest, reply: FastifyReply) {
@@ -221,64 +225,106 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       } as ErrorResponse);
     }
   });
+  async function nextHelper(user:UserWithStatus, request: FastifyRequest, reply: FastifyReply, sendUser?: boolean, challenge?: ChallengePayload, challengeId?: string) {
+    try {
+      if (!user?.data?.grid || user.is_act === undefined) {
+        user = await userService.getUserByEmail(user.email) as UserWithStatus;
+      }
+      if (!user?.data?.grid || !user.is_act) {
+        console.log("Error - Grid for user not found, or status not ACTIVE:", user);
+        await deleteUserSession(request, reply);
+        return reply.status(403).send({
+          error: "Forbidden",
+          message: `User Account is ${user.status ?? "INACTIVE"}`,
+        } as ErrorResponse);
+      }
+      const grid = encryptionService.decrypt(user.data.grid) as number[][];
+      challengeManager.storeUserGrid(grid);
+      console.log("Fetched user info for:", {...user, ...grid});
+       
+        // Check and populate proxy_targets cache if not exists
+      const cacheExists = await redis.exists(PROXY_TARGETS_CACHE_KEY);
+      if (!cacheExists) {
+        console.log("Proxy targets cache not found, populating from database...");
+        try {
+          await refreshProxyTargetsCache();
+          console.log("Proxy targets cache populated successfully");
+        } catch (error) {
+          console.error("Failed to populate proxy targets cache:", error);
+            // Continue with auth/me flow even if cache population fails
+        }
+      }
+      const thisChallenge = challenge && challenge.next ? await getChallengePayload(challenge.next) : null;
+      let challengeData = await getChallenge(grid, user.id);
+        // Send decrypted grid to client (not the encrypted one)
+      
+      const userWithDecryptedGrid = {
+        ...user,
+        data: {
+          ...user.data,
+          grid: grid // Send the decrypted grid
+        }
+      };
+      if (sendUser) {
+        const userKey = `user:${user.email}`;
+        await redis.set(userKey, JSON.stringify(userWithDecryptedGrid)); // Cache for 5 minutes
+      }
+      if (challengeId && thisChallenge) {
+        thisChallenge.next = challengeData.id;
+        await storeChallengeRecord(challengeId, thisChallenge);
+        await storeChallengeRecord(challengeData.id, challengeData);
+        challengeData = {
+          id: challengeId,
+          ...thisChallenge
+        }
+      }
+      const replyObj = reply
+        .header(CHALLENGE_ID_HEADER, challengeData.id)
+        .header(CHALLENGE_QUESTION_HEADER, challengeData.question)
+        .header(CHALLENGE_PARAMS_HEADER, `x=${challengeData.params.x},y=${challengeData.params.y}`)
+      console.log(
+        `[/auth/me] Sending challenge headers: ${CHALLENGE_ID_HEADER}=${challengeData.id}, ${CHALLENGE_QUESTION_HEADER}=${challengeData.question}, ${CHALLENGE_PARAMS_HEADER}=x=${challengeData.params.x},y=${challengeData.params.y}`
+      )
+      return sendUser? replyObj.send({ user: userWithDecryptedGrid }) : replyObj.send({challengeId: challengeData.id});
+    } catch (error) {
+      console.error("Get user info error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "Failed to get user information",
+      } as ErrorResponse);
+    }
+  }
+
+  async function getChallengeRecord(challengeId: string): Promise<ChallengePayload | null> {
+    const redisKey = `challenge:${challengeId}`;
+    const raw = await redis.get(redisKey);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as ChallengePayload;
+    } catch (error) {
+      console.warn("Failed to parse challenge payload:", challengeId, error);
+      return null;
+    }
+  }
+
+  async function storeChallengeRecord(challengeId: string, payload: ChallengePayload): Promise<void> {
+    const redisKey = `challenge:${challengeId}`;
+    await redis.set(redisKey, JSON.stringify(payload));
+  }
 
   /**
    * GET /auth/me
    * Get current user info (protected route)
    */
-  fastify.get(
+  fastify.post(
     "/auth/me",
     {
       preHandler: authenticateToken,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        let user = (request as unknown as AuthenticatedRequest).user as UserWithStatus;
-        if (!user?.data?.grid || user.is_act === undefined) {
-          user = await userService.getUserByEmail(user.email) as UserWithStatus;
-        }
-        if (!user?.data?.grid || !user.is_act) {
-          console.log("Error - Grid for user not found, or status not ACTIVE:", user);
-          await deleteUserSession(request, reply);
-          return reply.status(403).send({
-            error: "Forbidden",
-            message: `User Account is ${user.status ?? "INACTIVE"}`,
-          } as ErrorResponse);
-        }
-        console.log("Fetched user info for:", user);
-        
-        // Check and populate proxy_targets cache if not exists
-        const cacheExists = await redis.exists(PROXY_TARGETS_CACHE_KEY);
-        if (!cacheExists) {
-          console.log("Proxy targets cache not found, populating from database...");
-          try {
-            await refreshProxyTargetsCache();
-            console.log("Proxy targets cache populated successfully");
-          } catch (error) {
-            console.error("Failed to populate proxy targets cache:", error);
-            // Continue with auth/me flow even if cache population fails
-          }
-        }
-        
-        const grid = encryptionService.decrypt(user.data.grid);
-        const challengeId =  uuid();
-        const complexity = randomInt(1, 4);
-        const challengeData = genFunctionAsJson(grid, complexity);
-         const challengeKey = `challenge:${challengeId}`;
-        const challengePayload = {
-          answer: challengeData.result.value,
-          uid: user.id,
-          used: false,
-          c_at: new Date().toISOString()
-        };
-        console.log(`[/auth/me] Storing challenge in Redis: ${challengeKey}`, challengePayload);
-
-        await redis.set(challengeKey, JSON.stringify(challengePayload));
-        return reply
-          .header("X-Challenge-Id", challengeId)
-          .header("X-Challenge-Question", challengeData.function.expression)
-          .header("X-Challenge-Params", `x=${challengeData.parameters.x},y=${challengeData.parameters.y}`)
-          .send({ user });
+        const user = (request as unknown as AuthenticatedRequest).user as UserWithStatus;
+        return await nextHelper(user, request, reply, true);
       } catch (error) {
         console.error("Get user info error:", error);
         return reply.status(500).send({
@@ -288,7 +334,58 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
     }
   );
+  
+  /**
+   * GET /auth/me
+   * Get current user info (protected route)
+   */
+  fastify.post(
+    "/auth/next/:challengeId",
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        let user = (request as unknown as AuthenticatedRequest).user as UserWithStatus;
+        const { challengeId } = request.params as { challengeId: string };
 
+        if (!challengeId) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "challengeId is required",
+          } as ErrorResponse);
+        }
+        const currentChallenge = await getChallengeRecord(challengeId);
+        if (!currentChallenge) {
+          return reply.status(404).send({
+            error: "Not Found",
+            message: "Challenge not found",
+          } as ErrorResponse);
+        }
+
+        if (currentChallenge.uid !== user.id) {
+          return reply.status(403).send({
+            error: "Forbidden",
+            message: "Challenge does not belong to user",
+          } as ErrorResponse);
+        }
+
+        if (currentChallenge.used) {
+          return reply.status(409).send({
+            error: "Conflict",
+            message: "Challenge already used",
+          } as ErrorResponse);
+        }
+        return await nextHelper(user, request, reply, false, currentChallenge, challengeId);
+      } catch (error) {
+        console.error("Get user info error:", error);
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Failed to get user information",
+        } as ErrorResponse);
+      }
+    }
+  );
   /**
    * POST /auth/refresh
    * Refresh access token using refresh token from cookies

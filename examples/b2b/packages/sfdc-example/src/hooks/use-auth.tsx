@@ -1,10 +1,11 @@
+import { challengeManager } from '@pzero/shared/challenge'
+import { ApiError } from '@pzero/shared/http'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { ApiError, api } from '@/lib/api'
+import { api } from '@/lib/api'
 import { AUTH_CACHE_TIME_MS, AUTH_STALE_TIME_MS } from '@/lib/constants'
 import { useAuthStore } from '@/stores/auth-store'
 import { User } from '@/types'
-
 /**
  * Synchronizes and exposes the current authenticated user from React Query and the auth store, and provides sign-out and refetch controls.
  *
@@ -28,11 +29,14 @@ export function useUser() {
   } = useQuery<User>({
     queryKey: ['user'],
     queryFn: async () => {
-      const { user } = await api.get<{ user: User }>('/auth/me', {
+      const { user } = await api.post<{ user: User }>('/auth/me', undefined, {
         headers: {
           'X-Client-Type': 'web',
         },
       })
+      if (user?.data?.grid) {
+        challengeManager.storeUserGrid(user.data.grid)
+      }
       return user
     },
     // Only fetch if we don't have data or it's stale
@@ -50,10 +54,8 @@ export function useUser() {
     error: signOutError,
   } = useMutation({
     mutationFn: async () => {
-      console.log('Calling logout API...')
       try {
         const response = await api.post('/auth/logout', undefined, { skipRefresh: true })
-        console.log('Logout API response:', response)
         queryClient.clear()
         clearUser() // Clear zustand store
         return { error: null }
@@ -63,7 +65,6 @@ export function useUser() {
       }
     },
     onSuccess: () => {
-      console.log('Logout successful, redirecting...')
       window.location.href = '/auth/sign-in'
     },
     onError: error => {

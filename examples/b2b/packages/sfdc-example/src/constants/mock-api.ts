@@ -74,7 +74,6 @@ export const fakeProducts = {
       })
     }
     const csv = json2csv(products)
-    debugger
     return products
   },
 
@@ -98,7 +97,6 @@ export const fakeProducts = {
     })
     const totalProducts = allProducts.length
     const csv = json2csv(allProducts)
-    debugger
     // Pagination logic
     const offset = (page - 1) * limit
     const paginatedProducts = allProducts.slice(offset, offset + limit)

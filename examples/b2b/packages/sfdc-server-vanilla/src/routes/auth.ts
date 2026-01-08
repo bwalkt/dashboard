@@ -1,5 +1,6 @@
 import oauth2Plugin, { type OAuth2Namespace } from '@fastify/oauth2'
 import type { AuthenticatedRequest, ErrorResponse, UserResponse } from '@pzero/shared'
+import { CHALLENGE_ID_HEADER, CHALLENGE_QUESTION_HEADER } from '@pzero/shared/challenge'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { VALIDATION_HEADER_NAME } from '../config/constants.js'
 import { config } from '../config/env.js'
@@ -171,8 +172,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         // Store challenge ID in Redis for later refresh
         await redis.set(`user:${user.id}:challengeId`, challengeResponse.challengeId, 3600)
         // Send challenge as headers
-        reply.header('x-challenge-id', challengeResponse.challengeId)
-        reply.header('x-challenge', challengeResponse.challenge)
+        reply.header(CHALLENGE_ID_HEADER, challengeResponse.challengeId)
+        reply.header(CHALLENGE_QUESTION_HEADER, challengeResponse.challenge)
       }
 
       return reply.send({
@@ -192,7 +193,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
    * GET /auth/me
    * Get current user info (protected route)
    */
-  fastify.get(
+  fastify.post(
     '/auth/me',
     {
       preHandler: authenticateToken,
@@ -286,8 +287,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         // Store new challenge ID in Redis
         await redis.set(`user:${user.id}:challengeId`, challengeResponse.challengeId, 3600)
         // Send challenge as headers
-        reply.header('x-challenge-id', challengeResponse.challengeId)
-        reply.header('x-challenge', challengeResponse.challenge)
+        reply.header(CHALLENGE_ID_HEADER, challengeResponse.challengeId)
+        reply.header(CHALLENGE_QUESTION_HEADER, challengeResponse.challenge)
       }
 
       return reply.send({

@@ -23,7 +23,7 @@ static_resources:
                           - suffix: ".incmix.com"
                         allow_methods: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
                         allow_headers: "content-type,x-challenge-id,x-challenge-answer,authorization,traceparent,x-proxy-target,x-client-type"
-                        expose_headers: "x-challenge-id,x-challenge"
+                        expose_headers: "x-challenge-id,x-challenge,x-challenge-params,x-challenge-answer"
                         allow_credentials: true
                         max_age: "86400"
                       routes:

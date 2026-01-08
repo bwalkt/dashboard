@@ -1,5 +1,6 @@
 screenshots
 # Logs
+cookies*.txt
 logs
 *.log
 *.zip
@@ -37,3 +38,4 @@ sqlite
 common/zookeeper-1/data
 !common/clickhouse
 .turbo
+packages/server/cookies*.txt
