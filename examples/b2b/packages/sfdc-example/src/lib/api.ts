@@ -9,7 +9,7 @@
  * - Built-in retry logic for authentication failures
  * - Challenge solving and header attachment
  */
-import { challengeManager } from '@pzero/shared/challenge'
+import { CHALLENGE_PARAMS_HEADER, challengeManager } from '@pzero/shared/challenge'
 import {
   ApiError,
   ApiRequestOptions,
@@ -38,17 +38,26 @@ import { getUseWasm } from './proxy-config'
 async function handleChallengeHeaders(response: Response): Promise<void> {
   const challengeId = response.headers.get(CHALLENGE_ID_HEADER)
   const challenge = response.headers.get(CHALLENGE_HEADER)
-  const params = response.headers.get(CHALLENGE_ANSWER_HEADER)
+  const params = response.headers.get(CHALLENGE_PARAMS_HEADER)
   console.log('handleChallengeHeaders', { challengeId, challenge, params })
   debugger
   if (challengeId && challenge) {
     debugger
     try {
+      // Parse params or use default values
+      let parsedParams = { x: '0', y: '0' }
+      if (params) {
+        try {   
+          parsedParams = JSON.parse(params)
+        } catch (error) {
+          console.warn('Failed to parse challenge params, using defaults:', error)
+        }
+      }
+      
       // Solve the challenge
       // Store in localStorage
-      challengeManager.storeChallenge({ id: challengeId, question: challenge })
-      const challengeAnswer = challengeManager.solveChallenge(challengeId)
-      console.log('Challenge solved and stored:', { challengeId, challenge, challengeAnswer })
+      const answer = challengeManager.storeChallenge({ id: challengeId, question: challenge, params: parsedParams })
+      console.log('Challenge solved and stored:', { challengeId, challenge, answer })
     } catch (error) {
       console.error('Failed to solve challenge:', error)
     }

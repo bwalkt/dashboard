@@ -372,7 +372,15 @@ impl Context for ChallengeAuthzHttp {
 
 impl ChallengeAuthzHttp {
     fn handle_challenge_response(&mut self) {
-        if let (Some(challenge_id), Some(challenge_answer)) = (&self.pending_challenge_id, &self.pending_challenge_answer) {
+        let challenge_id = match self.pending_challenge_id.clone() {
+            Some(value) => value,
+            None => return,
+        };
+        let challenge_answer = match self.pending_challenge_answer.clone() {
+            Some(value) => value,
+            None => return,
+        };
+        {
             // Get response body from Redis using configurable buffer size
             let response_body = self.get_http_call_response_body(0, self.config.redis_response_buffer_size);
             
@@ -392,13 +400,13 @@ impl ChallengeAuthzHttp {
                                         warn!("[Rust WASM Filter] Challenge email mismatch: {} != {}", payload_email, user_email);
                                         (false, payload.next, used)
                                     } else {
-                                        (challenge_answer_matches(&payload.answer, challenge_answer), payload.next, used)
+                                        (challenge_answer_matches(&payload.answer, &challenge_answer), payload.next, used)
                                     }
                                 } else {
-                                    (challenge_answer_matches(&payload.answer, challenge_answer), payload.next, used)
+                                    (challenge_answer_matches(&payload.answer, &challenge_answer), payload.next, used)
                                 }
                             } else {
-                                (challenge_answer_matches(&payload.answer, challenge_answer), payload.next, used)
+                                (challenge_answer_matches(&payload.answer, &challenge_answer), payload.next, used)
                             }
                         }
                         Err(_) => {
@@ -422,7 +430,7 @@ impl ChallengeAuthzHttp {
 
                         // If we have a chained challenge, fetch the next one before proceeding
                         if next_challenge.is_some() {
-                            if self.dispatch_auth_next(challenge_id) {
+                            if self.dispatch_auth_next(&challenge_id) {
                                 // Clear pending challenge context, wait for /auth/next response
                                 self.pending_challenge_id = None;
                                 self.pending_challenge_answer = None;
@@ -783,31 +791,35 @@ impl ChallengeAuthzHttp {
             .and_then(|(_, value)| value.parse::<u16>().ok())
             .unwrap_or(200);
 
-        let mut headers: Vec<(&str, &str)> = Vec::new();
+        let mut owned_headers: Vec<(String, String)> = Vec::new();
         if let Some(origin) = self.get_http_request_header("origin") {
             let allowed_origin = self.validate_cors_origin(&origin);
             if !allowed_origin.is_empty() {
-                headers.push(("access-control-allow-origin", &allowed_origin));
-                headers.push(("access-control-allow-credentials", "true"));
+                owned_headers.push(("access-control-allow-origin".to_string(), allowed_origin));
+                owned_headers.push(("access-control-allow-credentials".to_string(), "true".to_string()));
             }
         }
 
-        let mut content_type = "application/json";
+        let mut content_type = "application/json".to_string();
         for (name, value) in &response_headers {
             if *name == "content-type" {
-                content_type = value;
+                content_type = value.to_string();
             }
             if *name == "x-challenge-id"
                 || *name == "x-challenge-question"
                 || *name == "x-challenge-params"
             {
-                headers.push((name, value));
+                owned_headers.push((name.to_string(), value.to_string()));
             }
         }
-        headers.push(("content-type", content_type));
+        owned_headers.push(("content-type".to_string(), content_type));
 
+        let headers: Vec<(&str, &str)> = owned_headers
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str()))
+            .collect();
         let body = response_body.map(|b| b.to_vec()).unwrap_or_default();
-        self.send_http_response(status, headers, Some(&body));
+        self.send_http_response(status.into(), headers, Some(&body));
 
         self.pending_user_call_id = None;
         self.pending_user_email = None;

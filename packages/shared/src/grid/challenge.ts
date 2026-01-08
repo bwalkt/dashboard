@@ -25,26 +25,63 @@ export interface Storage {
   getItem(key: string): string | null
   setItem(key: string, value: string): void
   removeItem(key: string): void
+  readonly length: number
+  key(index: number): string | null
 }
 
 export class ChallengeManager {
   private storage: Storage
+  // TODO - we should not save grid in localstorage - instead ask /auth/next to return grid
   grid: number[][] | null = null
   challenges: Map<string, Challenge> = new Map()
-  constructor(storage: localStorage !== 'undefined' ? localStorage : new MemoryStorage()) {
+  constructor(storage: Storage = typeof localStorage !== 'undefined' ? localStorage : new MemoryStorage()) {
     this.storage = storage
-  }
-  grid?: number[][]) {
-    if (grid) {
-      this.grid = grid
+    const grid = (this.storage.getItem('user:grid'))
+    this.grid = grid ? JSON.parse(grid) : null
+    // Load challenges from storage
+    if (storage instanceof MemoryStorage) {
+      // For MemoryStorage, we can iterate over the internal store
+      for (const [key, value] of (storage as any).store) {
+        if (key.startsWith('challenge:')) {
+          try {
+            const challenge: Challenge = JSON.parse(value)
+            this.challenges.set(challenge.id, challenge)
+          } catch (error) {
+            console.error('Failed to parse stored challenge:', key, error)
+          }
+        }
+      }
+    } else {
+      // For localStorage, we need to iterate through all keys
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i)
+        if (key && key.startsWith('challenge:')) {
+          try {
+            const value = storage.getItem(key)
+            if (value) {
+              const challenge: Challenge = JSON.parse(value)
+              this.challenges.set(challenge.id, challenge)
+            }
+          } catch (error) {
+            console.error('Failed to parse stored challenge:', key, error)
+          }
+        }
+      }
     }
+  }
+  setGrid(grid: number[][]): void {
+    this.grid = grid
+    this.storage.setItem('user:grid', JSON.stringify(grid))
   }
 
   /**
    * Store challenge data
    */
-  storeChallenge(challenge: Challenge): void {
+  storeChallenge(challenge: Challenge): string | null {
     this.challenges.set(challenge.id, challenge)
+    const answer = this.solveChallenge(challenge.id)
+    this.storage.setItem(`challenge:${challenge.id}`, JSON.stringify(challenge))
+    return answer?.toString() || null
   }
   /**
    * Get stored challenge
@@ -75,26 +112,21 @@ export class ChallengeManager {
     }
     return null
   }
-  markUsed(challengeId?: string): void {
+  markSolved(challengeId?: string): void {
     const challenge = this.getChallenge(challengeId)
     if (challenge) {
       challenge.solved = true
       challenge.solved_at = Date.now()
       this.challenges.set(challenge.id, challenge)
     }
+    this.storage.removeItem(`challenge:${challengeId}`)
   }
   /**
    * Clear stored challenge
    */
   clearChallenge(challengeId: string): void {
     this.challenges.delete(challengeId)
-  }
-
-  /**
-   * Store user's grid (should be stored after decrypting from server)
-   */
-  storeUserGrid(grid: number[][]): void {
-    this.grid = grid
+    this.storage.removeItem(`challenge:${challengeId}`)
   }
 
   /**
@@ -109,7 +141,14 @@ export class ChallengeManager {
   clearUserGrid(): void {
     this.grid = null
   }
-
+  logoff(): void {
+    this.clearUserGrid()
+    this.clearAllChallenges()
+  }
+  storeUserGrid(grid: number[][]): void {
+    this.grid = grid
+    this.storage.setItem('user:grid', JSON.stringify(grid))
+  }
   /**
    * Parse challenge parameters from header string
    * Format: "x=row,col,y=row,col" -> { x: "row,col", y: "row,col" }
@@ -181,7 +220,19 @@ export class ChallengeManager {
       console.warn('[Challenge] No challenge found')
       return null
     }
-
+    if (activeChallenge.answer) {
+      console.log('[Challenge] Challenge already solved:', {
+        challengeId: activeChallenge.id,
+        answer: activeChallenge.answer,
+      })
+      return activeChallenge.answer
+    }
+    if (activeChallenge.solved) {
+      console.log('[Challenge] Challenge already marked as solved:', {
+        challengeId: activeChallenge.id,
+      })
+      return activeChallenge.answer || null
+    }
     // Use provided grid or get from storage
     if (!this.grid) {
       console.error('[Challenge] No user grid found')
@@ -236,7 +287,12 @@ export class ChallengeManager {
     if (!challenge || !challengeId) {
       return headers
     }
-
+    if (challenge.solved) {
+      console.warn('[Challenge Client] Challenge already solved, skipping adding headers:', {
+        challengeId: challenge.id,
+      })
+      return headers
+    }
     // Solve the challenge if we haven't already
     if (challenge.answer === undefined) {
       const answer = this.solveChallenge(challenge.id)
@@ -245,8 +301,7 @@ export class ChallengeManager {
         return headers
       }
       challenge.answer = answer
-      challenge.solved = true
-      this.storeChallenge(challenge)
+      this.markSolved(challenge.id)
     }
 
     const updatedHeaders = {
@@ -298,7 +353,7 @@ export class ChallengeManager {
  * In-memory storage implementation for environments without localStorage
  */
 export class MemoryStorage implements Storage {
-  private store: Map<string, string> = new Map()
+  public store: Map<string, string> = new Map()
 
   getItem(key: string): string | null {
     return this.store.get(key) || null
@@ -315,6 +370,15 @@ export class MemoryStorage implements Storage {
   clear(): void {
     this.store.clear()
   }
+
+  get length(): number {
+    return this.store.size
+  }
+
+  key(index: number): string | null {
+    const keys = Array.from(this.store.keys())
+    return keys[index] || null
+  }
 }
 
 // Export singleton instance for convenience
@@ -328,8 +392,13 @@ export const storeUserGrid = (grid: number[][]) => challengeManager.storeUserGri
 export const getUserGrid = () => challengeManager.getUserGrid()
 export const extractChallengeFromHeaders = (response: Response) =>
   challengeManager.extractChallengeFromHeaders(response)
+export const parseChallengeParams = (paramsStr: string) => challengeManager['parseChallengeParams'](paramsStr)
+export const clearChallenge = (challengeId: string) => challengeManager.clearChallenge(challengeId)
+export const setGrid = (grid: number[][]) => challengeManager.setGrid(grid)
+export const clearUserGrid = () => challengeManager.clearUserGrid()
+export const logoff = () => challengeManager.logoff()
 export const solveChallenge = (challengeId?: string) => challengeManager.solveChallenge(challengeId)
 export const addChallengeHeaders = (headers: Record<string, string>) => challengeManager.addChallengeHeaders(headers)
 export const handleResponse = (response: Response, userData?: any) =>
   challengeManager.handleResponse(response, userData)
-export const markUsed = (challengerId?: string) => challengeManager.markUsed(challengerId)
+export const markSolved = (challengerId?: string) => challengeManager.markSolved(challengerId)
