@@ -30,6 +30,17 @@ export function MobileUserNav() {
     }
   }
 
+  const handleFullSignOut = () => {
+    document.cookie.split(';').forEach((cookie) => {
+      document.cookie = cookie
+        .replace(/^ +/, '')
+        .replace(/=.*/, '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/')
+    })
+    localStorage.clear()
+    sessionStorage.clear()
+    location.reload()
+  }
+
   // Create user object for display
   const userData = user
     ? {
@@ -67,6 +78,7 @@ export function MobileUserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>Home</DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleFullSignOut}>Full Signout</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

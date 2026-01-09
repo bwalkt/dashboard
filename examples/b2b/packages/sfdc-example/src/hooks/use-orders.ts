@@ -27,6 +27,7 @@ interface ApiResponse {
 interface PaginationParams {
   page?: number
   limit?: number
+  sort?: Array<{ id: string; desc: boolean }>
 }
 
 const fetchOrders = async (params?: PaginationParams): Promise<ListApiResponse> => {
@@ -34,6 +35,9 @@ const fetchOrders = async (params?: PaginationParams): Promise<ListApiResponse> 
 
   if (params?.page) queryParams.append('page', params.page.toString())
   if (params?.limit) queryParams.append('limit', params.limit.toString())
+  if (params?.sort && params.sort.length > 0) {
+    queryParams.append('sort', JSON.stringify(params.sort))
+  }
 
   const queryString = queryParams.toString()
   const url = queryString ? `/salesforce/Order/query?${queryString}` : '/salesforce/Order/query'

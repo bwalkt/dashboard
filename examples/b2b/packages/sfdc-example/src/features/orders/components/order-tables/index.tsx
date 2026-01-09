@@ -25,6 +25,9 @@ export function OrderTable<TData, TValue>({ data, columns, pagination }: OrderTa
     data, // order data
     columns, // order columns
     pageCount: pageCount,
+    initialState: {
+      sorting: [{ id: 'CreatedDate', desc: true }],
+    },
     shallow: false, //Setting to false triggers a network request with the updated querystring.
     debounceMs: 500,
     manualFiltering: true, // Enable server-side filtering
