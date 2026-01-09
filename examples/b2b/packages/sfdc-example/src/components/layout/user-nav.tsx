@@ -30,7 +30,7 @@ export function UserNav() {
     }
   }
 
-  const handleFullSignOut = () => {
+  const handleRefresh = () => {
     document.cookie.split(';').forEach((cookie) => {
       document.cookie = cookie
         .replace(/^ +/, '')
@@ -65,7 +65,7 @@ export function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>Home</DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
-        <DropdownMenuItem onClick={handleFullSignOut}>Full Signout</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleRefresh}>Refresh</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

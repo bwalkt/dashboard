@@ -405,18 +405,24 @@ impl ChallengeAuthzHttp {
                     info!("[Rust WASM Filter] Redis response: {}", body_str);
 
                     // Parse Redis response (supports JSON payloads and legacy string answers)
-                    let (answer_match, next_challenge, already_used) = match serde_json::from_str::<ChallengePayload>(&body_str) {
+                    let (answer_match, next_challenge, already_used, expected_answer_log) = match serde_json::from_str::<ChallengePayload>(&body_str) {
                         Ok(payload) => {
                             let used = payload.used.unwrap_or(false);
                             (
                                 challenge_answer_matches(&payload.answer, &challenge_answer),
                                 payload.next,
                                 used,
+                                Some(payload.answer.to_string()),
                             )
                         }
                         Err(_) => {
                             // Legacy format - plain text answer
-                            (constant_time_compare(body_str.trim().as_bytes(), challenge_answer.as_bytes()), None, false)
+                            (
+                                constant_time_compare(body_str.trim().as_bytes(), challenge_answer.as_bytes()),
+                                None,
+                                false,
+                                Some(body_str.trim().to_string()),
+                            )
                         }
                     };
 
@@ -488,8 +494,13 @@ impl ChallengeAuthzHttp {
                         
                         self.resume_http_request();
                     } else {
-                        warn!("[Rust WASM Filter] ⚠️ WRONG: Challenge validation failed: {}", challenge_id);
-                        self.send_forbidden_response("invalid challenge answer");
+                        warn!(
+                            "[Rust WASM Filter] ⚠️ WRONG: Challenge validation failed: {} expected={} provided={}",
+                            challenge_id,
+                            expected_answer_log.as_deref().unwrap_or("unknown"),
+                            challenge_answer
+                        );
+                        self.send_forbidden_response_with_challenge("invalid challenge answer", &challenge_id);
                     }
                 }
                 None => {
@@ -711,7 +722,8 @@ impl ChallengeAuthzHttp {
         
         // Validate challenge headers presence
         if challenge_id.is_empty() || challenge_answer.is_empty() {
-            warn!("[Rust WASM Filter] Missing challenge headers");
+            let path = self.get_http_request_header(":path").unwrap_or_default();
+            warn!("[Rust WASM Filter] Missing challenge headers for path: {}", path);
             self.send_forbidden_response("missing challenge headers");
             return;
         }
@@ -1155,6 +1167,23 @@ impl ChallengeAuthzHttp {
             ],
             Some(body.as_bytes()),
         );
+    }
+
+    fn send_forbidden_response_with_challenge(&mut self, reason: &str, challenge_id: &str) {
+        let origin = self.get_http_request_header("origin")
+            .unwrap_or_else(|| "*".to_string());
+        let body = json!({ "error": reason }).to_string();
+        let mut headers = vec![
+            ("content-type", "application/json"),
+            ("access-control-allow-origin", &origin),
+            ("access-control-allow-credentials", "true"),
+        ];
+
+        if !challenge_id.is_empty() {
+            headers.push((CHALLENGE_HEADER_ID, challenge_id));
+        }
+
+        self.send_http_response(403, headers, Some(body.as_bytes()));
     }
 }
 

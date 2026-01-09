@@ -1,19 +1,5 @@
 name: pzero-b2b
 services:
-  dragonfly:
-    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
-    container_name: pzero-b2b-dragonfly
-    restart: unless-stopped
-    networks:
-      - pzero-network
-    volumes:
-      - dragonfly_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
   pzero-sfdc-server:
     # Image from GitHub Container Registry
     # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
@@ -42,7 +28,7 @@ services:
       # Database Configuration
       - DATABASE_PATH=${DATABASE_PATH:-./database.db}
       # Redis Configuration (Dragonfly is Redis-compatible)
-      - REDIS_URL=${REDIS_URL:-redis://dragonfly:6379}
+      - REDIS_URL=${REDIS_URL:-redis://pzero-dragonfly:6379}
       # OAuth Callback URL
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:1420}
       # Authz Service Configuration
@@ -59,13 +45,7 @@ services:
       - type: bind
         source: ./packages/sfdc-server-vanilla/src/keys/certificate.crt
         target: /app/examples/b2b/packages/sfdc-server-vanilla/dist/keys/certificate.crt
-    depends_on:
-      dragonfly:
-        condition: service_healthy
-
-volumes:
-  dragonfly_data:
-
+# Redis is provided by the main stack (pzero-dragonfly) on the shared network.
 # NOTE: pzero-network is external and must be created manually before bringing up the stack:
 #   docker network create pzero-network
 # See ../../packages/authz-service/README.md for instructions on generating strong secrets
