@@ -45,7 +45,9 @@ export async function getChallenge(grid: number[][], uid: string) {
     };
 }
 
-export async function markChallengeUsed(challengeId: string) {
+export async function markChallengeUsed(
+  challengeId: string,
+): Promise<'ok' | 'already_used' | 'not_found'> {
     const challengeKey = `challenge:${challengeId}`;
     const script = `
         local data = redis.call('GET', KEYS[1])
@@ -59,10 +61,13 @@ export async function markChallengeUsed(challengeId: string) {
     const result = await redis.eval(script, [challengeKey]);
     if (result === 'already_used') {
         console.warn(`markChallengeUsed: Challenge ${challengeId} already used.`);
+        return 'already_used';
     } else if (result === null) {
         console.warn(`markChallengeUsed: Challenge ${challengeId} not found in Redis.`);
+        return 'not_found';
     } else {
         console.log(`markChallengeUsed: Marked challenge ${challengeId} as used.`);
+        return 'ok';
     }
 }
 

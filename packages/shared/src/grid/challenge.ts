@@ -27,6 +27,7 @@ export interface Storage {
   removeItem(key: string): void
   readonly length: number
   key(index: number): string | null
+  entries?(): IterableIterator<[string, string]>
 }
 
 export class ChallengeManager {
@@ -40,9 +41,9 @@ export class ChallengeManager {
     this.grid = grid ? JSON.parse(grid) : null
     // Load challenges from storage
     try {
-      if (storage instanceof MemoryStorage) {
+      if (typeof (storage as any).entries === 'function') {
         // For MemoryStorage, we can iterate over the internal store
-        for (const [key, value] of storage.entries()) {
+        for (const [key, value] of (storage as any).entries()) {
           if (key.startsWith('challenge:')) {
             try {
               const challenge: Challenge = JSON.parse(value)

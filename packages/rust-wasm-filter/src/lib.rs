@@ -8,7 +8,7 @@ use base64::{Engine as _, engine::general_purpose};
 
 // Challenge header names - must match packages/shared/src/http/utils.ts
 const CHALLENGE_HEADER_ID: &str = "x-challenge-id";
-const CHALLENGE_HEADER_QUESTION: &str = "x-challenge-question";
+const CHALLENGE_HEADER_QUESTION: &str = "x-challenge";
 const CHALLENGE_HEADER_PARAMS: &str = "x-challenge-params";
 const CHALLENGE_HEADER: &str = "x-challenge";
 const CHALLENGE_HEADER_ANSWER: &str = "x-challenge-answer";
@@ -1097,7 +1097,12 @@ fn extract_bearer_token(auth_header: &str) -> Option<String> {
     }
     let lower = trimmed.to_ascii_lowercase();
     if lower.starts_with("bearer ") {
-        Some(trimmed[7..].trim().to_string())
+        let token = trimmed[7..].trim();
+        if token.is_empty() {
+            None
+        } else {
+            Some(token.to_string())
+        }
     } else {
         None
     }
