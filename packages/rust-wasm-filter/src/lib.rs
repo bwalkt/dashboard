@@ -585,7 +585,10 @@ impl ChallengeAuthzHttp {
                             expected_answer_log.as_deref().unwrap_or("unknown"),
                             challenge_answer
                         );
-                        self.send_forbidden_response_with_challenge("invalid challenge answer", &challenge_id);
+                        self.send_forbidden_response_with_challenge(
+                            "invalid challenge answer",
+                            &challenge_id,
+                        );
                     }
                 }
                 None => {
@@ -1350,7 +1353,8 @@ impl ChallengeAuthzHttp {
     }
 
     fn send_forbidden_response_with_challenge(&mut self, reason: &str, challenge_id: &str) {
-        let origin = self.get_http_request_header("origin")
+        let origin = self
+            .get_http_request_header("origin")
             .unwrap_or_else(|| "*".to_string());
         let body = json!({ "error": reason }).to_string();
         let mut headers = vec![
