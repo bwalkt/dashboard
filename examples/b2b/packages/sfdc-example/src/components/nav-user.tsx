@@ -29,8 +29,19 @@ export function NavUser({
     email: string
     avatar: string
   }
-}) {
+  }) {
   const { isMobile } = useSidebar()
+
+  const handleFullSignOut = () => {
+    document.cookie.split(';').forEach((cookie) => {
+      document.cookie = cookie
+        .replace(/^ +/, '')
+        .replace(/=.*/, '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/')
+    })
+    localStorage.clear()
+    sessionStorage.clear()
+    location.reload()
+  }
 
   return (
     <SidebarMenu>
@@ -96,6 +107,10 @@ export function NavUser({
             <DropdownMenuItem>
               <IconLogout className="mr-2 h-4 w-4" />
               Log out
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleFullSignOut}>
+              <IconLogout className="mr-2 h-4 w-4" />
+              Full Signout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
