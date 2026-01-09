@@ -319,6 +319,8 @@ function transformSigNozResponse(apiResponse: any, pagination: SigNozPagination)
     const {
       [`req_headers.${CHALLENGE_ANSWER_HEADER}`]: _reqChallengeAnswer,
       [`req_headers.${CHALLENGE_ID_HEADER}`]: _reqChallengeId,
+      [`req_headers.${CHALLENGE_HEADER}`]: _resChallenge,
+      [`req_headers.${CHALLENGE_PARAMS_HEADER}`]: _resChallengeParams,
       "res_headers.content-length": _resContentLength,
       "res_headers.content-type": _resContentType,
       "res_headers.timing-allow-origin": _resTimingAllowOrigin,
