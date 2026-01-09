@@ -1,13 +1,17 @@
 // Utility functions for gRPC processing
 
+import {
+  CHALLENGE_ANSWER_HEADER,
+  CHALLENGE_ID_HEADER,
+  CHALLENGE_PARAMS_HEADER,
+  CHALLENGE_QUESTION_HEADER,
+} from '../grid/challenge.js'
 import { HttpMethod } from '../types'
 
-export const VALIDATION_HEADER = 'X-Test-Eval'
+export const VALIDATION_HEADER = 'x-test-eval'
 export const PROXY_TARGET_HEADER = 'x-proxy-target'
-export const CHALLENGE_ID_HEADER = 'x-challenge-id'
-export const CHALLENGE_HEADER = 'x-challenge'
-export const CHALLENGE_ANSWER_HEADER = 'x-challenge-answer'
-export const CHALLENGE_PARAMS_HEADER = 'x-challenge-params'
+export { CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER, CHALLENGE_PARAMS_HEADER }
+export const CHALLENGE_HEADER = CHALLENGE_QUESTION_HEADER
 export const CHALLENGER_HEADERS = [
   CHALLENGE_ID_HEADER,
   CHALLENGE_HEADER,

@@ -1,13 +1,11 @@
-import { randomInt } from "node:crypto";
+import { randomInt, timingSafeEqual } from "node:crypto";
 
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail, type UserResponse } from "@pzero/shared";
-import { CHALLENGE_ID_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_QUESTION_HEADER, challengeManager } from '@pzero/shared/challenge'
+import { CHALLENGE_ID_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_QUESTION_HEADER } from '@pzero/shared/challenge'
 import { genFunctionAsJson, genGrid } from "@pzero/shared/grid";
 import { uuid } from "@pzero/shared/uuid";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import request from "twilio/lib/http/request.js";
-import response from "twilio/lib/http/response.js";
 import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -15,7 +13,7 @@ import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
 import { PROXY_TARGETS_CACHE_KEY, refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
-import { type ChallengePayload, getChallenge, getChallengePayload } from "../utils/challenge.js";
+import { type ChallengePayload, getChallenge, getChallengePayload, markChallengeUsed } from "../utils/challenge.js";
 import { encryptionService } from '../utils/encryption.js'
 
 async function deleteUserSession(request: FastifyRequest, reply: FastifyReply) {
@@ -55,6 +53,13 @@ function extractUserIdFromToken(request: FastifyRequest): string | null {
   } catch {
     return null;
   }
+}
+
+function safeEqualString(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {
@@ -239,8 +244,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         } as ErrorResponse);
       }
       const grid = encryptionService.decrypt(user.data.grid) as number[][];
-      challengeManager.storeUserGrid(grid);
-      console.log("Fetched user info for:", {...user, ...grid});
+      console.log("Fetched user info for:", { id: user.id, email: user.email });
        
         // Check and populate proxy_targets cache if not exists
       const cacheExists = await redis.exists(PROXY_TARGETS_CACHE_KEY);
@@ -255,7 +259,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         }
       }
       const thisChallenge = challenge && challenge.next ? await getChallengePayload(challenge.next) : null;
-      let challengeData = await getChallenge(grid, user.id);
         // Send decrypted grid to client (not the encrypted one)
       
       const userWithDecryptedGrid = {
@@ -269,14 +272,18 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         const userKey = `user:${user.email}`;
         await redis.set(userKey, JSON.stringify(userWithDecryptedGrid)); // Cache for 5 minutes
       }
+      let challengeData: Awaited<ReturnType<typeof getChallenge>>;
       if (challengeId && thisChallenge) {
-        thisChallenge.next = challengeData.id;
+        const nextChallenge = await getChallenge(grid, user.id);
+        thisChallenge.next = nextChallenge.id;
         await storeChallengeRecord(challengeId, thisChallenge);
-        await storeChallengeRecord(challengeData.id, challengeData);
+        await storeChallengeRecord(nextChallenge.id, nextChallenge);
         challengeData = {
           id: challengeId,
           ...thisChallenge
-        }
+        };
+      } else {
+        challengeData = await getChallenge(grid, user.id);
       }
       const replyObj = reply
         .header(CHALLENGE_ID_HEADER, challengeData.id)
@@ -313,8 +320,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   }
 
   /**
-   * GET /auth/me
-   * Get current user info (protected route)
+   * POST /auth/next/:challengeId
+   * Advance to the next challenge in the chain (protected route)
    */
   fastify.post(
     "/auth/me",
@@ -363,7 +370,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
-        if (currentChallenge.uid !== user.id) {
+        if (!safeEqualString(currentChallenge.uid, user.id)) {
           return reply.status(403).send({
             error: "Forbidden",
             message: "Challenge does not belong to user",
@@ -376,6 +383,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
             message: "Challenge already used",
           } as ErrorResponse);
         }
+        await markChallengeUsed(challengeId);
         return await nextHelper(user, request, reply, false, currentChallenge, challengeId);
       } catch (error) {
         console.error("Get user info error:", error);

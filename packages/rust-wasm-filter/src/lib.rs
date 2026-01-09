@@ -6,6 +6,13 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use base64::{Engine as _, engine::general_purpose};
 
+// Challenge header names - must match packages/shared/src/http/utils.ts
+const CHALLENGE_HEADER_ID: &str = "x-challenge-id";
+const CHALLENGE_HEADER_QUESTION: &str = "x-challenge-question";
+const CHALLENGE_HEADER_PARAMS: &str = "x-challenge-params";
+const CHALLENGE_HEADER: &str = "x-challenge";
+const CHALLENGE_HEADER_ANSWER: &str = "x-challenge-answer";
+
 // Proxy target structure
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct ProxyTarget {
@@ -81,12 +88,14 @@ impl Default for FilterConfig {
 }
 
 // Challenge headers structure
+/// Challenge answer payload attached to protected requests.
 #[derive(Debug, Deserialize, Serialize)]
 struct ChallengeHeaders {
     challenge_id: String,
     challenge_answer: String,
 }
 
+/// Challenge headers returned from /auth/next used to chain challenges.
 #[derive(Debug, Deserialize)]
 struct NextChallengeHeaders {
     challenge_id: String,
@@ -94,15 +103,27 @@ struct NextChallengeHeaders {
     challenge_params: String,
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+struct ChallengeParams {
+    x: String,
+    y: String,
+}
+
+/// Redis-backed challenge record with answer and metadata.
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct ChallengePayload {
     answer: Value,
     next: Option<String>,
     uid: Option<String>,
-    email: Option<String>,
     used: Option<bool>,
+    question: String,
+    params: ChallengeParams,
+    c_at: u64,
 }
 
+/// /auth/me response wrapper for user payload.
 #[derive(Debug, Deserialize)]
 struct AuthMeResponse {
     user: Value,
@@ -233,6 +254,7 @@ impl ChallengeAuthzRoot {
             (":method", "GET"),
             (":path", "/proxy-targets"),
             (":authority", authority),
+            (":scheme", "http"),
             ("content-type", "application/json"),
         ];
         
@@ -371,14 +393,8 @@ impl Context for ChallengeAuthzHttp {
 
 impl ChallengeAuthzHttp {
     fn handle_challenge_response(&mut self) {
-        let challenge_id = match self.pending_challenge_id.clone() {
-            Some(value) => value,
-            None => return,
-        };
-        let challenge_answer = match self.pending_challenge_answer.clone() {
-            Some(value) => value,
-            None => return,
-        };
+        let Some(challenge_id) = self.pending_challenge_id.clone() else { return };
+        let Some(challenge_answer) = self.pending_challenge_answer.clone() else { return };
         {
             // Get response body from Redis using configurable buffer size
             let response_body = self.get_http_call_response_body(0, self.config.redis_response_buffer_size);
@@ -392,21 +408,11 @@ impl ChallengeAuthzHttp {
                     let (answer_match, next_challenge, already_used) = match serde_json::from_str::<ChallengePayload>(&body_str) {
                         Ok(payload) => {
                             let used = payload.used.unwrap_or(false);
-                            // Validate the challenge belongs to the user if metadata is present
-                            if let Some(user_email) = &self.pending_user_email {
-                                if let Some(payload_email) = &payload.email {
-                                    if payload_email != user_email {
-                                        warn!("[Rust WASM Filter] Challenge email mismatch: {} != {}", payload_email, user_email);
-                                        (false, payload.next, used)
-                                    } else {
-                                        (challenge_answer_matches(&payload.answer, &challenge_answer), payload.next, used)
-                                    }
-                                } else {
-                                    (challenge_answer_matches(&payload.answer, &challenge_answer), payload.next, used)
-                                }
-                            } else {
-                                (challenge_answer_matches(&payload.answer, &challenge_answer), payload.next, used)
-                            }
+                            (
+                                challenge_answer_matches(&payload.answer, &challenge_answer),
+                                payload.next,
+                                used,
+                            )
                         }
                         Err(_) => {
                             // Legacy format - plain text answer
@@ -558,9 +564,9 @@ impl ChallengeAuthzHttp {
                 if body_str.trim().is_empty() {
                     info!("[Rust WASM Filter] User not in cache, fetching from server");
                     if self.is_auth_me_request {
-                        self.fetch_auth_me_proxy();
+                        self.fetch_auth_me(CallType::AuthMeProxy);
                     } else {
-                        self.fetch_user_from_server();
+                        self.fetch_auth_me(CallType::UserFetch);
                     }
                 } else {
                     // Parse cached user
@@ -580,7 +586,7 @@ impl ChallengeAuthzHttp {
 
                             if self.is_auth_me_request {
                                 info!("[Rust WASM Filter] Cached user is active, proxying /auth/me");
-                                self.fetch_auth_me_proxy();
+                                self.fetch_auth_me(CallType::AuthMeProxy);
                                 return;
                             }
 
@@ -592,9 +598,9 @@ impl ChallengeAuthzHttp {
                             warn!("[Rust WASM Filter] Failed to parse cached user: {}", e);
                             // Fallback: fetch from server
                             if self.is_auth_me_request {
-                                self.fetch_auth_me_proxy();
+                                self.fetch_auth_me(CallType::AuthMeProxy);
                             } else {
-                                self.fetch_user_from_server();
+                                self.fetch_auth_me(CallType::UserFetch);
                             }
                         }
                     }
@@ -604,19 +610,19 @@ impl ChallengeAuthzHttp {
                 warn!("[Rust WASM Filter] No Redis cache response");
                 // Fallback: fetch from server
                 if self.is_auth_me_request {
-                    self.fetch_auth_me_proxy();
+                    self.fetch_auth_me(CallType::AuthMeProxy);
                 } else {
-                    self.fetch_user_from_server();
+                    self.fetch_auth_me(CallType::UserFetch);
                 }
             }
         }
     }
     
-    fn fetch_user_from_server(&mut self) {
+    fn fetch_auth_me(&mut self, call_type: CallType) {
         let cookie_header = match self.pending_cookie_header.clone() {
             Some(cookie) => cookie,
             None => {
-                warn!("[Rust WASM Filter] Missing cookie header for /auth/me fetch");
+                warn!("[Rust WASM Filter] Missing cookie header for /auth/me");
                 self.send_forbidden_response("missing access token");
                 return;
             }
@@ -629,7 +635,7 @@ impl ChallengeAuthzHttp {
             ("cookie", &cookie_header),
         ];
 
-        info!("[Rust WASM Filter] Fetching user from server via /auth/me");
+        info!("[Rust WASM Filter] Dispatching /auth/me ({:?})", call_type);
 
         match self.dispatch_http_call(
             "server_cluster",
@@ -639,50 +645,12 @@ impl ChallengeAuthzHttp {
             std::time::Duration::from_secs(5),
         ) {
             Ok(call_id) => {
-                info!("[Rust WASM Filter] /auth/me fetch dispatched with call_id: {}", call_id);
+                info!("[Rust WASM Filter] /auth/me dispatched with call_id: {}", call_id);
                 self.pending_user_call_id = Some(call_id);
-                self.call_type = CallType::UserFetch;
+                self.call_type = call_type;
             }
             Err(status) => {
-                warn!("[Rust WASM Filter] Failed to fetch user via /auth/me: {:?}", status);
-                self.send_forbidden_response("internal error");
-            }
-        }
-    }
-
-    fn fetch_auth_me_proxy(&mut self) {
-        let cookie_header = match self.pending_cookie_header.clone() {
-            Some(cookie) => cookie,
-            None => {
-                warn!("[Rust WASM Filter] Missing cookie header for /auth/me proxy");
-                self.send_forbidden_response("missing access token");
-                return;
-            }
-        };
-
-        let headers = vec![
-            (":method", "POST"),
-            (":path", "/auth/me"),
-            (":authority", "pzero-server"),
-            ("cookie", &cookie_header),
-        ];
-
-        info!("[Rust WASM Filter] Proxying /auth/me to server");
-
-        match self.dispatch_http_call(
-            "server_cluster",
-            headers,
-            None,
-            vec![],
-            std::time::Duration::from_secs(5),
-        ) {
-            Ok(call_id) => {
-                info!("[Rust WASM Filter] /auth/me proxy dispatched with call_id: {}", call_id);
-                self.pending_user_call_id = Some(call_id);
-                self.call_type = CallType::AuthMeProxy;
-            }
-            Err(status) => {
-                warn!("[Rust WASM Filter] Failed to proxy /auth/me: {:?}", status);
+                warn!("[Rust WASM Filter] Failed to dispatch /auth/me: {:?}", status);
                 self.send_forbidden_response("internal error");
             }
         }
@@ -699,6 +667,10 @@ impl ChallengeAuthzHttp {
 
         if challenge_id.is_empty() {
             warn!("[Rust WASM Filter] Missing challenge id for /auth/next");
+            return false;
+        }
+        if !challenge_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+            warn!("[Rust WASM Filter] Invalid challenge id format for /auth/next: {}", challenge_id);
             return false;
         }
 
@@ -781,14 +753,21 @@ impl ChallengeAuthzHttp {
     }
 
     fn handle_auth_me_proxy_response(&mut self) {
-        let response_body = self.get_http_call_response_body(0, 8192);
+        let max_body_size = 8192;
+        let response_body = self.get_http_call_response_body(0, max_body_size);
         let response_headers = self.get_http_call_response_headers();
 
         let status = response_headers
             .iter()
             .find(|(name, _)| *name == ":status")
             .and_then(|(_, value)| value.parse::<u16>().ok())
-            .unwrap_or(200);
+            .unwrap_or(502);
+
+        if let Some(ref body) = response_body {
+            if body.len() >= max_body_size {
+                warn!("[Rust WASM Filter] /auth/me response may be truncated at {} bytes", max_body_size);
+            }
+        }
 
         let mut owned_headers: Vec<(String, String)> = Vec::new();
         if let Some(origin) = self.get_http_request_header("origin") {
@@ -805,10 +784,10 @@ impl ChallengeAuthzHttp {
             if normalized == "content-type" {
                 content_type = value.to_string();
             }
-            if normalized == "x-challenge-id"
-                || normalized == "x-challenge-question"
-                || normalized == "x-challenge-params"
-                || normalized == "x-challenge"
+            if normalized == CHALLENGE_HEADER_ID
+                || normalized == CHALLENGE_HEADER_QUESTION
+                || normalized == CHALLENGE_HEADER_PARAMS
+                || normalized == CHALLENGE_HEADER
             {
                 owned_headers.push((normalized, value.to_string()));
             }
@@ -834,23 +813,34 @@ impl ChallengeAuthzHttp {
         let mut challenge_params = None;
         for (name, value) in &response_headers {
             let normalized = name.to_ascii_lowercase();
-            if normalized == "x-challenge-id" {
+            if normalized == CHALLENGE_HEADER_ID {
                 challenge_id = Some(value.to_string());
-            } else if normalized == "x-challenge-question" || normalized == "x-challenge" {
+            } else if normalized == CHALLENGE_HEADER_QUESTION || normalized == CHALLENGE_HEADER {
                 if challenge_question.is_none() {
                     challenge_question = Some(value.to_string());
                 }
-            } else if normalized == "x-challenge-params" {
+            } else if normalized == CHALLENGE_HEADER_PARAMS {
                 challenge_params = Some(value.to_string());
             }
         }
 
-        if let (Some(id), Some(question), Some(params)) = (challenge_id, challenge_question, challenge_params) {
+        if let (Some(id), Some(question), Some(params)) = (
+            challenge_id.as_ref(),
+            challenge_question.as_ref(),
+            challenge_params.as_ref(),
+        ) {
             self.pending_next_challenge_headers = Some(NextChallengeHeaders {
-                challenge_id: id,
-                challenge_question: question,
-                challenge_params: params,
+                challenge_id: id.clone(),
+                challenge_question: question.clone(),
+                challenge_params: params.clone(),
             });
+        } else if challenge_id.is_some() || challenge_question.is_some() || challenge_params.is_some() {
+            warn!(
+                "[Rust WASM Filter] Partial challenge headers in /auth/next response - id: {}, question: {}, params: {}",
+                challenge_id.is_some(),
+                challenge_question.is_some(),
+                challenge_params.is_some()
+            );
         }
 
         self.pending_next_call_id = None;
@@ -934,7 +924,15 @@ impl HttpContext for ChallengeAuthzHttp {
 
         // Extract and validate access token from cookie
         let cookie_header = self.get_http_request_header("cookie").unwrap_or_default();
-        let access_token = extract_access_token(&cookie_header);
+        let auth_header = self
+            .get_http_request_header("authorization")
+            .unwrap_or_default();
+        let access_token = extract_bearer_token(&auth_header)
+            .or_else(|| {
+                let token = extract_access_token(&cookie_header);
+                if token.is_empty() { None } else { Some(token) }
+            })
+            .unwrap_or_default();
         self.pending_cookie_header = Some(cookie_header);
         
         if access_token.is_empty() {
@@ -997,8 +995,8 @@ impl HttpContext for ChallengeAuthzHttp {
                 
                 if !self.is_auth_me_request {
                     // Store challenge data for later validation
-                    self.pending_challenge_id = Some(self.get_http_request_header("x-challenge-id").unwrap_or_default());
-                    self.pending_challenge_answer = Some(self.get_http_request_header("x-challenge-answer").unwrap_or_default());
+                    self.pending_challenge_id = Some(self.get_http_request_header(CHALLENGE_HEADER_ID).unwrap_or_default());
+                    self.pending_challenge_answer = Some(self.get_http_request_header(CHALLENGE_HEADER_ANSWER).unwrap_or_default());
                 }
                 
                 // Pause until we validate user
@@ -1016,17 +1014,17 @@ impl HttpContext for ChallengeAuthzHttp {
 
     fn on_http_response_headers(&mut self, _: usize, _: bool) -> Action {
         if let Some(next_headers) = self.pending_next_challenge_headers.take() {
-            if self.get_http_response_header("x-challenge-id").is_none() {
-                self.set_http_response_header("x-challenge-id", Some(&next_headers.challenge_id));
+            if self.get_http_response_header(CHALLENGE_HEADER_ID).is_none() {
+                self.set_http_response_header(CHALLENGE_HEADER_ID, Some(&next_headers.challenge_id));
             }
-            if self.get_http_response_header("x-challenge-question").is_none() {
-                self.set_http_response_header("x-challenge-question", Some(&next_headers.challenge_question));
+            if self.get_http_response_header(CHALLENGE_HEADER_QUESTION).is_none() {
+                self.set_http_response_header(CHALLENGE_HEADER_QUESTION, Some(&next_headers.challenge_question));
             }
-            if self.get_http_response_header("x-challenge").is_none() {
-                self.set_http_response_header("x-challenge", Some(&next_headers.challenge_question));
+            if self.get_http_response_header(CHALLENGE_HEADER).is_none() {
+                self.set_http_response_header(CHALLENGE_HEADER, Some(&next_headers.challenge_question));
             }
-            if self.get_http_response_header("x-challenge-params").is_none() {
-                self.set_http_response_header("x-challenge-params", Some(&next_headers.challenge_params));
+            if self.get_http_response_header(CHALLENGE_HEADER_PARAMS).is_none() {
+                self.set_http_response_header(CHALLENGE_HEADER_PARAMS, Some(&next_headers.challenge_params));
             }
         }
         Action::Continue
@@ -1075,9 +1073,9 @@ fn is_user_active(user_value: &Value) -> bool {
         return is_act;
     }
     if let Some(status) = user_value.get("status").and_then(|v| v.as_str()) {
-        return status == "ACTIVE";
+        return status.eq_ignore_ascii_case("ACTIVE");
     }
-    true
+    false
 }
 
 fn extract_access_token(cookie_header: &str) -> String {
@@ -1090,6 +1088,19 @@ fn extract_access_token(cookie_header: &str) -> String {
         }
     }
     String::new()
+}
+
+fn extract_bearer_token(auth_header: &str) -> Option<String> {
+    let trimmed = auth_header.trim();
+    if trimmed.len() < 7 {
+        return None;
+    }
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.starts_with("bearer ") {
+        Some(trimmed[7..].trim().to_string())
+    } else {
+        None
+    }
 }
 
 fn validate_jwt_format(token: &str) -> bool {
