@@ -32,7 +32,7 @@ export function NavUser({
   }) {
   const { isMobile } = useSidebar()
 
-  const handleFullSignOut = () => {
+  const handleRefresh = () => {
     document.cookie.split(';').forEach((cookie) => {
       document.cookie = cookie
         .replace(/^ +/, '')
@@ -108,9 +108,9 @@ export function NavUser({
               <IconLogout className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleFullSignOut}>
+            <DropdownMenuItem onClick={handleRefresh}>
               <IconLogout className="mr-2 h-4 w-4" />
-              Full Signout
+              Refresh
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

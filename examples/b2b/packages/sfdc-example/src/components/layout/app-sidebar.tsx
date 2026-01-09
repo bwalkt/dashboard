@@ -78,7 +78,7 @@ export default function AppSidebar() {
     }
   }
 
-  const handleFullSignOut = () => {
+  const handleRefresh = () => {
     document.cookie.split(';').forEach((cookie) => {
       document.cookie = cookie
         .replace(/^ +/, '')
@@ -208,9 +208,9 @@ export default function AppSidebar() {
                   <IconLogout className="mr-2 h-4 w-4" />
                   <span>Sign Out</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleFullSignOut}>
+                <DropdownMenuItem onClick={handleRefresh}>
                   <IconLogout className="mr-2 h-4 w-4" />
-                  <span>Full Signout</span>
+                  <span>Refresh</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
