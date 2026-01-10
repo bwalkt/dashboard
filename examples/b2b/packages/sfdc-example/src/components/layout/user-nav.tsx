@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { UserAvatarProfile } from '@/components/user-avatar-profile'
 import { useUser } from '@/hooks/use-auth'
+import { clearClientStorage } from '@/lib/storage-utils'
 
 export function UserNav() {
   const navigate = useNavigate()
@@ -28,6 +29,10 @@ export function UserNav() {
       console.error('[UserNav] Sign out error:', error)
       toast.error('Failed to sign out: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
+  }
+
+  const handleRefresh = () => {
+    clearClientStorage()
   }
 
   return (
@@ -54,6 +59,7 @@ export function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>Home</DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleRefresh}>Refresh</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

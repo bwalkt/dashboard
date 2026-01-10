@@ -85,7 +85,7 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         }
 
         const { objectType } = request.params as { objectType: string }
-        const { page = 1, limit = 50 } = request.query as SalesforceQueryParams
+        const { page = 1, limit = 50, sort } = request.query as SalesforceQueryParams
 
         // Validate pagination parameters
         const pageNum = Math.max(1, Math.floor(Number(page)))
@@ -101,10 +101,34 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         }
 
         const fields = keys.join(',')
+        const validSortFields = new Set(keys)
+        const sortItems: Array<{ id: string; desc: boolean }> = []
+
+        if (typeof sort === 'string' && sort.trim().length > 0) {
+          try {
+            const parsed = JSON.parse(sort)
+            if (Array.isArray(parsed)) {
+              for (const item of parsed) {
+                if (item && typeof item.id === 'string' && typeof item.desc === 'boolean') {
+                  const sortField = item.id === 'TotalAmount' ? 'Total_Amount__c' : item.id
+                  if (validSortFields.has(sortField)) {
+                    sortItems.push({ id: sortField, desc: item.desc })
+                  }
+                }
+              }
+            }
+          } catch {
+            // Ignore invalid sort payloads
+          }
+        }
 
         // Execute both COUNT and SELECT queries in parallel for better performance
         const countSoql = `SELECT COUNT() FROM ${objectType}`
-        const soql = `SELECT ${fields} FROM ${objectType} LIMIT ${limitNum} OFFSET ${offset}`
+        const orderBy =
+          sortItems.length > 0
+            ? ` ORDER BY ${sortItems.map(item => `${item.id} ${item.desc ? 'DESC' : 'ASC'}`).join(', ')}`
+            : ''
+        const soql = `SELECT ${fields} FROM ${objectType}${orderBy} LIMIT ${limitNum} OFFSET ${offset}`
 
         const [countResults, results] = await Promise.all([
           salesforceClient.queryPaginated(countSoql),

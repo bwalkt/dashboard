@@ -32,6 +32,15 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
 
+  const handleRefresh = () => {
+    document.cookie.split(';').forEach(cookie => {
+      document.cookie = cookie.replace(/^ +/, '').replace(/=.*/, '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/')
+    })
+    localStorage.clear()
+    sessionStorage.clear()
+    location.reload()
+  }
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -96,6 +105,10 @@ export function NavUser({
             <DropdownMenuItem>
               <IconLogout className="mr-2 h-4 w-4" />
               Log out
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleRefresh}>
+              <IconLogout className="mr-2 h-4 w-4" />
+              Refresh
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

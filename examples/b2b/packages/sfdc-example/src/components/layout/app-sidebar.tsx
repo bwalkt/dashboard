@@ -78,6 +78,15 @@ export default function AppSidebar() {
     }
   }
 
+  const handleRefresh = () => {
+    document.cookie.split(';').forEach(cookie => {
+      document.cookie = cookie.replace(/^ +/, '').replace(/=.*/, '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/')
+    })
+    localStorage.clear()
+    sessionStorage.clear()
+    location.reload()
+  }
+
   // Debug logging
 
   const activeTenant = tenants[0]
@@ -196,6 +205,10 @@ export default function AppSidebar() {
                 <DropdownMenuItem onClick={handleSignOut}>
                   <IconLogout className="mr-2 h-4 w-4" />
                   <span>Sign Out</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleRefresh}>
+                  <IconLogout className="mr-2 h-4 w-4" />
+                  <span>Refresh</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
