@@ -160,12 +160,10 @@ function getDefaultTraceSelectFields(): SelectField[] {
     { name: "events" },
     { name: `req_headers.${CHALLENGE_ANSWER_HEADER}` },
     { name: `req_headers.${CHALLENGE_ID_HEADER}` },
-    {
-      name: `res_headers.${CHALLENGE_PARAMS_HEADER}`,
-    },
-    {
-      name: `res_headers.${CHALLENGE_HEADER}`,
-    },
+    { name: `res_headers.${CHALLENGE_ID_HEADER}` },
+    { name: `res_headers.${CHALLENGE_ANSWER_HEADER}` },
+    { name: `res_headers.${CHALLENGE_PARAMS_HEADER}` },
+    { name: `res_headers.${CHALLENGE_HEADER}` },
     { name: "res_headers.content-length" },
     { name: "res_headers.content-type" },
     { name: "res_headers.timing-allow-origin" },
@@ -311,7 +309,7 @@ function transformSigNozResponse(apiResponse: any, pagination: SigNozPagination)
     const requestHeaders: Record<string, string> = extractHeaders(item, [CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER], "req_headers");
     const responseHeaders: Record<string, string> = extractHeaders(
       item,
-      ["content-length", "content-type", "timing-allow-origin", CHALLENGE_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_ID_HEADER],
+      ["content-length", "content-type", "timing-allow-origin", CHALLENGE_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_ID_HEADER, CHALLENGE_ANSWER_HEADER],
       "res_headers"
     );
 
@@ -319,8 +317,10 @@ function transformSigNozResponse(apiResponse: any, pagination: SigNozPagination)
     const {
       [`req_headers.${CHALLENGE_ANSWER_HEADER}`]: _reqChallengeAnswer,
       [`req_headers.${CHALLENGE_ID_HEADER}`]: _reqChallengeId,
-      [`req_headers.${CHALLENGE_HEADER}`]: _resChallenge,
-      [`req_headers.${CHALLENGE_PARAMS_HEADER}`]: _resChallengeParams,
+      [`res_headers.${CHALLENGE_ID_HEADER}`]: _resChallengeId,
+      [`res_headers.${CHALLENGE_ANSWER_HEADER}`]: _resChallengeAnswer,
+      [`res_headers.${CHALLENGE_HEADER}`]: _resChallenge,
+      [`res_headers.${CHALLENGE_PARAMS_HEADER}`]: _resChallengeParams,
       "res_headers.content-length": _resContentLength,
       "res_headers.content-type": _resContentType,
       "res_headers.timing-allow-origin": _resTimingAllowOrigin,
