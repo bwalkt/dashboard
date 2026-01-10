@@ -8,15 +8,31 @@ import { formatCurrency } from '@/lib/format'
 export function RecentSales() {
   const { data: orders, isLoading, error } = useOrdersLast30Days()
 
-  // Get the latest 5 orders with total amount > 0, sorted by creation date
-  const recentOrders =
+  // Get the latest 5 unique orders with total amount > 0, sorted by creation date
+  const filteredOrders =
     orders
       ?.filter(order => {
         const amount = order.TotalAmount || order.Total_Amount__c || 0
         return amount > 0
       })
-      ?.sort((a, b) => new Date(b.EffectiveDate).getTime() - new Date(a.EffectiveDate).getTime())
-      ?.slice(0, 5) || []
+      ?.sort((a, b) => new Date(b.EffectiveDate).getTime() - new Date(a.EffectiveDate).getTime()) || []
+
+  const seenOrderKeys = new Set<string>()
+  const uniqueOrders = filteredOrders.filter(order => {
+    const amount = order.TotalAmount || order.Total_Amount__c || 0
+    const key =
+      order.Id ||
+      `${order.Customer_Email__c ?? ''}|${order.Customer_Name__c ?? ''}|${amount}|${order.EffectiveDate ?? ''}|${
+        order.CreatedDate ?? ''
+      }`
+    if (seenOrderKeys.has(key)) {
+      return false
+    }
+    seenOrderKeys.add(key)
+    return true
+  })
+
+  const recentOrders = uniqueOrders.slice(0, 5)
   // Generate initials from customer name
   const getInitials = (name: string | null | undefined) => {
     if (!name) return 'UN'
@@ -89,14 +105,7 @@ export function RecentSales() {
     <Card className="h-full">
       <CardHeader>
         <CardTitle>Recent Orders</CardTitle>
-        <CardDescription>
-          You made{' '}
-          {orders?.filter(order => {
-            const amount = order.TotalAmount || order.Total_Amount__c || 0
-            return amount > 0
-          }).length || 0}{' '}
-          orders this month.
-        </CardDescription>
+        <CardDescription>You made {uniqueOrders.length} orders this month.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-8">

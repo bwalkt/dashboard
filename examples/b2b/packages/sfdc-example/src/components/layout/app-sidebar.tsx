@@ -79,10 +79,8 @@ export default function AppSidebar() {
   }
 
   const handleRefresh = () => {
-    document.cookie.split(';').forEach((cookie) => {
-      document.cookie = cookie
-        .replace(/^ +/, '')
-        .replace(/=.*/, '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/')
+    document.cookie.split(';').forEach(cookie => {
+      document.cookie = cookie.replace(/^ +/, '').replace(/=.*/, '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/')
     })
     localStorage.clear()
     sessionStorage.clear()

@@ -109,13 +109,11 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
             const parsed = JSON.parse(sort)
             if (Array.isArray(parsed)) {
               for (const item of parsed) {
-                if (
-                  item &&
-                  typeof item.id === 'string' &&
-                  typeof item.desc === 'boolean' &&
-                  validSortFields.has(item.id)
-                ) {
-                  sortItems.push({ id: item.id, desc: item.desc })
+                if (item && typeof item.id === 'string' && typeof item.desc === 'boolean') {
+                  const sortField = item.id === 'TotalAmount' ? 'Total_Amount__c' : item.id
+                  if (validSortFields.has(sortField)) {
+                    sortItems.push({ id: sortField, desc: item.desc })
+                  }
                 }
               }
             }
