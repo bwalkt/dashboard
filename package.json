@@ -20,11 +20,13 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "test": "pnpm -r test",
-    "test:ci": "pnpm --filter @pzero/shared test:ci"
+    "test:ci": "pnpm --filter @pzero/shared test:ci",
+    "postinstall": "lefthook install"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.8",
     "@types/node": "catalog:",
+    "lefthook": "1.11.12",
     "turbo": "2.7.2",
     "typescript": "catalog:"
   },
@@ -60,6 +62,7 @@
     },
     "ignoredBuiltDependencies": [
       "core-js",
+      "lefthook",
       "react-native-nitro-modules"
     ]
   }

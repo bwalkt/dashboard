@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { UserAvatarProfile } from '@/components/user-avatar-profile'
 import { useUser } from '@/hooks/use-auth'
+import { clearClientStorage } from '@/lib/storage-utils'
 
 export function MobileUserNav() {
   const navigate = useNavigate()
@@ -31,12 +32,7 @@ export function MobileUserNav() {
   }
 
   const handleRefresh = () => {
-    document.cookie.split(';').forEach(cookie => {
-      document.cookie = cookie.replace(/^ +/, '').replace(/=.*/, '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/')
-    })
-    localStorage.clear()
-    sessionStorage.clear()
-    location.reload()
+    clearClientStorage()
   }
 
   // Create user object for display
