@@ -86,59 +86,6 @@ function buildFilterExpression(filters: SigNozFilters): string | undefined {
     }
   }
 
-  if (filters.timingPhases) {
-    const { dns, connection, tls, ttfb, transfer } = filters.timingPhases;
-
-    // Note: Timing phases are calculated from events, so filtering might not be directly supported
-    // These filters assume the timing values are stored as attributes in SigNoz
-    // If not supported, these conditions will be ignored by the API
-
-    if (dns !== undefined) {
-      if (Array.isArray(dns)) {
-        const [min, max] = dns;
-        conditions.push(`timing.dns >= ${min} AND timing.dns <= ${max}`);
-      } else {
-        conditions.push(`timing.dns <= ${dns}`);
-      }
-    }
-
-    if (connection !== undefined) {
-      if (Array.isArray(connection)) {
-        const [min, max] = connection;
-        conditions.push(`timing.connection >= ${min} AND timing.connection <= ${max}`);
-      } else {
-        conditions.push(`timing.connection <= ${connection}`);
-      }
-    }
-
-    if (tls !== undefined) {
-      if (Array.isArray(tls)) {
-        const [min, max] = tls;
-        conditions.push(`timing.tls >= ${min} AND timing.tls <= ${max}`);
-      } else {
-        conditions.push(`timing.tls <= ${tls}`);
-      }
-    }
-
-    if (ttfb !== undefined) {
-      if (Array.isArray(ttfb)) {
-        const [min, max] = ttfb;
-        conditions.push(`timing.ttfb >= ${min} AND timing.ttfb <= ${max}`);
-      } else {
-        conditions.push(`timing.ttfb <= ${ttfb}`);
-      }
-    }
-
-    if (transfer !== undefined) {
-      if (Array.isArray(transfer)) {
-        const [min, max] = transfer;
-        conditions.push(`timing.transfer >= ${min} AND timing.transfer <= ${max}`);
-      } else {
-        conditions.push(`timing.transfer <= ${transfer}`);
-      }
-    }
-  }
-
   return conditions.join(" AND ");
 }
 
@@ -165,6 +112,7 @@ function getDefaultTraceSelectFields(): SelectField[] {
     { name: "res_headers.content-length" },
     { name: "res_headers.content-type" },
     { name: "res_headers.timing-allow-origin" },
+    { name: "res_headers.server-timing" },
   ];
 }
 
@@ -220,6 +168,7 @@ type TimingPhases = {
   "timing.ttfb": number;
   "timing.transfer": number;
   "timing.stalling": number;
+  "timing.envoy_total"?: number;
 };
 
 type EventNames =
@@ -234,10 +183,45 @@ type EventNames =
   | "responseEnd";
 
 /**
- * Calculates network timing phases from SigNoz API event strings.
+ * Parse Server-Timing header value
+ * Format: "envoy-total;dur=20"
+ * Returns object with envoy_total duration in milliseconds
+ */
+function parseServerTiming(serverTimingHeader: string | undefined | null): {
+  envoy_total?: number;
+} {
+  if (!serverTimingHeader) {
+    return {};
+  }
+
+  const result: { envoy_total?: number } = {};
+
+  // Split by comma to get individual entries
+  const entries = serverTimingHeader.split(",").map((entry) => entry.trim());
+
+  entries.forEach((entry) => {
+    // Parse format: "name;dur=value"
+    const parts = entry.split(";");
+    if (parts.length >= 2 && parts[0]) {
+      const name = parts[0].trim();
+      const durPart = parts.find((p) => p.trim().startsWith("dur="));
+      if (durPart) {
+        const duration = parseFloat(durPart.split("=")[1]?.trim() || "0");
+        if (!isNaN(duration) && name === "envoy-total") {
+          result.envoy_total = duration;
+        }
+      }
+    }
+  });
+
+  return result;
+}
+
+/**
+ * Calculates network timing phases from SigNoz API event strings and Server-Timing header.
  * Returns durations in milliseconds (ms).
  */
-function getTimingObject(eventStrings: string[]): TimingPhases {
+function getTimingObject(eventStrings: string[], serverTimingHeader?: string | null): TimingPhases {
   const events: Record<EventNames, number> = {
     fetchStart: 0,
     domainLookupEnd: 0,
@@ -269,6 +253,9 @@ function getTimingObject(eventStrings: string[]): TimingPhases {
     stalling = events.domainLookupStart - events.fetchStart + (events.requestStart - events.connectEnd);
   }
 
+  // Parse Server-Timing header if provided
+  const serverTiming = parseServerTiming(serverTimingHeader);
+
   return {
     // 1. DNS: domainLookupEnd - domainLookupStart
     "timing.dns": events.domainLookupEnd - events.domainLookupStart,
@@ -288,6 +275,11 @@ function getTimingObject(eventStrings: string[]): TimingPhases {
     // Extra: Stalling (Internal browser/SDK overhead)
     // Use this to explain why the phases don't match the total latency
     "timing.stalling": stalling,
+
+    // Server-Timing header value (from Envoy)
+    ...(serverTiming.envoy_total !== undefined && {
+      "timing.envoy_total": serverTiming.envoy_total,
+    }),
   };
 }
 /**
@@ -307,7 +299,16 @@ function transformSigNozResponse(apiResponse: any, pagination: SigNozPagination)
     const requestHeaders: Record<string, string> = extractHeaders(item, [CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER], "req_headers");
     const responseHeaders: Record<string, string> = extractHeaders(
       item,
-      ["content-length", "content-type", "timing-allow-origin", CHALLENGE_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_ID_HEADER, CHALLENGE_ANSWER_HEADER],
+      [
+        "content-length",
+        "content-type",
+        "timing-allow-origin",
+        "server-timing",
+        CHALLENGE_HEADER,
+        CHALLENGE_PARAMS_HEADER,
+        CHALLENGE_ID_HEADER,
+        CHALLENGE_ANSWER_HEADER,
+      ],
       "res_headers"
     );
 
@@ -322,6 +323,7 @@ function transformSigNozResponse(apiResponse: any, pagination: SigNozPagination)
       "res_headers.content-length": _resContentLength,
       "res_headers.content-type": _resContentType,
       "res_headers.timing-allow-origin": _resTimingAllowOrigin,
+      "res_headers.server-timing": serverTimingHeader,
       durationNano,
       ...rest
     } = item;
@@ -332,7 +334,7 @@ function transformSigNozResponse(apiResponse: any, pagination: SigNozPagination)
     // Convert durationNano from nanoseconds to milliseconds and rename to durationMs
     if (durationNano !== undefined && durationNano !== null) {
       result.durationMs = durationNano / 1000000; // Convert nanoseconds to milliseconds
-      result.timingPhases = getTimingObject(item.events);
+      result.timingPhases = getTimingObject(item.events || [], serverTimingHeader);
     }
 
     // Add headers only if they have values

@@ -75,9 +75,6 @@ struct FilterConfig {
     /// Whether to enforce challenge answer validation.
     /// Configure via check_answer=true|false in filter config.
     check_answer: bool,
-    /// Whether to enforce challenge answer validation.
-    /// Configure via check_answer=true|false in filter config.
-    check_answer: bool,
 }
 
 impl Default for FilterConfig {
@@ -89,7 +86,6 @@ impl Default for FilterConfig {
             redis_response_buffer_size: 4096, // Default 4KB buffer for Redis responses
             proxy_targets_authority: "pzero-server".to_string(), // Default authority (port from cluster config)
             allowed_origins: Vec::new(), // Empty = allow all origins (backward compatible)
-            check_answer: false,
             check_answer: false,
         }
     }
@@ -1372,17 +1368,6 @@ impl ChallengeAuthzHttp {
             .get_http_request_header("origin")
             .unwrap_or_else(|| "*".to_string());
         let body = json!({ "error": reason }).to_string();
-        let mut headers = vec![
-            ("content-type", "application/json"),
-            ("access-control-allow-origin", &origin),
-            ("access-control-allow-credentials", "true"),
-        ];
-
-        if !challenge_id.is_empty() {
-            headers.push((CHALLENGE_HEADER_ID, challenge_id));
-        }
-
-        self.send_http_response(403, headers, Some(body.as_bytes()));
         let mut headers = vec![
             ("content-type", "application/json"),
             ("access-control-allow-origin", &origin),

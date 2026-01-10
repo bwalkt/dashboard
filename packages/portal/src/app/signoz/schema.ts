@@ -78,7 +78,7 @@ export interface SignozTraceSchema {
   http_method?: string
   http_host?: string
   http_url?: string
-  timingPhases: Record<TimingPhase, number>
+  timingPhases: Partial<Record<TimingPhase, number>>
   responseHeaders?: Record<string, string>
   requestHeaders?: Record<string, string>
 }
@@ -101,6 +101,7 @@ export interface SignozColumnFilterSchema {
   'timingPhases.ttfb': number
   'timingPhases.transfer': number
   'timingPhases.stalling': number
+  'timingPhases.envoy_total'?: number
 }
 
 export interface SignozTraceFilterSchema {
