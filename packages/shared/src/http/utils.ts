@@ -257,10 +257,11 @@ export const isCorrectAnswer = (item: Record<string, any>, challengeAnswer: stri
 export const extractHeaders = (item: any, keys: string[], prefix: string): Record<string, string> => {
   const result: Record<string, string> = {}
   for (const key of keys) {
-    const value = getHeaderValue(item, `${prefix}.${key}`)
-
-    if (value) {
-      result[key] = value
+    const fullKey = `${prefix}.${key}`
+    const value = item[fullKey]
+    // Include all values that exist (even empty strings), but skip undefined/null
+    if (value !== undefined && value !== null) {
+      result[key] = String(value)
     }
   }
   return result

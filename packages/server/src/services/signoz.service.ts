@@ -160,8 +160,6 @@ function getDefaultTraceSelectFields(): SelectField[] {
     { name: "events" },
     { name: `req_headers.${CHALLENGE_ANSWER_HEADER}` },
     { name: `req_headers.${CHALLENGE_ID_HEADER}` },
-    { name: `res_headers.${CHALLENGE_ID_HEADER}` },
-    { name: `res_headers.${CHALLENGE_ANSWER_HEADER}` },
     { name: `res_headers.${CHALLENGE_PARAMS_HEADER}` },
     { name: `res_headers.${CHALLENGE_HEADER}` },
     { name: "res_headers.content-length" },
