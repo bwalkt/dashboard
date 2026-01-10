@@ -1346,19 +1346,7 @@ fn decode_jwt_claims(token: &str) -> Option<JwtClaims> {
 
 impl ChallengeAuthzHttp {
     fn send_forbidden_response(&mut self, reason: &str) {
-        let origin = self
-            .get_http_request_header("origin")
-            .unwrap_or_else(|| "*".to_string());
-        let body = json!({ "error": reason }).to_string();
-        self.send_http_response(
-            403,
-            vec![
-                ("content-type", "application/json"),
-                ("access-control-allow-origin", &origin),
-                ("access-control-allow-credentials", "true"),
-            ],
-            Some(body.as_bytes()),
-        );
+        self.send_forbidden_response_with_challenge(reason, "");
     }
 
     fn send_forbidden_response_with_challenge(&mut self, reason: &str, challenge_id: &str) {
