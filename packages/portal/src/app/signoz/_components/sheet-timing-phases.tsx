@@ -34,7 +34,10 @@ export function SheetTimingPhases({
               </div>
               <div
                 className={cn(getTimingColor(phase), 'h-4')}
-                style={{ width: value === undefined || isNaN(numValue) || numValue === 0 ? 0 : `${(numValue / latency) * 100}%` }}
+                style={{
+                  width:
+                    value === undefined || isNaN(numValue) || numValue === 0 ? 0 : `${(numValue / latency) * 100}%`,
+                }}
               />
             </div>
           </div>

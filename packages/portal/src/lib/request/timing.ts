@@ -61,9 +61,7 @@ export function getTimingPercentage(
     const value = timing[phase]
     if (value !== undefined && typeof value === 'number' && !isNaN(value) && latency > 0) {
       const pValue = Math.round((value / latency) * 1000) / 1000
-      percentage[phase] = /^0\.00[0-9]+/.test(pValue.toString())
-        ? '<1%'
-        : `${(pValue * 100).toFixed(1)}%`
+      percentage[phase] = /^0\.00[0-9]+/.test(pValue.toString()) ? '<1%' : `${(pValue * 100).toFixed(1)}%`
     } else {
       percentage[phase] = '-'
     }
