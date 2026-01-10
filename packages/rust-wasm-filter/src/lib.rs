@@ -72,6 +72,9 @@ struct FilterConfig {
     /// Configure via allowed_origins=<origin1,origin2> in filter config.
     /// If empty, reflects the origin header (current behavior).
     allowed_origins: Vec<String>,
+    /// Whether to enforce challenge answer validation.
+    /// Configure via check_answer=true|false in filter config.
+    check_answer: bool,
 }
 
 impl Default for FilterConfig {
@@ -83,6 +86,7 @@ impl Default for FilterConfig {
             redis_response_buffer_size: 4096, // Default 4KB buffer for Redis responses
             proxy_targets_authority: "pzero-server".to_string(), // Default authority (port from cluster config)
             allowed_origins: Vec::new(), // Empty = allow all origins (backward compatible)
+            check_answer: false,
         }
     }
 }
@@ -309,6 +313,9 @@ impl RootContext for ChallengeAuthzRoot {
                                 .filter(|s| !s.is_empty())
                                 .collect();
                         }
+                        "check_answer" => {
+                            config.check_answer = value.eq_ignore_ascii_case("true");
+                        }
                         _ => {}
                     }
                 }
@@ -436,7 +443,21 @@ impl ChallengeAuthzHttp {
                         return;
                     }
 
-                    if answer_match {
+                    let is_valid = if self.config.check_answer {
+                        answer_match
+                    } else {
+                        if !answer_match {
+                            warn!(
+                                "[Rust WASM Filter] ⚠️ WRONG (check_answer=false): {} expected={} provided={}",
+                                challenge_id,
+                                expected_answer_log.as_deref().unwrap_or("unknown"),
+                                challenge_answer
+                            );
+                        }
+                        true
+                    };
+
+                    if is_valid {
                         info!("[Rust WASM Filter] ✅ CORRECT: Challenge validated via Redis: {}", challenge_id);
 
                         // If we have a chained challenge, fetch the next one before proceeding
