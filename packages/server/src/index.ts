@@ -34,10 +34,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Export a function that returns a Fastify instance
-export default async function (
-  fastify: FastifyInstance,
-  opts: FastifyPluginOptions,
-): Promise<void> {
+export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   // Validate environment variables
   validateEnvironment();
 
@@ -57,10 +54,7 @@ export default async function (
   try {
     await refreshProxyTargetsCache();
   } catch (error) {
-    console.warn(
-      "⚠️  Failed to load proxy targets cache on startup:",
-      error instanceof Error ? error.message : error,
-    );
+    console.warn("⚠️  Failed to load proxy targets cache on startup:", error instanceof Error ? error.message : error);
     console.warn("Server will continue, but proxy targets may not be available until cache is refreshed");
   }
 
@@ -74,6 +68,21 @@ export default async function (
     maxAge: 86400, // Cache preflight response for 1 day
     preflightContinue: false,
     optionsSuccessStatus: 204,
+  });
+  // Use the onSend hook to add the Timing-Allow-Origin header
+  fastify.addHook("onSend", (request, reply, payload, done) => {
+    // Check if the request is a cross-origin request and if a specific origin was allowed
+    const origin = request.headers.origin;
+    const allowedOrigins = Array.isArray(config.CORS_ALLOWED_ORIGINS) ? config.CORS_ALLOWED_ORIGINS : [config.CORS_ALLOWED_ORIGINS]; // Your specific allowed origin
+
+    if (origin && allowedOrigins.includes(origin)) {
+      reply.header("Timing-Allow-Origin", origin);
+    }
+
+    // If using a wildcard for Access-Control-Allow-Origin
+    // reply.header('Timing-Allow-Origin', '*');
+
+    done();
   });
   // Security plugins
   await fastify.register(helmet, {
@@ -131,7 +140,7 @@ export default async function (
     try {
       await db.healthCheck();
       healthCheck.services.database = "healthy";
-      
+
       try {
         healthCheck.memory.database = await db.getMemoryInfo();
       } catch (memError) {
@@ -150,9 +159,9 @@ export default async function (
     try {
       await redis.ping();
       healthCheck.services.redis = "healthy";
-      
+
       try {
-        if (typeof redis.getMemoryInfo === 'function') {
+        if (typeof redis.getMemoryInfo === "function") {
           healthCheck.memory.redis = await redis.getMemoryInfo();
         } else {
           healthCheck.memory.redis = { info: "Memory info not available in test environment" };
@@ -198,10 +207,6 @@ export default async function (
 
   // Close resources on server shutdown
   fastify.addHook("onClose", async () => {
-    await Promise.allSettled([
-      db.close(),
-      redis.close(),
-      filterRedisService.shutdown()
-    ]);
+    await Promise.allSettled([db.close(), redis.close(), filterRedisService.shutdown()]);
   });
 }

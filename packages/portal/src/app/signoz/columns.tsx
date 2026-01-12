@@ -121,6 +121,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
     header: 'DNS',
     cell: ({ row }) => {
       const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.dns']
+      if (value === undefined) return <span className="text-muted-foreground">-</span>
       return <DataTableColumnLatency value={value} />
     },
     enableResizing: false,
@@ -138,6 +139,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
     header: 'Connection',
     cell: ({ row }) => {
       const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.connection']
+      if (value === undefined) return <span className="text-muted-foreground">-</span>
       return <DataTableColumnLatency value={value} />
     },
   },
@@ -147,6 +149,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
     header: 'TLS',
     cell: ({ row }) => {
       const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.tls']
+      if (value === undefined) return <span className="text-muted-foreground">-</span>
       return <DataTableColumnLatency value={value} />
     },
   },
@@ -156,6 +159,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
     header: 'TTFB',
     cell: ({ row }) => {
       const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.ttfb']
+      if (value === undefined) return <span className="text-muted-foreground">-</span>
       return <DataTableColumnLatency value={value} />
     },
   },
@@ -165,6 +169,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
     header: 'Transfer',
     cell: ({ row }) => {
       const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.transfer']
+      if (value === undefined) return <span className="text-muted-foreground">-</span>
       return <DataTableColumnLatency value={value} />
     },
   },
@@ -173,7 +178,9 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
     accessorKey: 'timingPhases',
     header: () => <div className="whitespace-nowrap">Timing Phases</div>,
     cell: ({ row }) => {
-      const timing = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases') as Record<TimingPhase, number>
+      const timing = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases') as Partial<
+        Record<TimingPhase, number>
+      >
       const latency = row.getValue<SignozTraceSchema['durationMs']>('durationMs')
       const percentage = getTimingPercentage(timing, latency)
       // TODO: create a separate component for this in _components
@@ -181,13 +188,16 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
         <HoverCard openDelay={50} closeDelay={50}>
           <HoverCardTrigger className="opacity-70 hover:opacity-100 data-[state=open]:opacity-100" asChild>
             <div className="flex">
-              {Object.entries(timing).map(([key, value]) => (
-                <div
-                  key={key}
-                  className={cn(getTimingColor(key as keyof typeof timing), 'h-4')}
-                  style={{ width: isNaN(value) ? 0 : `${(value / latency) * 100}%` }}
-                />
-              ))}
+              {Object.entries(timing).map(([key, value]) => {
+                const numValue = typeof value === 'number' ? value : 0
+                return (
+                  <div
+                    key={key}
+                    className={cn(getTimingColor(key as TimingPhase), 'h-4')}
+                    style={{ width: isNaN(numValue) || numValue === 0 ? 0 : `${(numValue / latency) * 100}%` }}
+                  />
+                )
+              })}
             </div>
           </HoverCardTrigger>
           {/* REMINDER: allows us to port the content to the document.body, which is helpful when using opacity-50 on the row element */}
@@ -198,9 +208,12 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
                   const color = getTimingColor(phase)
                   const percentageValue = percentage[phase]
                   const value = timing[phase]
-                  const formattedValue = new Intl.NumberFormat('en-US', {
-                    maximumFractionDigits: 3,
-                  }).format(value)
+                  const formattedValue =
+                    value !== undefined
+                      ? new Intl.NumberFormat('en-US', {
+                          maximumFractionDigits: 3,
+                        }).format(value)
+                      : '-'
                   return (
                     <div key={phase} className="grid grid-cols-2 gap-4 text-xs">
                       <div className="flex items-center gap-2">
@@ -210,8 +223,14 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
                       <div className="flex items-center justify-between gap-4">
                         <div className="font-mono text-muted-foreground">{percentageValue}</div>
                         <div className="font-mono">
-                          {isNaN(value) ? <span className="text-muted-foreground">-</span> : formattedValue}
-                          {isNaN(value) ? null : <span className="text-muted-foreground">ms</span>}
+                          {value === undefined || isNaN(value) ? (
+                            <span className="text-muted-foreground">-</span>
+                          ) : (
+                            formattedValue
+                          )}
+                          {value !== undefined && !isNaN(value) ? (
+                            <span className="text-muted-foreground">ms</span>
+                          ) : null}
                         </div>
                       </div>
                     </div>

@@ -89,7 +89,7 @@ const processHeaders = (span: any, headers: Headers | HeadersInit, prefix: 'req_
   // Convert HeadersInit to Headers for consistent handling
   const headersObj = headers instanceof Headers ? headers : new Headers(headers)
   const entries = Array.from(headersObj.entries())
-
+  console.log(entries)
   for (const [key, value] of entries) {
     const normalizedKey = normalizeHeaderName(key)
     const stringValue = typeof value === 'string' ? value : String(value)
@@ -111,6 +111,7 @@ registerInstrumentations({
       propagateTraceHeaderCorsUrls: corsUrls,
       ignoreUrls: [otelExporterUrl],
       applyCustomAttributesOnSpan: (span, request, response) => {
+        console.log('processing request', request)
         // Process request headers
         if (request.headers) {
           processHeaders(span, request.headers, 'req_headers')

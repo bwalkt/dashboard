@@ -8,6 +8,7 @@
     "dev:example-b2b-docker": "cd examples/b2b && docker-compose -f ./docker-compose.yml up --build",
     "dev:example-b2b-dashboard": "pnpm --filter @pzero/sfdc dev",
     "dev:example-b2b": "pnpm dev:example-b2b-docker && pnpm run dev:example-b2b-server & pnpm run dev:example-b2b-dashboard",
+    "dev:portal": "pnpm --filter @pzero/portal dev",
     "build:mobile": "pnpm --filter @pzero/mobile build",
     "build:server": "pnpm --filter @pzero/sfdc-server-vanilla build",
     "build:dashboard": "pnpm --filter @pzero/sfdc build",

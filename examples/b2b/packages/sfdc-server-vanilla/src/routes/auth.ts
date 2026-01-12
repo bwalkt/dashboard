@@ -2,12 +2,12 @@ import oauth2Plugin, { type OAuth2Namespace } from '@fastify/oauth2'
 import type { AuthenticatedRequest, ErrorResponse, UserResponse } from '@pzero/shared'
 import { CHALLENGE_ID_HEADER, CHALLENGE_QUESTION_HEADER } from '@pzero/shared/challenge'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import { VALIDATION_HEADER_NAME } from '../config/constants.js'
+import { REFRESH_TOKEN_TTL, VALIDATION_HEADER_NAME } from '../config/constants.js'
 import { config } from '../config/env.js'
 import { redis } from '../config/redis.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { authService } from '../services/auth.service.js'
-import { authzService } from '../services/authz.service.js'
+
 import { userService } from '../services/user.service.js'
 
 declare module 'fastify' {
@@ -162,19 +162,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 3600, // 1 hour
+        maxAge: REFRESH_TOKEN_TTL, // 30 days
       })
-
-      // Issue challenge from authz-service
-      const challengeResponse = await authzService.issueChallenge()
-
-      if (challengeResponse?.challengeId) {
-        // Store challenge ID in Redis for later refresh
-        await redis.set(`user:${user.id}:challengeId`, challengeResponse.challengeId, 3600)
-        // Send challenge as headers
-        reply.header(CHALLENGE_ID_HEADER, challengeResponse.challengeId)
-        reply.header(CHALLENGE_QUESTION_HEADER, challengeResponse.challenge)
-      }
 
       return reply.send({
         message: 'Login successful',
@@ -190,7 +179,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   })
 
   /**
-   * GET /auth/me
+   * POST /auth/me
    * Get current user info (protected route)
    */
   fastify.post(
@@ -277,19 +266,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 3600 * 24 * 30, // 30 days
+        maxAge: REFRESH_TOKEN_TTL, // 30 days
       })
-      // Refresh challenge from authz-service when JWT is refreshed
-      const oldChallengeId = await redis.get(`user:${user.id}:challengeId`)
-      const challengeResponse = await authzService.refreshChallenge(oldChallengeId)
-
-      if (challengeResponse?.challengeId) {
-        // Store new challenge ID in Redis
-        await redis.set(`user:${user.id}:challengeId`, challengeResponse.challengeId, 3600)
-        // Send challenge as headers
-        reply.header(CHALLENGE_ID_HEADER, challengeResponse.challengeId)
-        reply.header(CHALLENGE_QUESTION_HEADER, challengeResponse.challenge)
-      }
 
       return reply.send({
         user,
