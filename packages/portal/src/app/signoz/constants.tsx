@@ -202,9 +202,9 @@ export const sheetFields = [
     label: 'Response Headers',
     type: 'readonly',
     component: props => {
-      if (props.responseHeaders && Object.keys(props.responseHeaders).length === 0) return null
+      if (!props.responseHeaders || Object.keys(props.responseHeaders).length === 0) return null
       // REMINDER: negative margin to make it look like the header is on the same level of the tab triggers
-      return <KVTabs data={props.responseHeaders ?? {}} className="-mt-[22px]" />
+      return <KVTabs data={props.responseHeaders} className="-mt-[22px]" />
     },
     className: 'flex-col items-start w-full gap-1',
   },

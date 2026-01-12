@@ -27,9 +27,7 @@ declare module "fastify" {
   }
 }
 
-const headerValidationPlugin: FastifyPluginAsync<
-  HeaderValidationOptions
-> = async (fastify, opts) => {
+const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = async (fastify, opts) => {
   const options = {
     enableRateLimit: true,
     enableTokenCache: true,
@@ -63,11 +61,7 @@ const headerValidationPlugin: FastifyPluginAsync<
 
       if (!existing || now - existing.windowStart > windowSize) {
         const newData = { count: 1, windowStart: now };
-        await redis.set(
-          redisKey,
-          JSON.stringify(newData),
-          Math.ceil(windowSize / 1000),
-        );
+        await redis.set(redisKey, JSON.stringify(newData), Math.ceil(windowSize / 1000));
         return true;
       }
 
@@ -76,11 +70,7 @@ const headerValidationPlugin: FastifyPluginAsync<
       }
 
       existing.count++;
-      await redis.set(
-        redisKey,
-        JSON.stringify(existing),
-        Math.ceil((existing.windowStart + windowSize - now) / 1000),
-      );
+      await redis.set(redisKey, JSON.stringify(existing), Math.ceil((existing.windowStart + windowSize - now) / 1000));
       return true;
     } catch (error) {
       console.warn("Redis rate limit check failed, allowing request:", error);
@@ -117,11 +107,7 @@ const headerValidationPlugin: FastifyPluginAsync<
           valid: isValid,
           expires: Date.now() + options.tokenCacheTTL!,
         };
-        await redis.set(
-          redisKey,
-          JSON.stringify(cacheData),
-          Math.ceil(options.tokenCacheTTL! / 1000),
-        );
+        await redis.set(redisKey, JSON.stringify(cacheData), Math.ceil(options.tokenCacheTTL! / 1000));
       } catch (error) {
         console.warn("Redis token cache set failed:", error);
       }
@@ -135,11 +121,7 @@ const headerValidationPlugin: FastifyPluginAsync<
       const jwtService = new JWTService();
 
       // Verify JWT token using the JWT_SECRET from environment
-      const decoded = jwtService.verifyHMACToken(
-        token,
-        config.JWT_SECRET,
-        "HS512",
-      );
+      const decoded = jwtService.verifyHMACToken(token, config.JWT_SECRET, "HS512");
 
       // Check if token is not expired
       const now = Math.floor(Date.now() / 1000);
@@ -189,11 +171,7 @@ const headerValidationPlugin: FastifyPluginAsync<
       // Check accessToken first
       if (cookies.accessToken) {
         try {
-          const decoded = jwtService.verifyHMACToken(
-            cookies.accessToken,
-            config.JWT_SECRET,
-            "HS512",
-          );
+          const decoded = jwtService.verifyHMACToken(cookies.accessToken, config.JWT_SECRET, "HS512");
           const now = Math.floor(Date.now() / 1000);
           if (!decoded.exp || decoded.exp > now) {
             return true;
@@ -206,11 +184,7 @@ const headerValidationPlugin: FastifyPluginAsync<
       // Fallback to refreshToken if accessToken is invalid/missing
       if (cookies.refreshToken) {
         try {
-          const decoded = jwtService.verifyHMACToken(
-            cookies.refreshToken,
-            config.JWT_SECRET,
-            "HS512",
-          );
+          const decoded = jwtService.verifyHMACToken(cookies.refreshToken, config.JWT_SECRET, "HS512");
           const now = Math.floor(Date.now() / 1000);
           if (!decoded.exp || decoded.exp > now) {
             return true;
@@ -229,113 +203,100 @@ const headerValidationPlugin: FastifyPluginAsync<
 
   function isSuspiciousBot(request: FastifyRequest): boolean {
     const userAgent = (request.headers["user-agent"] || "").toLowerCase();
-    const suspiciousPatterns = [
-      "bot",
-      "spider",
-      "crawler",
-      "scraper",
-      "scrapy",
-      "curl",
-      "wget",
-      "python-requests",
-      "requests",
-    ];
+    const suspiciousPatterns = ["bot", "spider", "crawler", "scraper", "scrapy", "curl", "wget", "python-requests", "requests"];
     return suspiciousPatterns.some((pattern) => userAgent.includes(pattern));
   }
 
   // Register the validation hook
-  fastify.addHook(
-    "preHandler",
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const startTime = Date.now();
+  fastify.addHook("preHandler", async (request: FastifyRequest, reply: FastifyReply) => {
+    const startTime = Date.now();
 
-      // Extract client information
-      const clientIP = getClientIP(request);
-      const userAgent = request.headers["user-agent"] || "";
+    // Extract client information
+    const clientIP = getClientIP(request);
+    const userAgent = request.headers["user-agent"] || "";
 
-      // Generate request fingerprint
-      let fingerprint = "";
-      if (options.enableFingerprinting) {
-        fingerprint = generateFingerprint(request);
-        request.headers["x-server-fingerprint"] = fingerprint;
-      }
+    // Generate request fingerprint
+    let fingerprint = "";
+    if (options.enableFingerprinting) {
+      fingerprint = generateFingerprint(request);
+      request.headers["x-server-fingerprint"] = fingerprint;
+    }
 
-      // Bot detection (check before auth to catch bots early)
-      if (isSuspiciousBot(request)) {
-        return reply.status(403).send({
-          error: "Suspicious bot detected",
-          reason: "user-agent-pattern",
-        });
-      }
-
-      // Rate limiting
-      if (options.enableRateLimit && !(await checkRateLimit(clientIP))) {
-        return reply.status(429).send({
-          error: "Rate limit exceeded",
-          retryAfter: 60,
-        });
-      }
-
-      // Custom header validation
-      const customAuth = request.headers["x-custom-auth"] as string;
-      if (customAuth) {
-        const isValid = await validateCustomToken(customAuth);
-
-        if (isValid) {
-          // Add response headers for successful validation
-          reply.header("x-auth-validated", "true");
-          reply.header("x-validation-method", "custom-header");
-          reply.header("x-validation-timestamp", Date.now().toString());
-
-          if (fingerprint) {
-            reply.header("x-client-fingerprint", fingerprint);
-          }
-
-          request.user = {
-            authenticated: true,
-            method: "custom-header",
-            token: customAuth.substring(0, 8) + "...",
-          };
-
-          return; // Continue to handler
-        } else {
-          return reply.status(401).send({ error: "Invalid custom auth token" });
-        }
-      }
-
-      // Check for public paths (no auth required)
-      // Extract pathname from URL (remove query string and hash)
-      if (request.url) {
-        try {
-          // Fastify request.url is typically just the pathname with query string
-          // Use a dummy base URL to parse it properly
-          const url = new URL(request.url, config.SERVER_BASE_URL);
-          if (isPublicPath(url.pathname)) {
-            return; // Continue to handler
-          }
-        } catch {
-          // Fallback to original string if URL parsing fails
-          if (isPublicPath(request.url)) {
-            return; // Continue to handler
-          }
-        }
-      }
-
-      // JWT cookie fallback
-      if (hasValidJWTCookie(request)) {
-        reply.header("x-auth-validated", "true");
-        reply.header("x-validation-method", "jwt-cookie");
-        request.user = { authenticated: true, method: "jwt-cookie" };
-        return; // Continue to handler
-      }
-
-      // No valid authentication found
-      return reply.status(401).send({
-        error: "Authentication required",
-        supportedMethods: ["x-custom-auth", "jwt-cookie"],
+    // Bot detection (check before auth to catch bots early)
+    if (isSuspiciousBot(request)) {
+      return reply.status(403).send({
+        error: "Suspicious bot detected",
+        reason: "user-agent-pattern",
       });
-    },
-  );
+    }
+
+    // Rate limiting
+    if (options.enableRateLimit && !(await checkRateLimit(clientIP))) {
+      return reply.status(429).send({
+        error: "Rate limit exceeded",
+        retryAfter: 60,
+      });
+    }
+
+    // Custom header validation
+    const customAuth = request.headers["x-custom-auth"] as string;
+    if (customAuth) {
+      const isValid = await validateCustomToken(customAuth);
+
+      if (isValid) {
+        // Add response headers for successful validation
+        reply.header("x-auth-validated", "true");
+        reply.header("x-validation-method", "custom-header");
+        reply.header("x-validation-timestamp", Date.now().toString());
+
+        if (fingerprint) {
+          reply.header("x-client-fingerprint", fingerprint);
+        }
+
+        request.user = {
+          authenticated: true,
+          method: "custom-header",
+          token: customAuth.substring(0, 8) + "...",
+        };
+
+        return; // Continue to handler
+      } else {
+        return reply.status(401).send({ error: "Invalid custom auth token" });
+      }
+    }
+
+    // Check for public paths (no auth required)
+    // Extract pathname from URL (remove query string and hash)
+    if (request.url) {
+      try {
+        // Fastify request.url is typically just the pathname with query string
+        // Use a dummy base URL to parse it properly
+        const url = new URL(request.url, config.SERVER_BASE_URL);
+        if (isPublicPath(url.pathname)) {
+          return; // Continue to handler
+        }
+      } catch {
+        // Fallback to original string if URL parsing fails
+        if (isPublicPath(request.url)) {
+          return; // Continue to handler
+        }
+      }
+    }
+
+    // JWT cookie fallback
+    if (hasValidJWTCookie(request)) {
+      reply.header("x-auth-validated", "true");
+      reply.header("x-validation-method", "jwt-cookie");
+      request.user = { authenticated: true, method: "jwt-cookie" };
+      return; // Continue to handler
+    }
+
+    // No valid authentication found
+    return reply.status(401).send({
+      error: "Authentication required",
+      supportedMethods: ["x-custom-auth", "jwt-cookie"],
+    });
+  });
 
   // Redis handles TTL automatically, so no cleanup needed
   // Clean up on close

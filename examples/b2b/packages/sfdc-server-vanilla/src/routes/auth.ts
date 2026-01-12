@@ -2,7 +2,7 @@ import oauth2Plugin, { type OAuth2Namespace } from '@fastify/oauth2'
 import type { AuthenticatedRequest, ErrorResponse, UserResponse } from '@pzero/shared'
 import { CHALLENGE_ID_HEADER, CHALLENGE_QUESTION_HEADER } from '@pzero/shared/challenge'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import { VALIDATION_HEADER_NAME } from '../config/constants.js'
+import { REFRESH_TOKEN_TTL, VALIDATION_HEADER_NAME } from '../config/constants.js'
 import { config } from '../config/env.js'
 import { redis } from '../config/redis.js'
 import { authenticateToken } from '../middleware/auth.js'
@@ -162,7 +162,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 3600, // 1 hour
+        maxAge: REFRESH_TOKEN_TTL, // 30 days
       })
 
       return reply.send({
@@ -179,7 +179,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   })
 
   /**
-   * GET /auth/me
+   * POST /auth/me
    * Get current user info (protected route)
    */
   fastify.post(
@@ -266,7 +266,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 3600 * 24 * 30, // 30 days
+        maxAge: REFRESH_TOKEN_TTL, // 30 days
       })
 
       return reply.send({
