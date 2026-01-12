@@ -84,13 +84,11 @@ export function CollapseMenuButton({ icon: Icon, label, active, submenus, isOpen
       <Collapsible open={isMenuOpen} onOpenChange={setIsMenuOpen} className="group/collapsible">
         <SidebarMenuItem>
           <CollapsibleTrigger asChild>
-            <SidebarMenuButton tooltip={label} isActive={isMenuItemActive} className="w-full justify-between">
-              <div className="flex items-center gap-2">
-                <Icon />
-                <span>{label}</span>
-              </div>
+            <SidebarMenuButton tooltip={label} isActive={isMenuItemActive}>
+              <Icon />
+              <span className="flex-1 text-left">{label}</span>
               <IconChevronRight
-                className={cn('h-4 w-4 transition-transform duration-200', isMenuOpen && 'rotate-90')}
+                className={cn('ml-auto h-4 w-4 transition-transform duration-200', isMenuOpen && 'rotate-90')}
               />
             </SidebarMenuButton>
           </CollapsibleTrigger>

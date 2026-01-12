@@ -752,7 +752,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
   /**
    * POST /auth/login
-   * Login with email (sends verification code)
+   * Login with email (sends verification code, or skips OTP if SKIP_OTP is enabled)
    */
   fastify.post("/auth/login", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -790,6 +790,38 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           error: "Forbidden",
           message: `User Account is ${user.status ?? "INACTIVE"}`,
         } as ErrorResponse);
+      }
+
+      // Skip OTP verification if SKIP_OTP is enabled - directly authenticate user
+      if (config.SKIP_OTP) {
+        // Cache user status if available
+        await userService.setUserStatusInCache(user.id, user.status);
+
+        // Generate JWT tokens
+        const { accessToken, refreshToken } = authService.generateTokenPair(user.id.toString(), user.github_id || "", user.email);
+
+        // Set JWT tokens as cookies
+        reply.setCookie("accessToken", accessToken, {
+          httpOnly: true,
+          secure: config.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 3600, // 1 hour
+        });
+
+        reply.setCookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: config.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 3600 * 24 * 30, // 30 days
+        });
+
+        return reply.send({
+          message: "Login successful (OTP skipped)",
+          user,
+          accessToken,
+        });
       }
 
       // Generate verification code

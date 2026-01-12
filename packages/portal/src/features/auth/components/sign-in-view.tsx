@@ -29,7 +29,7 @@ export default function SignInViewPage(_props: {}) {
   // Redirect if already authenticated
   useEffect(() => {
     if (authStore.user && !authStore.loading) {
-      navigate({ to: '/overview', replace: true })
+      navigate({ to: '/logs', replace: true })
     }
   }, [authStore.user, authStore.loading, navigate])
 
@@ -71,7 +71,7 @@ export default function SignInViewPage(_props: {}) {
         }
 
         toast.success('Sign in successful!')
-        navigate({ to: '/overview', replace: true })
+        navigate({ to: '/logs', replace: true })
       } catch (error: any) {
         console.error('Verification error:', error)
         // Extract the error message from the API error
@@ -81,15 +81,24 @@ export default function SignInViewPage(_props: {}) {
         setIsLoading(false)
       }
     } else {
-      // Handle sending verification code
+      // Handle sending verification code (or direct login if server skips OTP)
       const formEmail = (e.target as any).email.value
 
       setIsLoading(true)
       try {
-        await api.post('/auth/login', { email: formEmail })
-        setEmail(formEmail)
-        setEmailSent(true)
-        toast.success('Check your email for verification code')
+        const loginResult = await api.post('/auth/login', { email: formEmail })
+
+        // Check if server returned a user directly (OTP skipped on server)
+        if (loginResult.user) {
+          await authStore.setUser(loginResult.user)
+          toast.success('Sign in successful!')
+          navigate({ to: '/logs', replace: true })
+        } else {
+          // Server expects OTP verification
+          setEmail(formEmail)
+          setEmailSent(true)
+          toast.success('Check your email for verification code')
+        }
       } catch (error: any) {
         console.error('Sign in error:', error)
         // Extract the error message from the API error
