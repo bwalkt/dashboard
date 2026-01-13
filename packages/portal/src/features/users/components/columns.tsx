@@ -1,6 +1,8 @@
 'use client'
 
 import type { ColumnDef } from '@tanstack/react-table'
+import { Ban, UserCheck } from 'lucide-react'
+import type React from 'react'
 import {
   createActionsColumn,
   createBooleanColumn,
@@ -33,6 +35,7 @@ export const createColumns = ({ onDelete, onSuspend, onActivate }: ColumnsProps)
 
   // Status column (based on is_act field)
   {
+    id: 'status',
     accessorKey: 'is_act',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ row }) => {
@@ -97,18 +100,24 @@ export const createColumns = ({ onDelete, onSuspend, onActivate }: ColumnsProps)
     additionalActions: [
       onSuspend && {
         label: 'Suspend',
+        icon: <Ban className="mr-2 h-4 w-4" />,
         onClick: onSuspend,
         className: 'text-warning',
+        shouldShow: (user: User) => user.is_act === true,
       },
       onActivate && {
         label: 'Activate',
+        icon: <UserCheck className="mr-2 h-4 w-4" />,
         onClick: onActivate,
         className: 'text-success',
+        shouldShow: (user: User) => user.is_act === false,
       },
     ].filter(Boolean) as Array<{
       label: string
+      icon?: React.ReactNode
       onClick: (user: User) => void
       className?: string
+      shouldShow?: (user: User) => boolean
     }>,
   }),
 ]

@@ -60,6 +60,7 @@ interface ActionsColumnOptions<T extends BaseEntity> {
     icon?: React.ReactNode
     onClick: (item: T) => void
     className?: string
+    shouldShow?: (item: T) => boolean
   }>
 }
 
@@ -142,13 +143,15 @@ export const createNameColumn = <T extends BaseEntity>(options: NameColumnOption
     if (options.showAvatar) {
       return (
         <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
+          <Avatar className="h-8 w-8 shrink-0">
             <AvatarImage src={avatar || undefined} alt={name || ''} />
             <AvatarFallback>{name?.charAt(0)?.toUpperCase() || '?'}</AvatarFallback>
           </Avatar>
-          <div className="flex flex-col">
-            <span className="font-medium">{name || '-'}</span>
-            {subText && <span className="text-xs text-muted-foreground">{subText}</span>}
+          <div className="flex flex-col justify-center min-w-0">
+            {name && <span className="font-medium truncate">{name}</span>}
+            {subText && (
+              <span className={`truncate ${name ? 'text-xs text-muted-foreground' : 'font-medium'}`}>{subText}</span>
+            )}
           </div>
         </div>
       )
@@ -342,12 +345,14 @@ export const createActionsColumn = <T extends BaseEntity>(options: ActionsColumn
           )}
 
           {/* Additional custom actions */}
-          {options.additionalActions?.map(action => (
-            <DropdownMenuItem key={action.label} onClick={() => action.onClick(item)} className={action.className}>
-              {action.icon}
-              {action.label}
-            </DropdownMenuItem>
-          ))}
+          {options.additionalActions
+            ?.filter(action => !action.shouldShow || action.shouldShow(item))
+            .map(action => (
+              <DropdownMenuItem key={action.label} onClick={() => action.onClick(item)} className={action.className}>
+                {action.icon}
+                {action.label}
+              </DropdownMenuItem>
+            ))}
 
           {/* Delete action */}
           {options.onDelete && (

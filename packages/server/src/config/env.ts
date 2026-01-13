@@ -24,6 +24,7 @@ export interface EnvironmentConfig {
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
   JWT_SECRET: string;
+  SKIP_OTP: boolean;
   POSTGRES_HOST: string;
   POSTGRES_PORT: number;
   POSTGRES_USER: string;
@@ -104,6 +105,7 @@ export const config: EnvironmentConfig = {
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || "",
   JWT_SECRET:
     process.env.JWT_SECRET || "default-secret-key-change-in-production",
+  SKIP_OTP: process.env.SKIP_OTP !== "false", // Defaults to true, set to 'false' to require OTP
   POSTGRES_HOST: process.env.POSTGRES_HOST || "localhost",
   POSTGRES_PORT: parseInt(process.env.POSTGRES_PORT || "5432", 10),
   POSTGRES_USER: process.env.POSTGRES_USER || "postgres",

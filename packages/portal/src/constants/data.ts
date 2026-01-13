@@ -1,7 +1,7 @@
 import type { NavItem } from '@/types'
 
-// Check if we're in development mode
-const isDev = import.meta.env.MODE === 'development' || import.meta.env.DEV
+// Check if tables/overview should be shown (defaults to false)
+const showTables = import.meta.env.VITE_SHOW_TABLES === 'true'
 export type Product = {
   Id: string
   Name: string
@@ -142,5 +142,7 @@ const allNavItems: NavItem[] = [
   },
 ]
 
-// Filter navigation items - exclude Tables menu in production
-export const navItems: NavItem[] = isDev ? allNavItems : allNavItems.filter(item => item.title !== 'Tables')
+// Filter navigation items - exclude Tables and Overview when VITE_SHOW_TABLES is false
+export const navItems: NavItem[] = showTables
+  ? allNavItems
+  : allNavItems.filter(item => item.title !== 'Tables' && item.title !== 'Overview')
