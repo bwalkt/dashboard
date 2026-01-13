@@ -138,9 +138,10 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await db.pool.query(`
-          SELECT a.email, a.email_verified, u.handle, u.online_status, u.last_seen, a.phone_verified, a.c_at, a.is_act, a.is_del 
+          SELECT u.id, u.name, a.email, a.email_verified, u.handle, u.online_status, u.last_seen, a.phone_verified, a.c_at, a.is_act, a.is_del
           FROM pzero.all_users u
           JOIN pzero.all_auth a ON u.id = a.id
+          WHERE u.is_del = false
           ORDER BY u.c_at DESC
         `);
 
@@ -254,6 +255,92 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.status(500).send({
           error: "Internal Server Error",
           message: "Failed to delete user",
+        });
+      }
+    },
+  );
+
+  /**
+   * POST /api/users/:id/suspend
+   * Suspend a user (set is_act to false)
+   */
+  fastify.post(
+    "/api/users/:id/suspend",
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const currentUser = (request as any).user;
+      console.log("=== SUSPEND ROUTE HIT ===", id);
+
+      // Prevent self-deactivation
+      if (currentUser?.id === id) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "You cannot suspend your own account",
+        });
+      }
+
+      try {
+        const result = await db.pool.query(
+          `SELECT pzero.suspend_user($1) as result`,
+          [id]
+        );
+
+        const response = result.rows[0]?.result;
+        console.log("=== SUSPEND RESULT ===", response);
+
+        if (!response?.success) {
+          return reply.status(404).send({
+            error: "Not Found",
+            message: response?.message || "User not found",
+          });
+        }
+
+        return reply.send(response);
+      } catch (error) {
+        console.error("=== SUSPEND ERROR ===", error);
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Failed to suspend user",
+        });
+      }
+    },
+  );
+
+  /**
+   * POST /api/users/:id/activate
+   * Activate a user (set is_act to true)
+   */
+  fastify.post(
+    "/api/users/:id/activate",
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      try {
+        const result = await db.pool.query(
+          `SELECT pzero.activate_user($1) as result`,
+          [id]
+        );
+
+        const response = result.rows[0]?.result;
+
+        if (!response?.success) {
+          return reply.status(404).send({
+            error: "Not Found",
+            message: response?.message || "User not found",
+          });
+        }
+
+        return reply.send(response);
+      } catch (error) {
+        console.error("Activate user error:", error);
+        return reply.status(500).send({
+          error: "Internal Server Error",
+          message: "Failed to activate user",
         });
       }
     },

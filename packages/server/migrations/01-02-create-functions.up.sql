@@ -207,10 +207,20 @@ except:
     # If app.environment is not set, default to production (safest option)
     environment = 'production'
 
+# Tables that support partition movement (DELETE + INSERT when is_act changes)
+# Include both parent table names (all_*) and partition names (without all_ prefix)
+PARTITION_MOVEMENT_TABLES = frozenset(['all_auth', 'all_users', 'all_emails', 'all_phones', 'auth', 'users', 'emails', 'phones'])
+
 # Validate event type
 if TD['event'] == 'DELETE':
-    # Only allow DELETE in development environment
-    if environment != 'development':
+    table_name = TD.get('table_name', '')
+    # Allow DELETE for partition movement on supported tables
+    is_partition_movement = any(t in table_name for t in PARTITION_MOVEMENT_TABLES)
+
+    if is_partition_movement:
+        dev_notice(f"Allowing partition movement DELETE on {table_name}")
+        return "OK"
+    elif environment != 'development':
         plpy.error(f"DELETE operations are not allowed in {environment} environment. Use soft delete (SET is_del = TRUE) instead.")
         raise ValueError(f"DELETE not allowed in {environment}")
 elif TD['event'] not in ['INSERT', 'UPDATE']:
@@ -748,7 +758,7 @@ elif event == 'UPDATE':
 return None
 $$ language plpython3u;
 
-CREATE FUNCTION pzero.check_relations_trigger () returns trigger AS $$
+CREATE OR REPLACE FUNCTION pzero.check_relations_trigger () returns trigger AS $$
 BEGIN
     PERFORM pzero.check_relations_plpython(); -- Calls check_relations_plpython
     PERFORM pzero.audit_trigger_plpython(); -- Calls audit_trigger_plpython
