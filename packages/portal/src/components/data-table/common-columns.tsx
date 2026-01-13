@@ -149,7 +149,9 @@ export const createNameColumn = <T extends BaseEntity>(options: NameColumnOption
           </Avatar>
           <div className="flex flex-col justify-center min-w-0">
             {name && <span className="font-medium truncate">{name}</span>}
-            {subText && <span className={`truncate ${name ? 'text-xs text-muted-foreground' : 'font-medium'}`}>{subText}</span>}
+            {subText && (
+              <span className={`truncate ${name ? 'text-xs text-muted-foreground' : 'font-medium'}`}>{subText}</span>
+            )}
           </div>
         </div>
       )
