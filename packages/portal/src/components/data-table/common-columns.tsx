@@ -49,19 +49,21 @@ interface DateColumnOptions {
   dateFormat?: string
 }
 
-interface ActionsColumnOptions<T extends BaseEntity> {
+export interface AdditionalAction<T extends BaseEntity> {
+  label: string
+  icon?: React.ReactNode
+  onClick: (item: T) => void
+  className?: string
+  shouldShow?: (item: T) => boolean
+}
+
+export interface ActionsColumnOptions<T extends BaseEntity> {
   editRoute?: string
   routeParam?: string
   onEdit?: (item: T) => void
   onDelete?: (item: T) => void
   onCopyId?: boolean
-  additionalActions?: Array<{
-    label: string
-    icon?: React.ReactNode
-    onClick: (item: T) => void
-    className?: string
-    shouldShow?: (item: T) => boolean
-  }>
+  additionalActions?: Array<AdditionalAction<T>>
 }
 
 /**
@@ -347,8 +349,12 @@ export const createActionsColumn = <T extends BaseEntity>(options: ActionsColumn
           {/* Additional custom actions */}
           {options.additionalActions
             ?.filter(action => !action.shouldShow || action.shouldShow(item))
-            .map(action => (
-              <DropdownMenuItem key={action.label} onClick={() => action.onClick(item)} className={action.className}>
+            .map((action, index) => (
+              <DropdownMenuItem
+                key={`${action.label}-${index}`}
+                onClick={() => action.onClick(item)}
+                className={action.className}
+              >
                 {action.icon}
                 {action.label}
               </DropdownMenuItem>

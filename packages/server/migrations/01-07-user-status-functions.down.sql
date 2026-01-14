@@ -16,5 +16,6 @@ BEGIN
 
   ALTER TABLE pzero.all_users
     ADD CONSTRAINT all_users_id_is_act_fkey
-    FOREIGN KEY (id, is_act) REFERENCES pzero.all_auth(id, is_act);
+    FOREIGN KEY (id, is_act) REFERENCES pzero.all_auth(id, is_act)
+    NOT DEFERRABLE;
 END $$;
