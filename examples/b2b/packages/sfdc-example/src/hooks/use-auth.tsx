@@ -29,15 +29,25 @@ export function useUser() {
   } = useQuery<User>({
     queryKey: ['user'],
     queryFn: async () => {
-      const { user } = await api.post<{ user: User }>('/auth/me', undefined, {
-        headers: {
-          'X-Client-Type': 'web',
-        },
-      })
-      if (user?.data?.grid) {
-        challengeManager.storeUserGrid(user.data.grid)
+      try {
+        const { user } = await api.post<{ user: User }>('/auth/me', undefined, {
+          headers: {
+            'X-Client-Type': 'web',
+          },
+        })
+        if (user?.data?.grid) {
+          challengeManager.storeUserGrid(user.data.grid)
+        }
+        return user
+      } catch (error) {
+        // If /auth/me returns 403 on /overview page, clear localStorage and redirect to sign-in
+        if (error instanceof ApiError && error.status === 403 && window.location.pathname === '/overview') {
+          clearUser()
+          challengeManager.logoff()
+          window.location.href = '/auth/sign-in'
+        }
+        throw error
       }
-      return user
     },
     // Only fetch if we don't have data or it's stale
     enabled: !user || isStale(),
@@ -58,6 +68,7 @@ export function useUser() {
         const response = await api.post('/auth/logout', undefined, { skipRefresh: true })
         queryClient.clear()
         clearUser() // Clear zustand store
+        challengeManager.logoff() // Clear challenges and grid from localStorage
         return { error: null }
       } catch (error) {
         console.error('Logout API error:', error)
@@ -80,7 +91,7 @@ export function useUser() {
     }
   }, [data, setUser])
 
-  // Handle auth errors by clearing user
+  // Handle 401 errors by clearing user
   useEffect(() => {
     if (error instanceof ApiError && error.status === 401) {
       clearUser()

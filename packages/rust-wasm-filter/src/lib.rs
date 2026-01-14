@@ -40,7 +40,10 @@ struct ChallengeAuthzHttp {
     pending_cookie_header: Option<String>,
     pending_next_call_id: Option<u32>,
     pending_next_challenge_headers: Option<NextChallengeHeaders>,
+    pending_routing: Option<PendingRouting>,
     is_auth_me_request: bool,
+    /// True for /auth/me and /auth/next requests - these skip challenge validation
+    skip_challenge_validation: bool,
     call_type: CallType,
 }
 
@@ -105,6 +108,15 @@ struct NextChallengeHeaders {
     challenge_id: String,
     challenge_question: String,
     challenge_params: String,
+}
+
+// Pending routing state to apply after /auth/next response
+#[allow(dead_code)]
+struct PendingRouting {
+    original_path: String,
+    proxy_target: Option<String>,
+    gateway_target: Option<String>,
+    modified_path: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -360,7 +372,9 @@ impl RootContext for ChallengeAuthzRoot {
             pending_cookie_header: None,
             pending_next_call_id: None,
             pending_next_challenge_headers: None,
+            pending_routing: None,
             is_auth_me_request: false,
+            skip_challenge_validation: false,
             call_type: CallType::None,
         }))
     }
@@ -511,32 +525,23 @@ impl ChallengeAuthzHttp {
                             challenge_id
                         );
 
-                        // Always fetch the next challenge after successful validation
-                        // This ensures the response includes challenge headers for the client's next request
-                        // The server will generate a new challenge if the current one doesn't have a 'next' field
-                        if self.dispatch_auth_next(&challenge_id) {
-                            // Clear pending challenge context, wait for /auth/next response
-                            self.pending_challenge_id = None;
-                            self.pending_challenge_answer = None;
-                            self.pending_call_id = None;
-                            return;
-                        }
-
-                        // Apply routing transformations before resuming
-                        // Extract path components to determine routing
+                        // Compute routing transformations before dispatching /auth/next
+                        // This ensures routing is applied regardless of whether /auth/next succeeds
                         let path = self.get_http_request_header(":path").unwrap_or_default();
+                        let proxy_target = self.get_http_request_header("x-proxy-target");
 
-                        // Always check for proxy target first
-                        if let Some(proxy_target) = self.get_http_request_header("x-proxy-target") {
-                            // Check for proxy target header and modify request to route directly
+                        // Compute the routing state
+                        let pending_routing = if let Some(ref proxy_target_url) = proxy_target {
                             info!(
                                 "[Rust WASM Filter] Request has proxy target: {}",
-                                proxy_target
+                                proxy_target_url
                             );
 
                             // Look up the proxy target from our cache by URL
-                            let target_entry =
-                                self.proxy_targets.values().find(|t| t.url == proxy_target);
+                            let target_entry = self
+                                .proxy_targets
+                                .values()
+                                .find(|t| t.url == *proxy_target_url);
                             if let Some(target) = target_entry {
                                 // Format target address with optional port
                                 let target_address = match target.port {
@@ -550,33 +555,52 @@ impl ChallengeAuthzHttp {
 
                                 // Modify the path to use gateway routing
                                 let new_path = format!("/gateway{}", path);
-                                self.set_http_request_header(":path", Some(&new_path));
-
-                                // Add header to indicate target service dynamically
-                                self.set_http_request_header(
-                                    "x-gateway-target",
-                                    Some(&target_address),
-                                );
-
-                                info!("[Rust WASM Filter] Modified path to {} for gateway routing to {}", new_path, target_address);
+                                Some(PendingRouting {
+                                    original_path: path.clone(),
+                                    proxy_target: Some(proxy_target_url.clone()),
+                                    gateway_target: Some(target_address),
+                                    modified_path: Some(new_path),
+                                })
                             } else {
                                 warn!(
                                     "[Rust WASM Filter] Proxy target not found in cache: {}",
-                                    proxy_target
+                                    proxy_target_url
                                 );
                                 // Forward to backend proxy endpoint to handle routing
-                                // The backend will look up the target and handle the proxying
                                 let proxy_path = format!("/proxy{}", path);
-                                self.set_http_request_header(":path", Some(&proxy_path));
-                                // Pass the proxy-target through for the backend to handle
-                                self.set_http_request_header("x-proxy-target", Some(&proxy_target));
-                                info!("[Rust WASM Filter] Forwarding to backend proxy handler: {} with target: {}", proxy_path, proxy_target);
+                                Some(PendingRouting {
+                                    original_path: path.clone(),
+                                    proxy_target: Some(proxy_target_url.clone()),
+                                    gateway_target: None,
+                                    modified_path: Some(proxy_path),
+                                })
                             }
                         } else {
                             // No proxy target specified, let request continue as-is
-                            info!("[Rust WASM Filter] No proxy target specified, continuing with original path: {}", path);
+                            info!(
+                                "[Rust WASM Filter] No proxy target specified, continuing with original path: {}",
+                                path
+                            );
+                            None
+                        };
+
+                        // Store the routing state for use after /auth/next response
+                        self.pending_routing = pending_routing;
+
+                        // Always fetch the next challenge after successful validation
+                        // This ensures the response includes challenge headers for the client's next request
+                        // The server will generate a new challenge if the current one doesn't have a 'next' field
+                        if self.dispatch_auth_next(&challenge_id) {
+                            // Clear pending challenge context, wait for /auth/next response
+                            // Routing will be applied in handle_auth_next_response
+                            self.pending_challenge_id = None;
+                            self.pending_challenge_answer = None;
+                            self.pending_call_id = None;
+                            return;
                         }
 
+                        // dispatch_auth_next failed, apply routing immediately
+                        self.apply_pending_routing();
                         self.resume_http_request();
                     } else {
                         warn!(
@@ -963,6 +987,32 @@ impl ChallengeAuthzHttp {
         self.call_type = CallType::None;
     }
 
+    /// Apply pending routing transformations to the request headers.
+    /// This sets the appropriate path and gateway target headers based on stored routing state.
+    fn apply_pending_routing(&mut self) {
+        if let Some(routing) = self.pending_routing.take() {
+            if let Some(modified_path) = &routing.modified_path {
+                self.set_http_request_header(":path", Some(modified_path));
+
+                if let Some(gateway_target) = &routing.gateway_target {
+                    // Route to gateway with target address
+                    self.set_http_request_header("x-gateway-target", Some(gateway_target));
+                    info!(
+                        "[Rust WASM Filter] Applied routing: path={} gateway_target={}",
+                        modified_path, gateway_target
+                    );
+                } else if let Some(proxy_target) = &routing.proxy_target {
+                    // Forward to backend proxy handler
+                    self.set_http_request_header("x-proxy-target", Some(proxy_target));
+                    info!(
+                        "[Rust WASM Filter] Applied routing: path={} proxy_target={}",
+                        modified_path, proxy_target
+                    );
+                }
+            }
+        }
+    }
+
     fn handle_auth_next_response(&mut self) {
         let response_headers = self.get_http_call_response_headers();
         let mut challenge_id = None;
@@ -1005,6 +1055,9 @@ impl ChallengeAuthzHttp {
 
         self.pending_next_call_id = None;
         self.call_type = CallType::None;
+
+        // Apply pending routing transformations before resuming the request
+        self.apply_pending_routing();
         self.resume_http_request();
     }
 }
@@ -1071,17 +1124,22 @@ impl HttpContext for ChallengeAuthzHttp {
         }
 
         let path_without_query = path.split('?').next().unwrap_or(&path);
+
+        // Paths that skip challenge validation (require JWT but not challenge headers)
+        const SKIP_CHALLENGE_PATHS: &[&str] = &["/auth/me", "/auth/next", "/proxy/auth/me", "/proxy/auth/next"];
+        self.skip_challenge_validation = SKIP_CHALLENGE_PATHS
+            .iter()
+            .any(|p| path_without_query.starts_with(p));
         self.is_auth_me_request = path_without_query == "/auth/me"
             || path_without_query == "/proxy/auth/me"
             || path_without_query.ends_with("/auth/me");
-        let is_auth_next_request = path_without_query.starts_with("/auth/next");
 
-        // Check if route is public (auth/me and proxy auth/me are handled by the filter)
+        // Check if route is public (auth/me and auth/next are handled by the filter)
         info!(
             "[Rust WASM Filter] Checking if public route: {} {}",
             method, path
         );
-        if !self.is_auth_me_request && !is_auth_next_request && is_public_route(&path, &method) {
+        if !self.skip_challenge_validation && is_public_route(&path, &method) {
             info!(
                 "[Rust WASM Filter] Public route, bypassing all validation: {} {}",
                 method, path
@@ -1171,7 +1229,7 @@ impl HttpContext for ChallengeAuthzHttp {
                 self.pending_user_call_id = Some(call_id);
                 self.call_type = CallType::UserCache;
 
-                if !self.is_auth_me_request {
+                if !self.skip_challenge_validation {
                     // Store challenge data for later validation
                     self.pending_challenge_id = Some(
                         self.get_http_request_header(CHALLENGE_HEADER_ID)

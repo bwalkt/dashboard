@@ -13,7 +13,7 @@ import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
 import { PROXY_TARGETS_CACHE_KEY, refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
-import { type ChallengePayload, getChallenge, getChallengePayload, getMultipleChallenges, markChallengeUsed } from "../utils/challenge.js";
+import { type ChallengePayload, getChallengePayload, getMultipleChallenges, markChallengeUsed } from "../utils/challenge.js";
 import { encryptionService } from '../utils/encryption.js'
 
 async function deleteUserSession(request: FastifyRequest, reply: FastifyReply) {
@@ -258,9 +258,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
             // Continue with auth/me flow even if cache population fails
         }
       }
-      const thisChallenge = challenge && challenge.next ? await getChallengePayload(challenge.next) : null;
-        // Send decrypted grid to client (not the encrypted one)
-      
+      // Send decrypted grid to client (not the encrypted one)
       const userWithDecryptedGrid = {
         ...user,
         data: {
@@ -277,21 +275,41 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         };
         await redis.set(userKey, JSON.stringify(userForCache), 300); // Cache for 5 minutes with TTL
       }
-      // Generate multiple challenges for parallel request support
-      const challenges = await getMultipleChallenges(grid, user.id, 10);
+
+      // For /auth/next, use the chained challenge; for /auth/me, generate new ones
+      let challenges: Array<{ id: string; question: string; params: { x: string; y: string } }>;
+      if (challenge && challenge.next) {
+        // Use the next challenge from the chain
+        const nextChallenge = await getChallengePayload(challenge.next);
+        if (nextChallenge) {
+          challenges = [{
+            id: challenge.next,
+            question: nextChallenge.question,
+            params: nextChallenge.params,
+          }];
+          console.log(`[/auth/next] Using chained challenge: ${challenge.next}`);
+        } else {
+          // Chain broken, generate new challenges
+          challenges = await getMultipleChallenges(grid, user.id, 1);
+          console.log(`[/auth/next] Chain broken, generated new challenges`);
+        }
+      } else {
+        // /auth/me or no chain - generate new challenges
+        challenges = await getMultipleChallenges(grid, user.id, 1);
+      }
 
       if (challenges.length === 0) {
         throw new Error("Failed to generate challenges");
       }
 
-      // Use first challenge for headers (backwards compatibility)
+      // Use first challenge for headers
       const firstChallenge = challenges[0]!;
       const replyObj = reply
         .header(CHALLENGE_ID_HEADER, firstChallenge.id)
         .header(CHALLENGE_QUESTION_HEADER, firstChallenge.question)
         .header(CHALLENGE_PARAMS_HEADER, `x=${firstChallenge.params.x},y=${firstChallenge.params.y}`)
       console.log(
-        `[/auth/me] Sending ${challenges.length} challenges, first: ${CHALLENGE_ID_HEADER}=${firstChallenge.id}`
+        `[/auth] Sending ${challenges.length} challenge(s), first: ${CHALLENGE_ID_HEADER}=${firstChallenge.id}`
       )
       return sendUser
         ? replyObj.send({ user: userWithDecryptedGrid, challenges })

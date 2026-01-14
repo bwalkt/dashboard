@@ -304,10 +304,12 @@ export class ChallengeManager {
       }
       const challengeIdValue = challenge.id
       if (challenge.solved) {
-        console.warn('[Challenge Client] Challenge already solved, skipping adding headers:', {
+        console.warn('[Challenge Client] Challenge already solved, trying next:', {
           challengeId: challengeIdValue,
         })
-        return headers
+        attempts++
+        challengeId = undefined
+        continue
       }
       // Solve the challenge if we haven't already
       if (challenge.answer === undefined) {
@@ -334,8 +336,8 @@ export class ChallengeManager {
         answerType: typeof challenge.answer,
       })
 
-      // Mark challenge as solved AFTER adding headers (so it won't be reused)
-      this.markSolved(challenge.id)
+      // Remove challenge from Map and localStorage so it won't be reused
+      this.clearChallenge(challenge.id)
 
       return updatedHeaders
     }
@@ -372,6 +374,9 @@ export class ChallengeManager {
 
     // Store multiple challenges from response body if available
     if (challenges && Array.isArray(challenges) && challenges.length > 0) {
+      // Clear old challenges before storing new ones
+      this.clearAllChallenges()
+
       console.log(`[Challenge Client] Received ${challenges.length} challenges from response body`)
       for (const challengeData of challenges) {
         const challenge: Challenge = {

@@ -377,6 +377,11 @@ export async function createRandomOrders(count: number): Promise<any[]> {
   // Get a pricebook ID if entries exist
   const pricebook2Id = pricebookEntries.length > 0 ? pricebookEntries[0].Pricebook2Id : undefined
 
+  // Filter entries to only those matching the selected pricebook
+  const matchingPricebookEntries = pricebook2Id
+    ? pricebookEntries.filter(entry => entry.Pricebook2Id === pricebook2Id)
+    : []
+
   const orders = generateRandomOrders(count, productIds, pricebook2Id)
   const results = []
 
@@ -387,8 +392,9 @@ export async function createRandomOrders(count: number): Promise<any[]> {
 
       if (response && response.success && response.id) {
         // Step 2: Create an OrderItem (required before changing status)
-        if (pricebookEntries.length > 0) {
-          const pricebookEntry = faker.helpers.arrayElement(pricebookEntries)
+        // Use only entries from the same pricebook as the Order to satisfy Salesforce constraint
+        if (matchingPricebookEntries.length > 0) {
+          const pricebookEntry = faker.helpers.arrayElement(matchingPricebookEntries)
           const quantity = order.Quantity__c ?? faker.number.int({ min: 1, max: 10 })
           const unitPrice = pricebookEntry.UnitPrice ?? order.Unit_Price__c ?? 100
           const orderItemResult = await createOrderItem(response.id, pricebookEntry.Id, quantity, unitPrice)

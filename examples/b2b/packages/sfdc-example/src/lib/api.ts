@@ -190,46 +190,37 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
 
   // Attach challenge headers if available
   if (getUseWasm()) {
-    console.log('[API] WASM mode enabled, checking for challenge. Endpoint:', endpoint)
-    console.log('[API] Current challenge:', challengeManager.getChallenge())
-    console.log('[API] User grid exists:', !!challengeManager.getUserGrid())
-    console.log('[API] lastUsedChallengeId:', localStorage.getItem('lastUsedChallengeId'))
-
     let withChallengeHeaders = challengeManager.addChallengeHeaders(updatedHeaders)
     const hasChallengeHeaders = CHALLENGE_ID_HEADER in withChallengeHeaders
-    console.log('[API] Has challenge headers after addChallengeHeaders:', hasChallengeHeaders)
 
-    // If no challenge available, try to get one via /auth/next
+    // If no challenge available, request new challenges via /auth/next through WASM
     if (!hasChallengeHeaders) {
       const lastChallengeId = localStorage.getItem('lastUsedChallengeId')
       if (lastChallengeId) {
-        console.log('[API] No challenge available, requesting new via /auth/next:', lastChallengeId)
         try {
-          // Call /auth/next on the main server (not through SFDC proxy)
-          const authServerUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'
-          const nextResponse = await fetch(`${authServerUrl}/auth/next/${lastChallengeId}`, {
+          // Route through WASM proxy, not directly to backend
+          const wasmProxyUrl = import.meta.env.VITE_PROXY_URL_WASM
+          const nextResponse = await fetch(`${wasmProxyUrl}/auth/next/${lastChallengeId}`, {
             method: 'POST',
             credentials: 'include',
             headers: {
-              'Content-Type': 'application/json',
+              [PROXY_TARGET_HEADER]: import.meta.env.VITE_BACKEND_URL,
             },
           })
 
           if (nextResponse.ok) {
-            // Extract and store new challenge from response headers
             const grid = challengeManager.getUserGrid()
             if (grid) {
               challengeManager.setGrid(grid)
             }
+            challengeManager.clearAllChallenges()
             challengeManager.extractChallengeFromHeaders(nextResponse)
 
-            // Store the new challenge ID for future /auth/next calls
             const newChallengeId = nextResponse.headers.get(CHALLENGE_ID_HEADER)
             if (newChallengeId) {
               localStorage.setItem('lastUsedChallengeId', newChallengeId)
             }
 
-            // Try adding challenge headers again
             withChallengeHeaders = challengeManager.addChallengeHeaders(updatedHeaders)
           }
         } catch (error) {
@@ -240,9 +231,58 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
 
     Object.assign(updatedHeaders, withChallengeHeaders)
 
-    // Store the challenge ID being used for future /auth/next calls
     if (CHALLENGE_ID_HEADER in withChallengeHeaders) {
       localStorage.setItem('lastUsedChallengeId', withChallengeHeaders[CHALLENGE_ID_HEADER])
+    } else if (!endpoint.startsWith('/auth/')) {
+      // No challenge headers available - try /auth/next to get new challenges (up to 3 times)
+      const MAX_RETRIES = 3
+      let success = false
+
+      for (let attempt = 0; attempt < MAX_RETRIES && !success; attempt++) {
+        const lastChallengeId = localStorage.getItem('lastUsedChallengeId')
+        if (!lastChallengeId) {
+          break
+        }
+
+        try {
+          const wasmProxyUrl = import.meta.env.VITE_PROXY_URL_WASM
+          const nextResponse = await fetch(`${wasmProxyUrl}/auth/next/${lastChallengeId}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              [PROXY_TARGET_HEADER]: import.meta.env.VITE_BACKEND_URL,
+            },
+          })
+
+          if (nextResponse.ok) {
+            const grid = challengeManager.getUserGrid()
+            if (grid) {
+              challengeManager.setGrid(grid)
+            }
+            challengeManager.clearAllChallenges()
+            challengeManager.extractChallengeFromHeaders(nextResponse)
+
+            const newChallengeId = nextResponse.headers.get(CHALLENGE_ID_HEADER)
+            if (newChallengeId) {
+              localStorage.setItem('lastUsedChallengeId', newChallengeId)
+            }
+
+            // Retry adding challenge headers
+            const retryHeaders = challengeManager.addChallengeHeaders(updatedHeaders)
+            if (CHALLENGE_ID_HEADER in retryHeaders) {
+              Object.assign(updatedHeaders, retryHeaders)
+              localStorage.setItem('lastUsedChallengeId', retryHeaders[CHALLENGE_ID_HEADER])
+              success = true
+            }
+          }
+        } catch (error) {
+          console.error(`[API] /auth/next attempt ${attempt + 1} failed:`, error)
+        }
+      }
+
+      if (!success) {
+        throw new ApiError('No challenge available. Please sign in again.', 403, 'Forbidden')
+      }
     }
   }
 
