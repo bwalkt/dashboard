@@ -38,6 +38,13 @@ function escapeSingleQuotes(value: string): string {
 }
 
 /**
+ * Escape LIKE wildcards (%, _, \) to match them literally
+ */
+function escapeLikeWildcards(value: string): string {
+  return value.replace(/[%_\\]/g, "\\$&");
+}
+
+/**
  * Build filter expression from filters
  */
 function buildFilterExpression(filters: SigNozFilters): string | undefined {
@@ -57,20 +64,24 @@ function buildFilterExpression(filters: SigNozFilters): string | undefined {
   }
 
   if (filters.http_host) {
-    const escapedHttpHost = escapeSingleQuotes(filters.http_host);
+    const escapedHttpHost = escapeSingleQuotes(escapeLikeWildcards(filters.http_host));
     conditions.push(`http_host LIKE '%${escapedHttpHost}%'`);
   }
 
   if (filters.http_url) {
-    const escapedHttpUrl = escapeSingleQuotes(filters.http_url);
+    const escapedHttpUrl = escapeSingleQuotes(escapeLikeWildcards(filters.http_url));
     conditions.push(`http_url LIKE '%${escapedHttpUrl}%'`);
   }
 
   if (filters.responseStatusCode) {
     const statusCodes = Array.isArray(filters.responseStatusCode) ? filters.responseStatusCode : [filters.responseStatusCode];
     // Status codes are numbers in SigNoz, don't wrap in quotes
-    const numericStatusCodes = statusCodes.map((code) => parseInt(code.toString(), 10));
-    conditions.push(`responseStatusCode IN [${numericStatusCodes.join(", ")}]`);
+    const numericStatusCodes = statusCodes
+      .map((code) => parseInt(code.toString(), 10))
+      .filter((code) => !isNaN(code));
+    if (numericStatusCodes.length > 0) {
+      conditions.push(`responseStatusCode IN [${numericStatusCodes.join(", ")}]`);
+    }
   }
 
   if (filters.durationMs !== undefined) {

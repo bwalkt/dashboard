@@ -157,16 +157,6 @@ export function DataTableInfinite<TData, TValue, TMeta>({
     return () => observer.unobserve(topBar)
   }, [topBarRef])
 
-  // Debug: log data passed to table
-  React.useEffect(() => {
-    console.log('Table data:', {
-      dataLength: data.length,
-      columnsLength: columns.length,
-      firstRow: data[0],
-      columnFilters,
-    })
-  }, [data, columns, columnFilters])
-
   // Disable client-side filtering - we only use server-side filtering
   // Keep columnFilters state for UI purposes (to show filter values in the UI)
   // but don't apply them to the table data
@@ -203,21 +193,6 @@ export function DataTableInfinite<TData, TValue, TMeta>({
     debugAll: import.meta.env.VITE_TABLE_DEBUG === 'true',
     meta: { getRowClassName },
   })
-
-  // Debug: log row model after table is created
-  React.useEffect(() => {
-    const rows = table.getCoreRowModel().rows // Use core row model since filtering is disabled
-    console.log('Table row model:', {
-      dataLength: data.length,
-      validDataLength: validData.length,
-      coreRowsLength: rows.length,
-      hasRows: rows.length > 0,
-      firstRowId: rows[0]?.id,
-      columnFilters,
-      firstDataItem: validData[0],
-      getRowIdResult: getRowId && validData[0] ? getRowId(validData[0] as any, 0) : 'no getRowId or no data',
-    })
-  }, [table, data, validData, columnFilters, getRowId])
 
   React.useEffect(() => {
     const columnFiltersWithNullable = filterFields.map(field => {
@@ -433,12 +408,6 @@ export function DataTableInfinite<TData, TValue, TMeta>({
                 {(() => {
                   // Use core row model directly since we disabled client-side filtering
                   const rows = table.getCoreRowModel().rows
-                  console.log('Rendering table body:', {
-                    dataLength: data.length,
-                    validDataLength: validData.length,
-                    rowsLength: rows.length,
-                    columnFilters,
-                  })
 
                   return rows?.length ? (
                     rows.map(row => (

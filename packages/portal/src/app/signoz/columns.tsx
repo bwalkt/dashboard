@@ -81,11 +81,11 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
       return <TextWithTooltip text={value} />
     },
     enableResizing: false,
-    size: 350,
-    minSize: 350,
+    size: 500,
+    minSize: 500,
     meta: {
-      cellClassName: 'font-mono w-[500px] max-w-[500px] min-w-[500px]',
-      headerClassName: 'w-[500px] max-w-[500px] min-w-[500px]',
+      cellClassName: 'font-mono w-[--col-url-size] max-w-[--col-url-size] min-w-[--col-url-size]',
+      headerClassName: 'w-[--header-url-size] max-w-[--header-url-size] min-w-[--header-url-size]',
     },
   },
   // 5. Timing Phase
@@ -207,6 +207,13 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
       const value = row.getValue<SignozTraceSchema['http_host']>('http_host')
       if (!value) return <span className="text-muted-foreground">-</span>
       return <TextWithTooltip text={value} />
+    },
+    enableResizing: false,
+    size: 150,
+    minSize: 150,
+    meta: {
+      cellClassName: 'font-mono w-[--col-host-size] max-w-[--col-host-size] min-w-[--col-host-size]',
+      headerClassName: 'w-[--header-host-size] max-w-[--header-host-size] min-w-[--header-host-size]',
     },
   },
   // 9. Trace ID
