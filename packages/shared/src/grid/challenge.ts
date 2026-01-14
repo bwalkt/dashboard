@@ -208,6 +208,10 @@ export class ChallengeManager {
     // Store the challenge
     this.storeChallenge(challenge)
 
+    // Store the challenge ID for fallback /auth/next calls
+    // This must be stored immediately so parallel requests can use it
+    this.storage.setItem('lastUsedChallengeId', challengeId)
+
     console.log('[Challenge Client] Received new challenge:', {
       id: challengeId,
       question: challengeQuestion,
@@ -316,7 +320,6 @@ export class ChallengeManager {
           continue
         }
         challenge.answer = answer
-        this.markSolved(challenge.id)
       }
 
       const updatedHeaders = {
@@ -330,6 +333,9 @@ export class ChallengeManager {
         answer: challenge.answer,
         answerType: typeof challenge.answer,
       })
+
+      // Mark challenge as solved AFTER adding headers (so it won't be reused)
+      this.markSolved(challenge.id)
 
       return updatedHeaders
     }
@@ -351,18 +357,38 @@ export class ChallengeManager {
   }
   /**
    * Handle challenge response from /auth/me endpoint
-   * Extracts challenge, stores it, and attempts to solve immediately
+   * Extracts challenges from headers and body, stores them, and solves immediately
    */
-  handleResponse(response: Response, userData?: any): void {
-    // Extract and store the challenge
-    const challenge = this.extractChallengeFromHeaders(response)
+  handleResponse(
+    response: Response,
+    userData?: any,
+    challenges?: Array<{ id: string; question: string; params: { x: string; y: string } }>,
+  ): void {
+    // IMPORTANT: Store grid FIRST before extracting/solving the challenge
+    // The challenge solving uses this.grid, so it must be set before extraction
+    if (userData?.grid) {
+      this.setGrid(userData.grid)
+    }
 
-    if (challenge) {
-      // If grid is provided, store it
-      if (userData?.grid) {
-        this.setGrid(userData.grid)
+    // Store multiple challenges from response body if available
+    if (challenges && Array.isArray(challenges) && challenges.length > 0) {
+      console.log(`[Challenge Client] Received ${challenges.length} challenges from response body`)
+      for (const challengeData of challenges) {
+        const challenge: Challenge = {
+          id: challengeData.id,
+          question: challengeData.question,
+          params:
+            typeof challengeData.params === 'string'
+              ? this.parseChallengeParams(challengeData.params)
+              : challengeData.params,
+        }
+        this.storeChallenge(challenge)
       }
-      // Challenge already stored and solved by extractChallengeFromHeaders
+      // Store the first challenge ID for fallback
+      this.storage.setItem('lastUsedChallengeId', challenges[0].id)
+    } else {
+      // Fallback: extract single challenge from headers
+      this.extractChallengeFromHeaders(response)
     }
   }
 
@@ -429,6 +455,9 @@ export const clearUserGrid = () => challengeManager.clearUserGrid()
 export const logoff = () => challengeManager.logoff()
 export const solveChallenge = (challengeId?: string) => challengeManager.solveChallenge(challengeId)
 export const addChallengeHeaders = (headers: Record<string, string>) => challengeManager.addChallengeHeaders(headers)
-export const handleResponse = (response: Response, userData?: any) =>
-  challengeManager.handleResponse(response, userData)
+export const handleResponse = (
+  response: Response,
+  userData?: any,
+  challenges?: Array<{ id: string; question: string; params: { x: string; y: string } }>,
+) => challengeManager.handleResponse(response, userData, challenges)
 export const markSolved = (challengeId?: string) => challengeManager.markSolved(challengeId)

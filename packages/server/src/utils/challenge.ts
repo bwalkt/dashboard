@@ -75,3 +75,37 @@ export async function getChallengePayload(challengeId: string): Promise<Challeng
     }
     return null;
 }
+
+/**
+ * Generate multiple challenges for parallel request support
+ * Returns array of challenges that can be used concurrently
+ */
+export async function getMultipleChallenges(grid: number[][], uid: string, count: number = 5) {
+    const challenges: Array<{ id: string; question: string; params: { x: string; y: string } }> = [];
+
+    for (let i = 0; i < count; i++) {
+        const challengeData = genFunctionAsJson(grid);
+        const challengeId = uuid();
+        const challengeKey = `challenge:${challengeId}`;
+
+        const challengePayload: ChallengePayload = {
+            answer: challengeData.result.value,
+            uid: uid,
+            used: false,
+            question: challengeData.function.expression,
+            params: challengeData.parameters,
+            c_at: Date.now(),
+        };
+
+        await redis.set(challengeKey, JSON.stringify(challengePayload));
+
+        challenges.push({
+            id: challengeId,
+            question: challengeData.function.expression,
+            params: challengeData.parameters,
+        });
+    }
+
+    console.log(`[Challenge] Generated ${count} challenges for user ${uid}`);
+    return challenges;
+}

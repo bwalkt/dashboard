@@ -331,9 +331,6 @@ impl RootContext for ChallengeAuthzRoot {
                         "check_answer" => {
                             config.check_answer = value.eq_ignore_ascii_case("true");
                         }
-                        "check_answer" => {
-                            config.check_answer = value.eq_ignore_ascii_case("true");
-                        }
                         _ => {}
                     }
                 }
@@ -456,7 +453,7 @@ impl ChallengeAuthzHttp {
                     info!("[Rust WASM Filter] Redis response: {}", body_str);
 
                     // Parse Redis response (supports JSON payloads and legacy string answers)
-                    let (answer_match, next_challenge, already_used, expected_answer_log) =
+                    let (answer_match, _next_challenge, already_used, expected_answer_log) =
                         match serde_json::from_str::<ChallengePayload>(&body_str) {
                             Ok(payload) => {
                                 let used = payload.used.unwrap_or(false);
@@ -514,15 +511,15 @@ impl ChallengeAuthzHttp {
                             challenge_id
                         );
 
-                        // If we have a chained challenge, fetch the next one before proceeding
-                        if next_challenge.is_some() {
-                            if self.dispatch_auth_next(&challenge_id) {
-                                // Clear pending challenge context, wait for /auth/next response
-                                self.pending_challenge_id = None;
-                                self.pending_challenge_answer = None;
-                                self.pending_call_id = None;
-                                return;
-                            }
+                        // Always fetch the next challenge after successful validation
+                        // This ensures the response includes challenge headers for the client's next request
+                        // The server will generate a new challenge if the current one doesn't have a 'next' field
+                        if self.dispatch_auth_next(&challenge_id) {
+                            // Clear pending challenge context, wait for /auth/next response
+                            self.pending_challenge_id = None;
+                            self.pending_challenge_answer = None;
+                            self.pending_call_id = None;
+                            return;
                         }
 
                         // Apply routing transformations before resuming

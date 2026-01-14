@@ -298,6 +298,17 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
 
+        // Invalidate user cache in Redis - get email first
+        const userResult = await db.pool.query(
+          `SELECT email FROM pzero.all_auth WHERE id = $1`,
+          [id]
+        );
+        if (userResult.rows[0]?.email) {
+          const cacheKey = `user:${userResult.rows[0].email}`;
+          await redis.delete(cacheKey);
+          console.log(`[suspend] Invalidated user cache: ${cacheKey}`);
+        }
+
         return reply.send(response);
       } catch (error) {
         console.error("=== SUSPEND ERROR ===", error);
@@ -333,6 +344,17 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
             error: "Not Found",
             message: response?.message || "User not found",
           });
+        }
+
+        // Invalidate user cache in Redis - get email first
+        const userResult = await db.pool.query(
+          `SELECT email FROM pzero.all_auth WHERE id = $1`,
+          [id]
+        );
+        if (userResult.rows[0]?.email) {
+          const cacheKey = `user:${userResult.rows[0].email}`;
+          await redis.delete(cacheKey);
+          console.log(`[activate] Invalidated user cache: ${cacheKey}`);
         }
 
         return reply.send(response);

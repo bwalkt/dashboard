@@ -4,6 +4,76 @@ import { OrderCreateRequest, PaymentMethod } from '@/types'
 import { api } from './api'
 
 /**
+ * PricebookEntry record from Salesforce
+ */
+interface PricebookEntry {
+  Id: string
+  Pricebook2Id: string
+  Product2Id: string
+  UnitPrice: number
+  IsActive: boolean
+  Name: string
+}
+
+interface PricebookEntryResponse {
+  success: boolean
+  records: PricebookEntry[]
+  totalSize: number
+  done: boolean
+  pagination: {
+    currentPage: number
+    totalPages: number
+    limit: number
+    hasNext: boolean
+    hasPrevious: boolean
+  }
+}
+
+/**
+ * Fetch active PricebookEntry records from Salesforce
+ */
+async function fetchPricebookEntries(limit = 100): Promise<PricebookEntry[]> {
+  try {
+    const response: PricebookEntryResponse = await api.get(`/salesforce/PricebookEntry/query?limit=${limit}`)
+    if (response.success && response.records) {
+      // Filter to only active entries
+      return response.records.filter(entry => entry.IsActive)
+    }
+    return []
+  } catch (error) {
+    console.error('Failed to fetch PricebookEntry records:', error)
+    return []
+  }
+}
+
+/**
+ * Create an OrderItem to link an Order to a PricebookEntry
+ */
+async function createOrderItem(
+  orderId: string,
+  pricebookEntryId: string,
+  quantity: number,
+  unitPrice: number,
+): Promise<{ success: boolean; id?: string; error?: any }> {
+  try {
+    const orderItem = {
+      OrderId: orderId,
+      PricebookEntryId: pricebookEntryId,
+      Quantity: quantity,
+      UnitPrice: unitPrice,
+    }
+    const response = await api.post('/salesforce/records/OrderItem', orderItem)
+    if (response && response.success && response.id) {
+      return { success: true, id: response.id }
+    }
+    return { success: false, error: response }
+  } catch (error) {
+    console.error('Failed to create OrderItem:', error)
+    return { success: false, error }
+  }
+}
+
+/**
  * Generate a date within the last 30 days with higher probability for the last day.
  * 80% chance of being in the last day, 20% chance of being in days 2-30.
  * Returns date formatted as YYYY-MM-DD.
@@ -52,7 +122,7 @@ function generateRecentDate(): string {
  * Reference fields (like Sales_Rep__c) must use valid Salesforce IDs,
  * not names or other text values.
  */
-export function generateRandomOrder(productIds: string[]): OrderCreateRequest {
+export function generateRandomOrder(productIds: string[], pricebook2Id?: string): OrderCreateRequest {
   // Generate effective date within last 30 days (higher probability for last 2 days)
   const effectiveDate = generateRecentDate()
 
@@ -66,6 +136,8 @@ export function generateRandomOrder(productIds: string[]): OrderCreateRequest {
     AccountId: faker.helpers.arrayElement([
       '001ak00001NjbGzAAJ', // Default account from form
     ]),
+    // Pricebook2Id is required for adding OrderItems
+    ...(pricebook2Id && { Pricebook2Id: pricebook2Id }),
   }
 
   // Optional fields - randomly include based on probability
@@ -210,22 +282,58 @@ export function generateRandomOrder(productIds: string[]): OrderCreateRequest {
 /**
  * Generate multiple random orders
  */
-export function generateRandomOrders(count: number, productIds: string[]): OrderCreateRequest[] {
-  return Array.from({ length: count }, () => generateRandomOrder(productIds))
+export function generateRandomOrders(count: number, productIds: string[], pricebook2Id?: string): OrderCreateRequest[] {
+  return Array.from({ length: count }, () => generateRandomOrder(productIds, pricebook2Id))
 }
 
 /**
  * Send a generated order to the backend API
+ * This includes creating an OrderItem before changing the order status.
  */
 export async function createRandomOrder(): Promise<any> {
-  const productIds = await fetchProducts({
-    limit: 100,
-  })
-  const order = generateRandomOrder(productIds.records.map(product => product.Id as string))
+  // Fetch products and pricebook entries
+  const [productResponse, pricebookEntries] = await Promise.all([
+    fetchProducts({ limit: 100 }),
+    fetchPricebookEntries(100),
+  ])
+
+  // Select a random pricebook entry (if available)
+  const pricebookEntry = pricebookEntries.length > 0 ? faker.helpers.arrayElement(pricebookEntries) : null
+
+  const order = generateRandomOrder(
+    productResponse.records.map(product => product.Id as string),
+    pricebookEntry?.Pricebook2Id,
+  )
 
   try {
+    // Step 1: Create the order in Draft status
     const response = await api.post('/salesforce/records/Order', order)
     if (response && response.id) {
+      // Step 2: Create an OrderItem (required before changing status)
+      if (pricebookEntry) {
+        const quantity = order.Quantity__c ?? faker.number.int({ min: 1, max: 10 })
+        const unitPrice = pricebookEntry.UnitPrice ?? order.Unit_Price__c ?? 100
+        const orderItemResult = await createOrderItem(response.id, pricebookEntry.Id, quantity, unitPrice)
+        if (!orderItemResult.success) {
+          console.warn('Failed to create OrderItem, skipping status update:', orderItemResult.error)
+          return {
+            success: true,
+            order,
+            response,
+            orderItemError: orderItemResult.error,
+          }
+        }
+      } else {
+        console.warn('No PricebookEntry available, skipping OrderItem creation and status update')
+        return {
+          success: true,
+          order,
+          response,
+          warning: 'No PricebookEntry available',
+        }
+      }
+
+      // Step 3: Update order status (now that we have an OrderItem)
       const random = Math.random()
       if (random < 0.6) order.Status = 'Completed'
       else if (random < 0.8) order.Status = 'Processing'
@@ -258,21 +366,54 @@ export async function createRandomOrder(): Promise<any> {
  * Send multiple generated orders to the backend API
  */
 export async function createRandomOrders(count: number): Promise<any[]> {
-  const productIds = await fetchProducts({
-    limit: 100,
-  })
+  // Fetch products and pricebook entries once for all orders
+  const [productResponse, pricebookEntries] = await Promise.all([
+    fetchProducts({ limit: 100 }),
+    fetchPricebookEntries(100),
+  ])
 
-  const orders = generateRandomOrders(
-    count,
-    productIds.records.map(product => product.Id as string),
-  )
+  const productIds = productResponse.records.map(product => product.Id as string)
+
+  // Get a pricebook ID if entries exist
+  const pricebook2Id = pricebookEntries.length > 0 ? pricebookEntries[0].Pricebook2Id : undefined
+
+  const orders = generateRandomOrders(count, productIds, pricebook2Id)
   const results = []
 
   for (const order of orders) {
     try {
+      // Step 1: Create the order in Draft status
       const response = await api.post('/salesforce/records/Order', order)
 
       if (response && response.success && response.id) {
+        // Step 2: Create an OrderItem (required before changing status)
+        if (pricebookEntries.length > 0) {
+          const pricebookEntry = faker.helpers.arrayElement(pricebookEntries)
+          const quantity = order.Quantity__c ?? faker.number.int({ min: 1, max: 10 })
+          const unitPrice = pricebookEntry.UnitPrice ?? order.Unit_Price__c ?? 100
+          const orderItemResult = await createOrderItem(response.id, pricebookEntry.Id, quantity, unitPrice)
+          if (!orderItemResult.success) {
+            console.warn('Failed to create OrderItem, skipping status update:', orderItemResult.error)
+            results.push({
+              success: true,
+              order,
+              response,
+              orderItemError: orderItemResult.error,
+            })
+            continue
+          }
+        } else {
+          console.warn('No PricebookEntry available, skipping OrderItem creation and status update')
+          results.push({
+            success: true,
+            order,
+            response,
+            warning: 'No PricebookEntry available',
+          })
+          continue
+        }
+
+        // Step 3: Update order status (now that we have an OrderItem)
         const random = Math.random()
         if (random < 0.6) order.Status = 'Completed'
         else if (random < 0.8) order.Status = 'Processing'
