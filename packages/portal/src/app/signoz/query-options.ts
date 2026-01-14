@@ -71,9 +71,11 @@ function buildSignozFilters(search: SearchParamsType): SigNozFilters {
   }
   const hasTimingPhases = Object.values(timingPhases).some(v => v !== undefined)
 
+  // Note: Field names match SigNoz API attribute names which use mixed conventions
+  // (e.g., httpMethod vs http_host). This is intentional to match the API contract.
   return {
     serviceName: search.serviceName || undefined,
-    http_method: getArrayOrValue(search.http_method),
+    httpMethod: getArrayOrValue(search.http_method),
     http_host: search.http_host || undefined,
     http_url: search.http_url || undefined,
     responseStatusCode: getArrayOrValue(search.responseStatusCode),
