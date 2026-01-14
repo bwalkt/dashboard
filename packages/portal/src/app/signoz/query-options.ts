@@ -73,7 +73,7 @@ function buildSignozFilters(search: SearchParamsType): SigNozFilters {
 
   return {
     serviceName: search.serviceName || undefined,
-    http_method: getArrayOrValue(search.http_method),
+    httpMethod: getArrayOrValue(search.http_method),
     http_host: search.http_host || undefined,
     http_url: search.http_url || undefined,
     responseStatusCode: getArrayOrValue(search.responseStatusCode),
