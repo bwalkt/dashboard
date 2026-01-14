@@ -29,18 +29,24 @@ END $$;
 CREATE OR REPLACE FUNCTION pzero.suspend_user(p_user_id text) RETURNS jsonb AS $$
 DECLARE
   v_row_count integer;
+  v_auth_count integer;
+  v_users_count integer;
 BEGIN
   -- Update all_users first (dependent table)
   UPDATE pzero.all_users
   SET is_act = false
   WHERE id = p_user_id::uuid AND is_act = true;
 
+  GET DIAGNOSTICS v_users_count = ROW_COUNT;
+
   -- Update all_auth (referenced table)
   UPDATE pzero.all_auth
   SET is_act = false
   WHERE id = p_user_id::uuid AND is_act = true;
 
-  GET DIAGNOSTICS v_row_count = ROW_COUNT;
+  GET DIAGNOSTICS v_auth_count = ROW_COUNT;
+
+  v_row_count := v_auth_count + v_users_count;
 
   IF v_row_count > 0 THEN
     RETURN jsonb_build_object('success', true, 'message', 'User suspended successfully', 'user_id', p_user_id);
@@ -54,18 +60,28 @@ $$ LANGUAGE plpgsql;
 -- Sets is_act = true for both all_auth and all_users
 -- Order: all_auth first (referenced), then all_users (dependent)
 CREATE OR REPLACE FUNCTION pzero.activate_user(p_user_id text) RETURNS jsonb AS $$
+DECLARE
+  v_row_count integer;
+  v_auth_count integer;
+  v_users_count integer;
 BEGIN
   -- Update all_auth first (referenced table)
   UPDATE pzero.all_auth
   SET is_act = true
   WHERE id = p_user_id::uuid AND is_act = false;
 
+  GET DIAGNOSTICS v_auth_count = ROW_COUNT;
+
   -- Update all_users (dependent table)
   UPDATE pzero.all_users
   SET is_act = true
   WHERE id = p_user_id::uuid AND is_act = false;
 
-  IF FOUND THEN
+  GET DIAGNOSTICS v_users_count = ROW_COUNT;
+
+  v_row_count := v_auth_count + v_users_count;
+
+  IF v_row_count > 0 THEN
     RETURN jsonb_build_object('success', true, 'message', 'User activated successfully', 'user_id', p_user_id);
   ELSE
     RETURN jsonb_build_object('success', false, 'message', 'User not found or already active');

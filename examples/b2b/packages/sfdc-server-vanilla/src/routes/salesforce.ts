@@ -9,6 +9,42 @@ import type {
   SalesforceRecordRequest,
 } from '../types/salesforce.js'
 
+// PricebookEntry fields for querying
+const PricebookEntryFields = [
+  'Id',
+  'Pricebook2Id',
+  'Product2Id',
+  'UnitPrice',
+  'IsActive',
+  'Name',
+  'ProductCode',
+  'UseStandardPrice',
+  'IsDeleted',
+  'CreatedDate',
+  'CreatedById',
+  'LastModifiedDate',
+  'LastModifiedById',
+  'SystemModstamp',
+]
+
+// OrderItem fields for querying
+const OrderItemFields = [
+  'Id',
+  'OrderId',
+  'PricebookEntryId',
+  'Product2Id',
+  'Quantity',
+  'UnitPrice',
+  'TotalPrice',
+  'Description',
+  'CreatedDate',
+  'CreatedById',
+  'LastModifiedDate',
+  'LastModifiedById',
+  'IsDeleted',
+  'SystemModstamp',
+]
+
 /**
  * Salesforce API Routes
  * Provides REST endpoints for Salesforce integration
@@ -98,6 +134,10 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
           keys.push(...Object.keys(OrderSchema.properties).filter(key => key !== 'attributes'))
         } else if (objectType === 'Product2') {
           keys.push(...Object.keys(ProductSchema.properties).filter(key => key !== 'attributes'))
+        } else if (objectType === 'PricebookEntry') {
+          keys.push(...PricebookEntryFields)
+        } else if (objectType === 'OrderItem') {
+          keys.push(...OrderItemFields)
         }
 
         const fields = keys.join(',')
@@ -323,6 +363,40 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         fastify.log.error(error, 'Salesforce update record error')
         reply.code(400).send({
           error: 'Record update failed',
+          message: (error as Error).message,
+        })
+      }
+    },
+  )
+
+  // Delete a record
+  fastify.delete(
+    '/salesforce/records/:objectType/:recordId',
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        if (!salesforceClient) {
+          reply.code(500).send({
+            error: 'Salesforce client not initialized',
+          })
+          return
+        }
+
+        const { objectType, recordId } = request.params as { objectType: string; recordId: string }
+
+        await salesforceClient.deleteRecord(objectType, recordId)
+
+        reply.send({
+          success: true,
+          message: `${objectType} record deleted successfully`,
+          id: recordId,
+        })
+      } catch (error) {
+        fastify.log.error(error, 'Salesforce delete record error')
+        reply.code(400).send({
+          error: 'Record deletion failed',
           message: (error as Error).message,
         })
       }

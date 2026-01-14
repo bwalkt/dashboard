@@ -13,8 +13,11 @@ import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
 import { PROXY_TARGETS_CACHE_KEY, refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
-import { type ChallengePayload, getChallenge, getChallengePayload, markChallengeUsed } from "../utils/challenge.js";
+import { type ChallengePayload, getChallengePayload, getMultipleChallenges, markChallengeUsed } from "../utils/challenge.js";
 import { encryptionService } from '../utils/encryption.js'
+
+// Number of challenges to generate per auth request (default is 2 to reduce round-trips)
+const CHALLENGE_COUNT = 2;
 
 async function deleteUserSession(request: FastifyRequest, reply: FastifyReply) {
   const userId = extractUserIdFromToken(request);
@@ -258,9 +261,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
             // Continue with auth/me flow even if cache population fails
         }
       }
-      const thisChallenge = challenge && challenge.next ? await getChallengePayload(challenge.next) : null;
-        // Send decrypted grid to client (not the encrypted one)
-      
+      // Send decrypted grid to client (not the encrypted one)
       const userWithDecryptedGrid = {
         ...user,
         data: {
@@ -269,30 +270,53 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         }
       };
       if (sendUser) {
+        // Cache user for WASM filter - must include is_act for active user check
         const userKey = `user:${user.email}`;
-        await redis.set(userKey, JSON.stringify(userWithDecryptedGrid)); // Cache for 5 minutes
-      }
-      let challengeData: Awaited<ReturnType<typeof getChallenge>>;
-      if (challengeId && thisChallenge) {
-        const nextChallenge = await getChallenge(grid, user.id);
-        thisChallenge.next = nextChallenge.id;
-        await storeChallengeRecord(challengeId, thisChallenge);
-        await storeChallengeRecord(nextChallenge.id, nextChallenge);
-        challengeData = {
-          id: challengeId,
-          ...thisChallenge
+        const userForCache = {
+          ...userWithDecryptedGrid,
+          is_act: true, // Explicitly set for WASM filter active user check
         };
-      } else {
-        challengeData = await getChallenge(grid, user.id);
+        await redis.set(userKey, JSON.stringify(userForCache), 300); // Cache for 5 minutes with TTL
       }
+
+      // For /auth/next, use the chained challenge; for /auth/me, generate new ones
+      let challenges: Array<{ id: string; question: string; params: { x: string; y: string } }>;
+      if (challenge && challenge.next) {
+        // Use the next challenge from the chain
+        const nextChallenge = await getChallengePayload(challenge.next);
+        if (nextChallenge) {
+          challenges = [{
+            id: challenge.next,
+            question: nextChallenge.question,
+            params: nextChallenge.params,
+          }];
+          console.log(`[/auth/next] Using chained challenge: ${challenge.next}`);
+        } else {
+          // Chain broken, generate new challenges
+          challenges = await getMultipleChallenges(grid, user.id, CHALLENGE_COUNT);
+          console.log(`[/auth/next] Chain broken, generated new challenges`);
+        }
+      } else {
+        // /auth/me or no chain - generate new challenges
+        challenges = await getMultipleChallenges(grid, user.id, CHALLENGE_COUNT);
+      }
+
+      if (challenges.length === 0) {
+        throw new Error("Failed to generate challenges");
+      }
+
+      // Use first challenge for headers
+      const firstChallenge = challenges[0]!;
       const replyObj = reply
-        .header(CHALLENGE_ID_HEADER, challengeData.id)
-        .header(CHALLENGE_QUESTION_HEADER, challengeData.question)
-        .header(CHALLENGE_PARAMS_HEADER, `x=${challengeData.params.x},y=${challengeData.params.y}`)
+        .header(CHALLENGE_ID_HEADER, firstChallenge.id)
+        .header(CHALLENGE_QUESTION_HEADER, firstChallenge.question)
+        .header(CHALLENGE_PARAMS_HEADER, `x=${firstChallenge.params.x},y=${firstChallenge.params.y}`)
       console.log(
-        `[/auth/me] Sending challenge headers: ${CHALLENGE_ID_HEADER}=${challengeData.id}, ${CHALLENGE_QUESTION_HEADER}=${challengeData.question}, ${CHALLENGE_PARAMS_HEADER}=x=${challengeData.params.x},y=${challengeData.params.y}`
+        `[/auth] Sending ${challenges.length} challenge(s), first: ${CHALLENGE_ID_HEADER}=${firstChallenge.id}`
       )
-      return sendUser? replyObj.send({ user: userWithDecryptedGrid }) : replyObj.send({challengeId: challengeData.id});
+      return sendUser
+        ? replyObj.send({ user: userWithDecryptedGrid, challenges })
+        : replyObj.send({ challengeId: firstChallenge.id, challenges });
     } catch (error) {
       console.error("Get user info error:", error);
       return reply.status(500).send({

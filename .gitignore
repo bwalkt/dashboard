@@ -1,6 +1,7 @@
 screenshots
 # Logs
 cookies*.txt
+database.db
 logs
 *.log
 *.zip

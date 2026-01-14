@@ -9,7 +9,7 @@
  * - Built-in retry logic for authentication failures
  * - Challenge solving and header attachment
  */
-import { challengeManager } from '@pzero/shared/challenge'
+import { CHALLENGE_ID_HEADER, challengeManager } from '@pzero/shared/challenge'
 import {
   ApiError,
   ApiRequestOptions,
@@ -31,8 +31,8 @@ import { getUseWasm } from './proxy-config'
  * Extract and solve challenge from response headers
  * Stores the solution in localStorage for future requests
  */
-async function handleChallengeHeaders(response: Response, data?: any): Promise<void> {
-  challengeManager.handleResponse(response, data)
+async function handleChallengeHeaders(response: Response, data?: any, challenges?: any[]): Promise<void> {
+  challengeManager.handleResponse(response, data, challenges)
 }
 
 /**
@@ -79,6 +79,41 @@ let isRefreshing = false
 let refreshPromise: Promise<void> | null = null
 
 /**
+ * Fetch new challenge from /auth/next endpoint
+ * Returns updated headers with challenge info, or null if failed
+ */
+async function fetchNewChallengeFromAuthNext(
+  lastChallengeId: string,
+  updatedHeaders: Record<string, string>,
+): Promise<Record<string, string> | null> {
+  try {
+    const wasmProxyUrl = import.meta.env.VITE_PROXY_URL_WASM
+    const nextResponse = await fetch(`${wasmProxyUrl}/auth/next/${lastChallengeId}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        [PROXY_TARGET_HEADER]: import.meta.env.VITE_PROXY_TARGET,
+      },
+    })
+
+    if (!nextResponse.ok) return null
+
+    challengeManager.clearAllChallenges()
+    challengeManager.extractChallengeFromHeaders(nextResponse)
+
+    const newChallengeId = nextResponse.headers.get(CHALLENGE_ID_HEADER)
+    if (newChallengeId) {
+      localStorage.setItem('lastUsedChallengeId', newChallengeId)
+    }
+
+    return challengeManager.addChallengeHeaders(updatedHeaders)
+  } catch (error) {
+    console.error('[API] Failed to fetch new challenge via /auth/next:', error)
+    return null
+  }
+}
+
+/**
  * Parse an API response
  */
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -95,7 +130,8 @@ async function parseResponse<T>(response: Response): Promise<T> {
   }
 
   const userData = typeof data === 'object' && data ? (data as any).user?.data : undefined
-  await handleChallengeHeaders(response, userData)
+  const challenges = typeof data === 'object' && data ? (data as any).challenges : undefined
+  await handleChallengeHeaders(response, userData, challenges)
   return data
 }
 
@@ -189,7 +225,47 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
 
   // Attach challenge headers if available
   if (getUseWasm()) {
-    Object.assign(updatedHeaders, challengeManager.addChallengeHeaders(updatedHeaders))
+    let withChallengeHeaders = challengeManager.addChallengeHeaders(updatedHeaders)
+    const hasChallengeHeaders = CHALLENGE_ID_HEADER in withChallengeHeaders
+
+    // If no challenge available, request new challenges via /auth/next through WASM
+    if (!hasChallengeHeaders) {
+      const lastChallengeId = localStorage.getItem('lastUsedChallengeId')
+      if (lastChallengeId) {
+        const newHeaders = await fetchNewChallengeFromAuthNext(lastChallengeId, updatedHeaders)
+        if (newHeaders) {
+          withChallengeHeaders = newHeaders
+        }
+      }
+    }
+
+    Object.assign(updatedHeaders, withChallengeHeaders)
+
+    if (CHALLENGE_ID_HEADER in withChallengeHeaders) {
+      localStorage.setItem('lastUsedChallengeId', withChallengeHeaders[CHALLENGE_ID_HEADER])
+    } else if (!endpoint.startsWith('/auth/')) {
+      // No challenge headers available - try /auth/next to get new challenges (up to 3 times)
+      const MAX_RETRIES = 3
+      let success = false
+
+      for (let attempt = 0; attempt < MAX_RETRIES && !success; attempt++) {
+        const lastChallengeId = localStorage.getItem('lastUsedChallengeId')
+        if (!lastChallengeId) {
+          break
+        }
+
+        const retryHeaders = await fetchNewChallengeFromAuthNext(lastChallengeId, updatedHeaders)
+        if (retryHeaders && CHALLENGE_ID_HEADER in retryHeaders) {
+          Object.assign(updatedHeaders, retryHeaders)
+          localStorage.setItem('lastUsedChallengeId', retryHeaders[CHALLENGE_ID_HEADER])
+          success = true
+        }
+      }
+
+      if (!success) {
+        throw new ApiError('No challenge available. Please sign in again.', 403, 'Forbidden')
+      }
+    }
   }
 
   // Prepare the request configuration

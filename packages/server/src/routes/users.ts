@@ -25,6 +25,26 @@ export interface UserWithVerification extends User {
   verification_expires_at?: string;
 }
 
+/**
+ * Helper to invalidate user cache in Redis
+ * Wrapped in try-catch so cache failures don't affect the main operation
+ */
+async function invalidateUserCache(userId: string, tag: string): Promise<void> {
+  try {
+    const userResult = await db.pool.query(
+      `SELECT email FROM pzero.all_auth WHERE id = $1`,
+      [userId]
+    );
+    if (userResult.rows[0]?.email) {
+      const cacheKey = `user:${userResult.rows[0].email}`;
+      await redis.delete(cacheKey);
+      console.log(`[${tag}] Invalidated user cache: ${cacheKey}`);
+    }
+  } catch (error) {
+    console.error(`[${tag}] Failed to invalidate cache for user ${userId}:`, error);
+  }
+}
+
 export async function userRoutes(fastify: FastifyInstance): Promise<void> {
   /**
    * POST /api/users
@@ -272,7 +292,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const currentUser = (request as any).user;
-      console.log("=== SUSPEND ROUTE HIT ===", id);
+      fastify.log.debug({ userId: id }, "Suspend route hit");
 
       // Prevent self-deactivation
       if (currentUser?.id === id) {
@@ -289,7 +309,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
         );
 
         const response = result.rows[0]?.result;
-        console.log("=== SUSPEND RESULT ===", response);
+        fastify.log.info({ userId: id, response }, "User suspended");
 
         if (!response?.success) {
           return reply.status(404).send({
@@ -298,9 +318,12 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
           });
         }
 
+        // Invalidate user cache in Redis
+        await invalidateUserCache(id, 'suspend');
+
         return reply.send(response);
       } catch (error) {
-        console.error("=== SUSPEND ERROR ===", error);
+        fastify.log.error({ err: error, userId: id }, "Error suspending user");
         return reply.status(500).send({
           error: "Internal Server Error",
           message: "Failed to suspend user",
@@ -334,6 +357,9 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
             message: response?.message || "User not found",
           });
         }
+
+        // Invalidate user cache in Redis
+        await invalidateUserCache(id, 'activate');
 
         return reply.send(response);
       } catch (error) {

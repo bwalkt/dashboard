@@ -75,3 +75,54 @@ export async function getChallengePayload(challengeId: string): Promise<Challeng
     }
     return null;
 }
+
+/**
+ * Generate multiple chained challenges
+ * Each challenge has a `next` field pointing to the next one in the chain
+ */
+export async function getMultipleChallenges(grid: number[][], uid: string, count: number = 2) {
+    const challenges: Array<{ id: string; question: string; params: { x: string; y: string } }> = [];
+    const challengeIds: string[] = [];
+    const challengePayloads: ChallengePayload[] = [];
+
+    // Generate all challenge data first
+    for (let i = 0; i < count; i++) {
+        const challengeData = genFunctionAsJson(grid);
+        const challengeId = uuid();
+        challengeIds.push(challengeId);
+
+        challengePayloads.push({
+            answer: challengeData.result.value,
+            uid: uid,
+            used: false,
+            question: challengeData.function.expression,
+            params: challengeData.parameters,
+            c_at: Date.now(),
+        });
+
+        challenges.push({
+            id: challengeId,
+            question: challengeData.function.expression,
+            params: challengeData.parameters,
+        });
+    }
+
+    // Chain challenges: each points to the next (last one has no next)
+    for (let i = 0; i < count - 1; i++) {
+        const payload = challengePayloads[i];
+        const nextId = challengeIds[i + 1];
+        if (payload && nextId) {
+            payload.next = nextId;
+        }
+    }
+    // Last challenge has no next - will trigger new challenge generation
+
+    // Store all challenges in Redis
+    for (let i = 0; i < count; i++) {
+        const challengeKey = `challenge:${challengeIds[i]}`;
+        await redis.set(challengeKey, JSON.stringify(challengePayloads[i]));
+    }
+
+    console.log(`[Challenge] Generated ${count} chained challenges for user ${uid}`);
+    return challenges;
+}

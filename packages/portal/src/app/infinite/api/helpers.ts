@@ -51,6 +51,7 @@ export function filterData(data: ColumnSchema[], search: Partial<SearchParamsTyp
         if (!filter.includes(row[key])) {
           return false
         }
+        continue
       }
       if (key === 'regions' && Array.isArray(filter)) {
         const typedFilter = filter as unknown as typeof REGIONS

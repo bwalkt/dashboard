@@ -2,8 +2,8 @@
 
 import type { ColumnDef } from '@tanstack/react-table'
 import { Ban, UserCheck } from 'lucide-react'
-import type React from 'react'
 import {
+  type AdditionalAction,
   createActionsColumn,
   createBooleanColumn,
   createDateColumn,
@@ -112,12 +112,6 @@ export const createColumns = ({ onDelete, onSuspend, onActivate }: ColumnsProps)
         className: 'text-success',
         shouldShow: (user: User) => user.is_act === false,
       },
-    ].filter(Boolean) as Array<{
-      label: string
-      icon?: React.ReactNode
-      onClick: (user: User) => void
-      className?: string
-      shouldShow?: (user: User) => boolean
-    }>,
+    ].filter(Boolean) as AdditionalAction<User>[],
   }),
 ]
