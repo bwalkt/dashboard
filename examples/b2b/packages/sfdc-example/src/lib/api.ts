@@ -79,6 +79,41 @@ let isRefreshing = false
 let refreshPromise: Promise<void> | null = null
 
 /**
+ * Fetch new challenge from /auth/next endpoint
+ * Returns updated headers with challenge info, or null if failed
+ */
+async function fetchNewChallengeFromAuthNext(
+  lastChallengeId: string,
+  updatedHeaders: Record<string, string>,
+): Promise<Record<string, string> | null> {
+  try {
+    const wasmProxyUrl = import.meta.env.VITE_PROXY_URL_WASM
+    const nextResponse = await fetch(`${wasmProxyUrl}/auth/next/${lastChallengeId}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        [PROXY_TARGET_HEADER]: import.meta.env.VITE_PROXY_TARGET,
+      },
+    })
+
+    if (!nextResponse.ok) return null
+
+    challengeManager.clearAllChallenges()
+    challengeManager.extractChallengeFromHeaders(nextResponse)
+
+    const newChallengeId = nextResponse.headers.get(CHALLENGE_ID_HEADER)
+    if (newChallengeId) {
+      localStorage.setItem('lastUsedChallengeId', newChallengeId)
+    }
+
+    return challengeManager.addChallengeHeaders(updatedHeaders)
+  } catch (error) {
+    console.error('[API] Failed to fetch new challenge via /auth/next:', error)
+    return null
+  }
+}
+
+/**
  * Parse an API response
  */
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -197,34 +232,9 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
     if (!hasChallengeHeaders) {
       const lastChallengeId = localStorage.getItem('lastUsedChallengeId')
       if (lastChallengeId) {
-        try {
-          // Route through WASM proxy, not directly to backend
-          const wasmProxyUrl = import.meta.env.VITE_PROXY_URL_WASM
-          const nextResponse = await fetch(`${wasmProxyUrl}/auth/next/${lastChallengeId}`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              [PROXY_TARGET_HEADER]: import.meta.env.VITE_BACKEND_URL,
-            },
-          })
-
-          if (nextResponse.ok) {
-            const grid = challengeManager.getUserGrid()
-            if (grid) {
-              challengeManager.setGrid(grid)
-            }
-            challengeManager.clearAllChallenges()
-            challengeManager.extractChallengeFromHeaders(nextResponse)
-
-            const newChallengeId = nextResponse.headers.get(CHALLENGE_ID_HEADER)
-            if (newChallengeId) {
-              localStorage.setItem('lastUsedChallengeId', newChallengeId)
-            }
-
-            withChallengeHeaders = challengeManager.addChallengeHeaders(updatedHeaders)
-          }
-        } catch (error) {
-          console.error('[API] Failed to fetch new challenge via /auth/next:', error)
+        const newHeaders = await fetchNewChallengeFromAuthNext(lastChallengeId, updatedHeaders)
+        if (newHeaders) {
+          withChallengeHeaders = newHeaders
         }
       }
     }
@@ -244,39 +254,11 @@ export async function apiRequest<T = any>(endpoint: string, options: ApiRequestO
           break
         }
 
-        try {
-          const wasmProxyUrl = import.meta.env.VITE_PROXY_URL_WASM
-          const nextResponse = await fetch(`${wasmProxyUrl}/auth/next/${lastChallengeId}`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              [PROXY_TARGET_HEADER]: import.meta.env.VITE_BACKEND_URL,
-            },
-          })
-
-          if (nextResponse.ok) {
-            const grid = challengeManager.getUserGrid()
-            if (grid) {
-              challengeManager.setGrid(grid)
-            }
-            challengeManager.clearAllChallenges()
-            challengeManager.extractChallengeFromHeaders(nextResponse)
-
-            const newChallengeId = nextResponse.headers.get(CHALLENGE_ID_HEADER)
-            if (newChallengeId) {
-              localStorage.setItem('lastUsedChallengeId', newChallengeId)
-            }
-
-            // Retry adding challenge headers
-            const retryHeaders = challengeManager.addChallengeHeaders(updatedHeaders)
-            if (CHALLENGE_ID_HEADER in retryHeaders) {
-              Object.assign(updatedHeaders, retryHeaders)
-              localStorage.setItem('lastUsedChallengeId', retryHeaders[CHALLENGE_ID_HEADER])
-              success = true
-            }
-          }
-        } catch (error) {
-          console.error(`[API] /auth/next attempt ${attempt + 1} failed:`, error)
+        const retryHeaders = await fetchNewChallengeFromAuthNext(lastChallengeId, updatedHeaders)
+        if (retryHeaders && CHALLENGE_ID_HEADER in retryHeaders) {
+          Object.assign(updatedHeaders, retryHeaders)
+          localStorage.setItem('lastUsedChallengeId', retryHeaders[CHALLENGE_ID_HEADER])
+          success = true
         }
       }
 

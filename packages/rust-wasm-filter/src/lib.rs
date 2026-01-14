@@ -111,9 +111,7 @@ struct NextChallengeHeaders {
 }
 
 // Pending routing state to apply after /auth/next response
-#[allow(dead_code)]
 struct PendingRouting {
-    original_path: String,
     proxy_target: Option<String>,
     gateway_target: Option<String>,
     modified_path: Option<String>,
@@ -556,7 +554,6 @@ impl ChallengeAuthzHttp {
                                 // Modify the path to use gateway routing
                                 let new_path = format!("/gateway{}", path);
                                 Some(PendingRouting {
-                                    original_path: path.clone(),
                                     proxy_target: Some(proxy_target_url.clone()),
                                     gateway_target: Some(target_address),
                                     modified_path: Some(new_path),
@@ -569,7 +566,6 @@ impl ChallengeAuthzHttp {
                                 // Forward to backend proxy endpoint to handle routing
                                 let proxy_path = format!("/proxy{}", path);
                                 Some(PendingRouting {
-                                    original_path: path.clone(),
                                     proxy_target: Some(proxy_target_url.clone()),
                                     gateway_target: None,
                                     modified_path: Some(proxy_path),
@@ -863,11 +859,6 @@ impl ChallengeAuthzHttp {
 
         // Validate challenge headers presence
         if challenge_id.is_empty() || challenge_answer.is_empty() {
-            let path = self.get_http_request_header(":path").unwrap_or_default();
-            warn!(
-                "[Rust WASM Filter] Missing challenge headers for path: {}",
-                path
-            );
             let path = self.get_http_request_header(":path").unwrap_or_default();
             warn!(
                 "[Rust WASM Filter] Missing challenge headers for path: {}",

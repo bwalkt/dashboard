@@ -16,6 +16,9 @@ import { type UserWithStatus, userService } from "../services/user.service.js";
 import { type ChallengePayload, getChallengePayload, getMultipleChallenges, markChallengeUsed } from "../utils/challenge.js";
 import { encryptionService } from '../utils/encryption.js'
 
+// Number of challenges to generate per auth request (default is 2 to reduce round-trips)
+const CHALLENGE_COUNT = 2;
+
 async function deleteUserSession(request: FastifyRequest, reply: FastifyReply) {
   const userId = extractUserIdFromToken(request);
   if (userId) {
@@ -290,12 +293,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           console.log(`[/auth/next] Using chained challenge: ${challenge.next}`);
         } else {
           // Chain broken, generate new challenges
-          challenges = await getMultipleChallenges(grid, user.id, 1);
+          challenges = await getMultipleChallenges(grid, user.id, CHALLENGE_COUNT);
           console.log(`[/auth/next] Chain broken, generated new challenges`);
         }
       } else {
         // /auth/me or no chain - generate new challenges
-        challenges = await getMultipleChallenges(grid, user.id, 1);
+        challenges = await getMultipleChallenges(grid, user.id, CHALLENGE_COUNT);
       }
 
       if (challenges.length === 0) {
