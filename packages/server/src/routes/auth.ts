@@ -2,7 +2,7 @@ import { randomInt, timingSafeEqual } from "node:crypto";
 
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail, type UserResponse } from "@pzero/shared";
-import { CHALLENGE_ID_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_QUESTION_HEADER } from '@pzero/shared/challenge'
+import { CHALLENGE_ID_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_QUESTION_HEADER } from "@pzero/shared/challenge";
 import { genFunctionAsJson, genGrid } from "@pzero/shared/grid";
 import { uuid } from "@pzero/shared/uuid";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -14,7 +14,7 @@ import { emailService } from "../services/email.service.js";
 import { PROXY_TARGETS_CACHE_KEY, refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
 import { type ChallengePayload, getChallengePayload, getMultipleChallenges, markChallengeUsed } from "../utils/challenge.js";
-import { encryptionService } from '../utils/encryption.js'
+import { encryptionService } from "../utils/encryption.js";
 
 // Number of challenges to generate per auth request (default is 2 to reduce round-trips)
 const CHALLENGE_COUNT = 2;
@@ -233,10 +233,17 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       } as ErrorResponse);
     }
   });
-  async function nextHelper(user:UserWithStatus, request: FastifyRequest, reply: FastifyReply, sendUser?: boolean, challenge?: ChallengePayload, challengeId?: string) {
+  async function nextHelper(
+    user: UserWithStatus,
+    request: FastifyRequest,
+    reply: FastifyReply,
+    sendUser?: boolean,
+    challenge?: ChallengePayload,
+    challengeId?: string
+  ) {
     try {
       if (!user?.data?.grid || user.is_act === undefined) {
-        user = await userService.getUserByEmail(user.email) as UserWithStatus;
+        user = (await userService.getUserByEmail(user.email)) as UserWithStatus;
       }
       if (!user?.data?.grid || !user.is_act) {
         console.log("Error - Grid for user not found, or status not ACTIVE:", user);
@@ -248,8 +255,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
       const grid = encryptionService.decrypt(user.data.grid) as number[][];
       console.log("Fetched user info for:", { id: user.id, email: user.email });
-       
-        // Check and populate proxy_targets cache if not exists
+
+      // Check and populate proxy_targets cache if not exists
       const cacheExists = await redis.exists(PROXY_TARGETS_CACHE_KEY);
       if (!cacheExists) {
         console.log("Proxy targets cache not found, populating from database...");
@@ -258,7 +265,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           console.log("Proxy targets cache populated successfully");
         } catch (error) {
           console.error("Failed to populate proxy targets cache:", error);
-            // Continue with auth/me flow even if cache population fails
+          // Continue with auth/me flow even if cache population fails
         }
       }
       // Send decrypted grid to client (not the encrypted one)
@@ -266,8 +273,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         ...user,
         data: {
           ...user.data,
-          grid: grid // Send the decrypted grid
-        }
+          grid: grid, // Send the decrypted grid
+        },
       };
       if (sendUser) {
         // Cache user for WASM filter - must include is_act for active user check
@@ -285,11 +292,13 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         // Use the next challenge from the chain
         const nextChallenge = await getChallengePayload(challenge.next);
         if (nextChallenge) {
-          challenges = [{
-            id: challenge.next,
-            question: nextChallenge.question,
-            params: nextChallenge.params,
-          }];
+          challenges = [
+            {
+              id: challenge.next,
+              question: nextChallenge.question,
+              params: nextChallenge.params,
+            },
+          ];
           console.log(`[/auth/next] Using chained challenge: ${challenge.next}`);
         } else {
           // Chain broken, generate new challenges
@@ -310,13 +319,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       const replyObj = reply
         .header(CHALLENGE_ID_HEADER, firstChallenge.id)
         .header(CHALLENGE_QUESTION_HEADER, firstChallenge.question)
-        .header(CHALLENGE_PARAMS_HEADER, `x=${firstChallenge.params.x},y=${firstChallenge.params.y}`)
-      console.log(
-        `[/auth] Sending ${challenges.length} challenge(s), first: ${CHALLENGE_ID_HEADER}=${firstChallenge.id}`
-      )
-      return sendUser
-        ? replyObj.send({ user: userWithDecryptedGrid, challenges })
-        : replyObj.send({ challengeId: firstChallenge.id, challenges });
+        .header(CHALLENGE_PARAMS_HEADER, `x=${firstChallenge.params.x},y=${firstChallenge.params.y}`);
+      console.log(`[/auth] Sending ${challenges.length} challenge(s), first: ${CHALLENGE_ID_HEADER}=${firstChallenge.id}`);
+      return sendUser ? replyObj.send({ user: userWithDecryptedGrid, challenges }) : replyObj.send({ challengeId: firstChallenge.id, challenges });
     } catch (error) {
       console.error("Get user info error:", error);
       return reply.status(500).send({
@@ -344,8 +349,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   }
 
   /**
-   * POST /auth/next/:challengeId
-   * Advance to the next challenge in the chain (protected route)
+   * POST /auth/me
+   * Get current user info (protected route)
    */
   fastify.post(
     "/auth/me",
@@ -365,10 +370,10 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       }
     }
   );
-  
+
   /**
-   * GET /auth/me
-   * Get current user info (protected route)
+   * POST /auth/next/:challengeId
+   * Advance to the next challenge in the chain (protected route)
    */
   fastify.post(
     "/auth/next/:challengeId",
