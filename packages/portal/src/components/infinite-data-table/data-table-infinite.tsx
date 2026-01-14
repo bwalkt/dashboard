@@ -115,6 +115,11 @@ export function DataTableInfinite<TData, TValue, TMeta>({
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(defaultColumnFilters)
   const [sorting, setSorting] = React.useState<SortingState>(defaultColumnSorting)
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(defaultRowSelection)
+
+  // Sync columnFilters state with defaultColumnFilters prop (from URL)
+  React.useEffect(() => {
+    setColumnFilters(defaultColumnFilters)
+  }, [defaultColumnFilters])
   const [columnOrder, setColumnOrder] = useLocalStorage<string[]>('data-table-column-order', [])
   const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
     'data-table-visibility',

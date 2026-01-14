@@ -58,18 +58,19 @@ function buildFilterExpression(filters: SigNozFilters): string | undefined {
 
   if (filters.http_host) {
     const escapedHttpHost = escapeSingleQuotes(filters.http_host);
-    conditions.push(`http_host = '${escapedHttpHost}'`);
+    conditions.push(`http_host LIKE '%${escapedHttpHost}%'`);
   }
 
   if (filters.http_url) {
     const escapedHttpUrl = escapeSingleQuotes(filters.http_url);
-    conditions.push(`http_url = '${escapedHttpUrl}'`);
+    conditions.push(`http_url LIKE '%${escapedHttpUrl}%'`);
   }
 
   if (filters.responseStatusCode) {
     const statusCodes = Array.isArray(filters.responseStatusCode) ? filters.responseStatusCode : [filters.responseStatusCode];
-    const escapedStatusCodes = statusCodes.map((code) => escapeSingleQuotes(code.toString())).map((code) => `'${code}'`);
-    conditions.push(`responseStatusCode IN [${escapedStatusCodes.join(", ")}]`);
+    // Status codes are numbers in SigNoz, don't wrap in quotes
+    const numericStatusCodes = statusCodes.map((code) => parseInt(code.toString(), 10));
+    conditions.push(`responseStatusCode IN [${numericStatusCodes.join(", ")}]`);
   }
 
   if (filters.durationMs !== undefined) {
