@@ -355,7 +355,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
   async function storeChallengeRecord(challengeId: string, payload: ChallengePayload): Promise<void> {
     const redisKey = `challenge:${challengeId}`;
-    await redis.set(redisKey, JSON.stringify(payload));
+    await redis.set(redisKey, JSON.stringify(payload), config.CHALLENGE_TTL_SECONDS);
   }
 
   /**

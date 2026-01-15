@@ -1,5 +1,6 @@
 import { genFunctionAsJson  } from "@pzero/shared/grid";
 import { uuid } from "@pzero/shared/uuid";
+import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
 export type ChallengePayload = {
     answer: string;
@@ -35,10 +36,11 @@ export async function getChallenge(grid: number[][], uid: string) {
         // No next - B is end of pre-generated chain (will be extended in /auth/next flow)
         c_at: Date.now()
     };
+    const ttl = config.CHALLENGE_TTL_SECONDS;
     console.log(`get Current challenge in Redis: ${challengeKey}`, challengePayload);
-    await redis.set(challengeKey, JSON.stringify(challengePayload));
+    await redis.set(challengeKey, JSON.stringify(challengePayload), ttl);
     console.log(`get Next challenge in Redis: ${nextChallengeKey}`, nextChallengePayload);
-    await redis.set(nextChallengeKey, JSON.stringify(nextChallengePayload));
+    await redis.set(nextChallengeKey, JSON.stringify(nextChallengePayload), ttl);
     return {
         id: challengeId,
         ...challengePayload
@@ -49,16 +51,22 @@ export type MarkChallengeResult = 'ok' | 'already_used' | 'not_found';
 
 export async function markChallengeUsed(challengeId: string): Promise<MarkChallengeResult> {
     const challengeKey = `challenge:${challengeId}`;
+    const ttl = config.CHALLENGE_TTL_SECONDS;
     const script = `
         local data = redis.call('GET', KEYS[1])
         if not data then return nil end
         local payload = cjson.decode(data)
         if payload.used then return 'already_used' end
         payload.used = true
-        redis.call('SET', KEYS[1], cjson.encode(payload))
+        local ttl = tonumber(ARGV[1])
+        if ttl and ttl > 0 then
+            redis.call('SETEX', KEYS[1], ttl, cjson.encode(payload))
+        else
+            redis.call('SET', KEYS[1], cjson.encode(payload))
+        end
         return 'ok'
     `;
-    const result = await redis.eval(script, [challengeKey]);
+    const result = await redis.eval(script, [challengeKey], [ttl.toString()]);
     if (result === 'already_used') {
         console.warn(`markChallengeUsed: Challenge ${challengeId} already used.`);
         return 'already_used';
@@ -122,10 +130,11 @@ export async function getMultipleChallenges(grid: number[][], uid: string, count
     }
     // Last challenge has no next - will trigger new challenge generation
 
-    // Store all challenges in Redis
+    // Store all challenges in Redis with TTL to prevent orphan accumulation
+    const ttl = config.CHALLENGE_TTL_SECONDS;
     for (let i = 0; i < count; i++) {
         const challengeKey = `challenge:${challengeIds[i]}`;
-        await redis.set(challengeKey, JSON.stringify(challengePayloads[i]));
+        await redis.set(challengeKey, JSON.stringify(challengePayloads[i]), ttl);
     }
 
     console.log(`[Challenge] Generated ${count} chained challenges for user ${uid}`);
