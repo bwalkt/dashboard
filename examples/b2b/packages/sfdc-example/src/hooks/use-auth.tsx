@@ -74,22 +74,26 @@ export function useUser() {
     error: signOutError,
   } = useMutation({
     mutationFn: async () => {
-      try {
-        const response = await api.post('/auth/logout', undefined, { skipRefresh: true })
+      // Always perform cleanup regardless of API result
+      const cleanup = () => {
         queryClient.clear()
         clearUser() // Clear zustand store
         challengeManager.logoff() // Clear challenges and grid from localStorage
-        return { error: null }
-      } catch (error) {
-        console.error('Logout API error:', error)
-        throw error
       }
+
+      try {
+        await api.post('/auth/logout', undefined, { skipRefresh: true })
+      } catch (error) {
+        // Log but don't throw - we still want to sign out locally even if API fails
+        // This handles zombie state where user is not found on server
+        console.warn('Logout API error (proceeding with local cleanup):', error)
+      }
+
+      cleanup()
+      return { error: null }
     },
     onSuccess: () => {
       window.location.href = '/auth/sign-in'
-    },
-    onError: error => {
-      console.error('Logout mutation error:', error)
     },
   })
 
