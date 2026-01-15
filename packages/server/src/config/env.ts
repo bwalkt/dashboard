@@ -2,10 +2,7 @@ import dotenv from "dotenv";
 
 // Load environment variables from .env file only when running locally (not in Docker)
 // In Docker, environment variables are provided at runtime via docker-compose
-if (
-  !process.env.DOCKER_CONTAINER &&
-  !process.env.NODE_ENV?.includes("docker")
-) {
+if (!process.env.DOCKER_CONTAINER && !process.env.NODE_ENV?.includes("docker")) {
   dotenv.config();
 }
 const serverUrl = process.env.SERVER_BASE_URL || "http://localhost:8090";
@@ -59,6 +56,7 @@ export interface EnvironmentConfig {
   REDIS_STATUS_TTL_SECONDS: number;
   STATS_API_KEY: string | undefined;
   ENCRYPTION_SECRET?: string;
+  ENVOY_INTERNAL_SECRET?: string; // Secret for validating Envoy internal requests
 }
 const DEFAULT_ALLOWED_HEADERS = [
   "Content-Type",
@@ -76,21 +74,14 @@ const DEFAULT_ALLOWED_HEADERS = [
   "x-test-eval",
 ];
 
-const DEFAULT_EXPOSED_HEADERS = [
-  "Content-Range",
-  "X-Content-Range",
-  "x-test-eval",
-];
+const DEFAULT_EXPOSED_HEADERS = ["Content-Range", "X-Content-Range", "x-test-eval"];
 function parserOnlyArray(envVar: string | undefined, def?: string[]): string[] {
   if (!envVar) {
     return def ?? [];
   }
   return envVar.split(",").map((item) => item.trim());
 }
-function parserArray(
-  envVar: string | undefined,
-  def: string,
-): string | string[] {
+function parserArray(envVar: string | undefined, def: string): string | string[] {
   if (!envVar) return def;
   const vars = envVar
     .split(",")
@@ -103,8 +94,7 @@ export const config: EnvironmentConfig = {
   NODE_ENV: process.env.NODE_ENV || "development",
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || "",
-  JWT_SECRET:
-    process.env.JWT_SECRET || "default-secret-key-change-in-production",
+  JWT_SECRET: process.env.JWT_SECRET || "default-secret-key-change-in-production",
   SKIP_OTP: process.env.SKIP_OTP !== "false", // Defaults to true, set to 'false' to require OTP
   POSTGRES_HOST: process.env.POSTGRES_HOST || "localhost",
   POSTGRES_PORT: parseInt(process.env.POSTGRES_PORT || "5432", 10),
@@ -139,25 +129,13 @@ export const config: EnvironmentConfig = {
   SERVER_BASE_URL: process.env.SERVER_BASE_URL || "http://localhost:8090",
   FRONTEND_URL: process.env.FRONTEND_URL,
   DOMAIN: domain,
-  POSTGRES_IDLE_TIMEOUT: parseInt(
-    process.env.POSTGRES_IDLE_TIMEOUT || "30000",
-    10,
-  ),
-  POSTGRES_CONNECTION_TIMEOUT: parseInt(
-    process.env.POSTGRES_CONNECTION_TIMEOUT || "2000",
-    10,
-  ),
+  POSTGRES_IDLE_TIMEOUT: parseInt(process.env.POSTGRES_IDLE_TIMEOUT || "30000", 10),
+  POSTGRES_CONNECTION_TIMEOUT: parseInt(process.env.POSTGRES_CONNECTION_TIMEOUT || "2000", 10),
   POSTGRES_MAX_CLIENTS: parseInt(process.env.POSTGRES_MAX_CLIENTS || "20", 10),
   CORS_ALLOWED_ORIGINS: parserArray(process.env.CORS_ALLOWED_ORIGINS, "*"),
   CORS_ALLOW_CREDENTIALS: process.env.CORS_ALLOW_CREDENTIALS === "true",
-  CORS_EXPOSED_HEADERS: parserOnlyArray(
-    process.env.CORS_EXPOSED_HEADERS,
-    DEFAULT_EXPOSED_HEADERS,
-  ),
-  CORS_ALLOWED_HEADERS: parserOnlyArray(
-    process.env.CORS_ALLOWED_HEADERS,
-    DEFAULT_ALLOWED_HEADERS,
-  ),
+  CORS_EXPOSED_HEADERS: parserOnlyArray(process.env.CORS_EXPOSED_HEADERS, DEFAULT_EXPOSED_HEADERS),
+  CORS_ALLOWED_HEADERS: parserOnlyArray(process.env.CORS_ALLOWED_HEADERS, DEFAULT_ALLOWED_HEADERS),
   EMAIL_EXPIRY_MINUTES: parseInt(process.env.EMAIL_EXPIRY_MINUTES || "100", 10),
   ALLOWED_DOMAINS: process.env.ALLOWED_DOMAINS,
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
@@ -168,7 +146,8 @@ export const config: EnvironmentConfig = {
   REDIS_STATUS_NAMESPACE: process.env.REDIS_STATUS_NAMESPACE || "APP:auth:status:",
   REDIS_STATUS_TTL_SECONDS: parseInt(process.env.REDIS_STATUS_TTL_SECONDS || "86400", 10), // Default: 24 hours
   STATS_API_KEY: process.env.STATS_API_KEY,
-  ENCRYPTION_SECRET: process.env.ENCRYPTION_SECRET || 'pzero',
+  ENCRYPTION_SECRET: process.env.ENCRYPTION_SECRET || "pzero",
+  ENVOY_INTERNAL_SECRET: process.env.ENVOY_INTERNAL_SECRET || "", // Fallback to JWT_SECRET for backward compatibility
 };
 
 /**
@@ -203,17 +182,10 @@ export function validateEnvironment(): void {
     });
 
     // Provide different instructions based on environment
-    if (
-      process.env.DOCKER_CONTAINER ||
-      process.env.NODE_ENV?.includes("docker")
-    ) {
-      console.error(
-        "\n📝 Please ensure all required variables are set in docker-compose.yml.",
-      );
+    if (process.env.DOCKER_CONTAINER || process.env.NODE_ENV?.includes("docker")) {
+      console.error("\n📝 Please ensure all required variables are set in docker-compose.yml.");
     } else {
-      console.error(
-        "\n📝 Please check your .env file and ensure all required variables are set.",
-      );
+      console.error("\n📝 Please check your .env file and ensure all required variables are set.");
     }
     console.error("📄 See env.example for reference.");
     process.exit(1);
@@ -221,9 +193,7 @@ export function validateEnvironment(): void {
 
   // Warn about default JWT secret
   if (config.JWT_SECRET === "default-secret-key-change-in-production") {
-    console.warn(
-      "⚠️  Using default JWT secret. Please set JWT_SECRET environment variable for production.",
-    );
+    console.warn("⚠️  Using default JWT secret. Please set JWT_SECRET environment variable for production.");
   }
 
   // Validate SERVER_BASE_URL is not empty and properly formatted

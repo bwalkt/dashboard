@@ -78,6 +78,9 @@ struct FilterConfig {
     /// Whether to enforce challenge answer validation.
     /// Configure via check_answer=true|false in filter config.
     check_answer: bool,
+    /// Secret for authenticating internal requests to backend server.
+    /// Configure via envoy_internal_secret=<secret> in filter config.
+    envoy_internal_secret: String,
 }
 
 impl Default for FilterConfig {
@@ -90,6 +93,7 @@ impl Default for FilterConfig {
             proxy_targets_authority: "pzero-server".to_string(), // Default authority (port from cluster config)
             allowed_origins: Vec::new(), // Empty = allow all origins (backward compatible)
             check_answer: false,
+            envoy_internal_secret: String::new(),
         }
     }
 }
@@ -341,6 +345,9 @@ impl RootContext for ChallengeAuthzRoot {
                         "check_answer" => {
                             config.check_answer = value.eq_ignore_ascii_case("true");
                         }
+                        "envoy_internal_secret" => {
+                            config.envoy_internal_secret = value.to_string();
+                        }
                         _ => {}
                     }
                 }
@@ -543,7 +550,12 @@ impl ChallengeAuthzHttp {
                                 );
 
                                 // Modify the path to use gateway routing
-                                let new_path = format!("/gateway{}", path);
+                                // Only prepend /gateway if path doesn't already start with it
+                                let new_path = if path.starts_with("/gateway") {
+                                    path.clone()
+                                } else {
+                                    format!("/gateway{}", path)
+                                };
                                 Some(PendingRouting {
                                     proxy_target: Some(proxy_target_url.clone()),
                                     gateway_target: Some(target_address),
@@ -555,9 +567,9 @@ impl ChallengeAuthzHttp {
                                     proxy_target_url
                                 );
                                 // Forward to backend proxy endpoint to handle routing
-                                // Don't add /proxy prefix if path already starts with /proxy
+                                // Only prepend /proxy if path doesn't already start with it
                                 let proxy_path = if path.starts_with("/proxy") {
-                                    path.to_string()
+                                    path.clone()
                                 } else {
                                     format!("/proxy{}", path)
                                 };
@@ -769,12 +781,49 @@ impl ChallengeAuthzHttp {
             }
         };
 
-        let headers = vec![
+        // Get the email that was extracted earlier during JWT decoding
+        let user_email = match self.pending_user_email.clone() {
+            Some(email) => email,
+            None => {
+                warn!("[Rust WASM Filter] Missing user email for /auth/me");
+                self.send_forbidden_response("missing user email");
+                return;
+            }
+        };
+
+        // Build headers vector
+        let mut header_vec: Vec<(&str, &str)> = vec![
             (":method", "POST"),
             (":path", "/auth/me"),
             (":authority", "pzero-server"),
             ("cookie", &cookie_header),
         ];
+
+        // Add trusted internal headers if configured
+        // Store as owned strings to ensure they persist through the dispatch call
+        let mut internal_secret_header: Option<String> = None;
+        let mut user_email_header: Option<String> = None;
+
+        if !self.config.envoy_internal_secret.is_empty() {
+            // Create owned copies to ensure they persist
+            internal_secret_header = Some(self.config.envoy_internal_secret.clone());
+            user_email_header = Some(user_email.clone());
+
+            let secret_ref = internal_secret_header.as_ref().unwrap();
+            let email_ref = user_email_header.as_ref().unwrap();
+
+            header_vec.push(("x-internal-auth-secret", secret_ref.as_str()));
+            header_vec.push(("x-internal-user-email", email_ref.as_str()));
+
+            info!(
+                "[Rust WASM Filter] Adding internal headers for /auth/me: email={}, secret_length={}, secret_value='{}'",
+                email_ref,
+                secret_ref.len(),
+                secret_ref
+            );
+        }
+
+        let headers = header_vec;
 
         info!("[Rust WASM Filter] Dispatching /auth/me ({:?})", call_type);
 
@@ -827,13 +876,49 @@ impl ChallengeAuthzHttp {
             return false;
         }
 
+        // Get the email that was extracted earlier during JWT decoding
+        let user_email = match self.pending_user_email.clone() {
+            Some(email) => email,
+            None => {
+                warn!("[Rust WASM Filter] Missing user email for /auth/next");
+                return false;
+            }
+        };
+
         let path = format!("/auth/next/{}", challenge_id);
-        let headers = vec![
+
+        // Build headers vector
+        let mut header_vec: Vec<(&str, &str)> = vec![
             (":method", "POST"),
             (":path", &path),
             (":authority", "pzero-server"),
             ("cookie", &cookie_header),
         ];
+
+        // Add trusted internal headers if configured
+        // Store as owned strings to ensure they persist through the dispatch call
+        let mut internal_secret_header: Option<String> = None;
+        let mut user_email_header: Option<String> = None;
+
+        if !self.config.envoy_internal_secret.is_empty() {
+            // Create owned copies to ensure they persist
+            internal_secret_header = Some(self.config.envoy_internal_secret.clone());
+            user_email_header = Some(user_email.clone());
+
+            let secret_ref = internal_secret_header.as_ref().unwrap();
+            let email_ref = user_email_header.as_ref().unwrap();
+
+            header_vec.push(("x-internal-auth-secret", secret_ref.as_str()));
+            header_vec.push(("x-internal-user-email", email_ref.as_str()));
+
+            info!(
+                "[Rust WASM Filter] Adding internal headers for /auth/next: email={}, secret_length={}",
+                email_ref,
+                secret_ref.len()
+            );
+        }
+
+        let headers = header_vec;
 
         info!(
             "[Rust WASM Filter] Fetching next challenge via /auth/next: {}",
@@ -1131,12 +1216,17 @@ impl HttpContext for ChallengeAuthzHttp {
         let path_without_query = path.split('?').next().unwrap_or(&path);
 
         // Paths that skip challenge validation (require JWT but not challenge headers)
-        const SKIP_CHALLENGE_PATHS: &[&str] = &["/auth/me", "/auth/next", "/proxy/auth/me", "/proxy/auth/next"];
+        const SKIP_CHALLENGE_PATHS: &[&str] = &[
+            "/auth/me",
+            "/auth/next",
+            "/proxy/auth/me",
+            "/proxy/auth/next",
+        ];
         self.skip_challenge_validation = SKIP_CHALLENGE_PATHS
             .iter()
             .any(|p| path_without_query.starts_with(p));
-        self.is_auth_me_request = path_without_query == "/auth/me"
-            || path_without_query == "/proxy/auth/me";
+        self.is_auth_me_request =
+            path_without_query == "/auth/me" || path_without_query == "/proxy/auth/me";
 
         // Check if route is public (auth/me and auth/next are handled by the filter)
         info!(

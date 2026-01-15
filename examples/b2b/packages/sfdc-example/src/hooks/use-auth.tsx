@@ -40,17 +40,27 @@ export function useUser() {
         }
         return user
       } catch (error) {
-        // If /auth/me returns 403 on /overview page, clear localStorage and redirect to sign-in
-        if (error instanceof ApiError && error.status === 403 && window.location.pathname === '/overview') {
-          clearUser()
-          challengeManager.logoff()
-          window.location.href = '/auth/sign-in'
+        if (error instanceof ApiError && error.status === 403) {
+          const message = error.message.toLowerCase()
+          // Stale/missing cookie - redirect to login (but not if already on auth pages)
+          if (message.includes('missing access token') || message.includes('invalid token')) {
+            const isAuthPage = window.location.pathname.startsWith('/auth/')
+            if (!isAuthPage) {
+              console.warn('[useUser] Session invalid, redirecting to login:', error.message)
+              clearUser()
+              challengeManager.logoff()
+              window.location.href = '/auth/sign-in'
+              return undefined as unknown as User
+            }
+          }
+          // Other 403 errors (e.g., challenge issues) - log but don't redirect
+          console.error('[useUser] /auth/me returned 403:', error.message)
         }
         throw error
       }
     },
-    // Only fetch if we don't have data or it's stale
-    enabled: !user || isStale(),
+    // Only fetch if we don't have data or it's stale, and not on auth pages
+    enabled: (!user || isStale()) && !window.location.pathname.startsWith('/auth/'),
     retry: false,
     staleTime: AUTH_STALE_TIME_MS,
     gcTime: AUTH_CACHE_TIME_MS,
