@@ -1136,8 +1136,7 @@ impl HttpContext for ChallengeAuthzHttp {
             .iter()
             .any(|p| path_without_query.starts_with(p));
         self.is_auth_me_request = path_without_query == "/auth/me"
-            || path_without_query == "/proxy/auth/me"
-            || path_without_query.ends_with("/auth/me");
+            || path_without_query == "/proxy/auth/me";
 
         // Check if route is public (auth/me and auth/next are handled by the filter)
         info!(
