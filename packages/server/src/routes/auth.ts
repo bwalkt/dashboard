@@ -344,8 +344,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   /**
    * POST /auth/me
    * Get current user info (protected route)
-   * POST /auth/me
-   * Get current user info (protected route)
    */
   fastify.post(
     "/auth/me",
