@@ -7,6 +7,8 @@ import type { DataTableFilterField, Option, SheetField } from '@/components/data
 import { formatMilliseconds } from '@/lib/format'
 import { getStatusColor } from '@/lib/request/status-code'
 import { cn } from '@/lib/utils'
+import { CollapsibleSection } from './_components/collapsible-section'
+import { SheetChallengeTimeline } from './_components/sheet-challenge-timeline'
 import { SheetTimingPhases } from './_components/sheet-timing-phases'
 import type { SignozColumnFilterSchema, SignozTraceSchema } from './schema'
 
@@ -198,25 +200,42 @@ export const sheetFields = [
     className: 'flex-col items-start w-full gap-1',
   },
   {
+    id: 'challengeTimeline',
+    label: '',
+    type: 'readonly',
+    component: props => (
+      <CollapsibleSection title="Challenge Chain" defaultOpen={true}>
+        <SheetChallengeTimeline currentTrace={props} />
+      </CollapsibleSection>
+    ),
+    className: 'flex-col items-start w-full',
+  },
+  {
     id: 'responseHeaders',
-    label: 'Response Headers',
+    label: '',
     type: 'readonly',
     component: props => {
       if (!props.responseHeaders || Object.keys(props.responseHeaders).length === 0) return null
-      // REMINDER: negative margin to make it look like the header is on the same level of the tab triggers
-      return <KVTabs data={props.responseHeaders} className="-mt-[22px]" />
+      return (
+        <CollapsibleSection title="Response Headers">
+          <KVTabs data={props.responseHeaders} />
+        </CollapsibleSection>
+      )
     },
-    className: 'flex-col items-start w-full gap-1',
+    className: 'flex-col items-start w-full',
   },
   {
     id: 'requestHeaders',
-    label: 'Request Headers',
+    label: '',
     type: 'readonly',
     component: props => {
       if (props.requestHeaders && Object.keys(props.requestHeaders).length === 0) return null
-      // REMINDER: negative margin to make it look like the header is on the same level of the tab triggers
-      return <KVTabs data={props.requestHeaders ?? {}} className="-mt-[22px]" />
+      return (
+        <CollapsibleSection title="Request Headers">
+          <KVTabs data={props.requestHeaders ?? {}} />
+        </CollapsibleSection>
+      )
     },
-    className: 'flex-col items-start w-full gap-1',
+    className: 'flex-col items-start w-full',
   },
 ] satisfies SheetField<SignozTraceSchema, Record<string, unknown>>[]

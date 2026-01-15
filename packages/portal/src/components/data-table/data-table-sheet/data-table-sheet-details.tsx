@@ -16,9 +16,11 @@ export interface DataTableSheetDetailsProps {
   title?: React.ReactNode
   titleClassName?: string
   children?: React.ReactNode
+  /** Custom action buttons rendered before navigation arrows */
+  actions?: React.ReactNode
 }
 
-export function DataTableSheetDetails({ title, titleClassName, children }: DataTableSheetDetailsProps) {
+export function DataTableSheetDetails({ title, titleClassName, children, actions }: DataTableSheetDetailsProps) {
   const { table, rowSelection, isLoading } = useDataTable()
 
   const selectedRowKey = Object.keys(rowSelection)?.[0]
@@ -94,6 +96,7 @@ export function DataTableSheetDetails({ title, titleClassName, children }: DataT
               {isLoading && !selectedRowKey ? <Skeleton className="h-7 w-36" /> : title}
             </SheetTitle>
             <div className="flex h-7 items-center gap-1">
+              {actions}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
