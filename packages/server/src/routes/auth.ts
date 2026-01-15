@@ -13,7 +13,7 @@ import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
 import { PROXY_TARGETS_CACHE_KEY, refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
-import { type ChallengePayload, getChallengePayload, getMultipleChallenges, markChallengeUsed } from "../utils/challenge.js";
+import { type ChallengePayload, getChallenge, getChallengePayload, getMultipleChallenges, markChallengeUsed } from "../utils/challenge.js";
 import { encryptionService } from '../utils/encryption.js'
 
 // Number of challenges to generate per auth request (default is 2 to reduce round-trips)
@@ -279,44 +279,39 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         await redis.set(userKey, JSON.stringify(userForCache), 300); // Cache for 5 minutes with TTL
       }
 
-      // For /auth/next, use the chained challenge; for /auth/me, generate new ones
-      let challenges: Array<{ id: string; question: string; params: { x: string; y: string } }>;
-      if (challenge && challenge.next) {
-        // Use the next challenge from the chain
-        const nextChallenge = await getChallengePayload(challenge.next);
-        if (nextChallenge) {
-          challenges = [{
-            id: challenge.next,
-            question: nextChallenge.question,
-            params: nextChallenge.params,
-          }];
-          console.log(`[/auth/next] Using chained challenge: ${challenge.next}`);
-        } else {
-          // Chain broken, generate new challenges
-          challenges = await getMultipleChallenges(grid, user.id, CHALLENGE_COUNT);
-          console.log(`[/auth/next] Chain broken, generated new challenges`);
-        }
+      // Get the next challenge in chain (if exists) for /auth/next flow
+      const thisChallenge = challenge && challenge.next ? await getChallengePayload(challenge.next) : null;
+
+      let challengeData: Awaited<ReturnType<typeof getChallenge>>;
+      if (challengeId && thisChallenge) {
+        // /auth/next flow: rotate the challenge
+        // Generate a new challenge to extend the chain
+        const nextChallenge = await getChallenge(grid, user.id);
+        thisChallenge.next = nextChallenge.id;
+        // Overwrite the original challenge with thisChallenge's data (rotates the ID)
+        await storeChallengeRecord(challengeId, thisChallenge);
+        await storeChallengeRecord(nextChallenge.id, nextChallenge);
+        challengeData = {
+          id: challengeId,
+          ...thisChallenge
+        };
+        console.log(`[/auth/next] Rotated challenge ${challengeId}, next: ${nextChallenge.id}`);
       } else {
-        // /auth/me or no chain - generate new challenges
-        challenges = await getMultipleChallenges(grid, user.id, CHALLENGE_COUNT);
+        // /auth/me flow or no chain: generate fresh challenge
+        challengeData = await getChallenge(grid, user.id);
+        console.log(`[/auth] Generated new challenge: ${challengeData.id}`);
       }
 
-      if (challenges.length === 0) {
-        throw new Error("Failed to generate challenges");
-      }
-
-      // Use first challenge for headers
-      const firstChallenge = challenges[0]!;
       const replyObj = reply
-        .header(CHALLENGE_ID_HEADER, firstChallenge.id)
-        .header(CHALLENGE_QUESTION_HEADER, firstChallenge.question)
-        .header(CHALLENGE_PARAMS_HEADER, `x=${firstChallenge.params.x},y=${firstChallenge.params.y}`)
+        .header(CHALLENGE_ID_HEADER, challengeData.id)
+        .header(CHALLENGE_QUESTION_HEADER, challengeData.question)
+        .header(CHALLENGE_PARAMS_HEADER, `x=${challengeData.params.x},y=${challengeData.params.y}`)
       console.log(
-        `[/auth] Sending ${challenges.length} challenge(s), first: ${CHALLENGE_ID_HEADER}=${firstChallenge.id}`
+        `[/auth] Sending challenge: ${CHALLENGE_ID_HEADER}=${challengeData.id}`
       )
       return sendUser
-        ? replyObj.send({ user: userWithDecryptedGrid, challenges })
-        : replyObj.send({ challengeId: firstChallenge.id, challenges });
+        ? replyObj.send({ user: userWithDecryptedGrid })
+        : replyObj.send({ challengeId: challengeData.id });
     } catch (error) {
       console.error("Get user info error:", error);
       return reply.status(500).send({
@@ -344,8 +339,8 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   }
 
   /**
-   * POST /auth/next/:challengeId
-   * Advance to the next challenge in the chain (protected route)
+   * POST /auth/me
+   * Get current user info (protected route)
    */
   fastify.post(
     "/auth/me",
@@ -367,57 +362,52 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   );
   
   /**
-   * GET /auth/me
-   * Get current user info (protected route)
+   * POST /auth/next/:challengeId and /proxy/auth/next/:challengeId
+   * Get next challenge in the chain (protected route)
    */
-  fastify.post(
-    "/auth/next/:challengeId",
-    {
-      preHandler: authenticateToken,
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        let user = (request as unknown as AuthenticatedRequest).user as UserWithStatus;
-        const { challengeId } = request.params as { challengeId: string };
+  const authNextHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      let user = (request as unknown as AuthenticatedRequest).user as UserWithStatus;
+      const { challengeId } = request.params as { challengeId: string };
 
-        if (!challengeId) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "challengeId is required",
-          } as ErrorResponse);
-        }
-        const currentChallenge = await getChallengeRecord(challengeId);
-        if (!currentChallenge) {
-          return reply.status(404).send({
-            error: "Not Found",
-            message: "Challenge not found",
-          } as ErrorResponse);
-        }
-
-        if (!safeEqualString(currentChallenge.uid, user.id)) {
-          return reply.status(403).send({
-            error: "Forbidden",
-            message: "Challenge does not belong to user",
-          } as ErrorResponse);
-        }
-
-        if (currentChallenge.used) {
-          return reply.status(409).send({
-            error: "Conflict",
-            message: "Challenge already used",
-          } as ErrorResponse);
-        }
-        await markChallengeUsed(challengeId);
-        return await nextHelper(user, request, reply, false, currentChallenge, challengeId);
-      } catch (error) {
-        console.error("Get user info error:", error);
-        return reply.status(500).send({
-          error: "Internal Server Error",
-          message: "Failed to get user information",
+      if (!challengeId) {
+        return reply.status(400).send({
+          error: "Bad Request",
+          message: "challengeId is required",
         } as ErrorResponse);
       }
+      const currentChallenge = await getChallengeRecord(challengeId);
+      if (!currentChallenge) {
+        return reply.status(404).send({
+          error: "Not Found",
+          message: "Challenge not found",
+        } as ErrorResponse);
+      }
+
+      if (!safeEqualString(currentChallenge.uid, user.id)) {
+        return reply.status(403).send({
+          error: "Forbidden",
+          message: "Challenge does not belong to user",
+        } as ErrorResponse);
+      }
+
+      // Note: We don't check/mark 'used' here because the rotation logic
+      // overwrites the challenge record with new data anyway. The WASM filter
+      // validates the answer, and the overwrite ensures fresh data for next use.
+      return await nextHelper(user, request, reply, false, currentChallenge, challengeId);
+    } catch (error) {
+      console.error("Get user info error:", error);
+      return reply.status(500).send({
+        error: "Internal Server Error",
+        message: "Failed to get user information",
+      } as ErrorResponse);
     }
-  );
+  };
+
+  // Register handler for both /auth/next and /proxy/auth/next paths
+  fastify.post("/auth/next/:challengeId", { preHandler: authenticateToken }, authNextHandler);
+  fastify.post("/proxy/auth/next/:challengeId", { preHandler: authenticateToken }, authNextHandler);
+
   /**
    * POST /auth/refresh
    * Refresh access token using refresh token from cookies

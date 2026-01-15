@@ -18,7 +18,7 @@ export async function redisFilterRoutes(
   }>("/redis/get/:key", {
     config: {
       rateLimit: {
-        max: 10, // 10 requests
+        max: 1000, // 1000 requests (high limit for WASM filter internal calls)
         timeWindow: '1 minute' // per minute per IP
       }
     }
