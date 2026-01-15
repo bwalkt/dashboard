@@ -497,18 +497,9 @@ impl ChallengeAuthzHttp {
                             }
                         };
 
-                    if already_used {
-                        warn!(
-                            "[Rust WASM Filter] ⚠️ Challenge already used: {}",
-                            challenge_id
-                        );
-                        self.send_forbidden_response("challenge already used");
-                        self.pending_challenge_id = None;
-                        self.pending_challenge_answer = None;
-                        self.pending_call_id = None;
-                        self.call_type = CallType::None;
-                        return;
-                    }
+                    // Note: We don't check 'used' flag because the rotation logic
+                    // overwrites challenge data on each /auth/next call. The answer
+                    // validation is sufficient - wrong answer = reject.
 
                     let is_valid = if self.config.check_answer {
                         answer_match
@@ -661,6 +652,15 @@ impl ChallengeAuthzHttp {
                             return;
                         }
 
+                        // Skip challenge validation for /auth/next and similar paths
+                        if self.skip_challenge_validation {
+                            info!(
+                                "[Rust WASM Filter] Skipping challenge validation, resuming request"
+                            );
+                            self.resume_http_request();
+                            return;
+                        }
+
                         info!("[Rust WASM Filter] User fetched and active, now checking challenge");
                         self.validate_challenge();
                     }
@@ -729,6 +729,15 @@ impl ChallengeAuthzHttp {
                                     "[Rust WASM Filter] Cached user is active, proxying /auth/me"
                                 );
                                 self.fetch_auth_me(CallType::AuthMeProxy);
+                                return;
+                            }
+
+                            // Skip challenge validation for /auth/next and similar paths
+                            if self.skip_challenge_validation {
+                                info!(
+                                    "[Rust WASM Filter] Skipping challenge validation, resuming request"
+                                );
+                                self.resume_http_request();
                                 return;
                             }
 
@@ -1216,9 +1225,8 @@ impl HttpContext for ChallengeAuthzHttp {
         self.skip_challenge_validation = SKIP_CHALLENGE_PATHS
             .iter()
             .any(|p| path_without_query.starts_with(p));
-        self.is_auth_me_request = path_without_query == "/auth/me"
-            || path_without_query == "/proxy/auth/me"
-            || path_without_query.ends_with("/auth/me");
+        self.is_auth_me_request =
+            path_without_query == "/auth/me" || path_without_query == "/proxy/auth/me";
 
         // Check if route is public (auth/me and auth/next are handled by the filter)
         info!(

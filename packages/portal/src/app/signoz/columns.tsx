@@ -11,7 +11,9 @@ import { getTimingColor, getTimingLabel, getTimingPercentage, TimingPhase, timin
 import { cn } from '@/lib/utils'
 import { HoverCardTimestamp } from './_components/hover-card-timestamp'
 import type { SignozTraceSchema } from './schema'
+
 export const columns: ColumnDef<SignozTraceSchema>[] = [
+  // 1. Timestamp
   {
     id: 'date',
     accessorKey: 'date',
@@ -28,22 +30,27 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
       cellClassName: 'font-mono w-[--col-date-size] max-w-[--col-date-size] min-w-[--col-date-size]',
     },
   },
+  // 2. Method
   {
     id: 'http_method',
     accessorKey: 'http_method',
-    header: 'HTTP Method',
+    header: 'Method',
     cell: ({ row }) => {
       const value = row.getValue<SignozTraceSchema['http_method']>('http_method')
       if (!value) return <span className="text-muted-foreground">-</span>
       return <TextWithTooltip text={value} />
     },
-    size: 200,
-    minSize: 200,
+    enableResizing: false,
+    size: 80,
+    minSize: 80,
     meta: {
-      cellClassName: 'font-mono w-[--col-name-size] max-w-[--col-name-size]',
-      headerClassName: 'min-w-[--header-name-size] w-[--header-name-size]',
+      cellClassName:
+        'font-mono w-[--col-http_method-size] max-w-[--col-http_method-size] min-w-[--col-http_method-size]',
+      headerClassName:
+        'w-[--header-http_method-size] max-w-[--header-http_method-size] min-w-[--header-http_method-size]',
     },
   },
+  // 3. Status
   {
     id: 'responseStatusCode',
     accessorKey: 'responseStatusCode',
@@ -53,7 +60,6 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
       if (value === undefined || value === null) {
         return <span className="text-muted-foreground">-</span>
       }
-      // DataTableColumnStatusCode handles both string and number
       return <DataTableColumnStatusCode value={value} />
     },
     enableResizing: false,
@@ -64,47 +70,7 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
       cellClassName: 'font-mono w-[--col-status-size] max-w-[--col-status-size] min-w-[--col-status-size]',
     },
   },
-  {
-    id: 'trace_id',
-    accessorKey: 'trace_id',
-    header: 'Trace ID',
-    cell: ({ row }) => {
-      const value = row.getValue<SignozTraceSchema['trace_id']>('trace_id')
-      return <TextWithTooltip text={value} />
-    },
-    size: 130,
-    minSize: 130,
-    meta: {
-      label: 'Trace ID',
-      cellClassName: 'font-mono w-[--col-trace-id-size] max-w-[--col-trace-id-size] min-w-[--col-trace-id-size]',
-      headerClassName: 'min-w-[--header-trace-id-size] w-[--header-trace-id-size] max-w-[--header-trace-id-size]',
-    },
-  },
-  {
-    id: 'serviceName',
-    accessorKey: 'serviceName',
-    header: 'Service',
-    cell: ({ row }) => {
-      const value = row.getValue<SignozTraceSchema['serviceName']>('serviceName')
-      return <TextWithTooltip text={value} />
-    },
-    size: 150,
-    minSize: 150,
-    meta: {
-      cellClassName: 'font-mono w-[--col-service-size] max-w-[--col-service-size]',
-      headerClassName: 'min-w-[--header-service-size] w-[--header-service-size]',
-    },
-  },
-  {
-    id: 'http_host',
-    accessorKey: 'http_host',
-    header: 'Host',
-    cell: ({ row }) => {
-      const value = row.getValue<SignozTraceSchema['http_host']>('http_host')
-      if (!value) return <span className="text-muted-foreground">-</span>
-      return <TextWithTooltip text={value} />
-    },
-  },
+  // 4. URL
   {
     id: 'http_url',
     accessorKey: 'http_url',
@@ -114,76 +80,25 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
       if (!value) return <span className="text-muted-foreground">-</span>
       return <TextWithTooltip text={value} />
     },
-  },
-  {
-    id: 'timingPhases.dns',
-    accessorKey: 'timingPhases',
-    header: 'DNS',
-    cell: ({ row }) => {
-      const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.dns']
-      if (value === undefined) return <span className="text-muted-foreground">-</span>
-      return <DataTableColumnLatency value={value} />
-    },
     enableResizing: false,
-    size: 110,
-    minSize: 110,
+    size: 500,
+    minSize: 500,
     meta: {
-      label: 'DNS',
-      headerClassName: 'w-[--header-timing-dns-size] max-w-[--header-timing-dns-size] min-w-[--header-timing-dns-size]',
-      cellClassName: 'font-mono w-[--col-timing-dns-size] max-w-[--col-timing-dns-size] min-w-[--col-timing-dns-size]',
+      cellClassName: 'font-mono w-[--col-url-size] max-w-[--col-url-size] min-w-[--col-url-size]',
+      headerClassName: 'w-[--header-url-size] max-w-[--header-url-size] min-w-[--header-url-size]',
     },
   },
-  {
-    id: 'timingPhases.connection',
-    accessorKey: 'timingPhases',
-    header: 'Connection',
-    cell: ({ row }) => {
-      const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.connection']
-      if (value === undefined) return <span className="text-muted-foreground">-</span>
-      return <DataTableColumnLatency value={value} />
-    },
-  },
-  {
-    id: 'timingPhases.tls',
-    accessorKey: 'timingPhases',
-    header: 'TLS',
-    cell: ({ row }) => {
-      const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.tls']
-      if (value === undefined) return <span className="text-muted-foreground">-</span>
-      return <DataTableColumnLatency value={value} />
-    },
-  },
-  {
-    id: 'timingPhases.ttfb',
-    accessorKey: 'timingPhases',
-    header: 'TTFB',
-    cell: ({ row }) => {
-      const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.ttfb']
-      if (value === undefined) return <span className="text-muted-foreground">-</span>
-      return <DataTableColumnLatency value={value} />
-    },
-  },
-  {
-    id: 'timingPhases.transfer',
-    accessorKey: 'timingPhases',
-    header: 'Transfer',
-    cell: ({ row }) => {
-      const value = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases')['timing.transfer']
-      if (value === undefined) return <span className="text-muted-foreground">-</span>
-      return <DataTableColumnLatency value={value} />
-    },
-  },
+  // 5. Timing Phase
   {
     id: 'timingPhases',
     accessorKey: 'timingPhases',
-    header: () => <div className="whitespace-nowrap">Timing Phases</div>,
+    header: () => <div className="whitespace-nowrap">Timing Phase</div>,
     cell: ({ row }) => {
       const timing = row.getValue<SignozTraceSchema['timingPhases']>('timingPhases') as Partial<
         Record<TimingPhase, number>
       >
       const latency = row.getValue<SignozTraceSchema['durationMs']>('durationMs')
       const percentage = getTimingPercentage(timing, latency)
-      // TODO: create a separate component for this in _components
       return (
         <HoverCard openDelay={50} closeDelay={50}>
           <HoverCardTrigger className="opacity-70 hover:opacity-100 data-[state=open]:opacity-100" asChild>
@@ -200,7 +115,6 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
               })}
             </div>
           </HoverCardTrigger>
-          {/* REMINDER: allows us to port the content to the document.body, which is helpful when using opacity-50 on the row element */}
           <HoverCardPortal>
             <HoverCardContent side="bottom" align="end" className="z-10 w-auto p-2">
               <div className="flex flex-col gap-1">
@@ -246,11 +160,12 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
     size: 130,
     minSize: 130,
     meta: {
-      label: 'Timing Phases',
+      label: 'Timing Phase',
       headerClassName: 'w-[--header-timing-size] max-w-[--header-timing-size] min-w-[--header-timing-size]',
       cellClassName: 'font-mono w-[--col-timing-size] max-w-[--col-timing-size] min-w-[--col-timing-size]',
     },
   },
+  // 6. Duration
   {
     id: 'durationMs',
     accessorKey: 'durationMs',
@@ -265,6 +180,57 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
     meta: {
       headerClassName: 'w-[--header-duration-size] max-w-[--header-duration-size] min-w-[--header-duration-size]',
       cellClassName: 'font-mono w-[--col-duration-size] max-w-[--col-duration-size] min-w-[--col-duration-size]',
+    },
+  },
+  // 7. Service
+  {
+    id: 'serviceName',
+    accessorKey: 'serviceName',
+    header: 'Service',
+    cell: ({ row }) => {
+      const value = row.getValue<SignozTraceSchema['serviceName']>('serviceName')
+      return <TextWithTooltip text={value} />
+    },
+    size: 150,
+    minSize: 150,
+    meta: {
+      cellClassName: 'font-mono w-[--col-service-size] max-w-[--col-service-size]',
+      headerClassName: 'min-w-[--header-service-size] w-[--header-service-size]',
+    },
+  },
+  // 8. Host
+  {
+    id: 'http_host',
+    accessorKey: 'http_host',
+    header: 'Host',
+    cell: ({ row }) => {
+      const value = row.getValue<SignozTraceSchema['http_host']>('http_host')
+      if (!value) return <span className="text-muted-foreground">-</span>
+      return <TextWithTooltip text={value} />
+    },
+    enableResizing: false,
+    size: 150,
+    minSize: 150,
+    meta: {
+      cellClassName: 'font-mono w-[--col-host-size] max-w-[--col-host-size] min-w-[--col-host-size]',
+      headerClassName: 'w-[--header-host-size] max-w-[--header-host-size] min-w-[--header-host-size]',
+    },
+  },
+  // 9. Trace ID
+  {
+    id: 'trace_id',
+    accessorKey: 'trace_id',
+    header: 'Trace ID',
+    cell: ({ row }) => {
+      const value = row.getValue<SignozTraceSchema['trace_id']>('trace_id')
+      return <TextWithTooltip text={value} />
+    },
+    size: 130,
+    minSize: 130,
+    meta: {
+      label: 'Trace ID',
+      cellClassName: 'font-mono w-[--col-trace-id-size] max-w-[--col-trace-id-size] min-w-[--col-trace-id-size]',
+      headerClassName: 'min-w-[--header-trace-id-size] w-[--header-trace-id-size] max-w-[--header-trace-id-size]',
     },
   },
 ]

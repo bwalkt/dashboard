@@ -41,8 +41,8 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
   --success: var(--muted);
-  --warning: 24.6 95% 53.1%;
-  --error: 0 84.2% 60.2%;
+  --warning: 45 95% 50%;
+  --error: 0 84% 40%;
   --info: 198.63 88.66% 48.43%;
 }
 
@@ -79,8 +79,8 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.439 0 0);
   --success: var(--muted);
-  --warning: 24.6 95% 53.1%;
-  --error: 0 84.2% 60.2%;
+  --warning: 45 95% 50%;
+  --error: 0 84% 40%;
   --info: 198.63 88.66% 48.43%;
 }
 
