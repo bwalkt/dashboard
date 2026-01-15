@@ -290,19 +290,27 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       const thisChallenge = challenge && challenge.next ? await getChallengePayload(challenge.next) : null;
 
       let challengeData: Awaited<ReturnType<typeof getChallenge>>;
-      if (challengeId && thisChallenge) {
-        // /auth/next flow: rotate the challenge
-        // Generate a new challenge to extend the chain
-        const nextChallenge = await getChallenge(grid, user.id);
-        thisChallenge.next = nextChallenge.id;
-        // Overwrite the original challenge with thisChallenge's data (rotates the ID)
-        await storeChallengeRecord(challengeId, thisChallenge);
-        await storeChallengeRecord(nextChallenge.id, nextChallenge);
+      if (challengeId && thisChallenge && challenge?.next) {
+        // /auth/next flow: mark current challenge as used, return the next one
+        // challengeId = A (used), challenge.next = B's ID, thisChallenge = B's payload
+        const nextChallengeId = challenge.next;
+
+        // Mark A as used (single-use)
+        await markChallengeUsed(challengeId);
+
+        // Pre-generate C to extend the chain
+        const pregenChallenge = await getChallenge(grid, user.id);
+        thisChallenge.next = pregenChallenge.id; // B.next = C
+
+        // Update B with new next pointer
+        await storeChallengeRecord(nextChallengeId, thisChallenge);
+
+        // Return B's ID and question/params
         challengeData = {
-          id: challengeId,
+          id: nextChallengeId,
           ...thisChallenge,
         };
-        console.log(`[/auth/next] Rotated challenge ${challengeId}, next: ${nextChallenge.id}`);
+        console.log(`[/auth/next] Marked ${challengeId} as used, returning next: ${nextChallengeId}, pre-generated: ${pregenChallenge.id}`);
       } else {
         // /auth/me flow or no chain: generate fresh challenge
         challengeData = await getChallenge(grid, user.id);

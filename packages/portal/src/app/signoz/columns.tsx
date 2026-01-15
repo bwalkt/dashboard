@@ -233,4 +233,30 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
       headerClassName: 'min-w-[--header-trace-id-size] w-[--header-trace-id-size] max-w-[--header-trace-id-size]',
     },
   },
+  // Hidden timing phase columns for filtering
+  {
+    id: 'timingPhases.dns',
+    accessorFn: row => row.timingPhases?.['timing.dns'],
+    enableHiding: true,
+  },
+  {
+    id: 'timingPhases.connection',
+    accessorFn: row => row.timingPhases?.['timing.connection'],
+    enableHiding: true,
+  },
+  {
+    id: 'timingPhases.tls',
+    accessorFn: row => row.timingPhases?.['timing.tls'],
+    enableHiding: true,
+  },
+  {
+    id: 'timingPhases.ttfb',
+    accessorFn: row => row.timingPhases?.['timing.ttfb'],
+    enableHiding: true,
+  },
+  {
+    id: 'timingPhases.transfer',
+    accessorFn: row => row.timingPhases?.['timing.transfer'],
+    enableHiding: true,
+  },
 ]

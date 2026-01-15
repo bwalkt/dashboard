@@ -497,9 +497,18 @@ impl ChallengeAuthzHttp {
                             }
                         };
 
-                    // Note: We don't check 'used' flag because the rotation logic
-                    // overwrites challenge data on each /auth/next call. The answer
-                    // validation is sufficient - wrong answer = reject.
+                    // Check if challenge was already used (single-use)
+                    if already_used {
+                        warn!(
+                            "[Rust WASM Filter] ⚠️ REJECTED: Challenge already used: {}",
+                            challenge_id
+                        );
+                        self.send_forbidden_response_with_challenge(
+                            "challenge already used",
+                            &challenge_id,
+                        );
+                        return;
+                    }
 
                     let is_valid = if self.config.check_answer {
                         answer_match
