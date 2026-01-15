@@ -238,25 +238,30 @@ export const columns: ColumnDef<SignozTraceSchema>[] = [
     id: 'timingPhases.dns',
     accessorFn: row => row.timingPhases?.['timing.dns'],
     enableHiding: true,
+    enableSorting: false,
   },
   {
     id: 'timingPhases.connection',
     accessorFn: row => row.timingPhases?.['timing.connection'],
     enableHiding: true,
+    enableSorting: false,
   },
   {
     id: 'timingPhases.tls',
     accessorFn: row => row.timingPhases?.['timing.tls'],
     enableHiding: true,
+    enableSorting: false,
   },
   {
     id: 'timingPhases.ttfb',
     accessorFn: row => row.timingPhases?.['timing.ttfb'],
     enableHiding: true,
+    enableSorting: false,
   },
   {
     id: 'timingPhases.transfer',
     accessorFn: row => row.timingPhases?.['timing.transfer'],
     enableHiding: true,
+    enableSorting: false,
   },
 ]
