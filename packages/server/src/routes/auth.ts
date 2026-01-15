@@ -302,7 +302,11 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           await storeChallengeRecord(nextChallengeId, thisChallenge);
 
           // Mark A as used only after chain is successfully extended
-          await markChallengeUsed(challengeId);
+          const markResult = await markChallengeUsed(challengeId);
+          if (markResult !== 'ok') {
+            // Challenge was already used or not found - potential replay attack or stale state
+            throw new Error(`Failed to mark challenge as used: ${markResult}`);
+          }
 
           // Return B's ID and question/params
           challengeData = {

@@ -32,7 +32,7 @@ export async function getChallenge(grid: number[][], uid: string) {
         used: false,
         question: nextChallengeData.function.expression,
         params: nextChallengeData.parameters,
-        next: nextChallengeId,
+        // No next - B is end of pre-generated chain (will be extended in /auth/next flow)
         c_at: Date.now()
     };
     console.log(`get Current challenge in Redis: ${challengeKey}`, challengePayload);
@@ -45,7 +45,9 @@ export async function getChallenge(grid: number[][], uid: string) {
     };
 }
 
-export async function markChallengeUsed(challengeId: string) {
+export type MarkChallengeResult = 'ok' | 'already_used' | 'not_found';
+
+export async function markChallengeUsed(challengeId: string): Promise<MarkChallengeResult> {
     const challengeKey = `challenge:${challengeId}`;
     const script = `
         local data = redis.call('GET', KEYS[1])
@@ -59,10 +61,13 @@ export async function markChallengeUsed(challengeId: string) {
     const result = await redis.eval(script, [challengeKey]);
     if (result === 'already_used') {
         console.warn(`markChallengeUsed: Challenge ${challengeId} already used.`);
+        return 'already_used';
     } else if (result === null) {
         console.warn(`markChallengeUsed: Challenge ${challengeId} not found in Redis.`);
+        return 'not_found';
     } else {
         console.log(`markChallengeUsed: Marked challenge ${challengeId} as used.`);
+        return 'ok';
     }
 }
 
