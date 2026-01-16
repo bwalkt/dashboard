@@ -180,6 +180,18 @@ function TimelineItemComponent({
 
   return (
     <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
       className={cn(
         timelineItemVariants({ mode }),
         isVerticalAlternating && (isAlternate ? 'flex-row-reverse' : 'flex-row'),
@@ -304,7 +316,7 @@ export interface SimpleTimelineItem {
   id: string
   label: string
   sublabel?: string
-  status?: 'completed' | 'current' | 'pending' | 'error' | 'previous' | 'executed'
+  status?: 'completed' | 'current' | 'pending' | 'error' | 'previous' | 'executed' | 'auth'
   icon?: React.ReactNode
 }
 
@@ -328,6 +340,7 @@ function SimpleTimeline({ items, className, onItemClick }: SimpleTimelineProps) 
           completed: 'bg-blue-500 border-blue-500', // Completed: Blue (alias)
           pending: 'bg-muted border-muted-foreground/40', // Not executed: Gray
           error: 'bg-destructive border-destructive',
+          auth: 'bg-violet-500 border-violet-500', // Auth endpoints: Violet
         }
 
         const statusColor = item.status ? statusColors[item.status] : statusColors.pending
@@ -335,6 +348,18 @@ function SimpleTimeline({ items, className, onItemClick }: SimpleTimelineProps) 
         return (
           <div
             key={item.id}
+            role={onItemClick ? 'button' : undefined}
+            tabIndex={onItemClick ? 0 : undefined}
+            onKeyDown={
+              onItemClick
+                ? e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onItemClick(item, index)
+                    }
+                  }
+                : undefined
+            }
             className={cn(
               'relative flex items-start gap-3 py-2',
               onItemClick && 'cursor-pointer hover:bg-accent/50 rounded-md px-1 -mx-1',
@@ -363,8 +388,17 @@ function SimpleTimeline({ items, className, onItemClick }: SimpleTimelineProps) 
                 >
                   {item.label}
                 </span>
+                {item.status === 'current' && (
+                  <span className="text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded">
+                    Current
+                  </span>
+                )}
               </div>
-              {item.sublabel && <span className="text-xs text-muted-foreground">{item.sublabel}</span>}
+              {item.sublabel && (
+                <span className={cn('text-xs text-muted-foreground', item.status === 'current' && 'font-semibold')}>
+                  {item.sublabel}
+                </span>
+              )}
             </div>
           </div>
         )

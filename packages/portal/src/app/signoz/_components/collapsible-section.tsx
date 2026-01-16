@@ -17,11 +17,18 @@ export function CollapsibleSection({ title, children, defaultOpen = false, class
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className={cn('w-full', className)}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between py-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-        <span>{title}</span>
-        <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', isOpen && 'rotate-180')} />
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between rounded-md bg-sky-50 dark:bg-sky-950/30 px-2 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors"
+        >
+          <span>{title}</span>
+          <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', isOpen && 'rotate-180')} />
+        </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pt-2">{children}</CollapsibleContent>
+      <CollapsibleContent className="pt-2 data-[state=closed]:animate-collapse-up data-[state=open]:animate-collapse-down overflow-hidden">
+        {children}
+      </CollapsibleContent>
     </Collapsible>
   )
 }

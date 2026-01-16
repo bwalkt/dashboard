@@ -115,28 +115,29 @@ export const sheetFields = [
     id: 'info',
     label: '',
     type: 'readonly',
+    noWrapper: true,
     component: (props: SignozTraceSchema) => (
       <CollapsibleSection title="Info" defaultOpen={true}>
         <SheetInfo trace={props} />
       </CollapsibleSection>
     ),
-    className: 'flex-col items-start w-full',
   },
   {
     id: 'challengeTimeline',
     label: '',
     type: 'readonly',
+    noWrapper: true,
     component: props => (
       <CollapsibleSection title="Challenge Chain" defaultOpen={true}>
         <SheetChallengeTimeline currentTrace={props} />
       </CollapsibleSection>
     ),
-    className: 'flex-col items-start w-full',
   },
   {
     id: 'responseHeaders',
     label: '',
     type: 'readonly',
+    noWrapper: true,
     component: props => {
       if (!props.responseHeaders || Object.keys(props.responseHeaders).length === 0) return null
       return (
@@ -145,20 +146,19 @@ export const sheetFields = [
         </CollapsibleSection>
       )
     },
-    className: 'flex-col items-start w-full',
   },
   {
     id: 'requestHeaders',
     label: '',
     type: 'readonly',
+    noWrapper: true,
     component: props => {
-      if (props.requestHeaders && Object.keys(props.requestHeaders).length === 0) return null
+      if (!props.requestHeaders || Object.keys(props.requestHeaders).length === 0) return null
       return (
         <CollapsibleSection title="Request Headers">
           <KVTabs data={props.requestHeaders ?? {}} />
         </CollapsibleSection>
       )
     },
-    className: 'flex-col items-start w-full',
   },
 ] satisfies SheetField<SignozTraceSchema, Record<string, unknown>>[]

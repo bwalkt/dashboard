@@ -1,14 +1,11 @@
 'use client'
 
+import { CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER } from '@pzero/shared/http'
 import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SimpleTimeline, type SimpleTimelineItem } from '@/components/ui/timeline'
 import { queryTraces } from '@/services/signoz.service'
 import type { SignozTraceSchema } from '../schema'
-
-// Challenge header names (matching packages/rust-wasm-filter/src/lib.rs)
-const CHALLENGE_HEADER_ID = 'x-challenge-id'
-const CHALLENGE_HEADER_ANSWER = 'x-challenge-answer'
 
 // Extract challenge ID from headers (case-insensitive)
 function getHeader(headers: Record<string, string> | undefined, key: string): string | undefined {
@@ -37,10 +34,16 @@ function getUuidTimestamp(uuid: string | undefined): number {
 // Get challenge IDs from a trace
 function getChallengeIds(trace: SignozTraceSchema) {
   return {
-    requestId: getHeader(trace.requestHeaders, CHALLENGE_HEADER_ID),
-    responseId: getHeader(trace.responseHeaders, CHALLENGE_HEADER_ID),
-    answer: getHeader(trace.requestHeaders, CHALLENGE_HEADER_ANSWER),
+    requestId: getHeader(trace.requestHeaders, CHALLENGE_ID_HEADER),
+    responseId: getHeader(trace.responseHeaders, CHALLENGE_ID_HEADER),
+    answer: getHeader(trace.requestHeaders, CHALLENGE_ANSWER_HEADER),
   }
+}
+
+// Check if path is an auth endpoint
+function isAuthPath(path: string | undefined): boolean {
+  if (!path) return false
+  return path.includes('/auth/me') || path.includes('/auth/next')
 }
 
 // Extract significant URL path (after /proxy, without query params)
@@ -173,37 +176,42 @@ export function SheetChallengeTimeline({ currentTrace }: SheetChallengeTimelineP
   const nextTrace = nextData?.nextTrace
   const nextExecuted = !!nextTrace
 
-  // Add prior trace if found - Blue (previous)
-  // Show prior's request challenge ID, or if none (initial call), show "Initial"
+  // Add prior trace if found
+  // Use 'auth' status for /auth/me and /auth/next, otherwise 'previous'
   if (priorTrace) {
     const priorLabel = priorChallengeIds?.requestId || 'Initial'
+    const priorPath = getSignificantPath(priorTrace)
     items.push({
       id: `prior-${priorLabel}`,
       label: priorLabel,
-      sublabel: getSignificantPath(priorTrace) || 'Prior',
-      status: 'previous',
+      sublabel: priorPath || 'Prior',
+      status: isAuthPath(priorPath) ? 'auth' : 'previous',
     })
   }
 
-  // Add current trace (B) - Green (current)
-  // Always show current trace, use request challenge ID or "Initial" if none
+  // Add current trace (B) - Always green (current) to indicate "this is the trace you're viewing"
   const currentLabel = current.requestId || 'Initial'
+  const currentPath = getSignificantPath(currentTrace)
   items.push({
     id: `current-${currentTrace.trace_id}`,
     label: currentLabel,
-    sublabel: getSignificantPath(currentTrace) || 'Current',
+    sublabel: currentPath || 'Current',
     status: 'current',
   })
 
-  // Add next challenge (C) from response - Blue if executed, Gray if not
+  // Add next challenge (C) from response
   if (current.responseId && current.responseId !== current.requestId) {
+    const nextPath = nextExecuted ? getSignificantPath(nextTrace) : undefined
     items.push({
       id: `res-${current.responseId}`,
       label: current.responseId,
-      sublabel: nextExecuted ? getSignificantPath(nextTrace) || 'Executed' : 'Pending',
-      status: nextExecuted ? 'executed' : 'pending',
+      sublabel: nextExecuted ? nextPath || 'Executed' : 'Pending',
+      status: nextExecuted ? (isAuthPath(nextPath) ? 'auth' : 'executed') : 'pending',
     })
   }
+
+  // Reverse order: show most recent first
+  items.reverse()
 
   // Warn if same ID in request and response
   if (current.requestId && current.responseId && current.requestId === current.responseId) {
