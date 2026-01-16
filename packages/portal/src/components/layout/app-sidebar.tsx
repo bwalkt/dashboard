@@ -1,12 +1,13 @@
 // User management imports
 import {
   IconBell,
-  IconBrightness,
   IconChevronRight,
   IconChevronsDown,
   IconCreditCard,
   IconLogout,
+  IconMoon,
   IconPhotoUp,
+  IconSun,
   IconUserCircle,
 } from '@tabler/icons-react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
@@ -50,7 +51,6 @@ import { SafeDataTableFilterControls } from '../data-table/safe-data-table-filte
 import { Icons } from '../icons'
 import { OrgSwitcher } from '../org-switcher'
 import { CollapseMenuButton } from './collapse-menu-button'
-import { ModeToggle } from './ThemeToggle/theme-toggle'
 
 // Helper function to generate CollapseMenuButton props
 const getCollapseMenuProps = (item: any, pathname: string, Icons: any) => {
@@ -342,13 +342,13 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                tooltip="Toggle theme"
+                tooltip={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                 onClick={() => {
                   setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
                 }}
               >
-                <IconBrightness />
-                <span>Theme</span>
+                {resolvedTheme === 'dark' ? <IconSun /> : <IconMoon />}
+                <span>{resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

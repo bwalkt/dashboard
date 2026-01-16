@@ -19,6 +19,10 @@ const DEFAULT_THEMES = [
     value: 'default',
   },
   {
+    name: 'Cyan',
+    value: 'cyan',
+  },
+  {
     name: 'Blue',
     value: 'blue',
   },
@@ -36,6 +40,10 @@ const SCALED_THEMES = [
   {
     name: 'Default',
     value: 'default-scaled',
+  },
+  {
+    name: 'Cyan',
+    value: 'cyan-scaled',
   },
   {
     name: 'Blue',

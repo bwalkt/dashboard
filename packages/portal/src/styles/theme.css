@@ -1,9 +1,9 @@
 /* Theme CSS Variables */
 
-/* Default theme */
+/* Default theme - Cyan/JetBlue */
 .theme-default {
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.89 0.12 195);
+  --primary-foreground: oklch(0.205 0 0);
 }
 
 .theme-amber {
@@ -20,8 +20,8 @@
 }
 
 .theme-default-scaled {
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.89 0.12 195);
+  --primary-foreground: oklch(0.205 0 0);
   --radius: 0.75rem;
 }
 .theme-green {
@@ -47,6 +47,11 @@
 .theme-blue {
   --primary: oklch(0.646 0.222 264.052);
   --primary-foreground: oklch(0.985 0 0);
+}
+
+.theme-cyan {
+  --primary: oklch(0.89 0.12 195);
+  --primary-foreground: oklch(0.205 0 0);
 }
 
 .theme-yellow {
@@ -97,6 +102,12 @@
 .theme-blue-scaled {
   --primary: oklch(0.646 0.222 264.052);
   --primary-foreground: oklch(0.985 0 0);
+  --radius: 0.75rem;
+}
+
+.theme-cyan-scaled {
+  --primary: oklch(0.89 0.12 195);
+  --primary-foreground: oklch(0.205 0 0);
   --radius: 0.75rem;
 }
 

@@ -8,6 +8,7 @@ import {
   IconLogout,
   IconSparkles,
 } from '@tabler/icons-react'
+import { toast } from 'sonner'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -20,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar'
+import { useAuthStore } from '@/stores/auth'
 
 /**
  * Render a navigation user control showing the user's avatar, name, and email with a dropdown menu of account actions.
@@ -39,6 +41,17 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const { logout } = useAuthStore()
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      toast.success('Signed out successfully')
+    } catch (error) {
+      toast.error('An unexpected error occurred')
+      console.error('Sign out error:', error)
+    }
+  }
 
   return (
     <SidebarMenu>
@@ -101,7 +114,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <IconLogout className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>

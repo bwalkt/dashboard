@@ -25,17 +25,12 @@ import { useAuthStore } from '@/stores/auth'
  */
 export function UserNav() {
   const navigate = useNavigate()
-  const { user, signOut } = useAuthStore()
+  const { user, logout } = useAuthStore()
 
   const handleSignOut = async () => {
     try {
-      const { error } = await signOut()
-      if (error) {
-        toast.error('Failed to sign out: ' + error.message)
-      } else {
-        toast.success('Signed out successfully')
-        navigate({ to: '/auth/sign-in' })
-      }
+      await logout()
+      toast.success('Signed out successfully')
     } catch (error) {
       toast.error('An unexpected error occurred')
       console.error('Sign out error:', error)
