@@ -1,7 +1,7 @@
 'use client'
 
-import * as React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 // =============================================================================
@@ -133,9 +133,7 @@ function Timeline({
 
         {/* Connector line for horizontal mode */}
         {showConnector && mode === 'horizontal' && (
-          <div
-            className={cn('absolute left-0 right-0 top-[7px] h-0.5 bg-border', lineClassName)}
-          />
+          <div className={cn('absolute left-0 right-0 top-[7px] h-0.5 bg-border', lineClassName)} />
         )}
 
         {items.map((item, index) => (
@@ -208,12 +206,7 @@ function TimelineItemComponent({
           isVerticalAlternating && (isAlternate ? 'pr-8 text-right w-[calc(50%-16px)]' : 'pl-8 w-[calc(50%-16px)]'),
         )}
       >
-        <TimelineCard
-          item={item}
-          className={cardClassName}
-          isHorizontal={isHorizontal}
-          isAlternate={isAlternate}
-        />
+        <TimelineCard item={item} className={cardClassName} isHorizontal={isHorizontal} isAlternate={isAlternate} />
       </div>
     </div>
   )
@@ -240,27 +233,14 @@ interface TimelineCardProps {
 }
 
 function TimelineCard({ item, className, isHorizontal, isAlternate }: TimelineCardProps) {
-  const formattedDate = item.date
-    ? typeof item.date === 'string'
-      ? item.date
-      : item.date.toLocaleDateString()
-    : null
+  const formattedDate = item.date ? (typeof item.date === 'string' ? item.date : item.date.toLocaleDateString()) : null
 
   return (
-    <div
-      className={cn(
-        'rounded-lg border bg-card p-3 shadow-sm transition-colors hover:bg-accent/50',
-        className,
-      )}
-    >
+    <div className={cn('rounded-lg border bg-card p-3 shadow-sm transition-colors hover:bg-accent/50', className)}>
       {/* Title/Date row */}
       <div className={cn('flex items-center gap-2', isHorizontal && 'justify-center', isAlternate && 'justify-end')}>
-        {item.title && (
-          <span className="text-xs font-medium text-muted-foreground">{item.title}</span>
-        )}
-        {formattedDate && (
-          <span className="text-xs text-muted-foreground">{formattedDate}</span>
-        )}
+        {item.title && <span className="text-xs font-medium text-muted-foreground">{item.title}</span>}
+        {formattedDate && <span className="text-xs text-muted-foreground">{formattedDate}</span>}
       </div>
 
       {/* Card Title */}
@@ -279,7 +259,9 @@ function TimelineCard({ item, className, isHorizontal, isAlternate }: TimelineCa
 
       {/* Card Detailed Text */}
       {item.cardDetailedText && (
-        <div className={cn('mt-2 text-sm text-foreground/80', isHorizontal && 'text-center', isAlternate && 'text-right')}>
+        <div
+          className={cn('mt-2 text-sm text-foreground/80', isHorizontal && 'text-center', isAlternate && 'text-right')}
+        >
           {Array.isArray(item.cardDetailedText) ? (
             <ul className={cn('list-disc pl-4 space-y-1', isAlternate && 'list-inside pl-0')}>
               {item.cardDetailedText.map((text, i) => (
@@ -382,9 +364,7 @@ function SimpleTimeline({ items, className, onItemClick }: SimpleTimelineProps) 
                   {item.label}
                 </span>
               </div>
-              {item.sublabel && (
-                <span className="text-xs text-muted-foreground">{item.sublabel}</span>
-              )}
+              {item.sublabel && <span className="text-xs text-muted-foreground">{item.sublabel}</span>}
             </div>
           </div>
         )

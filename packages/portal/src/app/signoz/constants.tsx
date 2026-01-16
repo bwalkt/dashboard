@@ -1,15 +1,13 @@
 'use client'
 
 import type { HttpMethod } from '@pzero/shared/types'
-import { format } from 'date-fns'
 import { KVTabs } from '@/components/custom/kv-tabs'
 import type { DataTableFilterField, Option, SheetField } from '@/components/data-table/types'
-import { formatMilliseconds } from '@/lib/format'
 import { getStatusColor } from '@/lib/request/status-code'
 import { cn } from '@/lib/utils'
 import { CollapsibleSection } from './_components/collapsible-section'
 import { SheetChallengeTimeline } from './_components/sheet-challenge-timeline'
-import { SheetTimingPhases } from './_components/sheet-timing-phases'
+import { SheetInfo } from './_components/sheet-info'
 import type { SignozColumnFilterSchema, SignozTraceSchema } from './schema'
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
@@ -114,90 +112,15 @@ export const filterFields = [
 
 export const sheetFields = [
   {
-    id: 'trace_id',
-    label: 'Trace ID',
+    id: 'info',
+    label: '',
     type: 'readonly',
-    skeletonClassName: 'w-64',
-  },
-  {
-    id: 'span_id',
-    label: 'Span ID',
-    type: 'readonly',
-    skeletonClassName: 'w-64',
-  },
-  {
-    id: 'date',
-    label: 'Timestamp',
-    type: 'timerange',
-    component: (props: SignozTraceSchema) => format(new Date(props.date), 'LLL dd, y HH:mm:ss'),
-    skeletonClassName: 'w-36',
-  },
-  {
-    id: 'serviceName',
-    label: 'Service Name',
-    type: 'input',
-    skeletonClassName: 'w-48',
-  },
-  {
-    id: 'name',
-    label: 'Span Name',
-    type: 'input',
-    skeletonClassName: 'w-56',
-  },
-  {
-    id: 'http_method',
-    label: 'HTTP Method',
-    type: 'input',
-    skeletonClassName: 'w-56',
-  },
-  {
-    id: 'http_host',
-    label: 'HTTP Host',
-    type: 'input',
-    skeletonClassName: 'w-48',
-  },
-  {
-    id: 'http_url',
-    label: 'HTTP URL',
-    type: 'input',
-    skeletonClassName: 'w-48',
-  },
-  {
-    id: 'responseStatusCode',
-    label: 'Status Code',
-    type: 'checkbox',
-    component: (props: SignozTraceSchema) => {
-      const statusCode = props.responseStatusCode
-      if (statusCode === undefined || statusCode === null) {
-        return <span className="text-muted-foreground">-</span>
-      }
-      // Handle both string and number status codes
-      const code = typeof statusCode === 'string' ? parseInt(statusCode, 10) : statusCode
-      if (isNaN(code)) {
-        return <span className="text-muted-foreground">{statusCode}</span>
-      }
-      return <span className={cn('font-mono', getStatusColor(code).text)}>{code}</span>
-    },
-    skeletonClassName: 'w-12',
-  },
-  {
-    id: 'durationMs',
-    label: 'Duration',
-    type: 'slider',
     component: (props: SignozTraceSchema) => (
-      <>
-        {formatMilliseconds(props.durationMs)}
-        <span className="text-muted-foreground">ms</span>
-      </>
+      <CollapsibleSection title="Info" defaultOpen={true}>
+        <SheetInfo trace={props} />
+      </CollapsibleSection>
     ),
-    skeletonClassName: 'w-16',
-  },
-  {
-    id: 'timingPhases', // REMINDER: cannot be 'timing' as it is a property of the object
-    label: 'Timing Phases',
-    type: 'readonly',
-    component: props => <SheetTimingPhases latency={props.durationMs} timing={props.timingPhases} />,
-    className: 'flex-col items-start w-full gap-1',
+    className: 'flex-col items-start w-full',
   },
   {
     id: 'challengeTimeline',

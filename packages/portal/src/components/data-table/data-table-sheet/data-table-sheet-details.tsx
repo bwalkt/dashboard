@@ -87,10 +87,10 @@ export function DataTableSheetDetails({ title, titleClassName, children, actions
     >
       <SheetContent
         // onCloseAutoFocus={(e) => e.preventDefault()}
-        className="overflow-y-auto p-0 sm:max-w-md"
+        className="flex flex-col overflow-hidden p-0 sm:max-w-md"
         hideClose
       >
-        <SheetHeader className="sticky top-0 z-10 border-b bg-background p-4">
+        <SheetHeader className="shrink-0 border-b bg-background p-4">
           <div className="flex items-center justify-between gap-2">
             <SheetTitle className={cn(titleClassName, 'truncate text-left')}>
               {isLoading && !selectedRowKey ? <Skeleton className="h-7 w-36" /> : title}
@@ -138,7 +138,7 @@ export function DataTableSheetDetails({ title, titleClassName, children, actions
           </div>
         </SheetHeader>
         <SheetDescription className="sr-only">Selected row details</SheetDescription>
-        <div className="p-4">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4">{children}</div>
       </SheetContent>
     </Sheet>
   )

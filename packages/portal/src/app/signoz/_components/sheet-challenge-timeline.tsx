@@ -1,8 +1,8 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { SimpleTimeline, type SimpleTimelineItem } from '@/components/ui/timeline'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SimpleTimeline, type SimpleTimelineItem } from '@/components/ui/timeline'
 import { queryTraces } from '@/services/signoz.service'
 import type { SignozTraceSchema } from '../schema'
 
@@ -21,12 +21,64 @@ function getHeader(headers: Record<string, string> | undefined, key: string): st
   return undefined
 }
 
+// Extract timestamp from UUIDv7 challenge ID (first 48 bits are Unix ms timestamp)
+function getUuidTimestamp(uuid: string | undefined): number {
+  if (!uuid) return 0
+  try {
+    // UUIDv7 format: xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx
+    // First 48 bits (12 hex chars) are the timestamp
+    const hex = uuid.replace(/-/g, '').slice(0, 12)
+    return parseInt(hex, 16)
+  } catch {
+    return 0
+  }
+}
+
 // Get challenge IDs from a trace
 function getChallengeIds(trace: SignozTraceSchema) {
   return {
     requestId: getHeader(trace.requestHeaders, CHALLENGE_HEADER_ID),
     responseId: getHeader(trace.responseHeaders, CHALLENGE_HEADER_ID),
     answer: getHeader(trace.requestHeaders, CHALLENGE_HEADER_ANSWER),
+  }
+}
+
+// Extract significant URL path (after /proxy, without query params)
+function getSignificantPath(trace: SignozTraceSchema | null | undefined): string | undefined {
+  if (!trace?.http_url) return undefined
+
+  try {
+    const url = new URL(trace.http_url, 'http://localhost')
+    let path = url.pathname
+
+    // Remove /proxy prefix if present
+    if (path.startsWith('/proxy')) {
+      path = path.slice(6) // Remove '/proxy'
+    }
+
+    // Ensure path starts with /
+    if (!path.startsWith('/')) {
+      path = '/' + path
+    }
+
+    return path || '/'
+  } catch {
+    // If URL parsing fails, try simple string manipulation
+    let path = trace.http_url
+
+    // Remove query params
+    const queryIndex = path.indexOf('?')
+    if (queryIndex !== -1) {
+      path = path.slice(0, queryIndex)
+    }
+
+    // Remove /proxy prefix
+    const proxyIndex = path.indexOf('/proxy')
+    if (proxyIndex !== -1) {
+      path = path.slice(proxyIndex + 6)
+    }
+
+    return path || '/'
   }
 }
 
@@ -37,27 +89,34 @@ interface SheetChallengeTimelineProps {
 export function SheetChallengeTimeline({ currentTrace }: SheetChallengeTimelineProps) {
   const current = getChallengeIds(currentTrace)
 
-  const now = Date.now()
-  const oneDayAgo = now - 24 * 60 * 60 * 1000
+  // Use a time window around the current trace (±10 minutes)
+  const currentTraceTime = currentTrace.timestamp
+  const tenMinutes = 10 * 60 * 1000
+  const startTime = currentTraceTime - tenMinutes
+  const endTime = currentTraceTime + tenMinutes
 
   // Fetch prior trace by querying for response challenge ID = current request challenge ID
   const { data: priorData, isLoading: isLoadingPrior } = useQuery({
-    queryKey: ['challenge-chain-prior', current.requestId],
+    queryKey: ['challenge-chain-prior', current.requestId, currentTrace.trace_id],
     queryFn: async () => {
       if (!current.requestId) return { priorTrace: null }
 
-      // Query for the trace that returned current.requestId as its response challenge
+      // Query for traces that returned current.requestId as response challenge
       const response = await queryTraces({
         filters: {
-          startTime: oneDayAgo,
-          endTime: now,
+          startTime,
+          endTime,
           responseChallengeId: current.requestId,
         },
-        pagination: { limit: 1, offset: 0 },
+        pagination: { limit: 10, offset: 0 },
       })
 
-      const priorTrace = response.data?.[0] as SignozTraceSchema | undefined
-      return { priorTrace: priorTrace || null }
+      // Find the trace that provided the challenge (prior)
+      // Signoz returns data sorted by timestamp desc, so filter and take first match
+      const traces = (response.data || []) as SignozTraceSchema[]
+      const priorTrace = traces.find(t => t.trace_id !== currentTrace.trace_id) || null
+
+      return { priorTrace }
     },
     enabled: !!current.requestId,
     staleTime: 60000,
@@ -65,22 +124,26 @@ export function SheetChallengeTimeline({ currentTrace }: SheetChallengeTimelineP
 
   // Fetch next trace to check if the next challenge was executed
   const { data: nextData, isLoading: isLoadingNext } = useQuery({
-    queryKey: ['challenge-chain-next', current.responseId],
+    queryKey: ['challenge-chain-next', current.responseId, currentTrace.trace_id],
     queryFn: async () => {
-      if (!current.responseId) return { nextExecuted: false }
+      if (!current.responseId) return { nextTrace: null }
 
-      // Query for a trace that used current.responseId as its REQUEST challenge (meaning it was executed)
+      // Query for traces that used current.responseId as request challenge
       const response = await queryTraces({
         filters: {
-          startTime: oneDayAgo,
-          endTime: now,
-          requestChallengeId: current.responseId, // Find trace where this challenge was used
+          startTime,
+          endTime,
+          requestChallengeId: current.responseId,
         },
-        pagination: { limit: 1, offset: 0 },
+        pagination: { limit: 10, offset: 0 },
       })
 
-      // If we find a trace, it means the next challenge was used (executed)
-      return { nextExecuted: (response.data?.length ?? 0) > 0 }
+      // Find the trace that used the challenge (next)
+      // Signoz returns data sorted by timestamp desc, so filter and take first match
+      const traces = (response.data || []) as SignozTraceSchema[]
+      const nextTrace = traces.find(t => t.trace_id !== currentTrace.trace_id) || null
+
+      return { nextTrace }
     },
     enabled: !!current.responseId && current.responseId !== current.requestId,
     staleTime: 60000,
@@ -88,7 +151,8 @@ export function SheetChallengeTimeline({ currentTrace }: SheetChallengeTimelineP
 
   const isLoading = isLoadingPrior || isLoadingNext
 
-  // If no challenge IDs found, don't render anything
+  // If no challenge IDs found at all, don't render anything
+  // (but still show if we have at least a response ID - like initial /auth/me calls)
   if (!current.requestId && !current.responseId) {
     return <span className="text-muted-foreground text-xs">No challenge data</span>
   }
@@ -105,35 +169,38 @@ export function SheetChallengeTimeline({ currentTrace }: SheetChallengeTimelineP
   // Build the chain: A (prior) → B (current request) → C (current response/next)
   const items: SimpleTimelineItem[] = []
   const priorTrace = priorData?.priorTrace
-  const priorChallengeId = priorTrace ? getChallengeIds(priorTrace).requestId : undefined
-  const nextExecuted = nextData?.nextExecuted ?? false
+  const priorChallengeIds = priorTrace ? getChallengeIds(priorTrace) : null
+  const nextTrace = nextData?.nextTrace
+  const nextExecuted = !!nextTrace
 
-  // Add prior challenge (A) if found - Blue (previous)
-  if (priorChallengeId) {
+  // Add prior trace if found - Blue (previous)
+  // Show prior's request challenge ID, or if none (initial call), show "Initial"
+  if (priorTrace) {
+    const priorLabel = priorChallengeIds?.requestId || 'Initial'
     items.push({
-      id: `prior-${priorChallengeId}`,
-      label: priorChallengeId,
-      sublabel: 'Prior Challenge',
+      id: `prior-${priorLabel}`,
+      label: priorLabel,
+      sublabel: getSignificantPath(priorTrace) || 'Prior',
       status: 'previous',
     })
   }
 
-  // Add current request challenge (B) - Green (current)
-  if (current.requestId) {
-    items.push({
-      id: `req-${current.requestId}`,
-      label: current.requestId,
-      sublabel: current.answer ? `Answer: ${current.answer}` : 'Current Challenge',
-      status: 'current',
-    })
-  }
+  // Add current trace (B) - Green (current)
+  // Always show current trace, use request challenge ID or "Initial" if none
+  const currentLabel = current.requestId || 'Initial'
+  items.push({
+    id: `current-${currentTrace.trace_id}`,
+    label: currentLabel,
+    sublabel: getSignificantPath(currentTrace) || 'Current',
+    status: 'current',
+  })
 
   // Add next challenge (C) from response - Blue if executed, Gray if not
   if (current.responseId && current.responseId !== current.requestId) {
     items.push({
       id: `res-${current.responseId}`,
       label: current.responseId,
-      sublabel: nextExecuted ? 'Next Challenge (Executed)' : 'Next Challenge (Pending)',
+      sublabel: nextExecuted ? getSignificantPath(nextTrace) || 'Executed' : 'Pending',
       status: nextExecuted ? 'executed' : 'pending',
     })
   }
