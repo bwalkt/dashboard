@@ -140,6 +140,9 @@ export interface SigNozFilters {
     ttfb?: number | [number, number]
     transfer?: number | [number, number]
   }
+  // Challenge ID filters for chain lookup
+  requestChallengeId?: string // Filter by x-challenge-id in request headers
+  responseChallengeId?: string // Filter by x-challenge-id in response headers
 
   startTime: number // Epoch timestamp in milliseconds
   endTime: number // Epoch timestamp in milliseconds

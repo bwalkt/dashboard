@@ -18,7 +18,7 @@ import { User } from '@/types'
  * - `refetch` — A function to manually refetch the user data.
  */
 export function useUser() {
-  const { user, setUser, clearUser, isStale } = useAuthStore()
+  const { user, setUser, clearUser } = useAuthStore()
 
   // Use React Query to fetch user, but integrate with zustand store
   const {
@@ -59,8 +59,9 @@ export function useUser() {
         throw error
       }
     },
-    // Only fetch if we don't have data or it's stale, and not on auth pages
-    enabled: (!user || isStale()) && !window.location.pathname.startsWith('/auth/'),
+    // Only fetch if we don't have user data at all (initial load), not on auth pages
+    // Note: /auth/me should NEVER be called after login - challenge chain handles auth
+    enabled: !user && !window.location.pathname.startsWith('/auth/'),
     retry: false,
     staleTime: AUTH_STALE_TIME_MS,
     gcTime: AUTH_CACHE_TIME_MS,

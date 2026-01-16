@@ -16,9 +16,11 @@ export interface DataTableSheetDetailsProps {
   title?: React.ReactNode
   titleClassName?: string
   children?: React.ReactNode
+  /** Custom action buttons rendered before navigation arrows */
+  actions?: React.ReactNode
 }
 
-export function DataTableSheetDetails({ title, titleClassName, children }: DataTableSheetDetailsProps) {
+export function DataTableSheetDetails({ title, titleClassName, children, actions }: DataTableSheetDetailsProps) {
   const { table, rowSelection, isLoading } = useDataTable()
 
   const selectedRowKey = Object.keys(rowSelection)?.[0]
@@ -85,15 +87,16 @@ export function DataTableSheetDetails({ title, titleClassName, children }: DataT
     >
       <SheetContent
         // onCloseAutoFocus={(e) => e.preventDefault()}
-        className="overflow-y-auto p-0 sm:max-w-md"
+        className="flex flex-col overflow-hidden p-0 sm:max-w-md"
         hideClose
       >
-        <SheetHeader className="sticky top-0 z-10 border-b bg-background p-4">
+        <SheetHeader className="shrink-0 border-b bg-background p-4">
           <div className="flex items-center justify-between gap-2">
             <SheetTitle className={cn(titleClassName, 'truncate text-left')}>
               {isLoading && !selectedRowKey ? <Skeleton className="h-7 w-36" /> : title}
             </SheetTitle>
             <div className="flex h-7 items-center gap-1">
+              {actions}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -135,7 +138,7 @@ export function DataTableSheetDetails({ title, titleClassName, children }: DataT
           </div>
         </SheetHeader>
         <SheetDescription className="sr-only">Selected row details</SheetDescription>
-        <div className="p-4">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4">{children}</div>
       </SheetContent>
     </Sheet>
   )
