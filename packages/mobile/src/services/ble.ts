@@ -5,6 +5,18 @@ import { BleManager, type State } from 'react-native-ble-plx'
 
 const { BLEPeripheralModule } = NativeModules
 
+/**
+ * OOB (Out-of-Band) pairing data for secure BLE connections
+ * This data is displayed as a QR code and scanned by the desktop app
+ */
+export interface BLEOOBData {
+  address: string // Device identifier (hex)
+  randomValue: string // 128-bit random value (hex)
+  confirmValue: string // Confirmation value - SHA256 of random (hex)
+  timestamp: number // Generation time (Unix timestamp)
+  expirySeconds: number // How long the data is valid
+}
+
 interface BLEPeripheralNativeModule {
   initialize(): Promise<boolean>
   startAdvertising(endpointsJSON: string): Promise<boolean>
@@ -12,6 +24,10 @@ interface BLEPeripheralNativeModule {
   isAdvertising(): Promise<boolean>
   setTokenForEndpoint(endpointId: string, token: string): Promise<boolean>
   transmitUid(uid: string): Promise<boolean>
+  // OOB pairing methods
+  generateOOBData(): Promise<BLEOOBData>
+  isOOBDataValid(): Promise<boolean>
+  clearOOBData(): Promise<boolean>
 }
 
 /**
@@ -288,6 +304,57 @@ export class BLEService {
       console.log('BLE: UID transmitted successfully')
     } catch (error) {
       console.error('Failed to transmit UID via BLE:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Generate OOB pairing data for secure BLE connection
+   * This data should be displayed as a QR code for the desktop app to scan
+   */
+  async generateOOBData(): Promise<BLEOOBData> {
+    try {
+      console.log('BLE: Generating OOB pairing data...')
+
+      if (!BLEPeripheralModule) {
+        throw new Error('BLE Peripheral module not available')
+      }
+
+      const oobData = await (BLEPeripheralModule as BLEPeripheralNativeModule).generateOOBData()
+      console.log('BLE: OOB pairing data generated successfully')
+      return oobData
+    } catch (error) {
+      console.error('Failed to generate OOB data:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Check if current OOB data is still valid (not expired)
+   */
+  async isOOBDataValid(): Promise<boolean> {
+    try {
+      if (!BLEPeripheralModule) {
+        return false
+      }
+      return await (BLEPeripheralModule as BLEPeripheralNativeModule).isOOBDataValid()
+    } catch (error) {
+      console.error('Failed to check OOB data validity:', error)
+      return false
+    }
+  }
+
+  /**
+   * Clear current OOB pairing data
+   */
+  async clearOOBData(): Promise<void> {
+    try {
+      if (BLEPeripheralModule) {
+        await (BLEPeripheralModule as BLEPeripheralNativeModule).clearOOBData()
+        console.log('BLE: OOB data cleared')
+      }
+    } catch (error) {
+      console.error('Failed to clear OOB data:', error)
       throw error
     }
   }

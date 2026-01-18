@@ -1,6 +1,8 @@
 import Foundation
 import CoreBluetooth
 import React
+import CryptoKit
+import UIKit
 
 @objc(BLEPeripheralModule)
 class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
@@ -17,6 +19,11 @@ class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
   private var validEndpointIds: Set<String> = []
   private var requestedEndpointId: String?
   private var currentUid: String?
+
+  // OOB pairing data
+  private var oobRandomValue: Data?
+  private var oobTimestamp: Date?
+  private let oobExpirySeconds: TimeInterval = 60.0
 
   // BLE Service and Characteristic UUIDs (must match verifier)
   private let serviceUUID = CBUUID(string: "550e8400-e29b-41d4-a716-446655440000")
@@ -117,6 +124,10 @@ class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
     self.requestedEndpointId = nil
     self.currentUid = nil
 
+    // Clear OOB pairing data
+    self.oobRandomValue = nil
+    self.oobTimestamp = nil
+
     resolve(true)
   }
 
@@ -158,6 +169,63 @@ class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
   }
 
   @objc
+  func generateOOBData(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    // Generate 128-bit (16 byte) cryptographically secure random value
+    var randomBytes = [UInt8](repeating: 0, count: 16)
+    let result = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+
+    guard result == errSecSuccess else {
+      reject("CRYPTO_ERROR", "Failed to generate secure random bytes", nil)
+      return
+    }
+
+    let randomData = Data(randomBytes)
+    self.oobRandomValue = randomData
+    self.oobTimestamp = Date()
+
+    // Convert to hex string for transmission
+    let randomHex = randomData.map { String(format: "%02x", $0) }.joined()
+
+    // Generate a simple confirmation value (hash of random value)
+    // In production, this would use proper BLE OOB confirmation calculation
+    let confirmData = randomData.sha256()
+    let confirmHex = confirmData.map { String(format: "%02x", $0) }.joined()
+
+    // Get device identifier (we use a stable app-specific identifier since iOS doesn't expose BLE address)
+    let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+
+    let oobData: [String: Any] = [
+      "address": deviceId,
+      "randomValue": randomHex,
+      "confirmValue": confirmHex,
+      "timestamp": Date().timeIntervalSince1970,
+      "expirySeconds": oobExpirySeconds
+    ]
+
+    print("BLE Peripheral: Generated OOB pairing data")
+    resolve(oobData)
+  }
+
+  @objc
+  func isOOBDataValid(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    guard let timestamp = oobTimestamp else {
+      resolve(false)
+      return
+    }
+
+    let elapsed = Date().timeIntervalSince(timestamp)
+    resolve(elapsed < oobExpirySeconds)
+  }
+
+  @objc
+  func clearOOBData(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    oobRandomValue = nil
+    oobTimestamp = nil
+    print("BLE Peripheral: Cleared OOB pairing data")
+    resolve(true)
+  }
+
+  @objc
   func setTokenForEndpoint(_ endpointId: String, token: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
     // Validate endpoint exists
     guard validEndpointIds.contains(endpointId) else {
@@ -183,26 +251,27 @@ class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
   // MARK: - Private Methods
 
   private func setupService() {
-    // Create characteristics
+    // Create characteristics with encryption required for security
+    // This forces BLE pairing before any data can be read/written
     getEndpointsCharacteristic = CBMutableCharacteristic(
       type: getEndpointsUUID,
       properties: [.read, .write],
       value: nil,
-      permissions: [.readable, .writeable]
+      permissions: [.readEncryptionRequired, .writeEncryptionRequired]
     )
 
     getTokenCharacteristic = CBMutableCharacteristic(
       type: getTokenUUID,
       properties: [.read, .write],
       value: nil,
-      permissions: [.readable, .writeable]
+      permissions: [.readEncryptionRequired, .writeEncryptionRequired]
     )
 
     devicePairingCharacteristic = CBMutableCharacteristic(
       type: devicePairingUUID,
       properties: [.read, .write, .notify],
       value: nil,
-      permissions: [.readable, .writeable]
+      permissions: [.readEncryptionRequired, .writeEncryptionRequired]
     )
 
     // Create service
@@ -360,5 +429,14 @@ class BLEPeripheralModule: NSObject, CBPeripheralManagerDelegate {
 
   func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
     print("BLE Peripheral: Central unsubscribed from characteristic: \(characteristic.uuid)")
+  }
+}
+
+// MARK: - Data Extension for SHA256
+
+extension Data {
+  func sha256() -> Data {
+    let digest = SHA256.hash(data: self)
+    return Data(digest)
   }
 }

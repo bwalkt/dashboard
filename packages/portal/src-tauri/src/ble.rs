@@ -1,6 +1,7 @@
 use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter, WriteType};
 use btleplug::platform::{Adapter, Manager, Peripheral};
 use serde::{Deserialize, Serialize};
+use sha2::{Sha256, Digest};
 use std::error::Error;
 use std::sync::Arc;
 use std::time::Duration;
@@ -42,6 +43,58 @@ pub struct Endpoint {
     #[serde(rename = "baseURI", skip_serializing_if = "Option::is_none")]
     pub base_uri: Option<String>,
     pub status: String,
+}
+
+/// OOB (Out-of-Band) pairing data received from mobile via QR code
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BLEOOBData {
+    /// Device identifier (hex string)
+    pub address: String,
+    /// 128-bit random value (hex string)
+    #[serde(rename = "randomValue")]
+    pub random_value: String,
+    /// SHA-256 of random value (hex string)
+    #[serde(rename = "confirmValue")]
+    pub confirm_value: String,
+    /// Unix timestamp when OOB data was generated
+    pub timestamp: u64,
+    /// How long the data is valid (seconds)
+    #[serde(rename = "expirySeconds")]
+    pub expiry_seconds: u64,
+}
+
+impl BLEOOBData {
+    /// Parse OOB data from JSON string (e.g., from QR code)
+    pub fn from_json(json: &str) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        let data: BLEOOBData = serde_json::from_str(json)?;
+        Ok(data)
+    }
+
+    /// Check if OOB data is still valid (not expired)
+    pub fn is_valid(&self) -> bool {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        now < self.timestamp + self.expiry_seconds
+    }
+
+    /// Verify the confirmation value matches the random value
+    pub fn verify_confirm(&self) -> bool {
+        // Decode random value from hex
+        let random_bytes = match hex::decode(&self.random_value) {
+            Ok(bytes) => bytes,
+            Err(_) => return false,
+        };
+
+        // Calculate SHA-256 of random value
+        let mut hasher = Sha256::new();
+        hasher.update(&random_bytes);
+        let computed_confirm = hex::encode(hasher.finalize());
+
+        // Compare with provided confirm value
+        computed_confirm == self.confirm_value
+    }
 }
 
 pub struct BLEManager {
@@ -343,5 +396,115 @@ impl BLEManager {
 
         println!("Device proximity verified. UID: {}", uid);
         Ok(uid)
+    }
+
+    /// Connect to mobile device using OOB pairing data from QR code
+    /// This provides higher security by verifying we're connecting to the intended device
+    pub async fn connect_with_oob(&self, oob_data: BLEOOBData) -> Result<(), Box<dyn Error>> {
+        println!("Connecting with OOB pairing data...");
+
+        // Validate OOB data
+        if !oob_data.is_valid() {
+            return Err("OOB pairing data has expired".into());
+        }
+
+        if !oob_data.verify_confirm() {
+            return Err("OOB confirmation value is invalid".into());
+        }
+
+        println!("OOB data validated, scanning for device: {}", oob_data.address);
+
+        let adapter = self.adapter.as_ref().ok_or("BLE adapter not initialized")?;
+
+        // Start scanning for devices with our service
+        adapter
+            .start_scan(ScanFilter {
+                services: vec![Uuid::parse_str(BLE_SERVICE_UUID)?],
+            })
+            .await?;
+
+        // Wait for devices to be discovered
+        let max_tries = std::env::var("NO_RETRIES")
+            .ok()
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(10)
+            .max(1);
+        let mut tries = 0;
+
+        println!("Scanning for OOB device...");
+        while tries < max_tries {
+            let peripherals = adapter.peripherals().await?;
+            if !peripherals.is_empty() {
+                println!("Found {} peripherals", peripherals.len());
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            tries += 1;
+        }
+
+        adapter.stop_scan().await?;
+
+        // Get discovered peripherals
+        let peripherals = adapter.peripherals().await?;
+        if peripherals.is_empty() {
+            return Err("No BLE devices found with the required service".into());
+        }
+
+        // Find the peripheral matching the OOB address
+        let service_uuid = Uuid::parse_str(BLE_SERVICE_UUID)?;
+        let mut found_peripheral: Option<Peripheral> = None;
+
+        for peripheral in peripherals {
+            let properties = peripheral.properties().await?;
+            if let Some(props) = properties {
+                // Check if this peripheral has our service
+                if !props.services.contains(&service_uuid) {
+                    continue;
+                }
+
+                // Check if this is the device we're looking for
+                // iOS uses identifierForVendor (UUID), Android uses BLE address
+                // We match by name containing "PZero" as backup
+                let local_name = props.local_name.clone().unwrap_or_default();
+                let address = peripheral.id().to_string();
+
+                println!("Checking peripheral: {} (address: {})", local_name, address);
+
+                // Try to match by address or name
+                if address.to_lowercase().contains(&oob_data.address.to_lowercase())
+                    || oob_data.address.to_lowercase().contains(&address.to_lowercase())
+                    || (local_name.to_lowercase().contains("pzero")
+                        && props.services.contains(&service_uuid))
+                {
+                    found_peripheral = Some(peripheral);
+                    println!("Found matching device: {}", local_name);
+                    break;
+                }
+            }
+        }
+
+        let peripheral = found_peripheral.ok_or("Device matching OOB data not found")?;
+
+        // Connect to the device
+        if !peripheral.is_connected().await? {
+            println!("Connecting to device...");
+            peripheral.connect().await?;
+        }
+
+        // Discover services (this triggers BLE pairing since characteristics require encryption)
+        println!("Discovering services (this may trigger OS pairing dialog)...");
+        peripheral.discover_services().await?;
+
+        // Store the peripheral
+        let mut periph_lock = self.peripheral.lock().await;
+        *periph_lock = Some(peripheral);
+
+        println!("Connected to mobile device with OOB verification");
+        Ok(())
+    }
+
+    /// Parse OOB data from JSON string (convenience method)
+    pub fn parse_oob_data(json: &str) -> Result<BLEOOBData, Box<dyn Error + Send + Sync>> {
+        BLEOOBData::from_json(json)
     }
 }

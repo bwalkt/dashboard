@@ -14,6 +14,8 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import com.facebook.react.bridge.*
 import org.json.JSONObject
+import java.security.MessageDigest
+import java.security.SecureRandom
 import java.util.*
 
 class BLEPeripheralModule(reactContext: ReactApplicationContext) :
@@ -41,6 +43,11 @@ class BLEPeripheralModule(reactContext: ReactApplicationContext) :
     private val validEndpointIds = mutableSetOf<String>()
     private var requestedEndpointId: String? = null
     private var currentUid: String? = null
+
+    // OOB pairing data
+    private var oobRandomValue: ByteArray? = null
+    private var oobTimestamp: Long? = null
+    private val oobExpirySeconds: Long = 60
 
     override fun getName(): String = "BLEPeripheralModule"
 
@@ -185,6 +192,10 @@ class BLEPeripheralModule(reactContext: ReactApplicationContext) :
             requestedEndpointId = null
             currentUid = null
 
+            // Clear OOB pairing data
+            oobRandomValue = null
+            oobTimestamp = null
+
             Log.d(TAG, "Stopped BLE advertising")
             promise.resolve(true)
         } catch (e: Exception) {
@@ -226,18 +237,75 @@ class BLEPeripheralModule(reactContext: ReactApplicationContext) :
         try {
             // Store the UID for transmission via BLE
             currentUid = uid
-            
+
             val response = JSONObject()
             response.put("type", "device_pairing")
             response.put("uid", uid)
             response.put("timestamp", System.currentTimeMillis() / 1000)
-            
+
             Log.d(TAG, "UID set for transmission: $uid")
             promise.resolve(true)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to transmit UID", e)
             promise.reject("UID_ERROR", e.message, e)
         }
+    }
+
+    @ReactMethod
+    fun generateOOBData(promise: Promise) {
+        try {
+            // Generate 128-bit (16 byte) cryptographically secure random value
+            val randomBytes = ByteArray(16)
+            SecureRandom().nextBytes(randomBytes)
+
+            oobRandomValue = randomBytes
+            oobTimestamp = System.currentTimeMillis()
+
+            // Convert to hex string for transmission
+            val randomHex = randomBytes.joinToString("") { "%02x".format(it) }
+
+            // Generate confirmation value (SHA-256 of random value)
+            val messageDigest = MessageDigest.getInstance("SHA-256")
+            val confirmBytes = messageDigest.digest(randomBytes)
+            val confirmHex = confirmBytes.joinToString("") { "%02x".format(it) }
+
+            // Get device BLE address
+            val deviceAddress = bluetoothAdapter?.address ?: UUID.randomUUID().toString()
+
+            val oobData = Arguments.createMap().apply {
+                putString("address", deviceAddress)
+                putString("randomValue", randomHex)
+                putString("confirmValue", confirmHex)
+                putDouble("timestamp", (System.currentTimeMillis() / 1000).toDouble())
+                putDouble("expirySeconds", oobExpirySeconds.toDouble())
+            }
+
+            Log.d(TAG, "Generated OOB pairing data")
+            promise.resolve(oobData)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to generate OOB data", e)
+            promise.reject("CRYPTO_ERROR", e.message, e)
+        }
+    }
+
+    @ReactMethod
+    fun isOOBDataValid(promise: Promise) {
+        val timestamp = oobTimestamp
+        if (timestamp == null) {
+            promise.resolve(false)
+            return
+        }
+
+        val elapsed = (System.currentTimeMillis() - timestamp) / 1000
+        promise.resolve(elapsed < oobExpirySeconds)
+    }
+
+    @ReactMethod
+    fun clearOOBData(promise: Promise) {
+        oobRandomValue = null
+        oobTimestamp = null
+        Log.d(TAG, "Cleared OOB pairing data")
+        promise.resolve(true)
     }
 
     private fun setupGattServer() {
@@ -248,23 +316,24 @@ class BLEPeripheralModule(reactContext: ReactApplicationContext) :
 
         bluetoothGattServer = bluetoothManager?.openGattServer(reactApplicationContext, gattServerCallback)
 
-        // Create characteristics
+        // Create characteristics with encryption required for security
+        // This forces BLE pairing before any data can be read/written
         val getEndpointsCharacteristic = BluetoothGattCharacteristic(
             GET_ENDPOINTS_UUID,
             BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE,
-            BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
+            BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
         )
 
         val getTokenCharacteristic = BluetoothGattCharacteristic(
             GET_TOKEN_UUID,
             BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE,
-            BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
+            BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
         )
 
         val devicePairingCharacteristic = BluetoothGattCharacteristic(
             DEVICE_PAIRING_UUID,
             BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-            BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
+            BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
         )
 
         // Create service

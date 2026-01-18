@@ -31,4 +31,6 @@ url = "2.4"
 urlencoding = "2.1"
 btleplug = { version = "0.11.0", features = ["serde"] }
 uuid = { version = "1.9", features = ["serde", "v7"] }
+sha2 = "0.10"
+hex = "0.4"
 

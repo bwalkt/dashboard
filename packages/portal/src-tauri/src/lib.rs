@@ -219,6 +219,29 @@ async fn ble_verify_device_proximity(state: State<'_, AppState>) -> Result<Strin
     ble.verify_device_proximity().await.map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn ble_connect_with_oob(oob_json: String, state: State<'_, AppState>) -> Result<(), String> {
+    // Parse OOB data from JSON
+    let oob_data = ble::BLEManager::parse_oob_data(&oob_json).map_err(|e| e.to_string())?;
+
+    // Clone the Arc to release the State borrow, then lock
+    let ble_manager = state.ble_manager.clone();
+    let ble = ble_manager.lock().await;
+    ble.connect_with_oob(oob_data).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn ble_validate_oob_data(oob_json: String) -> Result<bool, String> {
+    // Parse and validate OOB data without connecting
+    match ble::BLEManager::parse_oob_data(&oob_json) {
+        Ok(oob_data) => {
+            let is_valid = oob_data.is_valid() && oob_data.verify_confirm();
+            Ok(is_valid)
+        }
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 /// Builds and runs the Tauri application for the portal with tray support, registering plugins,
 /// authorization handlers, BLE commands, and (on iOS) a deep-link listener.
 ///
@@ -232,11 +255,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or(300);
 
-    // Read port from environment variable, default to 1430 (portal's default)
-    let port = std::env::var("PORT")
+    // Read port from environment variable, default to 1435 (Tauri app - web portal uses 1430)
+    let port = std::env::var("TAURI_PORT")
         .ok()
         .and_then(|s| s.parse::<u16>().ok())
-        .unwrap_or(1430);
+        .unwrap_or(1435);
 
     let app_state = AppState {
         pending_requests: Arc::new(Mutex::new(HashMap::new())),
@@ -312,7 +335,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             ble_is_connected,
             ble_get_endpoints,
             ble_get_token,
-            ble_verify_device_proximity
+            ble_verify_device_proximity,
+            ble_connect_with_oob,
+            ble_validate_oob_data
         ])
         .run(tauri::generate_context!())
         .map_err(|e| e.into())

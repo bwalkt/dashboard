@@ -3181,9 +3181,11 @@ name = "pzero-portal"
 version = "0.1.0"
 dependencies = [
  "btleplug",
+ "hex",
  "reqwest 0.11.27",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-localhost",
