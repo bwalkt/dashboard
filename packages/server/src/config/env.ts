@@ -57,6 +57,7 @@ export interface EnvironmentConfig {
   STATS_API_KEY: string | undefined;
   ENCRYPTION_SECRET?: string;
   ENVOY_INTERNAL_SECRET?: string; // Secret for validating Envoy internal requests
+  CHALLENGE_TTL_SECONDS: number; // TTL for challenge records in Redis
 }
 const DEFAULT_ALLOWED_HEADERS = [
   "Content-Type",
@@ -148,6 +149,7 @@ export const config: EnvironmentConfig = {
   STATS_API_KEY: process.env.STATS_API_KEY,
   ENCRYPTION_SECRET: process.env.ENCRYPTION_SECRET || "pzero",
   ENVOY_INTERNAL_SECRET: process.env.ENVOY_INTERNAL_SECRET || "", // Fallback to JWT_SECRET for backward compatibility
+  CHALLENGE_TTL_SECONDS: parseInt(process.env.CHALLENGE_TTL_SECONDS || "86400", 10), // Default: 1 day
 };
 
 /**

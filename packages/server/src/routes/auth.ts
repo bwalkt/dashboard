@@ -1,10 +1,8 @@
 import { randomInt, timingSafeEqual } from "node:crypto";
 
 import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
-import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail, type UserResponse } from "@pzero/shared";
+import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail } from "@pzero/shared";
 import { CHALLENGE_ID_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_QUESTION_HEADER } from "@pzero/shared/challenge";
-import { genFunctionAsJson, genGrid } from "@pzero/shared/grid";
-import { uuid } from "@pzero/shared/uuid";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { config } from "../config/env.js";
 import { redis } from "../config/redis.js";
@@ -13,11 +11,10 @@ import { authService } from "../services/auth.service.js";
 import { emailService } from "../services/email.service.js";
 import { PROXY_TARGETS_CACHE_KEY, refreshProxyTargetsCache } from "../services/proxy-targets-cache.service.js";
 import { type UserWithStatus, userService } from "../services/user.service.js";
-import { type ChallengePayload, getChallenge, getChallengePayload, getMultipleChallenges, markChallengeUsed } from "../utils/challenge.js";
+import { type ChallengePayload, getChallenge, getChallengePayload, markChallengeUsed } from "../utils/challenge.js";
 import { encryptionService } from "../utils/encryption.js";
 
 // Number of challenges to generate per auth request (default is 2 to reduce round-trips)
-const CHALLENGE_COUNT = 2;
 
 async function deleteUserSession(request: FastifyRequest, reply: FastifyReply) {
   const userId = extractUserIdFromToken(request);
@@ -290,19 +287,39 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       const thisChallenge = challenge && challenge.next ? await getChallengePayload(challenge.next) : null;
 
       let challengeData: Awaited<ReturnType<typeof getChallenge>>;
-      if (challengeId && thisChallenge) {
-        // /auth/next flow: rotate the challenge
-        // Generate a new challenge to extend the chain
-        const nextChallenge = await getChallenge(grid, user.id);
-        thisChallenge.next = nextChallenge.id;
-        // Overwrite the original challenge with thisChallenge's data (rotates the ID)
-        await storeChallengeRecord(challengeId, thisChallenge);
-        await storeChallengeRecord(nextChallenge.id, nextChallenge);
-        challengeData = {
-          id: challengeId,
-          ...thisChallenge,
-        };
-        console.log(`[/auth/next] Rotated challenge ${challengeId}, next: ${nextChallenge.id}`);
+      if (challengeId && thisChallenge && challenge?.next) {
+        // /auth/next flow: mark current challenge as used, return the next one
+        // challengeId = A (used), challenge.next = B's ID, thisChallenge = B's payload
+        const nextChallengeId = challenge.next;
+
+        try {
+          // Pre-generate C to extend the chain first (before marking A as used)
+          // This ensures we have a valid chain before invalidating the current challenge
+          const pregenChallenge = await getChallenge(grid, user.id);
+          thisChallenge.next = pregenChallenge.id; // B.next = C
+
+          // Update B with new next pointer
+          await storeChallengeRecord(nextChallengeId, thisChallenge);
+
+          // Mark A as used only after chain is successfully extended
+          const markResult = await markChallengeUsed(challengeId);
+          if (markResult !== 'ok') {
+            // Challenge was already used or not found - potential replay attack or stale state
+            throw new Error(`Failed to mark challenge as used: ${markResult}`);
+          }
+
+          // Return B's ID and question/params
+          challengeData = {
+            id: nextChallengeId,
+            ...thisChallenge,
+          };
+          console.log(`[/auth/next] Marked ${challengeId} as used, returning next: ${nextChallengeId}, pre-generated: ${pregenChallenge.id}`);
+        } catch (redisError) {
+          console.error(`[/auth/next] Redis operation failed for challenge chain:`, redisError);
+          // Fall back to generating a fresh challenge if chain operations fail
+          challengeData = await getChallenge(grid, user.id);
+          console.log(`[/auth/next] Fallback: Generated new challenge: ${challengeData.id}`);
+        }
       } else {
         // /auth/me flow or no chain: generate fresh challenge
         challengeData = await getChallenge(grid, user.id);
@@ -338,7 +355,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
   async function storeChallengeRecord(challengeId: string, payload: ChallengePayload): Promise<void> {
     const redisKey = `challenge:${challengeId}`;
-    await redis.set(redisKey, JSON.stringify(payload));
+    await redis.set(redisKey, JSON.stringify(payload), config.CHALLENGE_TTL_SECONDS);
   }
 
   /**
@@ -394,9 +411,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         } as ErrorResponse);
       }
 
-      // Note: We don't check/mark 'used' here because the rotation logic
-      // overwrites the challenge record with new data anyway. The WASM filter
-      // validates the answer, and the overwrite ensures fresh data for next use.
+      // The nextHelper will mark the current challenge as used and return the next one in the chain
       return await nextHelper(user, request, reply, false, currentChallenge, challengeId);
     } catch (error) {
       console.error("Get user info error:", error);

@@ -98,6 +98,18 @@ function buildFilterExpression(filters: SigNozFilters): string | undefined {
     }
   }
 
+  // Filter by request challenge ID (for checking if a challenge was used)
+  if (filters.requestChallengeId) {
+    const escapedChallengeId = escapeSingleQuotes(filters.requestChallengeId);
+    conditions.push(`req_headers.${CHALLENGE_ID_HEADER} = '${escapedChallengeId}'`);
+  }
+
+  // Filter by response challenge ID (for chain lookup)
+  if (filters.responseChallengeId) {
+    const escapedChallengeId = escapeSingleQuotes(filters.responseChallengeId);
+    conditions.push(`res_headers.${CHALLENGE_ID_HEADER} = '${escapedChallengeId}'`);
+  }
+
   return conditions.join(" AND ");
 }
 

@@ -497,9 +497,18 @@ impl ChallengeAuthzHttp {
                             }
                         };
 
-                    // Note: We don't check 'used' flag because the rotation logic
-                    // overwrites challenge data on each /auth/next call. The answer
-                    // validation is sufficient - wrong answer = reject.
+                    // Check if challenge was already used (single-use)
+                    if already_used {
+                        warn!(
+                            "[Rust WASM Filter] ⚠️ REJECTED: Challenge already used: {}",
+                            challenge_id
+                        );
+                        self.send_forbidden_response_with_challenge(
+                            "challenge already used",
+                            &challenge_id,
+                        );
+                        return;
+                    }
 
                     let is_valid = if self.config.check_answer {
                         answer_match
@@ -1044,6 +1053,17 @@ impl ChallengeAuthzHttp {
                     "access-control-allow-credentials".to_string(),
                     "true".to_string(),
                 ));
+                // Expose challenge headers so client JavaScript can read them
+                owned_headers.push((
+                    "access-control-expose-headers".to_string(),
+                    format!(
+                        "{},{},{},{}",
+                        CHALLENGE_HEADER_ID,
+                        CHALLENGE_HEADER,
+                        CHALLENGE_HEADER_QUESTION,
+                        CHALLENGE_HEADER_PARAMS
+                    ),
+                ));
                 // Add Timing-Allow-Origin header for allowed origins
                 owned_headers.push(("timing-allow-origin".to_string(), allowed_origin));
             }
@@ -1196,6 +1216,13 @@ impl HttpContext for ChallengeAuthzHttp {
 
             // Only send CORS headers if origin is allowed
             if !allowed_origin.is_empty() {
+                let expose_headers = format!(
+                    "{},{},{},{}",
+                    CHALLENGE_HEADER_ID,
+                    CHALLENGE_HEADER,
+                    CHALLENGE_HEADER_QUESTION,
+                    CHALLENGE_HEADER_PARAMS
+                );
                 self.send_http_response(
                     204,
                     vec![
@@ -1203,6 +1230,7 @@ impl HttpContext for ChallengeAuthzHttp {
                         ("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH"),
                         ("access-control-allow-headers", "content-type,x-challenge-id,x-challenge-answer,x-challenge,x-challenge-params,authorization,x-proxy-target"),
                         ("access-control-allow-credentials", "true"),
+                        ("access-control-expose-headers", &expose_headers),
                     ],
                     None,
                 );

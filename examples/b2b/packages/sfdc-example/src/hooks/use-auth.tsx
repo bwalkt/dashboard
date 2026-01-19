@@ -18,7 +18,7 @@ import { User } from '@/types'
  * - `refetch` — A function to manually refetch the user data.
  */
 export function useUser() {
-  const { user, setUser, clearUser, isStale } = useAuthStore()
+  const { user, setUser, clearUser } = useAuthStore()
 
   // Use React Query to fetch user, but integrate with zustand store
   const {
@@ -40,17 +40,28 @@ export function useUser() {
         }
         return user
       } catch (error) {
-        // If /auth/me returns 403 on /overview page, clear localStorage and redirect to sign-in
-        if (error instanceof ApiError && error.status === 403 && window.location.pathname === '/overview') {
-          clearUser()
-          challengeManager.logoff()
-          window.location.href = '/auth/sign-in'
+        if (error instanceof ApiError && error.status === 403) {
+          const message = error.message.toLowerCase()
+          // Stale/missing cookie - redirect to login (but not if already on auth pages)
+          if (message.includes('missing access token') || message.includes('invalid token')) {
+            const isAuthPage = window.location.pathname.startsWith('/auth/')
+            if (!isAuthPage) {
+              console.warn('[useUser] Session invalid, redirecting to login:', error.message)
+              clearUser()
+              challengeManager.logoff()
+              window.location.href = '/auth/sign-in'
+              return undefined as unknown as User
+            }
+          }
+          // Other 403 errors (e.g., challenge issues) - log but don't redirect
+          console.error('[useUser] /auth/me returned 403:', error.message)
         }
         throw error
       }
     },
-    // Only fetch if we don't have data or it's stale
-    enabled: !user || isStale(),
+    // Only fetch if we don't have user data at all (initial load), not on auth pages
+    // Note: /auth/me should NEVER be called after login - challenge chain handles auth
+    enabled: !user && !window.location.pathname.startsWith('/auth/'),
     retry: false,
     staleTime: AUTH_STALE_TIME_MS,
     gcTime: AUTH_CACHE_TIME_MS,
@@ -64,22 +75,26 @@ export function useUser() {
     error: signOutError,
   } = useMutation({
     mutationFn: async () => {
-      try {
-        const response = await api.post('/auth/logout', undefined, { skipRefresh: true })
+      // Always perform cleanup regardless of API result
+      const cleanup = () => {
         queryClient.clear()
         clearUser() // Clear zustand store
         challengeManager.logoff() // Clear challenges and grid from localStorage
-        return { error: null }
-      } catch (error) {
-        console.error('Logout API error:', error)
-        throw error
       }
+
+      try {
+        await api.post('/auth/logout', undefined, { skipRefresh: true })
+      } catch (error) {
+        // Log but don't throw - we still want to sign out locally even if API fails
+        // This handles zombie state where user is not found on server
+        console.warn('Logout API error (proceeding with local cleanup):', error)
+      }
+
+      cleanup()
+      return { error: null }
     },
     onSuccess: () => {
       window.location.href = '/auth/sign-in'
-    },
-    onError: error => {
-      console.error('Logout mutation error:', error)
     },
   })
 
