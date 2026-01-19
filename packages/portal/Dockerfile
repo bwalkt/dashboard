@@ -8,15 +8,16 @@ RUN npm install -g pnpm@10.18.3
 
 # Build arguments for Vite environment variables
 ARG VITE_BACKEND_URL
+ARG VITE_PUBLIC_POSTHOG_API_KEY
+ARG VITE_PUBLIC_POSTHOG_HOST
 
 
 # Set build-time environment variables
 ENV VITE_API_BASE_URL=${VITE_BACKEND_URL}
 ENV VITE_CONFIG_BREADCRUMB=true
-# This is an example PostHog API key
-ENV VITE_POSTHOG_API_KEY="phc_example1234567890"
-# This is a placeholder for the PostHog host
-ENV VITE_POSTHOG_HOST="https://us.i.posthog.com"
+# PostHog configuration
+ENV VITE_PUBLIC_POSTHOG_API_KEY=${VITE_PUBLIC_POSTHOG_API_KEY}
+ENV VITE_PUBLIC_POSTHOG_HOST=${VITE_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}
 # This is a placeholder for the table debug mode
 ENV VITE_TABLE_DEBUG=false
 # This is an example Sentry DSN
