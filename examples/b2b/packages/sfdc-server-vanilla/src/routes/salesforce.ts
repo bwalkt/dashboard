@@ -1,9 +1,49 @@
 import { OrderSchema, ProductSchema } from '@pzero/shared'
 import type { FastifyInstance, FastifyPluginOptions, FastifyReply, FastifyRequest } from 'fastify'
-import { salesforceConfig } from '../config/salesforce'
-import { authenticateToken } from '../middleware/auth'
-import { SalesforceClient } from '../services/salesforce-client.service'
-import type { SalesforcePaginatedResponse, SalesforceQueryParams, SalesforceRecordRequest } from '../types/salesforce'
+import { salesforceConfig } from '../config/salesforce.js'
+import { authenticateToken } from '../middleware/auth.js'
+import { SalesforceClient } from '../services/salesforce-client.service.js'
+import type {
+  SalesforcePaginatedResponse,
+  SalesforceQueryParams,
+  SalesforceRecordRequest,
+} from '../types/salesforce.js'
+
+// PricebookEntry fields for querying
+const PricebookEntryFields = [
+  'Id',
+  'Pricebook2Id',
+  'Product2Id',
+  'UnitPrice',
+  'IsActive',
+  'Name',
+  'ProductCode',
+  'UseStandardPrice',
+  'IsDeleted',
+  'CreatedDate',
+  'CreatedById',
+  'LastModifiedDate',
+  'LastModifiedById',
+  'SystemModstamp',
+]
+
+// OrderItem fields for querying
+const OrderItemFields = [
+  'Id',
+  'OrderId',
+  'PricebookEntryId',
+  'Product2Id',
+  'Quantity',
+  'UnitPrice',
+  'TotalPrice',
+  'Description',
+  'CreatedDate',
+  'CreatedById',
+  'LastModifiedDate',
+  'LastModifiedById',
+  'IsDeleted',
+  'SystemModstamp',
+]
 
 /**
  * Salesforce API Routes
@@ -81,7 +121,7 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         }
 
         const { objectType } = request.params as { objectType: string }
-        const { page = 1, limit = 50 } = request.query as SalesforceQueryParams
+        const { page = 1, limit = 50, sort } = request.query as SalesforceQueryParams
 
         // Validate pagination parameters
         const pageNum = Math.max(1, Math.floor(Number(page)))
@@ -91,16 +131,44 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         const keys: string[] = []
 
         if (objectType === 'Order') {
-          keys.push(...Object.keys(OrderSchema.shape).filter(key => key !== 'attributes'))
+          keys.push(...Object.keys(OrderSchema.properties).filter(key => key !== 'attributes'))
         } else if (objectType === 'Product2') {
-          keys.push(...Object.keys(ProductSchema.shape).filter(key => key !== 'attributes'))
+          keys.push(...Object.keys(ProductSchema.properties).filter(key => key !== 'attributes'))
+        } else if (objectType === 'PricebookEntry') {
+          keys.push(...PricebookEntryFields)
+        } else if (objectType === 'OrderItem') {
+          keys.push(...OrderItemFields)
         }
 
         const fields = keys.join(',')
+        const validSortFields = new Set(keys)
+        const sortItems: Array<{ id: string; desc: boolean }> = []
+
+        if (typeof sort === 'string' && sort.trim().length > 0) {
+          try {
+            const parsed = JSON.parse(sort)
+            if (Array.isArray(parsed)) {
+              for (const item of parsed) {
+                if (item && typeof item.id === 'string' && typeof item.desc === 'boolean') {
+                  const sortField = item.id === 'TotalAmount' ? 'Total_Amount__c' : item.id
+                  if (validSortFields.has(sortField)) {
+                    sortItems.push({ id: sortField, desc: item.desc })
+                  }
+                }
+              }
+            }
+          } catch {
+            // Ignore invalid sort payloads
+          }
+        }
 
         // Execute both COUNT and SELECT queries in parallel for better performance
         const countSoql = `SELECT COUNT() FROM ${objectType}`
-        const soql = `SELECT ${fields} FROM ${objectType} LIMIT ${limitNum} OFFSET ${offset}`
+        const orderBy =
+          sortItems.length > 0
+            ? ` ORDER BY ${sortItems.map(item => `${item.id} ${item.desc ? 'DESC' : 'ASC'}`).join(', ')}`
+            : ''
+        const soql = `SELECT ${fields} FROM ${objectType}${orderBy} LIMIT ${limitNum} OFFSET ${offset}`
 
         const [countResults, results] = await Promise.all([
           salesforceClient.queryPaginated(countSoql),
@@ -157,7 +225,7 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         }
 
         // Get all Order schema fields except attributes
-        const keys = Object.keys(OrderSchema.shape).filter(key => key !== 'attributes')
+        const keys = Object.keys(OrderSchema.properties).filter(key => key !== 'attributes')
         const fields = keys.join(',')
 
         // Create SOQL query with WHERE clause for last 30 days
@@ -295,6 +363,40 @@ export async function salesforceRoutes(fastify: FastifyInstance, options: Fastif
         fastify.log.error(error, 'Salesforce update record error')
         reply.code(400).send({
           error: 'Record update failed',
+          message: (error as Error).message,
+        })
+      }
+    },
+  )
+
+  // Delete a record
+  fastify.delete(
+    '/salesforce/records/:objectType/:recordId',
+    {
+      preHandler: authenticateToken,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        if (!salesforceClient) {
+          reply.code(500).send({
+            error: 'Salesforce client not initialized',
+          })
+          return
+        }
+
+        const { objectType, recordId } = request.params as { objectType: string; recordId: string }
+
+        await salesforceClient.deleteRecord(objectType, recordId)
+
+        reply.send({
+          success: true,
+          message: `${objectType} record deleted successfully`,
+          id: recordId,
+        })
+      } catch (error) {
+        fastify.log.error(error, 'Salesforce delete record error')
+        reply.code(400).send({
+          error: 'Record deletion failed',
           message: (error as Error).message,
         })
       }

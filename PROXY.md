@@ -34,10 +34,10 @@ Update the `.env` file with your configuration:
 
 ### 3. Create Docker Network
 
-Create a Docker network named `pzero` that will be used by all services:
+Create a Docker network named `pzero-network` that will be used by all services:
 
 ```bash
-docker network create pzero
+docker network create pzero-network
 ```
 
 ### 4. Start the Golang Proxy
@@ -60,7 +60,7 @@ cd examples/b2b
 docker compose up -d
 ```
 
-This will start the SFDC server and connect it to the `pzero` network.
+This will start the SFDC server and connect it to the `pzero-network` network.
 
 ### 6. Get the Enrollment JWT
 

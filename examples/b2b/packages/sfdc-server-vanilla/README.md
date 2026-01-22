@@ -81,6 +81,66 @@ pnpm start
 
 The server will start on `http://localhost:8080`
 
+### Docker Deployment
+
+The server can be deployed using Docker Compose.
+
+#### Prerequisites
+
+1. **Create Docker Network** (if not already created):
+   ```bash
+   docker network create pzero-network
+   ```
+
+2. **Environment Variables**: Ensure all required environment variables are set (see Environment Variables section below).
+
+#### Development Deployment
+
+From the `examples/b2b` directory:
+
+```bash
+docker compose up -d
+```
+
+This will start:
+- `dragonfly` - Redis-compatible database for challenge storage
+- `pzero-sfdc-server-vanilla` - The SFDC server (port 3000)
+- `pzero-envoy-wasm` - WASM filter proxy for authentication (when using proxy mode)
+
+#### Production Deployment
+
+For production, use `docker-compose.prod.yml`:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+**Important Production Notes:**
+
+1. **Challenge Secret**: Set `CHALLENGE_SECRET` environment variable for challenge validation.
+
+2. **Network Configuration**: Ensure all services are on the same Docker network (`pzero-network`) for internal communication.
+
+3. **Authentication Mode**: The server can work in direct mode (no proxy) or via WASM filter proxy for enhanced security.
+
+#### Challenge Header Validation
+
+The server can enforce challenge header validation for authenticated requests:
+
+- **Required Headers**: `x-challenge-id` and `x-challenge-answer` (when using WASM filter proxy)
+- **Validation**: Headers are validated by the WASM filter proxy before reaching the server
+- **Direct Mode**: When not using proxy, the server handles authentication directly
+
+#### Environment Variables for Docker
+
+Additional environment variables for Docker deployment:
+
+| Variable              | Description                                    | Required | Default                    |
+| --------------------- | ---------------------------------------------- | -------- | -------------------------- |
+| `REDIS_URL`            | Redis connection URL                           | No       | `redis://dragonfly:6379`   |
+| `CHALLENGE_SECRET`     | Secret for challenge validation                | Yes (production) | - |
+| `DOCKER_CONTAINER`     | Set to `true` when running in Docker           | No       | -                          |
+
 ## 📚 API Endpoints
 
 ### Authentication (GitHub OAuth)
@@ -134,6 +194,8 @@ The server will start on `http://localhost:8080`
 | `JWT_SECRET`              | JWT signing secret         | Yes                            |
 | `DATABASE_PATH`           | SQLite database path       | No (defaults to ./database.db) |
 | `OAUTH_REDIRECT_URL`      | OAuth callback URL         | Yes                            |
+| `REDIS_URL`               | Redis connection URL        | No (defaults to redis://dragonfly:6379) |
+| `CHALLENGE_SECRET`        | Challenge validation secret | Yes (production) |
 
 ## 📁 Project Structure
 

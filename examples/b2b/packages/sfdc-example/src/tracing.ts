@@ -1,7 +1,7 @@
-import { getWebAutoInstrumentations } from '@opentelemetry/auto-instrumentations-web'
 import { ZoneContextManager } from '@opentelemetry/context-zone'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { registerInstrumentations } from '@opentelemetry/instrumentation'
+import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch'
 import { defaultResource, resourceFromAttributes } from '@opentelemetry/resources'
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
@@ -51,7 +51,7 @@ const processor = new BatchSpanProcessor(exporter)
 // Create and configure the WebTracerProvider
 const provider = new WebTracerProvider({
   resource: resource,
-  spanProcessors: [processor], // Add the span processor here
+  spanProcessors: [processor], // Add the span processor here,
 })
 
 // Register the tracer provider with the context manager
@@ -62,17 +62,67 @@ provider.register({
 // Log successful initialization
 console.log('[OpenTelemetry] Tracing initialized successfully')
 
+// Sensitive headers that should be masked or omitted
+const SENSITIVE_HEADERS = new Set([
+  'authorization',
+  'cookie',
+  'set-cookie',
+  'api-key',
+  'x-api-key',
+  'x-authorization',
+  'x-session',
+  'token',
+  'access-token',
+])
+
+// Normalize header name to lowercase
+const normalizeHeaderName = (name: string): string => name.toLowerCase()
+
+// Mask sensitive header value (show first 4 chars + "***")
+const maskSensitiveValue = (value: string): string => {
+  if (value.length <= 4) return '***'
+  return value.slice(0, 4) + '***'
+}
+
+// Process headers and set attributes with filtering and masking
+const processHeaders = (span: any, headers: Headers | HeadersInit, prefix: 'req_headers' | 'res_headers'): void => {
+  // Convert HeadersInit to Headers for consistent handling
+  const headersObj = headers instanceof Headers ? headers : new Headers(headers)
+  const entries = Array.from(headersObj.entries())
+  console.log(entries)
+  for (const [key, value] of entries) {
+    const normalizedKey = normalizeHeaderName(key)
+    const stringValue = typeof value === 'string' ? value : String(value)
+
+    // Mask sensitive headers instead of omitting completely
+    if (SENSITIVE_HEADERS.has(normalizedKey)) {
+      span.setAttribute(`${prefix}.${normalizedKey}`, maskSensitiveValue(stringValue))
+    } else {
+      span.setAttribute(`${prefix}.${normalizedKey}`, stringValue)
+    }
+  }
+}
+
 // Set up automatic instrumentation for web APIs
 registerInstrumentations({
   instrumentations: [
-    getWebAutoInstrumentations({
-      '@opentelemetry/instrumentation-xml-http-request': {
-        // Only propagate trace headers to configured backend/proxy URLs
-        propagateTraceHeaderCorsUrls: corsUrls.length > 0 ? corsUrls : [/.+/g],
-      },
-      '@opentelemetry/instrumentation-fetch': {
-        // Only propagate trace headers to configured backend/proxy URLs
-        propagateTraceHeaderCorsUrls: corsUrls.length > 0 ? corsUrls : [/.+/g],
+    new FetchInstrumentation({
+      // Only propagate trace headers to configured backend/proxy URLs
+      propagateTraceHeaderCorsUrls: corsUrls,
+      ignoreUrls: [otelExporterUrl],
+      applyCustomAttributesOnSpan: (span, request, response) => {
+        console.log('processing request', request)
+        // Process request headers
+        if (request.headers) {
+          processHeaders(span, request.headers, 'req_headers')
+        }
+
+        // Process response headers
+        if (response instanceof Response && response.headers) {
+          processHeaders(span, response.headers, 'res_headers')
+        }
+
+        return span
       },
     }),
   ],

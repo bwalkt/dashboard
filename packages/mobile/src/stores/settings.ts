@@ -6,9 +6,12 @@ export const settingsKeys = {
   emailVerified: 'emailVerified',
   phone: 'phone',
   phoneVerified: 'phoneVerified',
-  nickName: 'nickName',
+  nickName: 'nickName', // Keep for backwards compatibility
+  name: 'name', // User's full name
   classificationType: 'classificationType',
   isPrimary: 'isPrimary',
+  pin: 'pin',
+  policiesAccepted: 'policiesAccepted',
 }
 
 export const classificationTypes = {

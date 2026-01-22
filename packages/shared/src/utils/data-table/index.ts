@@ -1,2 +1,2 @@
 // Export all data-table helpers
-export * from './helpers'
+export * from './helpers.js'

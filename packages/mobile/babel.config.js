@@ -1,13 +1,9 @@
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
-  plugins: [
-    [
-      'module:react-native-dotenv',
-      {
-        moduleName: '@env',
-        path: '.env',
-      },
-    ],
-    'react-native-reanimated/plugin',
-  ],
+  plugins: ['react-native-reanimated/plugin'],
+  env: {
+    test: {
+      presets: [['module:@react-native/babel-preset', { modules: 'auto' }]],
+    },
+  },
 }

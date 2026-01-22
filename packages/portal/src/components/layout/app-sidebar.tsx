@@ -1,6 +1,7 @@
 // User management imports
 import {
   IconBell,
+  IconBrightness,
   IconChevronRight,
   IconChevronsDown,
   IconCreditCard,
@@ -9,6 +10,7 @@ import {
   IconUserCircle,
 } from '@tabler/icons-react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
+import { useTheme } from 'next-themes'
 import * as React from 'react'
 import { toast } from 'sonner'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -40,24 +42,58 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UserAvatarProfile } from '@/components/user-avatar-profile'
 import { navItems } from '@/constants/data'
-import { useAuth } from '@/contexts/AuthContext'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { useAuthStore } from '@/stores/auth'
+import { useOrgsStore } from '@/stores/orgs'
 import { DataTableContext } from '../data-table/data-table-provider'
 import { SafeDataTableFilterControls } from '../data-table/safe-data-table-filter-controls'
 import { Icons } from '../icons'
 import { OrgSwitcher } from '../org-switcher'
+import { CollapseMenuButton } from './collapse-menu-button'
 import { ModeToggle } from './ThemeToggle/theme-toggle'
+
+// Helper function to generate CollapseMenuButton props
+const getCollapseMenuProps = (item: any, pathname: string, Icons: any) => {
+  const Icon = item.icon ? Icons[item.icon] : Icons.logo
+
+  return {
+    icon: Icon,
+    label: item.title,
+    active: pathname === item.url,
+    submenus: item.items.map((subItem: any) => ({
+      url: subItem.url,
+      title: subItem.title,
+      icon: subItem.icon,
+      isActive: pathname === subItem.url,
+      items: subItem.items?.map((nestedItem: any) => ({
+        url: nestedItem.url,
+        title: nestedItem.title,
+        icon: nestedItem.icon,
+        isActive: pathname === nestedItem.url,
+      })),
+    })),
+    isOpen:
+      pathname === item.url ||
+      pathname.startsWith(item.url + '/') ||
+      item.items?.some((subItem: any) => {
+        const subUrl = subItem.url.split('?')[0]
+        return (
+          pathname === subUrl ||
+          pathname.startsWith(subUrl + '/') ||
+          subItem.items?.some((nestedItem: any) => {
+            const nestedUrl = nestedItem.url.split('?')[0]
+            return pathname === nestedUrl || pathname.startsWith(nestedUrl + '/')
+          })
+        )
+      }),
+    url: item.url,
+  }
+}
 export const company = {
   name: 'Acme Inc',
   logo: IconPhotoUp,
   plan: 'Enterprise',
 }
-
-const tenants = [
-  { id: '1', name: 'Acme Inc' },
-  { id: '2', name: 'Beta Corp' },
-  { id: '3', name: 'Gamma Ltd' },
-]
 
 interface AppSidebarProps {
   filterFields?: any[]
@@ -74,9 +110,33 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
   const location = useLocation()
   const pathname = location.pathname
   const isMobile = useMediaQuery('(max-width: 768px)')
-  const { user: authUser, signOut } = useAuth()
+  const { user: authUser, logout } = useAuthStore()
   const { setOpenMobile } = useSidebar()
   const navigate = useNavigate()
+  const orgs = useOrgsStore(state => state.orgs)
+  const currentOrg = useOrgsStore(state => state.currentOrg)
+  const fetchOrgs = useOrgsStore(state => state.fetchOrgs)
+  const setCurrentOrg = useOrgsStore(state => state.setCurrentOrg)
+  const { setTheme, resolvedTheme } = useTheme()
+
+  // Fetch orgs on mount if not loaded
+  React.useEffect(() => {
+    if (!orgs || orgs.length === 0) {
+      fetchOrgs().catch(console.error)
+    }
+  }, [orgs, fetchOrgs])
+
+  // Map orgs to tenant format
+  const tenants = React.useMemo(() => {
+    return (
+      orgs?.map(org => ({
+        id: org.id,
+        name: org.name,
+      })) || []
+    )
+  }, [orgs])
+
+  const defaultTenant = currentOrg ? { id: currentOrg.id, name: currentOrg.name } : tenants[0]
 
   // Tab state management for mobile - default to 'filter' and persist in localStorage
   const [activeTab, setActiveTab] = React.useState<'filter' | 'menu'>(() => {
@@ -103,38 +163,23 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
     }
   }
 
-  const handleSwitchTenant = (_tenantId: string) => {
-    // Tenant switching functionality would be implemented here
+  const handleSwitchTenant = (tenantId: string) => {
+    // Find the org and set it as current
+    const org = orgs?.find(o => o.id === tenantId)
+    if (org) {
+      setCurrentOrg(org)
+    }
   }
 
   const handleSignOut = async () => {
     try {
-      const { error } = await signOut()
-      if (error) {
-        toast.error('Failed to sign out: ' + error.message)
-      } else {
-        toast.success('Signed out successfully')
-        navigate({ to: '/auth/sign-in' })
-      }
+      await logout()
+      toast.success('Signed out successfully')
     } catch (error) {
       toast.error('An unexpected error occurred')
       console.error('Sign out error:', error)
     }
   }
-
-  // Create user object for UserAvatarProfile
-  const user = authUser
-    ? {
-        fullName: authUser.user_metadata?.full_name || authUser.user_metadata?.name || 'User',
-        emailAddresses: [{ emailAddress: authUser.email || 'user@example.com' }],
-        imageUrl:
-          authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || authUser.user_metadata?.avatar_url,
-      }
-    : {
-        fullName: 'Dashboard User',
-        emailAddresses: [{ emailAddress: 'user@example.com' }],
-        imageUrl: undefined,
-      }
 
   // Load filter fields for data table pages
   React.useEffect(() => {
@@ -154,7 +199,7 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
   // Get filter fields - priority: props > context > loaded state
   let filterFields: any[] = propFilterFields || contextFilterFields || loadedFilterFields || []
 
-  const activeTenant = tenants[0]
+  const activeTenant = defaultTenant || tenants[0]
 
   React.useEffect(() => {
     // Side effects based on sidebar state changes
@@ -194,29 +239,9 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                     {navItems.map(item => {
                       const Icon = item.icon ? Icons[item.icon] : Icons.logo
                       return item?.items && item?.items?.length > 0 ? (
-                        <Collapsible key={item.title} defaultOpen={item.isActive} className="group/collapsible">
-                          <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-left hover:bg-accent rounded-md">
-                            <div className="flex items-center gap-2">
-                              {item.icon && <Icon className="h-4 w-4" />}
-                              <span>{item.title}</span>
-                            </div>
-                            <IconChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <div className="ml-6 space-y-1 pt-2">
-                              {item.items?.map(subItem => (
-                                <Link
-                                  key={subItem.title}
-                                  to={subItem.url}
-                                  className="block p-2 text-sm hover:bg-accent rounded-md"
-                                  onClick={handleNavigation}
-                                >
-                                  {subItem.title}
-                                </Link>
-                              ))}
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
+                        <div key={item.title} className="mb-2">
+                          <CollapseMenuButton {...getCollapseMenuProps(item, pathname, Icons)} />
+                        </div>
                       ) : (
                         <Link
                           key={item.title}
@@ -237,11 +262,11 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                   <DropdownMenu>
                     <DropdownMenuTrigger className="flex items-center gap-2 p-2 w-full hover:bg-accent rounded-md">
                       <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <UserAvatarProfile user={user} />
+                        <UserAvatarProfile user={authUser} />
                       </div>
                       <div className="flex-1 text-left text-sm">
-                        <div className="font-semibold">{user?.fullName}</div>
-                        <div className="text-xs text-muted-foreground">{user?.emailAddresses[0]?.emailAddress}</div>
+                        <div className="font-semibold">{authUser?.name}</div>
+                        <div className="text-xs text-muted-foreground">{authUser?.email}</div>
                       </div>
                       <IconChevronsDown className="h-4 w-4" />
                     </DropdownMenuTrigger>
@@ -298,34 +323,11 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
             {navItems.map(item => {
               const Icon = item.icon ? Icons[item.icon] : Icons.logo
               return item?.items && item?.items?.length > 0 ? (
-                <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={item.title} isActive={pathname === item.url}>
-                        {item.icon && <Icon />}
-                        <span>{item.title}</span>
-                        <IconChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {item.items?.map(subItem => (
-                          <SidebarMenuSubItem key={subItem.title}>
-                            <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
-                              <Link to={subItem.url}>
-                                <span>{subItem.title}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
+                <CollapseMenuButton key={item.title} {...getCollapseMenuProps(item, pathname, Icons)} />
               ) : (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title} isActive={pathname === item.url}>
-                    <Link to={item.url}>
+                    <Link to={item.url} onClick={handleNavigation}>
                       <Icon />
                       <span>{item.title}</span>
                     </Link>
@@ -339,10 +341,15 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
           <SidebarGroupLabel>Settings</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <div className="flex items-center gap-2 p-2">
-                <ModeToggle />
-                <span className="text-sm">Theme</span>
-              </div>
+              <SidebarMenuButton
+                tooltip="Toggle theme"
+                onClick={() => {
+                  setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
+                }}
+              >
+                <IconBrightness />
+                <span>Theme</span>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
@@ -356,12 +363,12 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  {user && (
+                  {authUser && (
                     <div className="flex items-center gap-2">
-                      <UserAvatarProfile user={user} />
+                      <UserAvatarProfile user={authUser} />
                       <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">{user.fullName}</span>
-                        <span className="truncate text-xs">{user.emailAddresses[0]?.emailAddress}</span>
+                        <span className="truncate font-semibold">{authUser.name}</span>
+                        <span className="truncate text-xs">{authUser.email}</span>
                       </div>
                     </div>
                   )}
@@ -376,12 +383,12 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
               >
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="px-1 py-1.5">
-                    {user && (
+                    {authUser && (
                       <div className="flex items-center gap-2">
-                        <UserAvatarProfile user={user} />
+                        <UserAvatarProfile user={authUser} />
                         <div className="grid flex-1 text-left text-sm leading-tight">
-                          <span className="truncate font-semibold">{user.fullName}</span>
-                          <span className="truncate text-xs">{user.emailAddresses[0]?.emailAddress}</span>
+                          <span className="truncate font-semibold">{authUser.name}</span>
+                          <span className="truncate text-xs">{authUser.email}</span>
                         </div>
                       </div>
                     )}

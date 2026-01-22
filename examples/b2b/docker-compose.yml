@@ -1,14 +1,15 @@
 name: pzero-b2b
-version: "3.9"
 services:
-  pzero-sfdc-server-vanilla:
+  pzero-sfdc-server:
     # Image from GitHub Container Registry
     # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
     # Or set SFDC_SERVER_IMAGE to override the full image path
     build:
       context: ../../
       dockerfile: examples/b2b/packages/sfdc-server-vanilla/Dockerfile
-    container_name: pzero-sfdc-server-vanilla
+    container_name: pzero-sfdc-server
+    networks:
+      - pzero-network
     ports:
       - "3000:3000" # Internal port for direct access (optional)
     environment:
@@ -26,13 +27,27 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       # Database Configuration
       - DATABASE_PATH=${DATABASE_PATH:-./database.db}
+      # Redis Configuration (Dragonfly is Redis-compatible)
+      - REDIS_URL=${REDIS_URL:-redis://pzero-dragonfly:6379}
       # OAuth Callback URL
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:1420}
+      # OpenTelemetry Configuration
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-sfdc-server-vanilla}
+      - OTEL_SERVICE_VERSION=${OTEL_SERVICE_VERSION:-1.0.0}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
     restart: unless-stopped
     volumes:
       - type: bind
         source: ./packages/sfdc-server-vanilla/src/keys/private.key
-        target: /app/examples/b2b/packages/sfdc-server-vanilla/src/keys/private.key
+        target: /app/examples/b2b/packages/sfdc-server-vanilla/dist/keys/private.key
       - type: bind
         source: ./packages/sfdc-server-vanilla/src/keys/certificate.crt
-        target: /app/examples/b2b/packages/sfdc-server-vanilla/src/keys/certificate.crt
+        target: /app/examples/b2b/packages/sfdc-server-vanilla/dist/keys/certificate.crt
+# Redis is provided by the main stack (pzero-dragonfly) on the shared network.
+# NOTE: pzero-network is external and must be created manually before bringing up the stack:
+#   docker network create pzero-network
+# See ../../packages/authz-service/README.md for instructions on generating strong secrets
+# for CHALLENGE_SECRET and other sensitive environment variables.
+networks:
+  pzero-network:
+    external: true

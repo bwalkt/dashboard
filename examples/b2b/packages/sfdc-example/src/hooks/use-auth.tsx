@@ -1,0 +1,167 @@
+import { challengeManager } from '@pzero/shared/challenge'
+import { ApiError } from '@pzero/shared/http'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { api } from '@/lib/api'
+import { AUTH_CACHE_TIME_MS, AUTH_STALE_TIME_MS } from '@/lib/constants'
+import { useAuthStore } from '@/stores/auth-store'
+import { User } from '@/types'
+/**
+ * Synchronizes and exposes the current authenticated user from React Query and the auth store, and provides sign-out and refetch controls.
+ *
+ * @returns An object containing:
+ * - `data` — The authenticated user if available, otherwise `undefined`.
+ * - `isLoading` — `true` when either the query or the auth store is loading, otherwise `false`.
+ * - `signOut` — A function that signs out the current user.
+ * - `signOutLoading` — `true` while the sign-out mutation is in progress, otherwise `false`.
+ * - `signOutError` — The error produced by the sign-out mutation, if any.
+ * - `refetch` — A function to manually refetch the user data.
+ */
+export function useUser() {
+  const { user, setUser, clearUser } = useAuthStore()
+
+  // Use React Query to fetch user, but integrate with zustand store
+  const {
+    data,
+    isLoading: queryLoading,
+    error,
+    refetch,
+  } = useQuery<User>({
+    queryKey: ['user'],
+    queryFn: async () => {
+      try {
+        const { user } = await api.post<{ user: User }>('/auth/me', undefined, {
+          headers: {
+            'X-Client-Type': 'web',
+          },
+        })
+        if (user?.data?.grid) {
+          challengeManager.storeUserGrid(user.data.grid)
+        }
+        return user
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 403) {
+          const message = error.message.toLowerCase()
+          // Stale/missing cookie - redirect to login (but not if already on auth pages)
+          if (message.includes('missing access token') || message.includes('invalid token')) {
+            const isAuthPage = window.location.pathname.startsWith('/auth/')
+            if (!isAuthPage) {
+              console.warn('[useUser] Session invalid, redirecting to login:', error.message)
+              clearUser()
+              challengeManager.logoff()
+              window.location.href = '/auth/sign-in'
+              return undefined as unknown as User
+            }
+          }
+          // Other 403 errors (e.g., challenge issues) - log but don't redirect
+          console.error('[useUser] /auth/me returned 403:', error.message)
+        }
+        throw error
+      }
+    },
+    // Only fetch if we don't have user data at all (initial load), not on auth pages
+    // Note: /auth/me should NEVER be called after login - challenge chain handles auth
+    enabled: !user && !window.location.pathname.startsWith('/auth/'),
+    retry: false,
+    staleTime: AUTH_STALE_TIME_MS,
+    gcTime: AUTH_CACHE_TIME_MS,
+  })
+
+  const queryClient = useQueryClient()
+
+  const {
+    mutateAsync: signOut,
+    isPending: signOutLoading,
+    error: signOutError,
+  } = useMutation({
+    mutationFn: async () => {
+      // Always perform cleanup regardless of API result
+      const cleanup = () => {
+        queryClient.clear()
+        clearUser() // Clear zustand store
+        challengeManager.logoff() // Clear challenges and grid from localStorage
+      }
+
+      try {
+        await api.post('/auth/logout', undefined, { skipRefresh: true })
+      } catch (error) {
+        // Log but don't throw - we still want to sign out locally even if API fails
+        // This handles zombie state where user is not found on server
+        console.warn('Logout API error (proceeding with local cleanup):', error)
+      }
+
+      cleanup()
+      return { error: null }
+    },
+    onSuccess: () => {
+      window.location.href = '/auth/sign-in'
+    },
+  })
+
+  // Sync zustand store with query data
+  useEffect(() => {
+    // Always sync fresh query data to store
+    if (data) {
+      setUser(data)
+    }
+  }, [data, setUser])
+
+  // Handle 401 errors by clearing user
+  useEffect(() => {
+    if (error instanceof ApiError && error.status === 401) {
+      clearUser()
+    }
+  }, [error, clearUser])
+
+  // Prioritize fresh query data over store to avoid stale renders
+  const currentUser = data ?? user
+
+  return {
+    data: currentUser,
+    isLoading: queryLoading,
+    error: error instanceof ApiError && error.status !== 401 ? error : null, // Don't expose 401 as error (handled via clearUser)
+    signOut,
+    signOutLoading,
+    signOutError,
+    refetch, // Allow manual refetch if needed
+  }
+}
+
+/**
+ * Initiates the GitHub OAuth sign-in flow by requesting an authorization URL and redirecting the browser to it.
+ *
+ * @returns An object containing:
+ * - `signInWithGitHub` — Function that requests the provider authorization URL and navigates the browser to that URL when successful.
+ * - `signInWithGitHubLoading` — `true` if the sign-in request is in progress, `false` otherwise.
+ */
+export function useAuth() {
+  const { mutateAsync: signInWithGitHub, isPending: signInWithGitHubLoading } = useMutation<{
+    data: string
+    error: any
+  }>({
+    mutationFn: async () => {
+      const { authUrl } = await api.get<{ authUrl: string; state: string }>('/auth/login')
+      return { data: authUrl, error: null }
+    },
+    onSuccess: ({ data }) => {
+      window.location.href = data
+    },
+    onError: error => {
+      console.error(error)
+    },
+  })
+
+  return {
+    signInWithGitHub,
+    signInWithGitHubLoading,
+  }
+}
+
+/**
+ * Provide direct access to the authentication store.
+ *
+ * @returns The auth store instance used to read and update authentication state.
+ */
+export function useAuthStoreDirectly() {
+  return useAuthStore()
+}

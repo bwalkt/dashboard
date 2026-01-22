@@ -3,17 +3,19 @@ import addFormats from 'ajv-formats'
 
 const ajv = new Ajv()
 addFormats(ajv)
-
+export const User = {
+  github_id: { type: ['string', 'null'] },
+  name: { type: 'string' },
+  email: { type: 'string', format: 'email' },
+  avatar: { type: ['string', 'null'], format: 'url' },
+  email_verified: { type: 'boolean', default: false },
+}
 // AJV schemas
 export const UserSchema = {
   type: 'object',
   properties: {
-    id: { type: 'number' },
-    github_id: { type: ['string', 'null'] },
-    name: { type: 'string' },
-    email: { type: 'string', format: 'email' },
-    avatar: { type: ['string', 'null'], format: 'url' },
-    email_verified: { type: 'boolean', default: false },
+    id: { type: 'string' },
+    ...User,
     created_at: { type: 'string' },
     updated_at: { type: 'string' },
   },
@@ -24,11 +26,8 @@ export const UserSchema = {
 export const CreateUserDataSchema = {
   type: 'object',
   properties: {
-    github_id: { type: ['string', 'null'] },
-    name: { type: 'string' },
-    email: { type: 'string', format: 'email' },
-    avatar: { type: ['string', 'null'], format: 'url' },
-    email_verified: { type: 'boolean', default: false },
+    ...User,
+    device: { type: 'object' },
   },
   required: ['name', 'email'],
   additionalProperties: false,
@@ -52,7 +51,7 @@ export const GitHubUserSchema = {
 export const AccessTokenPayloadSchema = {
   type: 'object',
   properties: {
-    userId: { type: 'number' },
+    userId: { type: 'string' },
     githubId: { type: ['string', 'null'] },
     email: { type: 'string', format: 'email' },
     exp: { type: 'number' },
@@ -65,7 +64,7 @@ export const AccessTokenPayloadSchema = {
 export const RefreshTokenPayloadSchema = {
   type: 'object',
   properties: {
-    userId: { type: 'number' },
+    userId: { type: 'string' },
     type: { const: 'refresh' },
     exp: { type: 'number' },
     iat: { type: 'number' },
@@ -128,7 +127,7 @@ export const validateAuthenticatedRequest = ajv.compile(AuthenticatedRequestSche
 
 // Type definitions
 export interface User {
-  id: number
+  id: string
   github_id: string | null
   name: string
   email: string
@@ -144,6 +143,8 @@ export interface CreateUserData {
   email: string
   avatar: string | null
   email_verified?: boolean
+  device?: unknown
+  handle?: string
 }
 
 export interface GitHubUser {
@@ -155,7 +156,7 @@ export interface GitHubUser {
 }
 
 export interface AccessTokenPayload {
-  userId: number
+  userId: string
   githubId: string | null
   email: string
   exp: number
@@ -163,7 +164,7 @@ export interface AccessTokenPayload {
 }
 
 export interface RefreshTokenPayload {
-  userId: number
+  userId: string
   type: 'refresh'
   exp: number
   iat: number

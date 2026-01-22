@@ -8,15 +8,37 @@ import { formatCurrency } from '@/lib/format'
 export function RecentSales() {
   const { data: orders, isLoading, error } = useOrdersLast30Days()
 
-  // Get the latest 5 orders with total amount > 0, sorted by creation date
-  const recentOrders =
+  // Get the latest 5 unique orders with total amount > 0, sorted by EffectiveDate
+  const filteredOrders =
     orders
       ?.filter(order => {
-        const amount = order.Total_Amount__c || 0
+        const amount = order.TotalAmount || order.Total_Amount__c || 0
         return amount > 0
       })
-      ?.sort((a, b) => new Date(b.EffectiveDate).getTime() - new Date(a.EffectiveDate).getTime())
-      ?.slice(0, 5) || []
+      ?.sort((a, b) => {
+        const ta = Date.parse(a.EffectiveDate) || Date.parse(a.CreatedDate) || 0
+        const tb = Date.parse(b.EffectiveDate) || Date.parse(b.CreatedDate) || 0
+        return tb - ta
+      }) || []
+
+  const seenOrderKeys = new Set<string>()
+  const uniqueOrders = filteredOrders
+    .map(order => {
+      const amount = order.TotalAmount || order.Total_Amount__c || 0
+      const key =
+        order.Id ||
+        `${order.Customer_Email__c ?? ''}|${order.Customer_Name__c ?? ''}|${amount}|${order.EffectiveDate ?? ''}|${order.CreatedDate ?? ''}`
+      return { ...order, _dedupeKey: key }
+    })
+    .filter(order => {
+      if (seenOrderKeys.has(order._dedupeKey)) {
+        return false
+      }
+      seenOrderKeys.add(order._dedupeKey)
+      return true
+    })
+
+  const recentOrders = uniqueOrders.slice(0, 5)
   // Generate initials from customer name
   const getInitials = (name: string | null | undefined) => {
     if (!name) return 'UN'
@@ -89,32 +111,24 @@ export function RecentSales() {
     <Card className="h-full">
       <CardHeader>
         <CardTitle>Recent Orders</CardTitle>
-        <CardDescription>
-          You made{' '}
-          {orders?.filter(order => {
-            const amount = order.TotalAmount || order.Total_Amount__c || 0
-            return amount > 0
-          }).length || 0}{' '}
-          orders this month.
-        </CardDescription>
+        <CardDescription>You made {uniqueOrders.length} orders this month.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-8">
           {recentOrders.length > 0 ? (
             recentOrders.map((order, index) => {
               const customerName = order.Customer_Name__c || 'Unknown Customer'
-              const customerEmail = order.Customer_Email__c || 'No email provided'
               const amount = order.TotalAmount || order.Total_Amount__c || 0
 
               return (
-                <div key={order.Id} className="flex items-center">
+                <div key={order._dedupeKey} className="flex items-center">
                   <Avatar className="h-9 w-9">
                     <AvatarImage src={getAvatarUrl(customerName, index)} alt="Avatar" />
                     <AvatarFallback>{getInitials(customerName)}</AvatarFallback>
                   </Avatar>
                   <div className="ml-4 space-y-1">
                     <p className="text-sm leading-none font-medium">{customerName}</p>
-                    <p className="text-muted-foreground text-sm">{truncateEmail(customerEmail)}</p>
+                    <p className="text-muted-foreground text-sm">{truncateEmail(order.Customer_Email__c)}</p>
                   </div>
                   <div className="ml-auto font-medium">+{formatCurrency(amount)}</div>
                 </div>

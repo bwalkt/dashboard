@@ -8,9 +8,12 @@ import { fontVariables } from '@/lib/font'
 import { cn } from '@/lib/utils'
 import 'nprogress/nprogress.css'
 import { NuqsAdapter } from 'nuqs/adapters/react'
+import { useEffect } from 'react'
+import { AppWrapper } from '@/components/AppWrapper'
+import { TauriAuthListener } from '@/components/TauriAuthListener'
 import { AppRouter } from '@/router'
+import { DevicesStore } from '@/stores/devices'
 import { PostHogProviderWrapper } from './posthog-provider'
-
 // Import all CSS styles
 import '@/styles/globals.css'
 import '@/styles/theme.css'
@@ -40,7 +43,10 @@ function ThemedAppContent() {
       )}
     >
       <Toaster />
-      <AppRouter />
+      <TauriAuthListener />
+      <AppWrapper>
+        <AppRouter />
+      </AppWrapper>
     </div>
   )
 }
@@ -71,6 +77,27 @@ function AppContent() {
  * @returns The root React element for the admin portal, wrapped with the router and Nuqs adapter.
  */
 function App() {
+  useEffect(() => {
+    const initializeDevicesStore = async () => {
+      try {
+        console.log('App: Initializing DevicesStore...')
+        await DevicesStore.init()
+        console.log('App: DevicesStore initialized successfully')
+        console.log('Current Device in App:', DevicesStore.currentDevice)
+
+        // Force regeneration to trigger debugger
+        console.log('App: Force regenerating device info to trigger debugger...')
+        await DevicesStore.forceRegenerateDeviceInfo()
+        console.log('App: Force regeneration complete')
+        console.log('Updated Device in App:', DevicesStore.currentDevice)
+      } catch (error) {
+        console.error('App: Failed to initialize DevicesStore:', error)
+      }
+    }
+
+    initializeDevicesStore()
+  }, [])
+
   return (
     <PostHogProviderWrapper>
       <NuqsAdapter>

@@ -1,15 +1,14 @@
 // Import tracing first to initialize OpenTelemetry instrumentation
 import './tracing'
 
-// Initialize USE_PROXY from localStorage before any API requests are made
-import { initializeUseProxy } from './lib/proxy-config'
-
-initializeUseProxy()
-
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import ErrorBoundary from './ErrorBoundary'
+// Initialize proxy and WASM settings from localStorage before any API requests are made
+import { initializeProxySettings } from './lib/proxy-config'
+
+initializeProxySettings()
 
 // Environment detection removed - app now works universally
 

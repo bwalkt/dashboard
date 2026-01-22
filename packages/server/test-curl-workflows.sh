@@ -56,10 +56,40 @@ test_registration_workflow() {
     
     print_step "1. Registering user with email: $TEST_EMAIL"
     
+    # Create device info JSON
+    DEVICE_INFO=$(cat <<EOF
+{
+    "id": "test-device-$(date +%s)",
+    "deviceId": "curl-test-001",
+    "deviceName": "Test Device",
+    "systemName": "macOS",
+    "systemVersion": "14.0",
+    "brand": "Apple",
+    "model": "MacBook Pro",
+    "buildNumber": "1.0.0",
+    "appVersion": "1.0.0",
+    "appName": "curl-test",
+    "uniqueId": "unique-$(date +%s)",
+    "carrier": null,
+    "ipAddress": "127.0.0.1",
+    "macAddress": null,
+    "deviceType": "desktop",
+    "isEmulator": false,
+    "isTablet": false,
+    "ua": "$USER_AGENT",
+    "manufacturer": "Apple",
+    "os": "macOS",
+    "osVersion": "14.0",
+    "type": "CURL_TEST",
+    "other": []
+}
+EOF
+    )
+    
     REGISTER_RESPONSE=$(curl -s -H "User-Agent: $USER_AGENT" -w "\n%{http_code}" -X POST \
         -H "Content-Type: application/json" \
         -H "User-Agent: $USER_AGENT" \
-        -d "{\"name\":\"$TEST_NAME\",\"email\":\"$TEST_EMAIL\"}" \
+        -d "{\"name\":\"$TEST_NAME\",\"email\":\"$TEST_EMAIL\",\"device\":$DEVICE_INFO}" \
         "$SERVER_URL/auth/register")
     
     HTTP_CODE=$(echo "$REGISTER_RESPONSE" | tail -n1)

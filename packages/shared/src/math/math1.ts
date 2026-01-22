@@ -9,6 +9,32 @@ import { TimeSeries } from './timeSeries.js'
 export class Math1 {
   private utils: Utils = new Utils()
   private matrixOps: MatrixOperations = new MatrixOperations()
+  private seed?: number
+  private rngState?: number
+
+  constructor(seed?: number) {
+    if (seed !== undefined && (!Number.isFinite(seed) || seed < 1)) {
+      throw new Error('Seed must be a positive finite number (>= 1)')
+    }
+    this.seed = seed
+    this.rngState = seed
+  }
+
+  // Seeded random number generator (LCG algorithm)
+  private seededRandom(): number {
+    if (this.rngState === undefined) {
+      return Math.random()
+    }
+    // Linear congruential generator with parameters for m=2^31-1
+    // Using Park and Miller parameters: a=16807, c=0, m=2147483647
+    this.rngState = (this.rngState * 16807) % 2147483647
+    return this.rngState / 2147483647
+  }
+
+  // Helper to get random with seed support
+  private getRandom(): number {
+    return this.seed !== undefined ? this.seededRandom() : Math.random()
+  }
   private _stats: StatisticalFunctions = new StatisticalFunctions()
   private _timeSeries: TimeSeries = new TimeSeries()
   private _signal: SignalProcessing = new SignalProcessing()
@@ -163,25 +189,30 @@ export class Math1 {
       'linearAlgebraOperation',
     ]
 
-    const randomOp = operations[Math.floor(Math.random() * operations.length)]
+    const randomOp = operations[Math.floor(this.getRandom() * operations.length)]
 
     // Handle matrix-based operations that don't need index
     if (['matrixOperation', 'vectorOperation', 'statisticalAnalysis', 'linearAlgebraOperation'].includes(randomOp)) {
+      // Use index 0 as default or clamp the provided index to valid range
+      const targetIdx = Math.max(0, Math.min(index ?? 0, matrix.length - 1))
       switch (randomOp) {
         case 'matrixOperation':
-          return { operation: 'matrixOperation', result: this.createMatrixOperationFunction(matrix) }
+          return { operation: `matrixOperation(${targetIdx})`, result: this.createMatrixOperationFunction(matrix) }
         case 'vectorOperation':
-          return { operation: 'vectorOperation', result: this.createVectorOperationFunction(matrix) }
+          return { operation: `vectorOperation(${targetIdx})`, result: this.createVectorOperationFunction(matrix) }
         case 'statisticalAnalysis':
-          return { operation: 'statisticalAnalysis', result: this.createStatisticalAnalysisFunction(matrix) }
+          return {
+            operation: `statisticalAnalysis(${targetIdx})`,
+            result: this.createStatisticalAnalysisFunction(matrix),
+          }
         case 'linearAlgebraOperation':
-          return { operation: 'linearAlgebraOperation', result: this.createLinearAlgebraFunction(matrix) }
+          return { operation: `linearAlgebraOperation(${targetIdx})`, result: this.createLinearAlgebraFunction(matrix) }
       }
     }
 
     // Handle function factories that require targetIdx
     if (['chainFunction', 'compositeFunction', 'transformFunction'].includes(randomOp)) {
-      const targetIdx = Math.max(0, Math.min(index ?? Math.floor(Math.random() * matrix.length), matrix.length - 1))
+      const targetIdx = Math.max(0, Math.min(index ?? Math.floor(this.getRandom() * matrix.length), matrix.length - 1))
       switch (randomOp) {
         case 'chainFunction':
           return { operation: `chainFunction(${targetIdx})`, result: this.createChainFunction(matrix, targetIdx) }
@@ -208,7 +239,10 @@ export class Math1 {
       }
     }
 
-    const targetIndex = Math.max(0, Math.min(index ?? Math.floor(Math.random() * (maxIndex + 1)), maxIndex))
+    const targetIndex = Math.max(0, Math.min(index ?? Math.floor(this.getRandom() * (maxIndex + 1)), maxIndex))
+
+    // Decide chaining at function creation time, not execution time
+    const shouldChain = this.getRandom() < 0.2 && enableChaining
 
     // Create a function that will execute the operation when called
     const operationFunction = (inputMatrix?: number[][], inputIndex?: number) => {
@@ -315,8 +349,8 @@ export class Math1 {
           break
       }
 
-      // Sometimes chain to another random function (20% chance)
-      if (Math.random() < 0.2 && typeof result === 'number' && result !== 0) {
+      // Chain if it was decided at function creation time
+      if (shouldChain && typeof result === 'number' && result !== 0) {
         const chainedFunction = this.randomFunc(workMatrix, Math.floor(Math.abs(result)) % workMatrix.length, false)
         const chainedResult = chainedFunction.result(workMatrix)
 
@@ -343,16 +377,22 @@ export class Math1 {
 
   createChainFunction(matrix: number[][], defaultIndex?: number): Function {
     const operations = ['sumRow', 'avgRow', 'maxRow', 'minRow', 'stdDevRow']
-    const chainLength = Math.floor(Math.random() * 3) + 2 // 2-4 operations
+    const chainLength = Math.floor(this.getRandom() * 3) + 2 // 2-4 operations
+
+    // Pre-determine the operations and initial index at function creation time
+    const preSelectedOps = Array(chainLength)
+      .fill(null)
+      .map(() => operations[Math.floor(this.getRandom() * operations.length)])
+    const randomInitialIndex = Math.floor(this.getRandom() * matrix.length)
 
     return (inputMatrix?: number[][], startIndex?: number) => {
       const workingMatrix = inputMatrix || matrix
-      let currentIndex = startIndex ?? defaultIndex ?? Math.floor(Math.random() * workingMatrix.length)
+      let currentIndex = startIndex ?? defaultIndex ?? randomInitialIndex
       let result = 0
       const appliedOps: string[] = []
 
       for (let i = 0; i < chainLength; i++) {
-        const randomOp = operations[Math.floor(Math.random() * operations.length)]
+        const randomOp = preSelectedOps[i]
         currentIndex = Math.max(0, Math.min(currentIndex, workingMatrix.length - 1))
 
         switch (randomOp) {
@@ -389,12 +429,14 @@ export class Math1 {
   createCompositeFunction(matrix: number[][], defaultIndex?: number): Function {
     const operations = ['sinCol', 'cosCol', 'tanCol', 'sqrtSumCol', 'hypotCol']
 
+    // Pre-determine random choices at function creation time
+    const randomTargetCol = Math.floor(this.getRandom() * (matrix[0]?.length || 1))
+    const primaryOp = operations[Math.floor(this.getRandom() * operations.length)]
+    const secondaryOp = operations[Math.floor(this.getRandom() * operations.length)]
+
     return (inputMatrix?: number[][], colIndex?: number) => {
       const workingMatrix = inputMatrix || matrix
-      const targetCol = colIndex ?? defaultIndex ?? Math.floor(Math.random() * (workingMatrix[0]?.length || 1))
-
-      const primaryOp = operations[Math.floor(Math.random() * operations.length)]
-      const secondaryOp = operations[Math.floor(Math.random() * operations.length)]
+      const targetCol = colIndex ?? defaultIndex ?? randomTargetCol
 
       let firstResult = 0
       let secondResult = 0
@@ -455,7 +497,8 @@ export class Math1 {
 
   createTransformFunction(matrix: number[][], defaultIndex?: number): Function {
     const transformTypes = ['polynomial', 'trigonometric', 'logarithmic', 'exponential']
-    const selectedTransform = transformTypes[Math.floor(Math.random() * transformTypes.length)]
+    const selectedTransform = transformTypes[Math.floor(this.getRandom() * transformTypes.length)]
+    const randomParam = this.getRandom() * 5 + 1
 
     return (inputData?: number[] | number[][], transformParam?: number) => {
       let dataToTransform: number[]
@@ -474,7 +517,7 @@ export class Math1 {
         dataToTransform = matrix[0] || []
       }
 
-      const param = transformParam ?? Math.random() * 5 + 1
+      const param = transformParam ?? randomParam
       const transformedData: number[] = []
 
       for (const value of dataToTransform) {
@@ -1187,7 +1230,7 @@ export class Math1 {
     const used = new Set<number>()
 
     while (centroids.length < k) {
-      const idx = Math.floor(Math.random() * n)
+      const idx = Math.floor(this.getRandom() * n)
       if (!used.has(idx)) {
         used.add(idx)
         centroids.push([...data[idx]])
@@ -1332,7 +1375,7 @@ export class Math1 {
   generateRandomNumbers(count: number, min: number = 0, max: number = 100): number[] {
     const numbers: number[] = []
     for (let i = 0; i < count; i++) {
-      numbers.push(Math.floor(Math.random() * (max - min + 1)) + min)
+      numbers.push(Math.floor(this.getRandom() * (max - min + 1)) + min)
     }
     return numbers
   }
@@ -1340,7 +1383,7 @@ export class Math1 {
   generateNormalDistribution(count: number, mean: number = 0, stdDev: number = 1): number[] {
     const numbers: number[] = []
     for (let i = 0; i < count; i += 2) {
-      const [u1, u2] = [Math.random(), Math.random()]
+      const [u1, u2] = [this.getRandom(), this.getRandom()]
       const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
       const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2)
 
@@ -1387,7 +1430,7 @@ export class Math1 {
     const indices = new Set<number>()
 
     while (indices.size < sampleSize) {
-      const randomIndex = Math.floor(Math.random() * array.length)
+      const randomIndex = Math.floor(this.getRandom() * array.length)
       if (!indices.has(randomIndex)) {
         indices.add(randomIndex)
         sample.push(array[randomIndex])
@@ -1613,7 +1656,10 @@ export class Math1 {
       'distributionFunction',
     ]
 
-    const randomOp = operations[Math.floor(Math.random() * operations.length)]
+    const randomOp = operations[Math.floor(this.getRandom() * operations.length)]
+
+    // Decide chaining at function creation time
+    const shouldChainStats = this.getRandom() < 0.25
 
     // Handle statistical function factories
     if (['statsChainFunction', 'aggregateFunction', 'distributionFunction'].includes(randomOp)) {
@@ -1665,8 +1711,8 @@ export class Math1 {
           break
       }
 
-      // Sometimes chain to another statistical function (25% chance)
-      if (Math.random() < 0.25 && typeof result === 'number' && result !== 0) {
+      // Chain if it was decided at function creation time
+      if (shouldChainStats && typeof result === 'number' && result !== 0) {
         const chainedStatsFunc = this.randomStatsFunc(workNumbers)
         const chainedResult = chainedStatsFunc.result(workNumbers)
 
@@ -1691,7 +1737,12 @@ export class Math1 {
 
   createStatsChainFunction(numbers: number[]): Function {
     const operations = ['average', 'median', 'standardDeviation', 'variance', 'range']
-    const chainLength = Math.floor(Math.random() * 4) + 2 // 2-5 operations
+    const chainLength = Math.floor(this.getRandom() * 4) + 2 // 2-5 operations
+
+    // Pre-determine the operations at function creation time
+    const preSelectedOps = Array(chainLength)
+      .fill(null)
+      .map(() => operations[Math.floor(this.getRandom() * operations.length)])
 
     return (inputNumbers?: number[]) => {
       const workNumbers = inputNumbers || numbers
@@ -1700,7 +1751,7 @@ export class Math1 {
       const results: (number | string)[] = []
 
       for (let i = 0; i < chainLength; i++) {
-        const randomOp = operations[Math.floor(Math.random() * operations.length)]
+        const randomOp = preSelectedOps[i]
         let result: number | string = 0
 
         switch (randomOp) {
@@ -1741,7 +1792,7 @@ export class Math1 {
 
   createAggregateFunction(numbers: number[]): Function {
     const aggregateTypes = ['sum', 'product', 'geometricMean', 'rootMeanSquare']
-    const selectedAggregate = aggregateTypes[Math.floor(Math.random() * aggregateTypes.length)]
+    const selectedAggregate = aggregateTypes[Math.floor(this.getRandom() * aggregateTypes.length)]
 
     return (inputNumbers?: number[], weights?: number[]) => {
       const workNumbers = inputNumbers || numbers
@@ -1779,7 +1830,7 @@ export class Math1 {
 
   createDistributionFunction(numbers: number[]): Function {
     const distributionTypes = ['histogram', 'quantiles', 'outliers', 'zscore']
-    const selectedType = distributionTypes[Math.floor(Math.random() * distributionTypes.length)]
+    const selectedType = distributionTypes[Math.floor(this.getRandom() * distributionTypes.length)]
 
     return (inputNumbers?: number[], bins?: number) => {
       const workNumbers = inputNumbers || numbers
@@ -1863,7 +1914,7 @@ export class Math1 {
     // Generate exponential distribution using inverse transform
     const exponential: number[] = []
     for (let i = 0; i < size; i++) {
-      const u = Math.random()
+      const u = this.getRandom()
       const lambda = 0.05
       exponential.push(this.roundResult(-Math.log(1 - u) / lambda))
     }
@@ -1873,7 +1924,7 @@ export class Math1 {
 
   createMatrixOperationFunction(matrix: number[][]): Function {
     const operations = ['multiply', 'transpose', 'determinant', 'inverse', 'eigenvalue']
-    const selectedOp = operations[Math.floor(Math.random() * operations.length)]
+    const selectedOp = operations[Math.floor(this.getRandom() * operations.length)]
 
     return (inputMatrix?: number[][]) => {
       const workMatrix = inputMatrix || matrix
@@ -1886,7 +1937,7 @@ export class Math1 {
           for (let i = 0; i < cols; i++) {
             randomMatrix[i] = []
             for (let j = 0; j < 2; j++) {
-              randomMatrix[i][j] = Math.floor(Math.random() * 10)
+              randomMatrix[i][j] = Math.floor(this.getRandom() * 10)
             }
           }
           const result = this.matrixMultiply(workMatrix, randomMatrix)
@@ -1968,7 +2019,7 @@ export class Math1 {
 
   createVectorOperationFunction(matrix: number[][]): Function {
     const operations = ['dot', 'cross', 'normalize', 'projection', 'angle']
-    const selectedOp = operations[Math.floor(Math.random() * operations.length)]
+    const selectedOp = operations[Math.floor(this.getRandom() * operations.length)]
 
     return (inputMatrix?: number[][]) => {
       const workMatrix = inputMatrix || matrix
@@ -2046,7 +2097,7 @@ export class Math1 {
 
   createStatisticalAnalysisFunction(matrix: number[][]): Function {
     const operations = ['loess', 'kde', 'kmeans', 'iqr', 'movingAverage', 'exponentialSmoothing', 'autocorrelation']
-    const selectedOp = operations[Math.floor(Math.random() * operations.length)]
+    const selectedOp = operations[Math.floor(this.getRandom() * operations.length)]
 
     return (inputData?: number[][] | number[]) => {
       let data: number[] = []
@@ -2142,7 +2193,7 @@ export class Math1 {
 
   createLinearAlgebraFunction(matrix: number[][]): Function {
     const operations = ['lu', 'qr', 'svd', 'cholesky', 'gram-schmidt']
-    const selectedOp = operations[Math.floor(Math.random() * operations.length)]
+    const selectedOp = operations[Math.floor(this.getRandom() * operations.length)]
 
     return (inputMatrix?: number[][]) => {
       const workMatrix = inputMatrix || matrix
@@ -2258,8 +2309,8 @@ export class Math1 {
           const svdN = workMatrix[0]?.length || 0
           const minDim = Math.min(svdM, svdN)
 
-          let u = new Array(svdM).fill(0).map(() => Math.random())
-          let v = new Array(svdN).fill(0).map(() => Math.random())
+          let u = new Array(svdM).fill(0).map(() => this.getRandom())
+          let v = new Array(svdN).fill(0).map(() => this.getRandom())
           let sigma = 0
 
           // Power iteration

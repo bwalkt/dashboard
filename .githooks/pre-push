@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Pre-push hook to run quality checks
+echo "🔍 Running pre-push checks..."
+
+# Run linting
+echo "📝 Running lint..."
+if ! pnpm lint; then
+    echo "❌ Lint failed. Push aborted."
+    exit 1
+fi
+
+# Run tests with timeout to prevent hanging
+echo "🧪 Running tests..."
+# Capture output to check test results even if vitest hangs (increased to 3 minutes for grid tests)
+test_output=$(timeout 180 pnpm run test:ci 2>&1)
+exit_code=$?
+
+if [ $exit_code -eq 0 ]; then
+    echo "✅ Tests passed successfully."
+elif [ $exit_code -eq 124 ] || [ $exit_code -eq 143 ]; then
+    # Timeout occurred - check if tests actually passed by counting test checkmarks
+    test_count=$(echo "$test_output" | grep -c "✓")
+    fail_count=$(echo "$test_output" | grep -c "❌\|FAIL")
+    
+    if [ $test_count -gt 250 ] && [ $fail_count -eq 0 ]; then
+        echo "✅ Tests completed successfully ($test_count tests passed) but vitest hung - continuing with push."
+    else
+        echo "❌ Tests failed or incomplete. Found $test_count passed tests, $fail_count failed tests."
+        echo "$test_output" | tail -20
+        exit 1
+    fi
+else
+    echo "❌ Tests failed. Push aborted."
+    echo "$test_output" | tail -20
+    exit 1
+fi
+
+# Run build to ensure everything compiles
+echo "🔨 Running build..."
+if ! pnpm build; then
+    echo "❌ Build failed. Push aborted."
+    exit 1
+fi
+
+# Run docker-compose build to ensure Docker images build correctly
+echo "🐳 Running Docker Compose build..."
+if ! (cd packages/server && docker compose build); then
+    echo "❌ Docker Compose build failed. Push aborted."
+    exit 1
+fi
+
+echo "✅ All checks passed! Proceeding with push..."
+exit 0

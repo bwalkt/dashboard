@@ -1,8 +1,26 @@
 import type { ErrorResponse } from "@pzero/shared";
-import { validateUSPhoneNumber } from "@pzero/shared/validator";
+import { formatPhoneE164, validateUSPhoneNumber } from "@pzero/shared/phone";
+import { randomInt } from "crypto";
 import type { FastifyReply } from "fastify";
-import { redis } from "../config/redis";
-import { smsService } from "../services/sms.service";
+import { config } from "../config/env.js";
+import { redis } from "../config/redis.js";
+import { twilioService } from "../services/twilio.service.js";
+
+/**
+ * Generate and store a verification code in Redis (for custom SMS)
+ */
+async function generateAndStoreCode(formattedPhone: string): Promise<string> {
+  // Generate cryptographically secure 6-digit verification code
+  const code = randomInt(100000, 1000000).toString();
+
+  // Store verification code in Redis with 10 minute expiry (only for custom SMS)
+  if (config.TWILIO_MESSAGE) {
+    const verificationKey = `sms_verification_code:${formattedPhone}`;
+    await redis.set(verificationKey, code, 600); // 10 minutes
+  }
+
+  return code;
+}
 
 /**
  * Validate phone number format and return error response if invalid
@@ -66,53 +84,57 @@ export async function checkSmsRateLimit(
 }
 
 /**
- * Send SMS verification code and store in Redis
+ * Send SMS verification code using Twilio Verify
  */
 export async function sendSmsVerification(phone: string): Promise<{
   message: string;
   expiresIn: number;
 }> {
-  // Generate verification code
-  const verificationCode = smsService.generateVerificationCode();
+  // Format phone number to E.164 format for Twilio
+  const formattedPhone = formatPhoneE164(phone, "US");
+  if (!formattedPhone) {
+    throw new Error("Invalid phone number format for SMS");
+  }
 
-  // Store verification code in Redis with 10 minute expiration
-  const redisKey = `phone_verification:${phone}`;
-  await redis.set(redisKey, verificationCode, 600);
+  // Generate and store verification code
+  const code = await generateAndStoreCode(formattedPhone);
 
-  // Send SMS with verification code
-  await smsService.sendVerificationCode({
-    to: phone,
-    code: verificationCode,
+  // Send SMS verification using Twilio (will choose method based on TWILIO_MESSAGE)
+  await twilioService.sendVerificationSMS({
+    to: formattedPhone,
+    code: code,
   });
 
   return {
     message: "SMS verification code sent successfully",
-    expiresIn: 600, // seconds
+    expiresIn: 600, // seconds (10 minutes)
   };
 }
 
 /**
- * Resend SMS verification code
+ * Resend SMS verification code using Twilio Verify
  */
 export async function resendSmsVerification(phone: string): Promise<{
   message: string;
   expiresIn: number;
 }> {
-  // Generate new verification code
-  const verificationCode = smsService.generateVerificationCode();
+  // Format phone number to E.164 format for Twilio
+  const formattedPhone = formatPhoneE164(phone, "US");
+  if (!formattedPhone) {
+    throw new Error("Invalid phone number format for SMS");
+  }
 
-  // Store verification code in Redis with 10 minute expiration
-  const redisKey = `phone_verification:${phone}`;
-  await redis.set(redisKey, verificationCode, 600);
+  // Generate and store verification code
+  const code = await generateAndStoreCode(formattedPhone);
 
-  // Send SMS with verification code
-  await smsService.sendVerificationCode({
-    to: phone,
-    code: verificationCode,
+  // Resend SMS verification using Twilio (will choose method based on TWILIO_MESSAGE)
+  await twilioService.sendVerificationSMS({
+    to: formattedPhone,
+    code: code,
   });
 
   return {
     message: "SMS verification code sent successfully",
-    expiresIn: 600, // seconds
+    expiresIn: 600, // seconds (10 minutes)
   };
 }

@@ -1,0 +1,57 @@
+name: CI - Golang Proxy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/golang-proxy/**'
+      - '.github/workflows/golang-proxy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY_URL: ghcr.io
+  GITHUB_OWNER: ${{ github.repository_owner }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        id: build
+        uses: ./.github/actions/docker-build-push
+        with:
+          dockerfile: packages/golang-proxy/Dockerfile
+          context: ./packages/golang-proxy
+          image-name: ${{ env.GITHUB_OWNER }}/golang-proxy
+          image-tags: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || (github.ref_name == 'main' && format('{0},latest', github.ref_name)) || github.ref_name }}
+          registry: ${{ env.REGISTRY_URL }}
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
+          push: ${{ github.event_name != 'pull_request' }}
+          cache-from: ${{ env.REGISTRY_URL }}/${{ env.GITHUB_OWNER }}/golang-proxy:cache
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}/golang-proxy:cache,mode=max', env.REGISTRY_URL, env.GITHUB_OWNER) || '' }}
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Trigger Dokploy Deployment
+        run: |
+          curl https://${{ secrets.DOKPLOY_DOMAIN }}/api/compose.deploy \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --header 'x-api-key: ${{ secrets.DOKPLOY_TOKEN }}' \
+            --data '{
+            "composeId": "${{ secrets.DOKPLOY_COMPOSE_ID_GOLANG_PROXY }}"
+          }'
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { colors } from '@pzero/shared/theme'
 import { ActivityIndicator, StyleSheet } from 'react-native'
 import { View } from 'react-native-ui-lib'

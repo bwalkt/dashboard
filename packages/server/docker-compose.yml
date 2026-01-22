@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile.postgres
     container_name: pzero-postgres
     restart: unless-stopped
+    networks:
+      - pzero-network
     command: ["postgres", "-c", "shared_preload_libraries=pgx_ulid"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -23,14 +25,16 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:latest
-    container_name: pzero-redis
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: pzero-dragonfly
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - pzero-network
     volumes:
-      - redis_data:/data
+      - dragonfly_data:/data
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -43,6 +47,8 @@ services:
       dockerfile: packages/server/Dockerfile
     container_name: pzero-server
     restart: unless-stopped
+    networks:
+      - pzero-network
     ports:
       - "${PORT:-8090}:${PORT:-8090}"
     environment:
@@ -56,51 +62,73 @@ services:
       - POSTGRES_MAX_CLIENTS=${POSTGRES_MAX_CLIENTS:-20}
       - POSTGRES_IDLE_TIMEOUT=${POSTGRES_IDLE_TIMEOUT:-30000}
       - POSTGRES_CONNECTION_TIMEOUT=${POSTGRES_CONNECTION_TIMEOUT:-2000}
-      - REDIS_HOST=redis
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/pzero}
+      - REDIS_HOST=dragonfly
       - REDIS_PORT=6379
+      - REDIS_URL=redis://dragonfly:6379
       - BREVO_API_KEY=${BREVO_API_KEY}
       - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
       - BREVO_SENDER_NAME=${BREVO_SENDER_NAME:-P-Zero}
       - EMAIL_EXPIRY_MINUTES=${EMAIL_EXPIRY_MINUTES:-100}
-      - SIGNALWIRE_PROJECT_ID=${SIGNALWIRE_PROJECT_ID}
-      - SIGNALWIRE_TOKEN=${SIGNALWIRE_TOKEN}
-      - SIGNALWIRE_PHONE_NUMBER=${SIGNALWIRE_PHONE_NUMBER}
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - JWT_SECRET=${JWT_SECRET}
+      - ENVOY_INTERNAL_SECRET=${ENVOY_INTERNAL_SECRET}
       - FRONTEND_URL=${FRONTEND_URL}
       - SERVER_BASE_URL=${SERVER_BASE_URL:-http://localhost:8090}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:1420}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:1420,http://localhost:1430}
       - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-false}
-      - CORS_EXPOSED_HEADERS=${CORS_EXPOSED_HEADERS:-Content-Range,X-Content-Range}
-      - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS:-Content-Type,Authorization,X-Requested-With,Accept,traceparent,x-client-type,x-auth-token,tracestate,X-Custom-Auth,x-grpc-web,x-grpc-web-accept-encoding,X-Custom-Header}
+      - CORS_EXPOSED_HEADERS=${CORS_EXPOSED_HEADERS:-Content-Range,X-Content-Range,X-Test-Eval,x-challenge-id,x-challenge,x-challenge-params}
+      - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS:-Content-Type,Authorization,X-Requested-With,Accept,traceparent,x-client-type,x-auth-token,tracestate,X-Custom-Auth,x-grpc-web,x-grpc-web-accept-encoding,X-Custom-Header,x-test-eval,x-challenge-id,x-challenge,x-challenge-params,x-challenge-answer}
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
       - ENVIRONMENT=${ENVIRONMENT:-development}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_API_KEY=${TWILIO_API_KEY}
+      - TWILIO_API_SECRET=${TWILIO_API_SECRET}
+      - TWILIO_VERIFY_SERVICE_SID=${TWILIO_VERIFY_SERVICE_SID}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+      - TWILIO_MESSAGE=${TWILIO_MESSAGE}
+      - SIGNOZ_API_KEY=${SIGNOZ_API_KEY}
+      - SIGNOZ_API_URL=${SIGNOZ_API_URL}
+      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-pzero}
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      dragonfly:
         condition: service_healthy
     volumes:
       - ./src:/app/packages/server/src
 
-  pzero-envoy:
-    image: envoyproxy/envoy:v1.30-latest
-    container_name: pzero-envoy-proxy
+  pzero-envoy-wasm:
+    build:
+      context: ../../
+      dockerfile: packages/rust-wasm-filter/Dockerfile
+    container_name: pzero-envoy-wasm-proxy
+    networks:
+      - pzero-network
     ports:
-      - "8181:8080" # External port for client requests
-      - "9901:9901" # Admin interface
+      - "8182:8081" # External port for WASM filter requests
+      - "6380:6380" # Redis proxy port
+      - "9902:9902" # Admin interface
     volumes:
-      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./envoy-wasm.yaml:/etc/envoy/envoy.yaml:ro
     command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
     restart: unless-stopped
     environment:
       - ENVOY_LOG_LEVEL=info
+      - JWT_SECRET=${JWT_SECRET:-default-secret-key-change-in-production}
     depends_on:
       pzero-server:
         condition: service_started
+      dragonfly:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  dragonfly_data:
   redis_data:
+
+networks:
+  pzero-network:
+    external: true

@@ -2,13 +2,13 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import type { Table as TTable } from '@tanstack/react-table'
 import { useQueryState, useQueryStates } from 'nuqs'
 import * as React from 'react'
+import { DataTableInfinite } from '@/components/infinite-data-table'
 import { useHotKey } from '@/hooks/use-hot-key'
 import { getLevelRowClassName } from '@/lib/request/level'
 import { cn } from '@/lib/utils'
 import { LiveRow } from './_components/live-row'
 import { columns } from './columns'
 import { filterFields as defaultFilterFields, sheetFields } from './constants'
-import { DataTableInfinite } from './data-table-infinite'
 import { dataOptions } from './query-options'
 import type { FacetMetadataSchema } from './schema'
 import { searchParamsParser } from './search-params'
@@ -30,7 +30,6 @@ export function Client() {
   const filterDBRowCount = lastPage?.meta?.filterRowCount
   const metadata = lastPage?.meta?.metadata
   const chartData = lastPage?.meta?.chartData
-  console.log('Raw chart data from API:', chartData?.length, chartData)
   const facets = lastPage?.meta?.facets
   const totalFetched = flatData?.length
 
@@ -82,7 +81,7 @@ export function Client() {
           id: key,
           value,
         }))
-        .filter(({ value }) => value != null)}
+        .filter(({ value }) => value != null && (!Array.isArray(value) || value.length > 0))}
       defaultColumnSorting={sort ? [sort] : undefined}
       defaultRowSelection={search.uuid ? { [search.uuid]: true } : undefined}
       // FIXME: make it configurable - TODO: use `columnHidden: boolean` in `filterFields`

@@ -1,4 +1,4 @@
-import { centrifugeServer } from "./server";
+import { centrifugeServer } from "./server.js";
 
 async function startCentrifugeApp(): Promise<void> {
   try {

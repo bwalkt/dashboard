@@ -2,10 +2,10 @@ import crypto from "node:crypto";
 import type { ErrorResponse } from "@pzero/shared";
 import { render } from "@react-email/render";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { redis } from "../config/redis";
-import SlackStyleConfirmEmail from "../emails/slack-style-confirm";
-import VerificationEmail from "../emails/verification-email";
-import { emailService } from "../services/email.service";
+import { redis } from "../config/redis.js";
+import SlackStyleConfirmEmail from "../emails/slack-style-confirm.js";
+import VerificationEmail from "../emails/verification-email.js";
+import { emailService } from "../services/email.service.js";
 
 interface SendVerificationEmailRequest {
   Body: {
@@ -291,7 +291,7 @@ export async function emailRoutes(fastify: FastifyInstance): Promise<void> {
         const html = await render(
           VerificationEmail({
             name: "John Doe",
-            verificationLink: "https://example.com/verify-email?token=abc123",
+            verificationLink: "https://example.com/verify/email?token=abc123",
           }),
           {
             pretty: true,

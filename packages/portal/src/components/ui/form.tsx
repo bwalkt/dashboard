@@ -21,15 +21,17 @@ const Form = ({
   onSubmit,
   form,
   className,
+  id,
 }: {
   children: React.ReactNode
   onSubmit: (data: any) => void
   form: UseFormReturn<any, any, undefined>
   className?: string
+  id?: string
 }) => {
   return (
     <FormProvider {...form}>
-      <form onSubmit={onSubmit} className={className}>
+      <form onSubmit={onSubmit} className={className} id={id}>
         {children}
       </form>
     </FormProvider>

@@ -1,3 +1,5 @@
+import { api } from '@pzero/shared/api'
+import { genGrid } from '@pzero/shared/grid'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -6,31 +8,47 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/contexts/AuthContext'
-import { api } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
 
 /**
  * Render the sign-up page with a local form and a GitHub OAuth sign-in option.
  *
- * If an authenticated user is present (and auth is not loading), navigates to the previous location or `/dashboard/overview`. Submitting the form prevents default submission and shows an informational toast instructing the user to use GitHub OAuth; no account creation is performed by the form.
+ * If an authenticated user is present (and auth is not loading), navigates to the previous location or `/overview`. Submitting the form prevents default submission and shows an informational toast instructing the user to use GitHub OAuth; no account creation is performed by the form.
  *
  * @returns The sign-up page as a JSX element.
  */
 export default function SignUpViewPage() {
   const navigate = useNavigate()
-  const { user, loading, signUp } = useAuth()
+  const authStore = useAuthStore()
   const [emailSent, setEmailSent] = useState(false)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [grid, setGrid] = useState<number[][] | null>(null)
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user && !loading) {
-      navigate({ to: '/dashboard/overview', replace: true })
+    if (authStore.user && !authStore.loading) {
+      navigate({ to: '/overview', replace: true })
     }
-  }, [user, loading, navigate])
+  }, [authStore.user, authStore.loading, navigate])
+
+  const handleResendCode = async () => {
+    setIsLoading(true)
+    try {
+      // Use the same grid that was generated initially
+      await api.post('/auth/register', { email, name, grid })
+      setOtpCode('') // Clear the OTP input
+      toast.success('New verification code sent to your email')
+    } catch (error: any) {
+      console.error('Resend error:', error)
+      const errorMessage = error?.message || 'Failed to resend code. Please try again.'
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,13 +65,21 @@ export default function SignUpViewPage() {
         const result = await api.post('/auth/register/verify', {
           email: email,
           code: otpCode,
+          grid: grid, // Include the grid in verification
         })
 
+        // Update AuthStore with the new user
+        if (result.user) {
+          await authStore.updateUserAfterRegistration(result.user)
+        }
+
         toast.success('Registration successful!')
-        navigate({ to: '/dashboard/overview', replace: true })
-      } catch (error) {
+        navigate({ to: '/overview', replace: true })
+      } catch (error: any) {
         console.error('Verification error:', error)
-        toast.error('Invalid or expired verification code. Please try again.')
+        // Extract the error message from the API error
+        const errorMessage = error?.message || 'Invalid or expired verification code. Please try again.'
+        toast.error(errorMessage)
       } finally {
         setIsLoading(false)
       }
@@ -64,18 +90,25 @@ export default function SignUpViewPage() {
 
       setIsLoading(true)
       try {
-        const result = await signUp({
+        // Generate a 5x5 grid for the user
+        const userGrid = genGrid(5)
+
+        await api.post('/auth/register', {
           email: formEmail,
           name: formName,
+          grid: userGrid,
         })
 
         setEmail(formEmail)
         setName(formName)
+        setGrid(userGrid) // Store the grid for later use
         setEmailSent(true)
         toast.success('Check your email for verification code')
-      } catch (error) {
+      } catch (error: any) {
         console.error('Sign up error:', error)
-        toast.error('Failed to sign up. Please try again.')
+        // Extract the error message from the API error
+        const errorMessage = error?.message || 'Failed to sign up. Please try again.'
+        toast.error(errorMessage)
       } finally {
         setIsLoading(false)
       }
@@ -146,6 +179,32 @@ export default function SignUpViewPage() {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'Processing...' : emailSent ? 'Verify Code' : 'Register'}
                 </Button>
+
+                {emailSent && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleResendCode}
+                      disabled={isLoading}
+                    >
+                      Resend Code
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => {
+                        setEmailSent(false)
+                        setOtpCode('')
+                      }}
+                      disabled={isLoading}
+                    >
+                      Use Different Email
+                    </Button>
+                  </>
+                )}
               </form>
 
               <div className="relative my-4">

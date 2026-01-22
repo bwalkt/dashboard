@@ -1,5 +1,10 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { authService } from "../services/auth.service";
+import { config } from "../config/env.js";
+import { authService } from "../services/auth.service.js";
+import { FilterAuthService } from "../services/filter-auth.service.js";
+import { filterCentrifugoService } from "../services/filter-centrifugo.service.js";
+
+// FilterAuthService uses static methods
 
 // Centrifugo proxy endpoints for authentication and authorization
 export async function centrifugoRoutes(
@@ -207,6 +212,173 @@ export async function centrifugoRoutes(
       }
     },
   );
+
+  // Special connect proxy for filter authentication
+  fastify.post(
+    "/centrifugo/filter-connect",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as any;
+        const authToken = body.token; // Filter auth token
+        
+        if (!authToken || typeof authToken !== 'object') {
+          return reply.status(200).send({
+            disconnect: {
+              code: 5001,
+              reason: "Filter authentication required",
+            },
+          });
+        }
+
+        // Validate filter authentication token
+        const authResult = await FilterAuthService.validateAuthToken(authToken);
+
+        if (!authResult.valid) {
+          return reply.status(200).send({
+            disconnect: {
+              code: 5002,
+              reason: `Filter authentication failed: ${authResult.reason}`,
+            },
+          });
+        }
+
+        // Generate stable filter user ID for Centrifugo
+        const filterUserId = `filter:${authToken.filterId}`;
+
+        // Allow connection with filter context
+        return reply.status(200).send({
+          result: {
+            user: filterUserId,
+            data: {
+              type: "envoy-wasm-filter",
+              filterId: authToken.filterId,
+              authenticatedAt: Date.now(),
+            },
+          },
+        });
+      } catch (error) {
+        console.error("Filter Centrifugo connect error:", error);
+        return reply.status(200).send({
+          disconnect: {
+            code: 5003,
+            reason: "Filter authentication service error",
+          },
+        });
+      }
+    },
+  );
+
+  // Handle filter messages received via Centrifugo
+  fastify.post(
+    "/centrifugo/filter-message",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as any;
+        const { message, channel, user } = body;
+        
+        if (!message || !channel || !user) {
+          return reply.status(400).send({ error: "Missing required fields" });
+        }
+
+        // Validate that this is from a filter user
+        if (!user.startsWith("filter:") || !(await isAuthenticatedFilter(user))) {
+          return reply.status(403).send({ error: "Unauthorized: not a filter user" });
+        }
+
+        // Validate signed message
+        const validationResult = await FilterAuthService.validateSignedMessage(message);
+        
+        if (!validationResult.valid) {
+          console.warn(`Invalid filter message: ${validationResult.reason}`);
+          return reply.status(400).send({ error: `Invalid message: ${validationResult.reason}` });
+        }
+
+        // Extract filter info from validated message
+        const { filterId, instanceId } = message;
+        
+        // Handle the message
+        await filterCentrifugoService.handleFilterRequest(filterId, instanceId, validationResult.data);
+
+        return reply.status(200).send({ success: true });
+      } catch (error) {
+        console.error("Filter message handling error:", error);
+        return reply.status(500).send({ error: "Message processing failed" });
+      }
+    },
+  );
+
+  // Get filter statistics endpoint (requires authentication)
+  fastify.get("/centrifugo/filter-stats", async (request, reply) => {
+    try {
+      // Authenticate admin user before returning sensitive statistics
+      const apiKey = request.headers['x-api-key'] as string;
+      const authHeader = request.headers['authorization'] as string;
+      const filterToken = request.headers['x-filter-token'] as string;
+
+      // Check API key authentication
+      if (apiKey) {
+        // Use separate STATS_API_KEY for security, fallback to JWT_SECRET for backward compatibility
+        const validApiKey = config.STATS_API_KEY || config.JWT_SECRET;
+        if (apiKey !== validApiKey) {
+          reply.code(401);
+          return { error: "Invalid API key" };
+        }
+        
+        // Log security warning if using JWT_SECRET as fallback
+        if (!config.STATS_API_KEY) {
+          console.warn("⚠️ Using JWT_SECRET as stats API key. Consider setting STATS_API_KEY for better security separation.");
+        }
+      }
+      // Check JWT authentication
+      else if (authHeader) {
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        try {
+          const authResult = await authService.validateToken(token);
+          if (!authResult.valid) {
+            reply.code(401);
+            return { error: "Invalid authentication token" };
+          }
+          // Optional: Check if user has admin privileges
+          // const user = authResult.user;
+          // if (!user.isAdmin) {
+          //   reply.code(403);
+          //   return { error: "Admin privileges required" };
+          // }
+        } catch (authError) {
+          console.error("JWT validation error:", authError);
+          reply.code(401);
+          return { error: "Token validation failed" };
+        }
+      }
+      // Check filter token authentication (for internal filter access)
+      else if (filterToken) {
+        try {
+          const tokenData = JSON.parse(Buffer.from(filterToken, 'base64').toString());
+          const result = await FilterAuthService.validateAuthToken(tokenData);
+          if (!result.valid) {
+            reply.code(401);
+            return { error: `Filter authentication failed: ${result.reason}` };
+          }
+        } catch (filterAuthError) {
+          console.error("Filter token validation error:", filterAuthError);
+          reply.code(401);
+          return { error: "Invalid filter token" };
+        }
+      }
+      // No authentication provided
+      else {
+        reply.code(401);
+        return { error: "Authentication required. Provide x-api-key, Authorization header, or x-filter-token" };
+      }
+
+      const stats = await filterCentrifugoService.getFilterStatistics();
+      return { success: true, stats };
+    } catch (error) {
+      console.error("Error getting filter stats:", error);
+      reply.code(500);
+      return { error: "Failed to get filter statistics" };
+    }
+  });
 }
 
 // Channel authorization helper
@@ -241,11 +413,40 @@ async function authorizeChannelAccess(
       return false;
     }
 
+    // Filter channels (special handling for envoy-wasm-filter)
+    if (channel.startsWith("filter:")) {
+      // Only allow filter communication if it's from authenticated filter
+      return await isAuthenticatedFilter(userId);
+    }
+
     // Default deny for unknown channels
     console.warn(`Unknown channel pattern: ${channel}`);
     return false;
   } catch (error) {
     console.error(`Error authorizing ${action} on channel ${channel}:`, error);
+    return false;
+  }
+}
+
+// Helper function to check if userId represents an authenticated filter
+async function isAuthenticatedFilter(userId: string): Promise<boolean> {
+  try {
+    // Filter user IDs follow pattern: "filter:filterId"
+    if (!userId.startsWith("filter:")) {
+      return false;
+    }
+
+    // Extract filterId by removing the "filter:" prefix
+    // This handles filterIds that contain colons (e.g., "filter:my:filter:id:12345" -> "my:filter:id:12345")
+    const filterId = userId.slice("filter:".length);
+    if (!filterId) {
+      return false;
+    }
+    
+    // Direct lookup for better performance - O(1) instead of O(n)
+    return await FilterAuthService.isFilterActive(filterId);
+  } catch (error) {
+    console.error("Error checking filter authentication:", error);
     return false;
   }
 }

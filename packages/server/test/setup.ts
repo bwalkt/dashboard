@@ -32,12 +32,16 @@ beforeAll(async () => {
     process.env.BREVO_API_KEY = "test-api-key";
   }
 
-  if (!process.env.SIGNALWIRE_PROJECT_ID) {
-    process.env.SIGNALWIRE_PROJECT_ID = "test-project-id";
+  if (!process.env.TWILIO_ACCOUNT_SID) {
+    process.env.TWILIO_ACCOUNT_SID = "test-account-sid";
   }
 
-  if (!process.env.SIGNALWIRE_TOKEN) {
-    process.env.SIGNALWIRE_TOKEN = "test-token";
+  if (!process.env.TWILIO_API_SECRET) {
+    process.env.TWILIO_API_SECRET = "test-api-secret";
+  }
+
+  if (!process.env.TWILIO_PHONE_NUMBER) {
+    process.env.TWILIO_PHONE_NUMBER = "+12125551234";
   }
 
   // Additional test environment config - use config defaults
@@ -54,8 +58,7 @@ beforeAll(async () => {
     NODE_ENV: process.env.NODE_ENV,
     hasJWTSecret: !!config.JWT_SECRET,
     hasDBConfig: !!config.POSTGRES_HOST,
-    redisHost: config.REDIS_HOST,
-    oauthRedirectUrl: config.OAUTH_REDIRECT_URL,
+    redisUrl: config.REDIS_URL,
     serverBaseUrl: config.SERVER_BASE_URL,
   });
 });

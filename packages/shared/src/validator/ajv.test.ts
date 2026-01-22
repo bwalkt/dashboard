@@ -319,7 +319,7 @@ describe('AJV Validation System', () => {
     describe('user schema', () => {
       it('should validate user with required fields', () => {
         const userData = {
-          id: 1,
+          id: '1',
           email: 'user@example.com',
           name: 'Test User',
           created_at: '2023-01-01T00:00:00.000Z',
@@ -332,7 +332,7 @@ describe('AJV Validation System', () => {
 
       it('should allow dynamic user fields', () => {
         const userData = {
-          id: 1,
+          id: '1',
           email: 'user@example.com',
           name: 'Test User',
           created_at: '2023-01-01T00:00:00.000Z',
@@ -519,7 +519,7 @@ describe('AJV Validation System', () => {
     describe('userValidator', () => {
       it('should validate users', () => {
         const user = {
-          id: 1,
+          id: '1',
           email: 'test@example.com',
           name: 'Test User',
           created_at: '2023-01-01T00:00:00.000Z',

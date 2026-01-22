@@ -34,12 +34,21 @@ export function DataTableSheetContent<TData, TMeta>({
   if (!data) return <SheetDetailsContentSkeleton fields={fields} />
 
   return (
-    <dl className={cn('divide-y', className)} {...props}>
+    <dl className={cn('divide-y -mt-5', className)} {...props}>
       {fields.map(field => {
         if (field.condition && !field.condition(data)) return null
 
         const Component = field.component
         const value = String(data[field.id])
+
+        // Render without wrapper for full-width sections
+        if (field.noWrapper && Component) {
+          return (
+            <div key={field.id.toString()} className={field.className}>
+              <Component {...data} metadata={metadata} />
+            </div>
+          )
+        }
 
         return (
           <div key={field.id.toString()}>

@@ -10,14 +10,30 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import { config } from "../config/env";
+import { config } from "../config/env.js";
 
 interface SlackStyleConfirmEmailProps {
   confirmationCode?: string;
   recipientName?: string;
 }
 
-const baseUrl = config.SERVER_BASE_URL;
+// Use a publicly hosted logo URL or CDN URL in production
+// You can upload your logo to a free service like imgur.com or use your production server URL
+// For development, the logo won't show in emails unless SERVER_BASE_URL is publicly accessible
+const LOGO_URL = (() => {
+  // First, try the explicitly configured public logo URL
+  if (config.LOGO_PUBLIC_URL) {
+    return config.LOGO_PUBLIC_URL;
+  }
+
+  // Fallback to server-based URL logic
+  const baseUrl = config.SERVER_BASE_URL;
+
+  // Safe check - baseUrl is guaranteed to be non-empty by validation
+  return baseUrl.includes("localhost")
+    ? "https://via.placeholder.com/120x120/000000/FFFFFF?text=P-Zero" // Placeholder for local dev
+    : `${baseUrl}/assets/images/logo.png`; // Production URL
+})();
 
 export const SlackStyleConfirmEmail = ({
   confirmationCode = "123456",
@@ -31,7 +47,7 @@ export const SlackStyleConfirmEmail = ({
         <Container style={container}>
           <Section style={logoContainer}>
             <Img
-              src={`${baseUrl}/assets/images/logo.png`}
+              src={LOGO_URL}
               width="120"
               height="120"
               alt="P-Zero Logo"

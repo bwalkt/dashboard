@@ -1,0 +1,23 @@
+name: sfdc-example
+
+services:
+  sfdc-example:
+    build:
+      context: ../../../../
+      dockerfile: examples/b2b/packages/sfdc-example/Dockerfile
+      args:
+        - VITE_BACKEND_URL=${VITE_BACKEND_URL:-}
+        - VITE_USE_PROXY=${VITE_USE_PROXY:-}
+        - VITE_PROXY_URL=${VITE_PROXY_URL:-}
+        - VITE_PROXY_TARGET=${VITE_PROXY_TARGET:-}
+        - VITE_OTEL_EXPORTER_URL=${VITE_OTEL_EXPORTER_URL:-}
+    container_name: sfdc-example
+    networks:
+      - pzero-network
+    ports:
+      - "1420:80"
+    restart: unless-stopped
+
+networks:
+  pzero-network:
+    external: true

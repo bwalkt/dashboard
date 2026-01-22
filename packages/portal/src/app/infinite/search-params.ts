@@ -38,7 +38,7 @@ export const searchParamsParser = {
   'timing.tls': parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
   'timing.ttfb': parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
   'timing.transfer': parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
-  status: parseAsArrayOf(parseAsInteger, SLIDER_DELIMITER),
+  status: parseAsArrayOf(parseAsInteger, ARRAY_DELIMITER),
   regions: parseAsArrayOf(parseAsStringLiteral(REGIONS), ARRAY_DELIMITER),
   method: parseAsArrayOf(parseAsStringLiteral(METHODS), ARRAY_DELIMITER),
   host: parseAsString,

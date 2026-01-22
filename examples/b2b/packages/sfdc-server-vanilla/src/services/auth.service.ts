@@ -33,7 +33,7 @@ export class AuthService extends JWTService {
    */
   public generateRefreshToken(userId: number): string {
     const tokenPayload: Omit<RefreshTokenPayload, 'exp' | 'iat'> = {
-      userId,
+      userId: String(userId),
       type: 'refresh',
     }
 
@@ -48,7 +48,8 @@ export class AuthService extends JWTService {
       const decoded = this.verifyHMACToken(token, this.jwtSecret, 'HS512') as AccessTokenPayload
 
       // Additional validation
-      if (typeof decoded.userId !== 'number' || typeof decoded.githubId !== 'string') {
+      // userId is a string in AccessTokenPayload, githubId can be string | null
+      if (typeof decoded.userId !== 'string' || (decoded.githubId !== null && typeof decoded.githubId !== 'string')) {
         return null
       }
 
@@ -67,7 +68,8 @@ export class AuthService extends JWTService {
       const decoded = this.verifyHMACToken(token, this.jwtSecret, 'HS512') as RefreshTokenPayload
 
       // Additional validation
-      if (decoded.type !== 'refresh' || typeof decoded.userId !== 'number') {
+      // userId is a string in RefreshTokenPayload
+      if (decoded.type !== 'refresh' || typeof decoded.userId !== 'string') {
         return null
       }
 
@@ -128,7 +130,7 @@ export class AuthService extends JWTService {
     refreshToken: string
   } {
     const accessToken = this.generateAccessToken({
-      userId,
+      userId: String(userId),
       githubId,
       email,
     })

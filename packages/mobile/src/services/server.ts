@@ -1,17 +1,18 @@
 //TODO 1. add threads for each endpoint, 2. keep track of thread status. 3. add
+const SERVER_HOST = process.env.SERVER_HOST
+const SERVER_PORT = process.env.SERVER_PORT
 
-import { SERVER_PORT } from '@env'
 import { type Endpoint, type EndpointStatus, endpointStatuses } from '@pzero/shared/pzero'
 import { uuid } from '@pzero/shared/uuid'
 import { Buffer } from 'buffer'
-import crypto from 'react-native-quick-crypto'
+//import crypto from 'react-native-quick-crypto'
 import TcpSocket from 'react-native-tcp-socket'
 import { HistoryStore, Keys } from '../stores/history'
 import { ZStorage } from '../stores/store'
 import { getLocalIPAddress } from '../utils/network'
 
-const DEFAULT_PORT = Number.parseInt(SERVER_PORT || '8070', 10)
-
+const DEFAULT_PORT = Number.parseInt(SERVER_PORT || '8090', 10)
+export const ServerURL = `${SERVER_HOST || 'http://localhost'}:${SERVER_PORT || DEFAULT_PORT}`
 /**
  * WEBSOCKET_MAGIC_STRING is a constant defined in RFC 6455 (WebSocket Protocol Specification).
  * This GUID is used during the WebSocket handshake to generate the Sec-WebSocket-Accept header.
@@ -303,17 +304,17 @@ class HTTPServer extends ZStorage {
     }
 
     // Generate accept key using RN-compatible crypto
-    const acceptKey = crypto
+    /*const acceptKey = crypto
       .createHash('sha1')
       .update(key + WEBSOCKET_MAGIC_STRING)
-      .digest('base64')
+      .digest('base64') */
 
     // Send upgrade response
     const response = [
       'HTTP/1.1 101 Switching Protocols',
       'Upgrade: websocket',
       'Connection: Upgrade',
-      `Sec-WebSocket-Accept: ${acceptKey}`,
+      //      `Sec-WebSocket-Accept: ${acceptKey}`,
       '\r\n',
     ].join('\r\n')
 

@@ -5,6 +5,11 @@
 -- Test 1: Basic Auth User Creation with Auto-Generated ID
 -- ============================================================================
 INSERT INTO
+  pzero.parts (part, name)
+VALUES
+  ('pzero', 'pzero');
+
+INSERT INTO
   pzero.all_auth (email)
 VALUES
   ('admin@example.com');
@@ -15,53 +20,90 @@ VALUES
   ('user@example.com');
 
 -- ============================================================================
--- Test 2: Users with Data Processing (meta removal, tags preservation)
+-- Test 2: Organizations (must be created before users that reference them)
+-- ============================================================================
+INSERT INTO
+  pzero.all_orgs (name, handle, part_by, website, dscr, data)
+SELECT
+  'Test Organization',
+  'test',
+  'pzero',
+  'https://test.example.com',
+  'Test Organization for Users',
+  (
+    '{"meta": {"c_by": "' || id || '"}, "purpose": "testing"}'
+  )::jsonb
+FROM
+  pzero.all_auth
+WHERE
+  email = 'admin@example.com'
+LIMIT
+  1;
+
+INSERT INTO
+  pzero.all_orgs (name, handle, part_by, website, dscr, data)
+SELECT
+  'Boardwalk Technologies',
+  'bwalk',
+  'pzero',
+  'https://www.boardwalktech.com',
+  'Boardwalk Technologies',
+  (
+    '{"meta": {"c_by": "' || id || '"}, "industry": "technology",
+  "founded": 2020}'
+  )::jsonb
+FROM
+  pzero.all_auth
+WHERE
+  email = 'admin@example.com'
+LIMIT
+  1;
+
+-- ============================================================================
+-- Test 3: Users with Data Processing (meta removal, tags preservation)
 -- ============================================================================
 -- Test user with data.meta that should be removed
 INSERT INTO
-  pzero.all_users (id, name, data)
+  pzero.all_users (id, name, org_id, data)
 SELECT
-  id,
+  a.id,
   'Admin User' AS name,
-  '{"meta": {"c_by": "' || id || '", "foo": 1, "bar": "test"}, "tags": ["admin", "superuser"], "profile": {"role": "administrator"}}'::jsonb AS data
+  o.id AS org_id,
+  jsonb_build_object(
+    'meta',
+    jsonb_build_object('c_by', a.id::text, 'foo', 1, 'bar', 'test'),
+    'tags',
+    jsonb_build_array('admin', 'superuser'),
+    'profile',
+    jsonb_build_object('role', 'administrator')
+  ) AS data
 FROM
-  pzero.all_auth
+  pzero.all_auth a,
+  pzero.all_orgs o
 WHERE
-  email = 'admin@example.com';
+  a.email = 'admin@example.com'
+  AND o.handle = 'test';
 
 -- Test user with data.diff for update tracking
 INSERT INTO
-  pzero.all_users (id, name, data)
+  pzero.all_users (id, name, org_id, data)
 SELECT
-  id,
+  a.id,
   'Regular User' AS name,
-  '{"meta": {"c_by": "' || id || '"}, "tags": ["user"], "diff": {"name": {"old": "John", "new": "Jane"}}, "settings": {"theme": "dark"}}'::jsonb AS data
-FROM
-  pzero.all_auth
-WHERE
-  email = 'user@example.com';
-
--- ============================================================================
--- Test 3: Organizations
--- ============================================================================
-INSERT INTO
-  pzero.all_orgs (name, handle, website, data)
-VALUES
+  o.id AS org_id,
   (
-    'Boardwalk Technologies',
-    'bwalk',
-    'https://www.boardwalktech.com',
-    '{"meta": {"c_by": "' || (
-      SELECT
-        id
-      FROM
-        pzero.all_auth
-      WHERE
-        email = 'admin@example.com'
-      LIMIT
-        1
-    ) || '"}, "industry": "technology", "founded": 2020}'
-  );
+    '{"meta": {"c_by": "' || a.id || '"}, "tags": ["user"],
+  "diff": {"name": {"old": "John", "new": "Jane"}}, "settings":
+  {"theme": "dark"}}'
+  )::jsonb AS data
+FROM
+  pzero.all_auth a
+  CROSS JOIN pzero.all_orgs o
+WHERE
+  a.email = 'user@example.com'
+  AND o.handle = 'bwalk'
+LIMIT
+  1;
 
 -- ============================================================================
 -- Test 4: Endpoints with Various Methods
@@ -276,7 +318,7 @@ SELECT
   'Transaction Records Count' AS test_name,
   count(*) AS count
 FROM
-  pzero.txns;
+  pzero.all_txns;
 
 -- Verify data processing worked (meta should be removed)
 SELECT
@@ -391,4 +433,4 @@ SELECT
   'Transactions' AS table_name,
   count(*) AS record_count
 FROM
-  pzero.txns;
+  pzero.all_txns;

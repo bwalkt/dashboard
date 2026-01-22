@@ -1,0 +1,13 @@
+name: sfdc-example
+version: "3.9"
+
+services:
+  sfdc-example:
+    # Image from GitHub Container Registry
+    # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
+    # Or set SFDC_EXAMPLE_IMAGE to override the full image path
+    image: ${SFDC_EXAMPLE_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/sfdc-example:latest}
+    container_name: sfdc-example
+    ports:
+      - "${PORT:-1420}:80"
+    restart: "no"

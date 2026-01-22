@@ -11,25 +11,28 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { UserAvatarProfile } from '@/components/user-avatar-profile'
-import { useAuth } from '@/contexts/AuthContext'
+import { useUser } from '@/hooks/use-auth'
+import { clearClientStorage } from '@/lib/storage-utils'
 
 export function UserNav() {
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
+  const { data: user, signOut } = useUser()
 
   const handleSignOut = async () => {
     try {
-      const { error } = await signOut()
-      if (error) {
-        toast.error('Failed to sign out: ' + error.message)
-      } else {
-        toast.success('Signed out successfully')
-        navigate('/auth/sign-in')
-      }
+      console.log('[UserNav] Starting sign out...')
+      await signOut()
+      console.log('[UserNav] Sign out successful')
+      toast.success('Signed out successfully')
+      navigate('/auth/sign-in')
     } catch (error) {
-      toast.error('An unexpected error occurred')
-      console.error('Sign out error:', error)
+      console.error('[UserNav] Sign out error:', error)
+      toast.error('Failed to sign out: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
+  }
+
+  const handleRefresh = () => {
+    clearClientStorage()
   }
 
   return (
@@ -56,6 +59,7 @@ export function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>Home</DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleRefresh}>Refresh</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

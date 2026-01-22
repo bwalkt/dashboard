@@ -1,28 +1,28 @@
-name: 'Trigger Coolify Deployment'
-description: 'Triggers a Coolify deployment for all services after successful Docker image builds'
+name: 'Trigger Dokploy Deployment'
+description: 'Triggers a Dokploy deployment for all services after successful Docker image builds'
 
 inputs:
   webhook_url:
-    description: 'Coolify webhook URL for all services'
+    description: 'Dokploy webhook URL for all services'
     required: true
-  coolify_token:
-    description: 'Coolify API token for authentication'
+  dokploy_token:
+    description: 'Dokploy API token for authentication'
     required: true
 
 runs:
   using: 'composite'
   steps:
-    - name: Trigger Coolify deployment
+    - name: Trigger Dokploy deployment
       id: deploy
       run: |
-        echo "🚀 Triggering Coolify deployment for all built services"
+        echo "🚀 Triggering Dokploy deployment for all built services"
 
         # Make the webhook request to trigger deployment
         RESPONSE=$(curl -s -w "\n%{http_code}" \
           --request GET "${{ inputs.webhook_url }}" \
-          --header "Authorization: Bearer ${{ inputs.coolify_token }}" \
+          --header "Authorization: Bearer ${{ inputs.dokploy_token }}" \
           --header "Content-Type: application/json" \
-          --header "User-Agent: GitHub-Actions-Coolify-Deploy/1.0")
+          --header "User-Agent: GitHub-Actions-Dokploy-Deploy/1.0")
 
         # Extract response body and status code
         HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
@@ -33,10 +33,10 @@ runs:
 
         # Check if deployment was triggered successfully
         if [ "$HTTP_STATUS" -eq 200 ] || [ "$HTTP_STATUS" -eq 201 ] || [ "$HTTP_STATUS" -eq 202 ]; then
-          echo "✅ Coolify deployment triggered successfully for all services"
+          echo "✅ Dokploy deployment triggered successfully for all services"
           echo "deployment_status=success" >> $GITHUB_OUTPUT
         else
-          echo "❌ Failed to trigger Coolify deployment"
+          echo "❌ Failed to trigger Dokploy deployment"
           echo "deployment_status=failed" >> $GITHUB_OUTPUT
           exit 1
         fi

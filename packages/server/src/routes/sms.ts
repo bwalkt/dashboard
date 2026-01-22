@@ -1,12 +1,15 @@
 import type { ErrorResponse } from "@pzero/shared";
+import { formatPhoneE164 } from "@pzero/shared/phone";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { redis } from "../config/redis";
+import { config } from "../config/env.js";
+import { redis } from "../config/redis.js";
+import { twilioService } from "../services/twilio.service.js";
 import {
   checkSmsRateLimit,
   resendSmsVerification,
   sendSmsVerification,
   validatePhoneNumber,
-} from "../utils/sms-validation";
+} from "../utils/sms-validation.js";
 
 export async function smsRoutes(fastify: FastifyInstance): Promise<void> {
   /**
@@ -60,27 +63,51 @@ export async function smsRoutes(fastify: FastifyInstance): Promise<void> {
           } as ErrorResponse);
         }
 
-        // Get verification code from Redis
-        const redisKey = `phone_verification:${phone}`;
-        const storedCode = await redis.get(redisKey);
+        // Format phone number to E.164 format
+        const formattedPhone = formatPhoneE164(phone, "US");
+        if (!formattedPhone) {
+          return reply.status(400).send({
+            error: "Bad Request",
+            message: "Invalid phone number format",
+          } as ErrorResponse);
+        }
 
-        if (!storedCode) {
+        let isValid = false;
+
+        // Choose verification method based on TWILIO_MESSAGE setting
+        if (config.TWILIO_MESSAGE) {
+          // Custom SMS verification using Redis
+          const verificationKey = `sms_verification_code:${formattedPhone}`;
+          const storedCode = await redis.get(verificationKey);
+
+          if (!storedCode) {
+            return reply.status(400).send({
+              error: "Bad Request",
+              message: "Verification code has expired or does not exist",
+            } as ErrorResponse);
+          }
+
+          isValid = storedCode === code;
+
+          if (isValid) {
+            // Delete the verification code after successful verification
+            await redis.delete(verificationKey);
+          }
+        } else {
+          // Twilio Verify API verification
+          const verificationResult = await twilioService.verifySMSCode({
+            to: formattedPhone,
+            code: code,
+          });
+          isValid = verificationResult.valid;
+        }
+
+        if (!isValid) {
           return reply.status(400).send({
             error: "Bad Request",
             message: "Invalid or expired verification code",
           } as ErrorResponse);
         }
-
-        // Verify code
-        if (code !== storedCode) {
-          return reply.status(400).send({
-            error: "Bad Request",
-            message: "Invalid verification code",
-          } as ErrorResponse);
-        }
-
-        // Delete verification code from Redis (one-time use)
-        await redis.delete(redisKey);
 
         return reply.send({
           message: "Phone number verified successfully",

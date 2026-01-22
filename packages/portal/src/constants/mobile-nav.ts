@@ -4,7 +4,7 @@ import type { NavItem } from '@/types'
 export const mobileNavItems: NavItem[] = [
   {
     title: 'Overview',
-    url: '/dashboard/overview',
+    url: '/overview',
     icon: 'dashboard',
     isActive: false,
     shortcut: ['o', 'o'],
@@ -12,7 +12,7 @@ export const mobileNavItems: NavItem[] = [
   },
   {
     title: 'Logs',
-    url: '/dashboard/logs',
+    url: '/logs',
     icon: 'activity',
     isActive: false,
     shortcut: ['l', 'l'],
@@ -20,7 +20,7 @@ export const mobileNavItems: NavItem[] = [
   },
   {
     title: 'Users',
-    url: '/dashboard/users',
+    url: '/users',
     icon: 'users',
     isActive: false,
     shortcut: ['u', 'u'],

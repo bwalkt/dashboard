@@ -1,27 +1,33 @@
 import { toast } from 'sonner'
 import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/use-auth'
 import { useTauriAuth } from '@/hooks/use-tauri-auth'
 
 export default function GithubSignInButton() {
-  const { signInWithGitHub: webSignIn, loading: webLoading } = useAuth()
-  const { signInWithGitHub: tauriSignIn, isLoading: tauriLoading, error: tauriError } = useTauriAuth()
+  const { signInWithGitHub: webSignIn, signInWithGitHubLoading } = useAuth()
+  const { signInWithGitHub: tauriSignIn, isLoading: tauriLoading } = useTauriAuth()
 
   const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__
-  const loading = isTauri ? tauriLoading : webLoading
+
+  const loading = isTauri ? tauriLoading : signInWithGitHubLoading
 
   const handleGitHubSignIn = async () => {
     try {
+      console.log('[GithubSignIn] Starting GitHub authentication...', { isTauri })
+
       if (isTauri) {
-        await tauriSignIn()
-        if (tauriError) {
-          toast.error('Failed to sign in with GitHub: ' + tauriError)
+        const result = await tauriSignIn()
+        console.log('[GithubSignIn] Tauri sign-in result:', result)
+        // Check if tauriSignIn returns an error object
+        if (result && typeof result === 'object' && 'error' in result && result.error) {
+          toast.error('Failed to sign in with GitHub: ' + result.error.message)
         } else {
           toast.success('Opening GitHub authentication...')
         }
       } else {
         const { error } = await webSignIn()
+        console.log('[GithubSignIn] Web sign-in result:', { error })
         if (error) {
           toast.error('Failed to sign in with GitHub: ' + error.message)
         } else {
@@ -29,8 +35,8 @@ export default function GithubSignInButton() {
         }
       }
     } catch (error) {
-      toast.error('An unexpected error occurred')
-      console.error('GitHub sign in error:', error)
+      console.error('[GithubSignIn] GitHub sign-in error:', error)
+      toast.error('Failed to sign in with GitHub: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 

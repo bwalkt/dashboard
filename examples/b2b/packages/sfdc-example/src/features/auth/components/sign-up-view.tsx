@@ -5,21 +5,21 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/contexts/AuthContext'
+import { useUser } from '@/hooks/use-auth'
 import GithubSignInButton from './github-auth-button'
 
 export default function SignUpViewPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, loading } = useAuth()
+  const { data: user, isLoading } = useUser()
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !isLoading) {
       const from = location.state?.from?.pathname || '/dashboard/overview'
       navigate(from, { replace: true })
     }
-  }, [user, loading, navigate, location])
+  }, [user, isLoading, navigate, location])
 
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault()

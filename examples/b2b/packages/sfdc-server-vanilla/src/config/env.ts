@@ -13,6 +13,7 @@ export const config: EnvironmentConfig = {
   JWT_SECRET: process.env.JWT_SECRET || 'default-secret-key-change-in-production',
   DATABASE_PATH: process.env.DATABASE_PATH || './database.db',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:1420',
+  REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
 }
 
 /**

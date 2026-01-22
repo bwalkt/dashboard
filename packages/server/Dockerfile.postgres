@@ -2,9 +2,11 @@
 # This image inherits the standard PostgreSQL entrypoint (docker-entrypoint.sh)
 # which automatically handles database initialization and creation of POSTGRES_DB
 # when the data directory (/var/lib/postgresql/data) is empty on first startup
-FROM postgres:18
 
-# Install required dependencies, PostGIS, and build tools
+# Stage 1: Builder - install build dependencies and compile extensions
+FROM postgres:18 AS builder
+
+# Install build dependencies
 RUN apt-get update && \
     apt-get install -y \
     postgresql-18-postgis-3 \
@@ -20,9 +22,6 @@ RUN apt-get update && \
     python3 \
     wget \
     && rm -rf /var/lib/apt/lists/*
-
-# PL/Python3 is installed via apt-get above, no additional build needed
-
 
 # Install Rust (required for pgx_ulid)
 RUN set -eux; \
@@ -40,16 +39,32 @@ RUN set -eux; \
     /usr/local/bin/rustup-init -y --no-modify-path --profile minimal
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Install cargo-pgrx
+# Install cargo-pgrx and build pgx_ulid extension
 RUN cargo install --locked cargo-pgrx && \
     cargo pgrx init --pg18 /usr/lib/postgresql/18/bin/pg_config
 
-# Install pgx_ulid extension
 RUN git clone https://github.com/pksunkara/pgx_ulid.git /tmp/pgx_ulid && \
     cd /tmp/pgx_ulid && \
     cargo pgrx install --release && \
     cd / && \
     rm -rf /tmp/pgx_ulid
+
+# Stage 2: Runtime - copy only necessary files to minimal image
+FROM postgres:18
+
+# Install only runtime dependencies (PostGIS and PL/Python3)
+RUN apt-get update && \
+    apt-get install -y \
+    postgresql-18-postgis-3 \
+    postgresql-plpython3-18 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy built pgx_ulid extension from builder stage
+# pgx extensions install to:
+# - SQL files: /usr/share/postgresql/18/extension/
+# - Shared libraries: /usr/lib/postgresql/18/lib/
+COPY --from=builder /usr/share/postgresql/18/extension/pgx_ulid* /usr/share/postgresql/18/extension/
+COPY --from=builder /usr/lib/postgresql/18/lib/pgx_ulid* /usr/lib/postgresql/18/lib/
 
 # Copy custom entrypoint script that ensures database exists
 COPY docker-entrypoint.sh /usr/local/bin/custom-entrypoint.sh

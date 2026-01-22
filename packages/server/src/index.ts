@@ -5,31 +5,58 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { db } from "./config/database";
-import { config, validateEnvironment } from "./config/env";
-import { redis } from "./config/redis";
-import headerValidationPlugin from "./middleware/header-validation";
-import { authRoutes } from "./routes/auth";
-import { centrifugoRoutes } from "./routes/centrifugo";
-import { emailRoutes } from "./routes/email";
-import { gatewayRoutes } from "./routes/gateway";
-import { proxyRoutes } from "./routes/proxy";
-import { smsRoutes } from "./routes/sms";
+import { db } from "./config/database.js";
+import { config, validateEnvironment } from "./config/env.js";
+import { redis } from "./config/redis.js";
+import headerValidationPlugin from "./middleware/header-validation.js";
+import { authRoutes } from "./routes/auth.js";
+import { centrifugoRoutes } from "./routes/centrifugo.js";
+import { deviceRoutes } from "./routes/devices.js";
+import { emailRoutes } from "./routes/email.js";
+import { faqRoutes } from "./routes/faq.js";
+import { filterSessionRoutes } from "./routes/filter-session.js";
+import { gatewayRoutes } from "./routes/gateway.js";
+import { headerInfoRoutes } from "./routes/header-info.js";
+import { orgRoutes } from "./routes/orgs.js";
+import { privacyRoutes } from "./routes/privacy.js";
+import { proxyRoutes } from "./routes/proxy.js";
+import { proxyTargetsRoutes } from "./routes/proxy-targets.js";
+import { redisFilterRoutes } from "./routes/redis-filter.js";
+import { redisProxyRoutes } from "./routes/redis-proxy.js";
+import { signozRoutes } from "./routes/signoz.js";
+import { smsRoutes } from "./routes/sms.js";
+import { termsRoutes } from "./routes/terms.js";
+import { userRoutes } from "./routes/users.js";
+import { filterRedisService } from "./services/filter-redis.service.js";
+import { refreshProxyTargetsCache } from "./services/proxy-targets-cache.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Export a function that returns a Fastify instance
-export default async function (
-  fastify: FastifyInstance,
-  opts: FastifyPluginOptions,
-): Promise<void> {
+export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   // Validate environment variables
   validateEnvironment();
 
   // Initialize database and Redis
   await db.initialize();
   await redis.initialize();
+
+  // Initialize filter Redis service
+  try {
+    await filterRedisService.init();
+  } catch (error) {
+    console.error("❌ Failed to initialize filter Redis service:", error);
+    throw error; // Re-throw to prevent server start with broken Redis connection
+  }
+
+  // Load proxy targets into Redis cache on startup
+  try {
+    await refreshProxyTargetsCache();
+  } catch (error) {
+    console.warn("⚠️  Failed to load proxy targets cache on startup:", error instanceof Error ? error.message : error);
+    console.warn("Server will continue, but proxy targets may not be available until cache is refreshed");
+  }
 
   // Register CORS plugin
   await fastify.register(cors, {
@@ -41,6 +68,21 @@ export default async function (
     maxAge: 86400, // Cache preflight response for 1 day
     preflightContinue: false,
     optionsSuccessStatus: 204,
+  });
+  // Use the onSend hook to add the Timing-Allow-Origin header
+  fastify.addHook("onSend", (request, reply, payload, done) => {
+    // Check if the request is a cross-origin request and if a specific origin was allowed
+    const origin = request.headers.origin;
+    const allowedOrigins = Array.isArray(config.CORS_ALLOWED_ORIGINS) ? config.CORS_ALLOWED_ORIGINS : [config.CORS_ALLOWED_ORIGINS]; // Your specific allowed origin
+
+    if (origin && allowedOrigins.includes(origin)) {
+      reply.header("Timing-Allow-Origin", origin);
+    }
+
+    // If using a wildcard for Access-Control-Allow-Origin
+    // reply.header('Timing-Allow-Origin', '*');
+
+    done();
   });
   // Security plugins
   await fastify.register(helmet, {
@@ -72,24 +114,99 @@ export default async function (
 
   // Health check route
   fastify.get("/health", async (request, reply) => {
-    return { status: "ok", timestamp: new Date().toISOString() };
+    const timestamp = new Date().toISOString();
+    const healthCheck = {
+      status: "ok",
+      timestamp,
+      uptime: process.uptime(),
+      services: {
+        database: "unknown",
+        redis: "unknown",
+      },
+      version: process.env.npm_package_version || "unknown",
+      environment: process.env.NODE_ENV || "development",
+      memory: {
+        nodejs: {
+          used: process.memoryUsage().heapUsed,
+          total: process.memoryUsage().heapTotal,
+          external: process.memoryUsage().external,
+        },
+        database: null as any,
+        redis: null as any,
+      },
+    };
+
+    // Check database connection and get memory info
+    try {
+      await db.healthCheck();
+      healthCheck.services.database = "healthy";
+
+      try {
+        healthCheck.memory.database = await db.getMemoryInfo();
+      } catch (memError) {
+        console.warn("Failed to get database memory info:", memError);
+        healthCheck.memory.database = { error: "Unable to retrieve memory info" };
+      }
+    } catch (error) {
+      healthCheck.services.database = "unhealthy";
+      if (config.NODE_ENV !== "test") {
+        healthCheck.status = "degraded";
+      }
+      healthCheck.memory.database = { error: "Database unavailable" };
+    }
+
+    // Check Redis connection and get memory info
+    try {
+      await redis.ping();
+      healthCheck.services.redis = "healthy";
+
+      try {
+        if (typeof redis.getMemoryInfo === "function") {
+          healthCheck.memory.redis = await redis.getMemoryInfo();
+        } else {
+          healthCheck.memory.redis = { info: "Memory info not available in test environment" };
+        }
+      } catch (memError) {
+        console.warn("Failed to get Redis memory info:", memError);
+        healthCheck.memory.redis = { error: "Unable to retrieve memory info" };
+      }
+    } catch (error) {
+      healthCheck.services.redis = "unhealthy";
+      if (config.NODE_ENV !== "test") {
+        healthCheck.status = "degraded";
+      }
+      healthCheck.memory.redis = { error: "Redis unavailable" };
+    }
+
+    // Set appropriate HTTP status code
+    const statusCode = healthCheck.status === "ok" ? 200 : 503;
+    reply.code(statusCode);
+
+    return healthCheck;
   });
 
   // Register routes
   await fastify.register(authRoutes);
   await fastify.register(centrifugoRoutes);
+  await fastify.register(deviceRoutes);
   await fastify.register(emailRoutes);
+  await fastify.register(faqRoutes);
+  await fastify.register(filterSessionRoutes);
   await fastify.register(gatewayRoutes);
+  await fastify.register(headerInfoRoutes);
+  await fastify.register(orgRoutes);
   await fastify.register(proxyRoutes);
+  await fastify.register(proxyTargetsRoutes);
+  await fastify.register(redisProxyRoutes);
+  await fastify.register(redisFilterRoutes);
+  await fastify.register(signozRoutes);
   await fastify.register(smsRoutes);
-
-  // Console log when server starts
-  fastify.addHook("onReady", async () => {});
-  await db.initialize();
-  await redis.initialize();
+  await fastify.register(termsRoutes);
+  await fastify.register(userRoutes);
+  await fastify.register(privacyRoutes);
 
   // Close resources on server shutdown
   fastify.addHook("onClose", async () => {
-    await Promise.allSettled([db.close(), redis.close()]);
+    await Promise.allSettled([db.close(), redis.close(), filterRedisService.shutdown()]);
   });
 }

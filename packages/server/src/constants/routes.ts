@@ -9,11 +9,10 @@ export const PUBLIC_ROUTES = [
   "/auth/login",
   "/auth/login/verify",
   "/auth/logout",
+  "/auth/callback",
   "/auth/callback/github",
   "/auth/refresh",
-
-  // Proxy routes
-  "/proxy",
+  "/auth/me",
 
   // Centrifugo proxy routes (must be public for Centrifugo server to call)
   "/centrifugo/connect",
@@ -34,6 +33,15 @@ export const PUBLIC_ROUTES = [
   "/public",
   "/docs",
   "/assets",
+
+  // FAQ endpoint (public access)
+  "/faq",
+
+  // Terms and conditions endpoint (public access)
+  "/terms",
+
+  // Privacy policy endpoint (public access)
+  "/privacy",
 ] as const;
 
 /**
@@ -44,4 +52,8 @@ export const PUBLIC_ROUTE_PATTERNS = [
   "/assets/", // All asset paths
   "/public/", // All public paths
   "/docs/", // Documentation paths
+  "/proxy/", // Proxy paths
+  "/auth/next/",
+  "/redis/get/", // Redis GET for wasm filter challenges ONLY (handler restricts to 'challenge:*' keys)
+  "/internal/user/", // Internal user endpoints for WASM filter (protected by filter itself)
 ] as const;

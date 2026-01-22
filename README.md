@@ -2,6 +2,17 @@
 
 A modern monorepo architecture for building cross-platform applications with React Native, React, and Node.js.
 
+## 🌐 Endpoints
+
+The following endpoints are available for the deployed services:
+
+- **sfdc-dashboard**: https://sfdc-example.incmix.com
+- **sfdc-server**: https://sfdc-server.incmix.com
+- **server**: https://pzero-api.incmix.com
+- **server-envoy-wasm**: https://pzero-emvoy-wasm.incmix.com
+- **portal**: https://pzero-portal.incmix.com
+- **dokploy**: https://dokploy.incmix.com
+
 ## 📦 Packages
 
 This monorepo contains the following packages:
@@ -20,6 +31,8 @@ React Native mobile application with features including:
 - Device information and geolocation
 - State management with Zustand
 - UI components from React Native UI Lib
+
+### `@pzero/verifier` 
 
 ### `@pzero/sfdc-server-vanilla`
 Node.js backend server built with:

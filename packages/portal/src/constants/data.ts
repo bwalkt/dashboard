@@ -1,4 +1,7 @@
 import type { NavItem } from '@/types'
+
+// Check if tables/overview should be shown (defaults to false)
+const showTables = import.meta.env.VITE_SHOW_TABLES === 'true'
 export type Product = {
   Id: string
   Name: string
@@ -29,14 +32,30 @@ export type Product = {
 }
 
 //Info: The following data is used for the sidebar navigation and Cmd K bar.
-export const navItems: NavItem[] = [
+const allNavItems: NavItem[] = [
   {
-    title: 'Dashboard',
-    url: '/dashboard/overview',
+    title: 'Overview',
+    url: '/overview',
     icon: 'dashboard',
     isActive: false,
-    shortcut: ['d', 'd'],
-    items: [], // Empty array as there are no child items for Dashboard
+    shortcut: ['o', 'v'],
+    items: [], // Empty array as there are no child items for Overview
+  },
+  {
+    title: 'Organizations',
+    url: '/orgs',
+    icon: 'building',
+    isActive: false,
+    shortcut: ['o', 'r'],
+    items: [], // Empty array as there are no child items for Organizations
+  },
+  {
+    title: 'Users',
+    url: '/users',
+    icon: 'users',
+    isActive: false,
+    shortcut: ['u', 's'],
+    items: [], // Empty array as there are no child items for Users
   },
   {
     title: 'Tables',
@@ -46,13 +65,13 @@ export const navItems: NavItem[] = [
     items: [
       {
         title: 'Users Table',
-        url: '/dashboard/users',
+        url: '/data-table/users',
         icon: 'users',
-        shortcut: ['t', 'b'],
+        shortcut: ['u', 't'],
       },
       {
         title: 'Avatar Table',
-        url: '/table',
+        url: '/data-table/table',
         icon: 'user',
         shortcut: ['a', 'v'],
       },
@@ -64,10 +83,66 @@ export const navItems: NavItem[] = [
       },
       {
         title: 'Logs',
-        url: '/dashboard/logs',
+        url: '/data-table/logs',
         icon: 'infinity',
         shortcut: ['l', 'g'],
       },
     ],
   },
+  {
+    title: 'Organization Settings',
+    url: '#',
+    icon: 'settings',
+    isActive: false,
+    items: [
+      {
+        title: 'Company Profile',
+        url: '/settings/company-profile',
+        icon: 'building',
+        shortcut: ['c', 'p'],
+      },
+      {
+        title: 'Members and Roles',
+        url: '/settings/members-roles',
+        icon: 'users',
+        shortcut: ['m', 'r'],
+      },
+      {
+        title: 'Security',
+        url: '#',
+        icon: 'shield',
+        items: [
+          {
+            title: 'Allowed Addresses',
+            url: '/settings/security/allowed-addresses',
+            icon: 'mapPin',
+            shortcut: ['a', 'a'],
+          },
+          {
+            title: 'Current Sessions',
+            url: '/settings/security/current-sessions',
+            icon: 'activity',
+            shortcut: ['c', 's'],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Endpoints',
+    url: '/endpoints',
+    icon: 'network',
+    shortcut: ['p', 't'],
+  },
+  {
+    title: 'Logs',
+    url: '/logs',
+    icon: 'activity',
+    shortcut: ['l', 'o'],
+  },
 ]
+
+// Filter navigation items - exclude Tables and Overview when VITE_SHOW_TABLES is false
+export const navItems: NavItem[] = showTables
+  ? allNavItems
+  : allNavItems.filter(item => item.title !== 'Tables' && item.title !== 'Overview')

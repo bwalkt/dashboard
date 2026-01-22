@@ -92,7 +92,7 @@ export const AjvExamples = {
         },
       },
       custom_field_123: 'Custom value',
-      organization_id: 456,
+      org_id: 456,
     }
 
     const isValid = validateUser(userData)

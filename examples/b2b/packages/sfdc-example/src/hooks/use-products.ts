@@ -29,7 +29,7 @@ interface PaginationParams {
   limit?: number
 }
 
-const fetchProducts = async (params?: PaginationParams): Promise<ListApiResponse> => {
+export const fetchProducts = async (params?: PaginationParams): Promise<ListApiResponse> => {
   const queryParams = new URLSearchParams()
 
   if (params?.page) queryParams.append('page', params.page.toString())

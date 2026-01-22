@@ -5,38 +5,26 @@ services:
     # Image from GitHub Container Registry
     # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
     # Or set POSTGRES_IMAGE to override the full image path
-    image: ${POSTGRES_IMAGE:-ghcr.io/${GITHUB_OWNER}/server-postgres:latest}
+    image: ${POSTGRES_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/server-postgres:latest}
     container_name: pzero-postgres
-    restart: unless-stopped
+    restart: "no"
     command: ["postgres", "-c", "shared_preload_libraries=pgx_ulid"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-pzero}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}"]
+      interval: 60s
+      timeout: 5s
+      retries: 5
     ports:
       - "${POSTGRES_PORT:-5433}:5432" # Changed default from 5432 to 5433 to avoid conflicts with local PostgreSQL
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:latest
-    container_name: pzero-redis
-    restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+    networks:
+      - dokploy-network # Dokploy network required in production
 
   pzero-server:
     # Image from GitHub Container Registry
@@ -44,30 +32,27 @@ services:
     # Or set SERVER_IMAGE to override the full image path
     image: ${SERVER_IMAGE:-ghcr.io/${GITHUB_OWNER}/server:latest}
     container_name: pzero-server
-    restart: unless-stopped
+    restart: "no"
     ports:
       - "${PORT:-8090}:${PORT:-8090}"
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=${PORT:-8090}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-pzero}
       - POSTGRES_MAX_CLIENTS=${POSTGRES_MAX_CLIENTS:-20}
       - POSTGRES_IDLE_TIMEOUT=${POSTGRES_IDLE_TIMEOUT:-30000}
       - POSTGRES_CONNECTION_TIMEOUT=${POSTGRES_CONNECTION_TIMEOUT:-2000}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/pzero}
+      # Redis connection URL (supports password via redis://:password@host:port or redis://username:password@host:port)
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - BREVO_API_KEY=${BREVO_API_KEY}
       - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
       - BREVO_SENDER_NAME=${BREVO_SENDER_NAME:-P-Zero}
       - EMAIL_EXPIRY_MINUTES=${EMAIL_EXPIRY_MINUTES:-100}
-      - SIGNALWIRE_PROJECT_ID=${SIGNALWIRE_PROJECT_ID}
-      - SIGNALWIRE_TOKEN=${SIGNALWIRE_TOKEN}
-      - SIGNALWIRE_PHONE_NUMBER=${SIGNALWIRE_PHONE_NUMBER}
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - JWT_SECRET=${JWT_SECRET}
@@ -75,38 +60,39 @@ services:
       - SERVER_BASE_URL=${SERVER_BASE_URL:-http://localhost:8090}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://sfdc-example.incmix.com}
       - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-true}
-      - CORS_EXPOSED_HEADERS=${CORS_EXPOSED_HEADERS:-Content-Range,X-Content-Range}
-      - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS:-Content-Type,Authorization,X-Requested-With,Accept,traceparent,x-client-type,x-auth-token,tracestate,X-Custom-Auth,x-grpc-web,x-grpc-web-accept-encoding,X-Custom-Header}
+      - CORS_EXPOSED_HEADERS=${CORS_EXPOSED_HEADERS:-Content-Range,X-Content-Range,X-Test-Eval}
+      - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS:-Content-Type,Authorization,X-Requested-With,Accept,traceparent,x-client-type,x-auth-token,tracestate,X-Custom-Auth,x-grpc-web,x-grpc-web-accept-encoding,X-Custom-Header,X-Test-Eval}
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
       - ENVIRONMENT=${ENVIRONMENT:-production}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_API_KEY=${TWILIO_API_KEY}
+      - TWILIO_API_SECRET=${TWILIO_API_SECRET}
+      - TWILIO_VERIFY_SERVICE_SID=${TWILIO_VERIFY_SERVICE_SID}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+      - TWILIO_MESSAGE=${TWILIO_MESSAGE}
+      - SIGNOZ_API_URL=${SIGNOZ_API_URL}
+      - SIGNOZ_API_KEY=${SIGNOZ_API_KEY}
+      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-pzero}
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
 
-  pzero-envoy:
-    image: envoyproxy/envoy:v1.30-latest
-    container_name: pzero-envoy-proxy
+  pzero-envoy-wasm:
+    image: ${RUST_WASM_FILTER_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/rust-wasm-filter:latest}
+    container_name: pzero-envoy-wasm-proxy
     ports:
-      - "8181:8080" # External port for client requests
-      - "9901:9901" # Admin interface
-    volumes:
-      - type: bind
-        source: ./envoy.yaml
-        target: /etc/envoy/envoy.yaml
-        is_directory: false
-        content: |
-          envoy.yaml content
+      - "8182:8081" # External port for client requests
+      - "9902:9902" # Admin interface
     command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml
-    restart: unless-stopped
+    restart: "no"
     environment:
       - ENVOY_LOG_LEVEL=info
     depends_on:
       pzero-server:
         condition: service_started
+    volumes:
+      - ./envoy-wasm.yaml:/etc/envoy/envoy.yaml
 
 volumes:
   postgres_data:
-  redis_data:

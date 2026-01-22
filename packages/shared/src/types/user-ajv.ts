@@ -4,14 +4,14 @@
  */
 
 // Using plain JSON Schema objects instead of JSONSchemaType for better compatibility
-import { createValidator, ValidationResult } from '../validator/ajv'
+import { createValidator, ValidationResult } from '../validator/ajv.js'
 
 // =============================================================================
 // Core User Interface with Dynamic Field Support
 // =============================================================================
 
 export interface User {
-  id: number
+  id: string
   github_id?: string | null
   name: string
   email: string
@@ -42,7 +42,7 @@ export interface GitHubUser {
 }
 
 export interface AccessTokenPayload {
-  userId: number
+  userId: string
   githubId?: string | null
   email: string
   exp: number
@@ -52,7 +52,7 @@ export interface AccessTokenPayload {
 }
 
 export interface RefreshTokenPayload {
-  userId: number
+  userId: string
   type: 'refresh'
   exp: number
   iat: number
@@ -92,7 +92,7 @@ export interface AuthenticatedRequest {
 export const UserSchema = {
   type: 'object',
   properties: {
-    id: { type: 'number' },
+    id: { type: 'string' },
     github_id: { type: ['string', 'null'] },
     name: { type: 'string' },
     email: { type: 'string', format: 'email' },
@@ -134,7 +134,7 @@ export const GitHubUserSchema = {
 export const AccessTokenPayloadSchema = {
   type: 'object',
   properties: {
-    userId: { type: 'number' },
+    userId: { type: 'string' },
     githubId: { type: ['string', 'null'] },
     email: { type: 'string', format: 'email' },
     exp: { type: 'number' },
@@ -148,7 +148,7 @@ export const AccessTokenPayloadSchema = {
 export const RefreshTokenPayloadSchema = {
   type: 'object',
   properties: {
-    userId: { type: 'number' },
+    userId: { type: 'string' },
     type: { const: 'refresh' },
     exp: { type: 'number' },
     iat: { type: 'number' },

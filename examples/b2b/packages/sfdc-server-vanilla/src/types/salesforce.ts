@@ -120,6 +120,7 @@ export interface SalesforceQueryRequest {
 export interface SalesforceQueryParams {
   page?: number
   limit?: number
+  sort?: string
 }
 
 export interface SalesforcePaginatedResponse {

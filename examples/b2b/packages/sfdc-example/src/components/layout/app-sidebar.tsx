@@ -38,7 +38,7 @@ import {
 } from '@/components/ui/sidebar'
 import { UserAvatarProfile } from '@/components/user-avatar-profile'
 import { navItems } from '@/constants/data'
-import { useAuth } from '@/contexts/AuthContext'
+import { useUser } from '@/hooks/use-auth'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { Icons } from '../icons'
 import { OrgSwitcher } from '../org-switcher'
@@ -58,7 +58,7 @@ export default function AppSidebar() {
   const location = useLocation()
   const pathname = location.pathname
   const { isOpen } = useMediaQuery()
-  const { user: authUser, signOut } = useAuth()
+  const { data: authUser, signOut } = useUser()
   const navigate = useNavigate()
 
   const handleSwitchTenant = (_tenantId: string) => {
@@ -67,32 +67,25 @@ export default function AppSidebar() {
 
   const handleSignOut = async () => {
     try {
-      const { error } = await signOut()
-      if (error) {
-        toast.error('Failed to sign out: ' + error.message)
-      } else {
-        toast.success('Signed out successfully')
-        navigate('/auth/sign-in')
-      }
+      console.log('[AppSidebar] Starting sign out...')
+      await signOut()
+      console.log('[AppSidebar] Sign out successful')
+      toast.success('Signed out successfully')
+      navigate('/auth/sign-in')
     } catch (error) {
-      toast.error('An unexpected error occurred')
-      console.error('Sign out error:', error)
+      console.error('[AppSidebar] Sign out error:', error)
+      toast.error('Failed to sign out: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 
-  // Create user object for UserAvatarProfile
-  const user = authUser
-    ? {
-        fullName: authUser.user_metadata?.full_name || authUser.user_metadata?.name || 'User',
-        emailAddresses: [{ emailAddress: authUser.email || 'user@example.com' }],
-        imageUrl:
-          authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || authUser.user_metadata?.avatar_url,
-      }
-    : {
-        fullName: 'Dashboard User',
-        emailAddresses: [{ emailAddress: 'user@example.com' }],
-        imageUrl: undefined,
-      }
+  const handleRefresh = () => {
+    document.cookie.split(';').forEach(cookie => {
+      document.cookie = cookie.replace(/^ +/, '').replace(/=.*/, '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/')
+    })
+    localStorage.clear()
+    sessionStorage.clear()
+    location.reload()
+  }
 
   // Debug logging
 
@@ -112,7 +105,7 @@ export default function AppSidebar() {
           <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarMenu>
             {navItems.map(item => {
-              const Icon = item.icon ? Icons[item.icon] : Icons.logo
+              const Icon = item.icon ? Icons[item.icon as keyof typeof Icons] : Icons.logo
               return item?.items && item?.items?.length > 0 ? (
                 <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
                   <SidebarMenuItem>
@@ -125,7 +118,7 @@ export default function AppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {item.items?.map(subItem => (
+                        {item.items?.map((subItem: any) => (
                           <SidebarMenuSubItem key={subItem.title}>
                             <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
                               <Link to={subItem.url}>
@@ -161,12 +154,12 @@ export default function AppSidebar() {
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  {user && (
+                  {authUser && (
                     <div className="flex items-center gap-2">
-                      <UserAvatarProfile user={user} />
+                      <UserAvatarProfile user={authUser} />
                       <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">{user.fullName}</span>
-                        <span className="truncate text-xs">{user.emailAddresses[0]?.emailAddress}</span>
+                        <span className="truncate font-semibold">{authUser.name}</span>
+                        <span className="truncate text-xs">{authUser.email}</span>
                       </div>
                     </div>
                   )}
@@ -181,12 +174,12 @@ export default function AppSidebar() {
               >
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="px-1 py-1.5">
-                    {user && (
+                    {authUser && (
                       <div className="flex items-center gap-2">
-                        <UserAvatarProfile user={user} />
+                        <UserAvatarProfile user={authUser} />
                         <div className="grid flex-1 text-left text-sm leading-tight">
-                          <span className="truncate font-semibold">{user.fullName}</span>
-                          <span className="truncate text-xs">{user.emailAddresses[0]?.emailAddress}</span>
+                          <span className="truncate font-semibold">{authUser.name}</span>
+                          <span className="truncate text-xs">{authUser.email}</span>
                         </div>
                       </div>
                     )}
@@ -209,13 +202,13 @@ export default function AppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/dashboard/overview')}>
-                  <IconUserCircle className="mr-2 h-4 w-4" />
-                  <span>Home</span>
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>
                   <IconLogout className="mr-2 h-4 w-4" />
                   <span>Sign Out</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleRefresh}>
+                  <IconLogout className="mr-2 h-4 w-4" />
+                  <span>Refresh</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

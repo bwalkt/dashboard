@@ -1,0 +1,28 @@
+# Generated files
+src/routeTree.gen.ts
+.tanstack/
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+.nuxt/
+.output/
+
+# Environment files
+.env.local
+.env.production.local
+.env.development.local
+
+# Logs
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -1,4 +1,12 @@
-export const timingPhases = ['timing.dns', 'timing.connection', 'timing.tls', 'timing.ttfb', 'timing.transfer'] as const
+export const timingPhases = [
+  'timing.dns',
+  'timing.connection',
+  'timing.tls',
+  'timing.ttfb',
+  'timing.transfer',
+  'timing.stalling',
+  'timing.envoy_total',
+] as const
 
 export type TimingPhase = (typeof timingPhases)[number]
 
@@ -14,6 +22,10 @@ export function getTimingColor(timing: TimingPhase) {
       return 'bg-violet-500'
     case 'timing.transfer':
       return 'bg-purple-500'
+    case 'timing.stalling':
+      return 'bg-gray-500'
+    case 'timing.envoy_total':
+      return 'bg-orange-500'
     default:
       return 'bg-gray-500'
   }
@@ -31,21 +43,28 @@ export function getTimingLabel(timing: TimingPhase) {
       return 'TTFB'
     case 'timing.transfer':
       return 'Transfer'
+    case 'timing.stalling':
+      return 'Waiting'
+    case 'timing.envoy_total':
+      return 'Envoy'
     default:
       return 'Unknown'
   }
 }
 
 export function getTimingPercentage(
-  timing: Record<TimingPhase, number>,
+  timing: Partial<Record<TimingPhase, number>>,
   latency: number,
 ): Record<TimingPhase, number | string> {
-  const percentage: Record<TimingPhase, number | string> = { ...timing }
-  Object.entries(timing).forEach(([key, value]) => {
-    const pValue = Math.round((value / latency) * 1000) / 1000
-    percentage[key as keyof typeof timing] = /^0\.00[0-9]+/.test(pValue.toString())
-      ? '<1%'
-      : `${(pValue * 100).toFixed(1)}%`
+  const percentage: Record<TimingPhase, number | string> = {} as Record<TimingPhase, number | string>
+  timingPhases.forEach(phase => {
+    const value = timing[phase]
+    if (value !== undefined && typeof value === 'number' && !isNaN(value) && latency > 0) {
+      const pValue = Math.round((value / latency) * 1000) / 1000
+      percentage[phase] = /^0\.00[0-9]+/.test(pValue.toString()) ? '<1%' : `${(pValue * 100).toFixed(1)}%`
+    } else {
+      percentage[phase] = '-'
+    }
   })
   return percentage
 }

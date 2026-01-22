@@ -3,7 +3,7 @@ import type {
   AuthResult,
   ProcessingRequest,
   ProcessingResponse,
-} from "@pzero/shared/grpc";
+} from "@pzero/shared/http";
 import {
   createAuthHeaders,
   createResponseTrackingHeaders,
@@ -11,8 +11,8 @@ import {
   GrpcStatus,
   isPublicPath,
   ProcessingStatus,
-} from "@pzero/shared/grpc";
-import { AuthProxy } from "../../auth-proxy";
+} from "@pzero/shared/http";
+import { AuthProxy } from "../../auth-proxy.js";
 
 export function createExtProcService(authProxy: AuthProxy) {
   return {
@@ -71,7 +71,7 @@ export function createExtProcService(authProxy: AuthProxy) {
                       status: ProcessingStatus.CONTINUE_AND_REPLACE,
                       header_mutation: {
                         set_headers: createAuthHeaders(
-                          authResult.user.id,
+                          String(authResult.user.id),
                           authResult.user.email,
                         ),
                         remove_headers: ["x-custom-auth"], // Remove original token for security
@@ -225,4 +225,4 @@ export function createExtProcService(authProxy: AuthProxy) {
   };
 }
 
-// These utility functions are now imported from @pzero/shared/grpc
+// These utility functions are now imported from @pzero/shared/http

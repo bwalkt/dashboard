@@ -71,11 +71,19 @@ export const columns: ColumnDef<Order>[] = [
   },
   {
     id: 'TotalAmount',
-    accessorKey: 'TotalAmount',
+    accessorFn: row => {
+      if (row.Total_Amount__c != null) {
+        return row.Total_Amount__c
+      }
+      if (row.Quantity__c != null && row.Unit_Price__c != null) {
+        return Number(row.Quantity__c) * Number(row.Unit_Price__c)
+      }
+      return row.TotalAmount ?? null
+    },
     header: ({ column }) => <DataTableColumnHeader column={column} title="Total Amount" />,
     cell: ({ cell }) => {
-      const amount = cell.getValue<Order['TotalAmount']>()
-      if (!amount) return <div>N/A</div>
+      const amount = cell.getValue<Order['TotalAmount'] | Order['Total_Amount__c'] | null>()
+      if (amount == null) return <div>N/A</div>
       return <div className="font-medium">${amount.toLocaleString()}</div>
     },
   },

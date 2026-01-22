@@ -1,0 +1,14 @@
+name: portal
+version: "3.9"
+
+services:
+  portal:
+    # Image from GitHub Container Registry
+    # Set GITHUB_OWNER to the repository owner (org or username), not your personal username
+    # Or set PORTAL_IMAGE to override the full image path
+    image: ${PORTAL_IMAGE:-ghcr.io/${GITHUB_OWNER:-bwalkt}/portal:latest}
+    container_name: portal
+    ports:
+      - "${PORT:-1430}:80"
+    restart: "no"
+

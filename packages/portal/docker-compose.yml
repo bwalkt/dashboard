@@ -1,0 +1,25 @@
+name: portal
+
+services:
+  portal:
+    build:
+      context: ../../
+      dockerfile: packages/portal/Dockerfile
+      args:
+        - VITE_BACKEND_URL=${VITE_BACKEND_URL:-}
+        - VITE_CONFIG_BREADCRUMB=${VITE_CONFIG_BREADCRUMB:-}
+        - VITE_POSTHOG_API_KEY=${VITE_POSTHOG_API_KEY:-}
+        - VITE_POSTHOG_HOST=${VITE_POSTHOG_HOST:-}
+        - VITE_TABLE_DEBUG=${VITE_TABLE_DEBUG:-}
+        - VITE_SENTRY_DSN=${VITE_SENTRY_DSN:-}
+        - VITE_SENTRY_DISABLED=${VITE_SENTRY_DISABLED:-}
+    container_name: portal
+    networks:
+      - pzero-network
+    ports:
+      - "1430:80"
+    restart: unless-stopped
+
+networks:
+  pzero-network:
+    external: true

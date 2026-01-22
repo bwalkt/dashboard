@@ -1,0 +1,117 @@
+static_resources:
+  listeners:
+    - name: listener_0
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8081 }
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: backend
+                      domains: ["*"]
+                      cors:
+                        allow_origin_string_match:
+                          - prefix: "http://localhost"
+                          - prefix: "https://localhost"
+                          - exact: "https://sfdc-example.incmix.com"
+                          - exact: "https://pzero-envoy-wasm.incmix.com"
+                          - suffix: ".incmix.com"
+                        allow_methods: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+                        allow_headers: "content-type,x-challenge-id,x-challenge-answer,authorization,traceparent,x-proxy-target,x-client-type"
+                        expose_headers: "x-challenge-id,x-challenge,x-challenge-params,x-challenge-answer,timing-allow-origin,server-timing"
+                        allow_credentials: true
+                        max_age: "86400"
+                      routes:
+                        # All routes go to server_cluster
+                        # Public route bypass is handled by WASM filter, not Envoy config
+                        - match: { prefix: "/" }
+                          route: { cluster: server_cluster }
+                          # Add Server-Timing header with Envoy total duration
+                          response_headers_to_add:
+                            - header:
+                                key: "server-timing"
+                                value: "envoy-total;dur=%DURATION%"
+                http_filters:
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                  - name: envoy.filters.http.wasm
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+                      config:
+                        name: "challenge_authz"
+                        root_id: "challenge_authz"
+                        fail_open: false
+                        vm_config:
+                          vm_id: "challenge_authz_vm"
+                          runtime: "envoy.wasm.runtime.v8"
+                          code:
+                            local:
+                              filename: "/etc/envoy/wasm/challenge-authz.wasm"
+                          allow_precompiled: true
+                        configuration:
+                          "@type": type.googleapis.com/google.protobuf.StringValue
+                          value: |
+                            centrifugo_secret=default-secret-key-change-in-production_FILTER_AUTH
+                            filter_id=pzero-envoy-wasm-filter-1
+                            jwt_secret=your_super_secret_jwt_key_change_this_in_production
+                            proxy_targets_authority=pzero-server
+                            envoy_internal_secret=your_envoy_internal_secret
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+    - name: redis_listener
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 6380 }
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.redis_proxy
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.redis_proxy.v3.RedisProxy
+                stat_prefix: redis_stats
+                settings:
+                  op_timeout: 5s
+                  enable_redirection: true
+                  enable_command_stats: true
+                downstream_auth_passwords:
+                  - inline_string: ""
+                prefix_routes:
+                  routes:
+                    - prefix: ""
+                      cluster: redis_cluster
+  clusters:
+    - name: server_cluster
+      connect_timeout: 10s
+      type: logical_dns
+      dns_lookup_family: V4_ONLY
+      load_assignment:
+        cluster_name: server_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: { address: pzero-server, port_value: 8090 }
+    - name: redis_cluster
+      type: LOGICAL_DNS
+      connect_timeout: 1s
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: redis_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: pzero-dragonfly
+                      port_value: 6379
+
+admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9902

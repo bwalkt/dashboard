@@ -89,6 +89,8 @@ export type SheetField<TData, TMeta = Record<string, unknown>> = {
   condition?: (props: TData) => boolean
   className?: string
   skeletonClassName?: string
+  /** When true, renders component without dt/dd wrapper (for full-width sections) */
+  noWrapper?: boolean
 }
 
 /** ----------------------------------------- */

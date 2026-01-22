@@ -3,6 +3,7 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestApp } from "../helpers/app";
 import { mockRedis } from "../mocks/redis";
+import "../mocks/external-services";
 
 describe("Header Validation Middleware", () => {
   let app: FastifyInstance;
@@ -93,10 +94,11 @@ describe("Header Validation Middleware", () => {
       // We should have processed all requests
       expect(responses.length).toBe(105);
 
-      // The global rate limiter should have kicked in eventually
-      // Note: This might not always trigger depending on rate limiter configuration
-      // So we'll just verify the test completes and basic functionality works
-      expect(successResponses.length).toBeGreaterThan(0);
+      // All responses should be either successful or rate-limited (no errors)
+      expect(successResponses.length + rateLimitedResponses.length).toBe(105);
+      
+      // Since we sent 105 requests (above the 100/min limit), rate limiting should occur
+      expect(rateLimitedResponses.length).toBeGreaterThan(0);
 
       // If rate limiting occurred, verify the response format
       if (rateLimitedResponses.length > 0) {

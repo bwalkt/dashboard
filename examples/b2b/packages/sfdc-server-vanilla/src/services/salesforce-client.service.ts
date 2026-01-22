@@ -296,6 +296,13 @@ export class SalesforceClient {
   }
 
   /**
+   * Delete a record
+   */
+  async deleteRecord(objectType: string, recordId: string): Promise<void> {
+    await this.apiCall('DELETE', `/services/data/v58.0/sobjects/${objectType}/${recordId}`)
+  }
+
+  /**
    * Get object metadata
    * @param objectType - Salesforce object type
    * @returns Object metadata
