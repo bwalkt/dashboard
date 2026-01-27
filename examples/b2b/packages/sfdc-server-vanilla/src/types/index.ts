@@ -26,7 +26,6 @@ export interface EnvironmentConfig {
   DATABASE_PATH: string
   PORT?: number
   FRONTEND_URL: string
-  REDIS_URL: string
   // OpenTelemetry/SigNoz configuration (optional)
   OTEL_SERVICE_NAME?: string
   OTEL_SERVICE_VERSION?: string

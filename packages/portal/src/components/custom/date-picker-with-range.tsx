@@ -207,7 +207,10 @@ function CustomDateRange({
   }
 
   React.useEffect(() => {
-    onSelect({ from: debounceDateFrom, to: debounceDateTo })
+    // Only call onSelect if we have valid dates (prevents clearing when preset is selected)
+    if (debounceDateFrom && debounceDateTo) {
+      onSelect({ from: debounceDateFrom, to: debounceDateTo })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounceDateFrom, debounceDateTo])
 

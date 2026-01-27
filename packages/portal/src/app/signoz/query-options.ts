@@ -90,7 +90,8 @@ function buildSignozFilters(search: SearchParamsType): SigNozFilters {
  * Query options for Signoz traces
  */
 export const dataOptions = (search: SearchParamsType) => {
-  const DEFAULT_LIMIT = search.limit || 50
+  // Table pagination limit - higher to get data across multiple days
+  const DEFAULT_LIMIT = 500
 
   return infiniteQueryOptions({
     queryKey: ['signoz-traces', searchParamsSerializer({ ...search, offset: null, traceId: null })], // Remove offset and traceId from queryKey to avoid unnecessary refetches
@@ -239,13 +240,13 @@ function transformTraceDataToSummary(
 }
 
 /**
- * Query options for Signoz traces summary
+ * Query options for Signoz traces summary (for chart)
  */
-export const summaryOptions = () => {
+export const summaryOptions = (startTime: number, endTime: number) => {
   return queryOptions({
-    queryKey: ['signoz-traces-summary'],
+    queryKey: ['signoz-traces-summary', startTime, endTime],
     queryFn: async (): Promise<{ timestamp: number; success: number; warning: number; error: number }[]> => {
-      const response = await queryTracesSummary()
+      const response = await queryTracesSummary(startTime, endTime)
       const transformedData = transformTraceDataToSummary(response.data || [])
       return transformedData
     },

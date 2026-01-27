@@ -20,8 +20,6 @@ services:
       # GitHub OAuth Configuration
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
-      # Redis Configuration
-      - REDIS_URL=${REDIS_URL}
       # JWT Configuration
       - JWT_SECRET=${JWT_SECRET}
       # Database Configuration

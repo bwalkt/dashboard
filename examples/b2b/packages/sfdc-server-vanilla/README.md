@@ -103,7 +103,6 @@ docker compose up -d
 ```
 
 This will start:
-- `dragonfly` - Redis-compatible database for challenge storage
 - `pzero-sfdc-server-vanilla` - The SFDC server (port 3000)
 - `pzero-envoy-wasm` - WASM filter proxy for authentication (when using proxy mode)
 
@@ -137,7 +136,6 @@ Additional environment variables for Docker deployment:
 
 | Variable              | Description                                    | Required | Default                    |
 | --------------------- | ---------------------------------------------- | -------- | -------------------------- |
-| `REDIS_URL`            | Redis connection URL                           | No       | `redis://dragonfly:6379`   |
 | `CHALLENGE_SECRET`     | Secret for challenge validation                | Yes (production) | - |
 | `DOCKER_CONTAINER`     | Set to `true` when running in Docker           | No       | -                          |
 
@@ -194,7 +192,6 @@ Additional environment variables for Docker deployment:
 | `JWT_SECRET`              | JWT signing secret         | Yes                            |
 | `DATABASE_PATH`           | SQLite database path       | No (defaults to ./database.db) |
 | `OAUTH_REDIRECT_URL`      | OAuth callback URL         | Yes                            |
-| `REDIS_URL`               | Redis connection URL        | No (defaults to redis://dragonfly:6379) |
 | `CHALLENGE_SECRET`        | Challenge validation secret | Yes (production) |
 
 ## 📁 Project Structure

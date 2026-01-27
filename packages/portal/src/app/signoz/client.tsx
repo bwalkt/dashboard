@@ -11,6 +11,21 @@ import { dataOptions, summaryOptions } from './query-options'
 import type { SignozTraceSchema } from './schema'
 import { searchParamsParser } from './search-params'
 
+const chartConfig: ChartConfig = {
+  success: {
+    label: 'Success',
+    color: 'hsl(142 76% 36%)',
+  },
+  warning: {
+    label: 'Warning',
+    color: 'hsl(45 93% 47%)',
+  },
+  error: {
+    label: 'Error',
+    color: 'hsl(0 84% 60%)',
+  },
+}
+
 export function SignozClient() {
   const [search, setSearch] = useQueryStates(searchParamsParser)
   useResetFocus()
@@ -34,7 +49,10 @@ export function SignozClient() {
     return data?.pages?.flatMap(page => page.data.traces ?? []) ?? []
   }, [data?.pages])
 
-  const { data: summaryData } = useQuery(summaryOptions())
+  // Use separate query for chart summary data (fetches all data for the date range)
+  const { data: chartData = [] } = useQuery(
+    summaryOptions(search.startTime || Date.now() - 60 * 60 * 1000, search.endTime || Date.now()),
+  )
 
   // Get metadata from the last page (all pages should have the same total)
   const lastPage = data?.pages?.[data?.pages.length - 1]
@@ -42,19 +60,28 @@ export function SignozClient() {
   const totalRowsFetched = flatData.length
 
   // Extract filter values for defaultColumnFilters
-  // Note: We don't add date filter here because we filter by startTime/endTime at the API level
-  // Adding it as a column filter would cause double-filtering and might filter out all rows
-  // Only include filters that correspond to actual table columns
-  const { sort, spanId, ...filters } = search
+  // Exclude params that are not table columns (limit, offset, sort, spanId, traceId)
+  // But convert startTime/endTime to a "date" column filter
+  const { sort, spanId, traceId, startTime, endTime, limit, offset, ...filters } = search
 
   const defaultColumnFilters = React.useMemo(() => {
-    return Object.entries(filters)
+    const columnFilters = Object.entries(filters)
       .map(([key, value]) => ({
         id: key,
         value,
       }))
       .filter(({ value }) => value != null && (!Array.isArray(value) || value.length > 0))
-  }, [filters])
+
+    // Convert startTime/endTime URL params back to a "date" column filter
+    if (startTime && endTime) {
+      columnFilters.push({
+        id: 'date',
+        value: [new Date(startTime), new Date(endTime)],
+      })
+    }
+
+    return columnFilters
+  }, [filters, startTime, endTime])
 
   return (
     <DataTableInfinite
@@ -86,8 +113,10 @@ export function SignozClient() {
       hasNextPage={hasNextPage ?? false}
       fetchPreviousPage={undefined}
       refetch={refetch}
-      chartData={summaryData ?? []}
+      chartData={chartData}
       chartDataColumnId="date"
+      chartConfig={chartConfig}
+      chartBarKeys={['error', 'warning', 'success']}
       getRowClassName={() => ''}
       getRowId={row => {
         if (!row) {

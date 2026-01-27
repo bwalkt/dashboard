@@ -17,10 +17,10 @@ const config = {
     ],
     sourceExts: ['js', 'jsx', 'json', 'ts', 'tsx', 'cjs', 'mjs'],
     unstable_enableSymlinks: true,
-    // Shim Node.js modules that don't exist in React Native
-    extraNodeModules: {
-      crypto: path.resolve(__dirname, 'shims/crypto.js'),
-    },
+    // Note: crypto shim temporarily disabled for testing
+    // extraNodeModules: {
+    //   crypto: path.resolve(__dirname, 'shims/crypto.js'),
+    // },
   },
 }
 

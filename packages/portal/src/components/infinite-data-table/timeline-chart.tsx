@@ -130,7 +130,7 @@ export function TimelineChart<TChart extends BaseChartSchema>({
             } else if (timerange.period === '1d') {
               return format(date, 'HH:mm')
             } else if (timerange.period === '1w') {
-              return format(date, 'LLL dd HH:mm')
+              return format(date, 'LLL dd')
             }
             return format(date, 'LLL dd, y')
           }}
@@ -152,7 +152,13 @@ export function TimelineChart<TChart extends BaseChartSchema>({
         />
         {/* Dynamically render bars based on keys */}
         {keys.map(key => (
-          <Bar key={key} dataKey={key} stackId="a" fill={chartConfig?.[key]?.color || `hsl(var(--${key}))`} />
+          <Bar
+            key={key}
+            dataKey={key}
+            stackId="a"
+            fill={chartConfig?.[key]?.color || `hsl(var(--${key}))`}
+            maxBarSize={20}
+          />
         ))}
         {refAreaLeft && refAreaRight && (
           <ReferenceArea

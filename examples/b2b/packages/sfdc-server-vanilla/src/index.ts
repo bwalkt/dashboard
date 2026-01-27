@@ -4,8 +4,6 @@ import { CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER, CHALLENGE_QUESTION_HEADER
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import { VALIDATION_HEADER_NAME } from './config/constants.js'
 import { config, validateEnvironment } from './config/env.js'
-import { fastifyOtelInstrumentation } from './config/otel.js'
-import { redis } from './config/redis.js'
 import { authRoutes } from './routes/auth.js'
 import { salesforceRoutes } from './routes/salesforce.js'
 
@@ -13,25 +11,6 @@ import { salesforceRoutes } from './routes/salesforce.js'
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   // Validate environment variables
   validateEnvironment()
-
-  // Remove this - FastifyOtelInstrumentation is now handled by NodeSDK
-  // await fastify.register(fastifyOtelInstrumentation.plugin())
-
-  // Initialize Redis with timeout and error handling
-  try {
-    const REDIS_CONNECTION_TIMEOUT_MS = 10000 // 10 seconds
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`Redis connection timeout after ${REDIS_CONNECTION_TIMEOUT_MS}ms`))
-      }, REDIS_CONNECTION_TIMEOUT_MS)
-    })
-
-    await Promise.race([redis.initialize(), timeoutPromise])
-  } catch (error) {
-    console.error('❌ Failed to initialize Redis connection:', error)
-    console.error('Server startup aborted due to Redis connection failure.')
-    process.exit(1)
-  }
 
   // Register CORS plugin
   await fastify.register(cors, {

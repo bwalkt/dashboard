@@ -1,5 +1,6 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { UserDrawer } from '@/features/users/components'
@@ -15,6 +16,7 @@ export const Route = createFileRoute('/users/new')({
 
 function NewUserPage() {
   const navigate = Route.useNavigate()
+  const queryClient = useQueryClient()
 
   const handleAdd = async (userData: Partial<User>) => {
     try {
@@ -24,6 +26,7 @@ function NewUserPage() {
         phone: userData.phone || undefined,
         handle: userData.handle || undefined,
       })
+      await queryClient.invalidateQueries({ queryKey: ['users'] })
       toast.success('User created successfully')
       navigate({ to: '/users' })
     } catch (error) {

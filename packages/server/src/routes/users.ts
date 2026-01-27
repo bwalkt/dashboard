@@ -51,7 +51,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
    * Create a new user (similar to registration)
    */
   fastify.post(
-    "/users",
+    "/api/users",
     {
       preHandler: authenticateToken,
     },

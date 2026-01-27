@@ -217,7 +217,27 @@ const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = asyn
       request.headers["x-server-fingerprint"] = fingerprint;
     }
 
-    // Bot detection (check before auth to catch bots early)
+    // Check for public paths FIRST (no auth required, skip bot detection for these)
+    // Extract pathname from URL (remove query string and hash)
+    let isPublic = false;
+    if (request.url) {
+      try {
+        // Fastify request.url is typically just the pathname with query string
+        // Use a dummy base URL to parse it properly
+        const url = new URL(request.url, config.SERVER_BASE_URL);
+        isPublic = isPublicPath(url.pathname);
+      } catch {
+        // Fallback to original string if URL parsing fails
+        isPublic = isPublicPath(request.url);
+      }
+    }
+
+    // Skip bot detection for public paths (like /auth/login)
+    if (isPublic) {
+      return; // Continue to handler
+    }
+
+    // Bot detection (only for non-public paths)
     if (isSuspiciousBot(request)) {
       return reply.status(403).send({
         error: "Suspicious bot detected",
@@ -257,24 +277,6 @@ const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = asyn
         return; // Continue to handler
       } else {
         return reply.status(401).send({ error: "Invalid custom auth token" });
-      }
-    }
-
-    // Check for public paths (no auth required)
-    // Extract pathname from URL (remove query string and hash)
-    if (request.url) {
-      try {
-        // Fastify request.url is typically just the pathname with query string
-        // Use a dummy base URL to parse it properly
-        const url = new URL(request.url, config.SERVER_BASE_URL);
-        if (isPublicPath(url.pathname)) {
-          return; // Continue to handler
-        }
-      } catch {
-        // Fallback to original string if URL parsing fails
-        if (isPublicPath(request.url)) {
-          return; // Continue to handler
-        }
       }
     }
 

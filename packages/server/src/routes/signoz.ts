@@ -75,23 +75,28 @@ export async function signozRoutes(fastify: FastifyInstance): Promise<void> {
       }
     },
   );
-  fastify.get<SigNozTracesRequest>(
+  // GET /signoz/traces/summary - Query SigNoz for trace summary (for chart)
+  // Accepts query params: startTime, endTime (epoch ms)
+  fastify.get<{ Querystring: { startTime?: string; endTime?: string } }>(
     "/signoz/traces/summary",
     {
       preHandler: [authenticateToken],
     },
-    async (
-      _request: FastifyRequest<SigNozTracesRequest>,
-      reply: FastifyReply,
-    ) => {
+    async (request, reply) => {
       try {
-        
+        const { startTime: startTimeStr, endTime: endTimeStr } = request.query;
 
+        // Parse query params or use defaults (last 24 hours)
+        const now = Date.now();
+        const startTime = startTimeStr ? parseInt(startTimeStr, 10) : now - 1000 * 60 * 60 * 24;
+        const endTime = endTimeStr ? parseInt(endTimeStr, 10) : now;
 
-        const result = await queryTraces({ filters:{
-          startTime: Date.now() - 1000 * 60 * 60 * 24 * 30, // 30 days ago
-          endTime: Date.now(),
-        }, pagination: { limit: 10000, offset: 0 } });
+        // Use a high limit to get all data for the chart
+        // Note: With DESC ordering, we need enough limit to reach historical data
+        const result = await queryTraces({
+          filters: { startTime, endTime },
+          pagination: { limit: 50000, offset: 0 }
+        });
         return reply.code(200).send(result);
       } catch (error) {
         const errorMessage =

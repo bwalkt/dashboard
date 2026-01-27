@@ -4,7 +4,6 @@ import { CHALLENGE_ID_HEADER, CHALLENGE_QUESTION_HEADER } from '@pzero/shared/ch
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { REFRESH_TOKEN_TTL, VALIDATION_HEADER_NAME } from '../config/constants.js'
 import { config } from '../config/env.js'
-import { redis } from '../config/redis.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { authService } from '../services/auth.service.js'
 

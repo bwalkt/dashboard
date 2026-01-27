@@ -24,7 +24,7 @@ export function DataTableFilterTimerange<TData>({ value: _value, presets }: Data
   )
 
   const setDate = (date: DateRange | undefined) => {
-    if (!date) return // TODO: remove from search params if columnFilter is removed
+    if (!date) return
     if (date.from && !date.to) {
       column?.setFilterValue([date.from])
     }

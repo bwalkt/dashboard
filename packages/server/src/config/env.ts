@@ -64,6 +64,7 @@ const DEFAULT_ALLOWED_HEADERS = [
   "Authorization",
   "X-Requested-With",
   "Accept",
+  "User-Agent",
   "traceparent",
   "x-client-type",
   "x-auth-token",

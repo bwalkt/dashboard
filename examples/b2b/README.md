@@ -77,8 +77,7 @@ docker compose -f docker-compose.prod.yml up -d
 
 ## Services
 
-- **dragonfly**: Redis-compatible in-memory database (development only)
-- **pzero-sfdc-server-vanilla**: Salesforce integration server  
+- **pzero-sfdc-server-vanilla**: Salesforce integration server
 - **pzero-envoy-wasm**: WASM filter proxy for authentication (when using proxy mode)
 
 ## Security Notes
