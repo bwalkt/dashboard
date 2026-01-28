@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { redis } from "../config/redis.js";
+import { config } from "../config/env.js";
 
 /**
  * Redis routes for WASM filter challenge and user validation
@@ -13,15 +14,19 @@ export async function redisFilterRoutes(
   
   // Simple GET endpoint for wasm filter (no auth required for challenge validation)
   // Rate limiting is applied at the server level for public routes
+  // In non-production environments we disable per-route rate limits to avoid
+  // impacting perf tests and local development.
   fastify.get<{
     Params: { key: string }
   }>("/redis/get/:key", {
-    config: {
-      rateLimit: {
-        max: 1000, // 1000 requests (high limit for WASM filter internal calls)
-        timeWindow: '1 minute' // per minute per IP
-      }
-    }
+    config: config.NODE_ENV === "production"
+      ? {
+          rateLimit: {
+            max: 1000, // 1000 requests (high limit for WASM filter internal calls)
+            timeWindow: '1 minute', // per minute per IP
+          },
+        }
+      : {}
   }, async (request, reply) => {
     try {
       const { key } = request.params;

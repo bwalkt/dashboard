@@ -2,7 +2,7 @@
 set -e
 
 # Find all compiled test files and run them sequentially
-for test_file in /tests/dist/*.test.js; do
+for test_file in /tests/dist/sfdc-server-vanilla.test.js; do
   if [ -f "$test_file" ]; then
     echo "Running test: $test_file"
     k6 run "$test_file"

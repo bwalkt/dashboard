@@ -92,6 +92,7 @@ services:
       - SIGNOZ_API_KEY=${SIGNOZ_API_KEY}
       - SIGNOZ_API_URL=${SIGNOZ_API_URL}
       - ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-pzero}
+      - STATIC_CHALLENGE_ANSWER=${STATIC_CHALLENGE_ANSWER}
     depends_on:
       postgres:
         condition: service_healthy
