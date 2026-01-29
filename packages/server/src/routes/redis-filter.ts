@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
-import { redis } from "../config/redis.js";
 import { config } from "../config/env.js";
+import { redis } from "../config/redis.js";
 
 /**
  * Redis routes for WASM filter challenge and user validation

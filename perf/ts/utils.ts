@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/correctness/noUndeclaredVariables: K6 env variables */
+/** biome-ignore-all lint/suspicious/noExplicitAny: Will be fixed in future */
 /**
  * Utility functions for k6 performance tests
  * Handles authentication, proxy headers, and challenge management
@@ -283,9 +284,8 @@ export function handleChallengeResponseWithBody(response: Response, parsedBody?:
   const headers = createHeadersFromK6Response(response)
 
   // Extract grid and challenges from parsed body
-  // biome-ignore lint/suspicious/noExplicitAny: Will be fixed in future
+
   let userData: any
-  // biome-ignore lint/suspicious/noExplicitAny: Will be fixed in future
   let challenges: any[] | undefined
 
   if (parsedBody) {
@@ -411,7 +411,6 @@ export function makeRequest(endpoint: string, params?: Record<string, string | n
  * Similar to api.post in api.ts
  * Returns both the response and parsed body (since response.json() can only be called once in k6)
  */
-// biome-ignore lint/suspicious/noExplicitAny: Will be fixed in future
 export function makePostRequest(
   endpoint: string,
   body?: any,

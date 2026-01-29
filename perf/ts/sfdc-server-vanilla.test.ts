@@ -90,7 +90,7 @@ export default function (data: { initialized: boolean } | undefined) {
   sleep(1)
 
   // Test 2: GET /salesforce/:objectType/query - Query Salesforce records
-  const objectTypes = ['Order', 'Product2',]
+  const objectTypes = ['Order', 'Product2']
   const objectType = objectTypes[__VU % objectTypes.length] // Distribute across VUs
 
   const queryStart = Date.now()
@@ -98,7 +98,7 @@ export default function (data: { initialized: boolean } | undefined) {
     page: 1,
     limit: 50,
   })
-  
+
   const querySuccess = check(queryResponse, {
     [`query ${objectType} status is 200`]: r => r.status === 200,
     [`query ${objectType} has records`]: r => {
