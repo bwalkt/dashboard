@@ -7,7 +7,7 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/k6": "^0.48.0",
-    "typescript": "catalog:"
+    "@types/k6": "1.5.0",
+    "typescript": "5.9.3"
   }
 }
