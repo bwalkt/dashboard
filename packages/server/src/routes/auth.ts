@@ -4,7 +4,7 @@ import oauth2Plugin, { type OAuth2Namespace } from "@fastify/oauth2";
 import { type AuthenticatedRequest, type ErrorResponse, generateHandleFromEmail } from "@pzero/shared";
 import { CHALLENGE_ID_HEADER, CHALLENGE_PARAMS_HEADER, CHALLENGE_QUESTION_HEADER } from "@pzero/shared/challenge";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { config } from "../config/env.js";
+import { config, expiryStringToSeconds } from "../config/env.js";
 import { redis } from "../config/redis.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { authService } from "../services/auth.service.js";
@@ -73,7 +73,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       sameSite: "lax",
       ...(config.DOMAIN && { domain: config.DOMAIN }),
       path: "/",
-      maxAge: 3600, // 1 hour
+      maxAge: expiryStringToSeconds(config.JWT_ACCESS_TOKEN_EXPIRY),
     },
     credentials: {
       client: {
@@ -208,14 +208,14 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: config.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 3600, // 1 hour
+        maxAge: expiryStringToSeconds(config.JWT_ACCESS_TOKEN_EXPIRY),
       });
       reply.setCookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: config.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 3600 * 24 * 30, // 30 days
+        maxAge: expiryStringToSeconds(config.JWT_REFRESH_TOKEN_EXPIRY),
       });
 
       return reply.send({
@@ -470,7 +470,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: config.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 3600, // 1 hour
+        maxAge: expiryStringToSeconds(config.JWT_ACCESS_TOKEN_EXPIRY),
       });
 
       reply.setCookie("refreshToken", newRefreshToken, {
@@ -478,7 +478,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: config.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 3600 * 24 * 30, // 30 days
+        maxAge: expiryStringToSeconds(config.JWT_REFRESH_TOKEN_EXPIRY),
       });
 
       return reply.send({
@@ -757,7 +757,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: config.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 3600, // 1 hour
+        maxAge: expiryStringToSeconds(config.JWT_ACCESS_TOKEN_EXPIRY),
       });
 
       reply.setCookie("refreshToken", refreshToken, {
@@ -765,7 +765,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: config.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 3600 * 24 * 30, // 30 days
+        maxAge: expiryStringToSeconds(config.JWT_REFRESH_TOKEN_EXPIRY),
       });
 
       return reply.send({
@@ -838,7 +838,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           secure: config.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
-          maxAge: 3600, // 1 hour
+          maxAge: expiryStringToSeconds(config.JWT_ACCESS_TOKEN_EXPIRY),
         });
 
         reply.setCookie("refreshToken", refreshToken, {
@@ -846,7 +846,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           secure: config.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
-          maxAge: 3600 * 24 * 30, // 30 days
+          maxAge: expiryStringToSeconds(config.JWT_REFRESH_TOKEN_EXPIRY),
         });
 
         return reply.send({
@@ -961,7 +961,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: config.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 3600, // 1 hour
+        maxAge: expiryStringToSeconds(config.JWT_ACCESS_TOKEN_EXPIRY),
       });
 
       reply.setCookie("refreshToken", refreshToken, {
@@ -969,7 +969,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: config.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 3600 * 24 * 30, // 30 days
+        maxAge: expiryStringToSeconds(config.JWT_REFRESH_TOKEN_EXPIRY),
       });
 
       return reply.send({

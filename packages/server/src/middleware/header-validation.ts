@@ -29,7 +29,9 @@ declare module "fastify" {
 
 const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = async (fastify, opts) => {
   const options = {
-    enableRateLimit: true,
+    // Disable rate limiting outside production so local dev and perf tests
+    // (including Envoy/WASM internal calls) are not throttled.
+    enableRateLimit: config.NODE_ENV === "production",
     enableTokenCache: true,
     enableFingerprinting: false,
     maxRequestsPerMinute: 100,

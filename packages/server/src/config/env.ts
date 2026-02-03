@@ -21,6 +21,8 @@ export interface EnvironmentConfig {
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
   JWT_SECRET: string;
+  JWT_ACCESS_TOKEN_EXPIRY: string;
+  JWT_REFRESH_TOKEN_EXPIRY: string;
   SKIP_OTP: boolean;
   POSTGRES_HOST: string;
   POSTGRES_PORT: number;
@@ -91,11 +93,26 @@ function parserArray(envVar: string | undefined, def: string): string | string[]
   if (vars.length === 0) return def;
   return vars.length === 1 ? vars[0] || def : vars;
 }
+
+/**
+ * Converts a zeit/ms-style expiry string (e.g. "1h", "30d") to seconds for cookie maxAge.
+ */
+export function expiryStringToSeconds(expiry: string): number {
+  const match = expiry.trim().match(/^(\d+)(s|m|h|d)$/i);
+  if (!match || match[1] === undefined || match[2] === undefined) return 3600; // fallback 1 hour
+  const n = parseInt(match[1], 10);
+  const unit = match[2].toLowerCase();
+  const multipliers: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
+  return n * (multipliers[unit] ?? 3600);
+}
+
 export const config: EnvironmentConfig = {
   NODE_ENV: process.env.NODE_ENV || "development",
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || "",
   JWT_SECRET: process.env.JWT_SECRET || "default-secret-key-change-in-production",
+  JWT_ACCESS_TOKEN_EXPIRY: process.env.JWT_ACCESS_TOKEN_EXPIRY || "1h",
+  JWT_REFRESH_TOKEN_EXPIRY: process.env.JWT_REFRESH_TOKEN_EXPIRY || "30d",
   SKIP_OTP: process.env.SKIP_OTP !== "false", // Defaults to true, set to 'false' to require OTP
   POSTGRES_HOST: process.env.POSTGRES_HOST || "localhost",
   POSTGRES_PORT: parseInt(process.env.POSTGRES_PORT || "5432", 10),

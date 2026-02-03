@@ -704,6 +704,10 @@ impl ChallengeAuthzHttp {
         match response_body {
             Some(body) => {
                 let body_str = String::from_utf8_lossy(&body);
+                info!(
+                    "[Rust WASM Filter] Raw user cache value: {}",
+                    body_str
+                );
 
                 // If empty (user not in cache), fetch from server
                 if body_str.trim().is_empty() {
@@ -717,6 +721,24 @@ impl ChallengeAuthzHttp {
                     // Parse cached user
                     match serde_json::from_str::<Value>(&body_str) {
                         Ok(user_value) => {
+                            // Handle rate limit errors from redis-filter gracefully:
+                            // if the response is {"error":"Rate limit exceeded", ...},
+                            // treat it like a cache miss and fall back to /auth/me.
+                            if user_value
+                                .get("error")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.eq_ignore_ascii_case("Rate limit exceeded"))
+                                .unwrap_or(false)
+                            {
+                                warn!("[Rust WASM Filter] User cache rate limited, falling back to /auth/me");
+                                if self.is_auth_me_request {
+                                    self.fetch_auth_me(CallType::AuthMeProxy);
+                                } else {
+                                    self.fetch_auth_me(CallType::UserFetch);
+                                }
+                                return;
+                            }
+
                             let cached_email = user_value
                                 .get("email")
                                 .and_then(|value| value.as_str())

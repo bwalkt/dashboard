@@ -3,7 +3,7 @@ import type { AuthenticatedRequest, ErrorResponse, UserResponse } from '@pzero/s
 import { CHALLENGE_ID_HEADER, CHALLENGE_QUESTION_HEADER } from '@pzero/shared/challenge'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { REFRESH_TOKEN_TTL, VALIDATION_HEADER_NAME } from '../config/constants.js'
-import { config } from '../config/env.js'
+import { config, expiryStringToSeconds } from '../config/env.js'
 import { redis } from '../config/redis.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { authService } from '../services/auth.service.js'
@@ -25,7 +25,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 3600, // 1 hour
+      maxAge: expiryStringToSeconds(config.JWT_ACCESS_TOKEN_EXPIRY),
     },
     credentials: {
       client: {
@@ -155,7 +155,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 3600, // 1 hour
+        maxAge: expiryStringToSeconds(config.JWT_ACCESS_TOKEN_EXPIRY),
       })
       reply.setCookie('refreshToken', refreshToken, {
         httpOnly: true,
@@ -258,7 +258,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 3600, // 1 hour
+        maxAge: expiryStringToSeconds(config.JWT_ACCESS_TOKEN_EXPIRY),
       })
 
       reply.setCookie('refreshToken', newRefreshToken, {

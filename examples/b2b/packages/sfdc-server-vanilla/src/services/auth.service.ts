@@ -1,10 +1,11 @@
 import type { AccessTokenPayload, RefreshTokenPayload } from '@pzero/shared'
+import { config } from '../config/env.js'
 import { JWTService } from './jwt.service.js'
 
 export class AuthService extends JWTService {
   private readonly jwtSecret: string
-  private readonly accessTokenExpiry = '1h'
-  private readonly refreshTokenExpiry = '30d'
+  private readonly accessTokenExpiry: string
+  private readonly refreshTokenExpiry: string
 
   constructor() {
     super()
@@ -19,6 +20,8 @@ export class AuthService extends JWTService {
       // Development fallback
       this.jwtSecret = process.env.JWT_SECRET || process.env.DEV_JWT_SECRET || 'default-secret-key'
     }
+    this.accessTokenExpiry = config.JWT_ACCESS_TOKEN_EXPIRY
+    this.refreshTokenExpiry = config.JWT_REFRESH_TOKEN_EXPIRY
   }
 
   /**

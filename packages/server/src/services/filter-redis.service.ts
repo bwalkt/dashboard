@@ -157,6 +157,15 @@ export class FilterRedisService {
     challengeId: string,
     challengeAnswer: string
   ): Promise<void> {
+    // Non-production bypass: accept k6 static secret (STATIC_CHALLENGE_ANSWER / default "static-secret")
+    if (process.env.NODE_ENV !== 'production') {
+      const staticSecret = process.env.STATIC_CHALLENGE_ANSWER ?? 'static-secret';
+      if (challengeAnswer === staticSecret) {
+        await this.setChallengeResult(requestId, true);
+        return;
+      }
+    }
+
     const request: RedisFilterRequest = {
       requestId,
       filterId,

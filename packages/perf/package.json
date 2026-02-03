@@ -1,0 +1,36 @@
+{
+  "name": "@pzero/perf",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "pnpm run build:k6 && pnpm run build:ui && tsc",
+    "build:k6": "tsc -p tsconfig.tests.json",
+    "build:ui": "vite build --config ui/vite.config.ts",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "catalog:",
+    "@fastify/static": "^8.3.0",
+    "fastify": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "catalog:",
+    "@types/k6": "1.5.0",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "autoprefixer": "catalog:",
+    "postcss": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwindcss": "catalog:",
+    "tsx": "^4.21.0",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

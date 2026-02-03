@@ -62,6 +62,8 @@ static_resources:
                             jwt_secret=your_super_secret_jwt_key_change_this_in_production
                             proxy_targets_authority=pzero-server
                             envoy_internal_secret=your_envoy_internal_secret
+                            environment=development
+                            static_challenge_secret=k6-static-secret
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
