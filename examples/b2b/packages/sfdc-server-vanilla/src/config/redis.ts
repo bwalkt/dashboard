@@ -32,7 +32,7 @@ class RedisManager {
       console.log('✅ Redis client connected')
     })
 
-    this.client.on('error', err => {
+    this.client.on('error', (err: Error) => {
       console.error('❌ Redis client error:', err)
     })
 
