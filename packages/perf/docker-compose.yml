@@ -1,0 +1,20 @@
+# k6 Control Center stack. Single service: UI and API at http://localhost:8099
+# Run from repo root: docker compose -f packages/perf/docker-compose.perf-ui.yml up --build
+name: perf-ui
+services:
+  perf:
+    build:
+      context: ../..
+      dockerfile: packages/perf/Dockerfile
+    container_name: perf
+    ports:
+      - "8099:8099"
+    environment:
+      - PERF_WORKSPACE=/app/perf-dist
+      - PORT=8099
+      # Server-side env passed to k6 (set via .env or export)
+      - BASE_URL=${BASE_URL:-}
+      - PROXY_TARGET=${PROXY_TARGET:-}
+      - STATIC_CHALLENGE_ANSWER=${STATIC_CHALLENGE_ANSWER:-}
+      - STATIC_CHALLENGE_ID=${STATIC_CHALLENGE_ID:-}
+    restart: "no"

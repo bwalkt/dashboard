@@ -70,7 +70,7 @@ if [ "$1" != "" ]; then
     docker run --rm \
         --env-file "$ENV_FILE" \
         --entrypoint k6 \
-        "$IMAGE_NAME" run "/tests/dist/$TEST_FILE"
+        "$IMAGE_NAME" run "/tests/k6-dist/$TEST_FILE"
 else
     print_info "Running all tests with environment variables from .env"
     docker run --rm \
