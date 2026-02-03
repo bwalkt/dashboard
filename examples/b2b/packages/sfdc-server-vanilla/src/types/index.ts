@@ -23,6 +23,8 @@ export interface EnvironmentConfig {
   GITHUB_CLIENT_ID: string
   GITHUB_CLIENT_SECRET: string
   JWT_SECRET: string
+  JWT_ACCESS_TOKEN_EXPIRY: string
+  JWT_REFRESH_TOKEN_EXPIRY: string
   DATABASE_PATH: string
   PORT?: number
   FRONTEND_URL: string

@@ -7,10 +7,24 @@ if (!process.env.DOCKER_CONTAINER && !process.env.NODE_ENV?.includes('docker')) 
   dotenv.config()
 }
 
+/**
+ * Converts a zeit/ms-style expiry string (e.g. "1h", "30d") to seconds for cookie maxAge.
+ */
+export function expiryStringToSeconds(expiry: string): number {
+  const match = expiry.trim().match(/^(\d+)(s|m|h|d)$/i)
+  if (!match || match[1] === undefined || match[2] === undefined) return 3600 // fallback 1 hour
+  const n = parseInt(match[1], 10)
+  const unit = match[2].toLowerCase()
+  const multipliers: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 }
+  return n * (multipliers[unit] ?? 3600)
+}
+
 export const config: EnvironmentConfig = {
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || '',
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || '',
   JWT_SECRET: process.env.JWT_SECRET || 'default-secret-key-change-in-production',
+  JWT_ACCESS_TOKEN_EXPIRY: process.env.JWT_ACCESS_TOKEN_EXPIRY || '1h',
+  JWT_REFRESH_TOKEN_EXPIRY: process.env.JWT_REFRESH_TOKEN_EXPIRY || '30d',
   DATABASE_PATH: process.env.DATABASE_PATH || './database.db',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:1420',
   REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',

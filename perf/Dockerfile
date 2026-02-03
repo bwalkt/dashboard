@@ -8,8 +8,7 @@ RUN npx tsc
 FROM grafana/k6:1.5.0
 WORKDIR /tests
 COPY --from=builder /app/dist ./dist
-COPY run-tests.sh /tests/run-tests.sh
-RUN chmod +x /tests/run-tests.sh
+COPY --chmod=755 run-tests.sh /tests/run-tests.sh
 ENTRYPOINT []
 CMD ["sh", "/tests/run-tests.sh"]
 

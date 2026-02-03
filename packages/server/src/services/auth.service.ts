@@ -4,12 +4,14 @@ import { JWTService } from "./jwt.service.js";
 
 export class AuthService extends JWTService {
   private readonly jwtSecret: string;
-  private readonly accessTokenExpiry = "1h";
-  private readonly refreshTokenExpiry = "30d";
+  private readonly accessTokenExpiry: string;
+  private readonly refreshTokenExpiry: string;
 
   constructor() {
     super();
     this.jwtSecret = config.JWT_SECRET;
+    this.accessTokenExpiry = config.JWT_ACCESS_TOKEN_EXPIRY;
+    this.refreshTokenExpiry = config.JWT_REFRESH_TOKEN_EXPIRY;
   }
 
   /**
