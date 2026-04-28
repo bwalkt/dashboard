@@ -218,18 +218,14 @@ const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = asyn
     }
 
     // Check for public paths FIRST (no auth required, skip bot detection for these)
-    // Extract pathname from URL (remove query string and hash)
-    let isPublic = false;
-    if (request.url) {
-      try {
-        // Fastify request.url is typically just the pathname with query string
-        // Use a dummy base URL to parse it properly
-        const url = new URL(request.url, config.SERVER_BASE_URL);
-        isPublic = isPublicPath(url.pathname);
-      } catch {
-        // Fallback to original string if URL parsing fails
-        isPublic = isPublicPath(request.url);
-      }
+    const isPublic = request.url ? isPublicPath(request.url) : false;
+
+    // Rate limiting
+    if (options.enableRateLimit && !(await checkRateLimit(clientIP))) {
+      return reply.status(429).send({
+        error: "Rate limit exceeded",
+        retryAfter: 60,
+      });
     }
 
     // Skip bot detection for public paths (like /auth/login)
@@ -242,14 +238,6 @@ const headerValidationPlugin: FastifyPluginAsync<HeaderValidationOptions> = asyn
       return reply.status(403).send({
         error: "Suspicious bot detected",
         reason: "user-agent-pattern",
-      });
-    }
-
-    // Rate limiting
-    if (options.enableRateLimit && !(await checkRateLimit(clientIP))) {
-      return reply.status(429).send({
-        error: "Rate limit exceeded",
-        retryAfter: 60,
       });
     }
 
