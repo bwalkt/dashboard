@@ -98,19 +98,18 @@ CREATE DOMAIN pzero.url AS text CHECK (
 );
 
 CREATE TYPE pzero.oauth_provider AS enum('GITHUB', 'GOOGLE', 'MICROSOFT');
-
--- OB - OWNED BY, PC - PARENT-CHILD, PP - PEER-PEER, EXTEND-PARENT,CLONED-OBJECT, LINKED-OBJECT, ROOT-OBJECT, RELATED, REPLACED-OBJECT, Admined-by, member-of, billing-to
+-- roles - Admined-by, member-of, billing-to
+-- OB - OWNED BY, PC - PARENT-CHILD, PP - PEER-PEER, EXTEND-PARENT,CLONED-OBJECT, LINKED-OBJECT, ROOT-OBJECT, RELATED, REPLACED-OBJECT, 
 CREATE TYPE pzero.relation_type AS enum(
-  'OB',
-  'PC',
-  'PP',
-  'EP',
-  'CO',
-  'LO',
-  'RO',
-  'RL',
-  'RP',
-  'AB'
+  'OB', -- 1
+  'PC', -- 4
+  'PP', -- 8
+  'EP', -- 16
+  'CO', -- 32
+  'LO', -- 64
+  'RO', -- 128
+  'RL', -- 256
+  'RP', -- 512
 );
 
 CREATE TYPE pzero.billing_freq AS enum(
@@ -567,6 +566,18 @@ CREATE TABLE pzero.base_part (
 -- Children of org are
 -- nhs,
 -- groups
+-- this table is currently not populated.
+-- TODO: populate and remove relation from pzero.all_relations
+-- 
+CREATE TABLE pzero.all_relations_types (
+  part pzero.valid_part,
+  is_act boolean DEFAULT TRUE,
+  mmn1 pzero.mmn_type not null,
+  mmn2 pzero.mmn_type not null
+  relation pzero.relation_type not null,
+  PRIMARY KEY (part, is_act, mmn1, mmn2)
+)PARTITION BY list (is_act);
+
 CREATE TABLE pzero.all_relations (
   part pzero.valid_part,
   is_act boolean DEFAULT TRUE,
