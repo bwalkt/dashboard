@@ -18,4 +18,5 @@ export {
   isValidHandle,
   suggestAlternativeHandles,
 } from './utils/handles.js'
+export * from './uuid.js'
 export * from './validator/index.js'

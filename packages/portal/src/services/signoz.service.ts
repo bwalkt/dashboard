@@ -19,7 +19,11 @@ export async function queryTraces(options: SigNozQueryOptions): Promise<RawDataR
  * Query SigNoz API for traces summary (for chart) via server endpoint
  */
 export async function queryTracesSummary(startTime: number, endTime: number): Promise<RawDataResponse> {
-  return apiRequest<RawDataResponse>(`/signoz/traces/summary?startTime=${startTime}&endTime=${endTime}`, {
+  const params = new URLSearchParams({
+    startTime: startTime.toString(),
+    endTime: endTime.toString(),
+  })
+  return apiRequest<RawDataResponse>(`/signoz/traces/summary?${params}`, {
     method: 'GET',
   })
 }

@@ -201,23 +201,17 @@ export function DataTableInfinite<TData, TValue, TMeta>({
       return { id: field.value, value: filterValue.value }
     })
 
-    console.log('🔍 columnFilters:', columnFilters)
-    console.log('🔍 columnFiltersWithNullable:', columnFiltersWithNullable)
-
     const search = columnFiltersWithNullable.reduce(
       (prev, curr) => {
         // Special handling for timerange filter - convert to startTime/endTime
         if (curr.id === 'date' && Array.isArray(curr.value) && curr.value.length >= 2) {
           const dates = curr.value as Date[]
-          console.log('🔍 Date filter (2 dates):', dates)
           if (dates[0] && dates[1]) {
             prev.startTime = dates[0].getTime()
             prev.endTime = dates[1].getTime()
-            console.log('🔍 Converted to startTime/endTime:', prev.startTime, prev.endTime)
           }
         } else if (curr.id === 'date' && Array.isArray(curr.value) && curr.value.length === 1) {
           const date = curr.value[0] as Date
-          console.log('🔍 Date filter (1 date):', date)
           if (date) {
             prev.startTime = date.getTime()
             prev.endTime = date.getTime()

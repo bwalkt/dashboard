@@ -91,6 +91,20 @@ export async function signozRoutes(fastify: FastifyInstance): Promise<void> {
         const startTime = startTimeStr ? parseInt(startTimeStr, 10) : now - 1000 * 60 * 60 * 24;
         const endTime = endTimeStr ? parseInt(endTimeStr, 10) : now;
 
+        if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
+          return reply.code(400).send({
+            error: "Invalid time range",
+            message: "startTime and endTime must be valid numbers (epoch ms)",
+          });
+        }
+
+        if (startTime >= endTime) {
+          return reply.code(400).send({
+            error: "Invalid time range",
+            message: "startTime must be less than endTime",
+          });
+        }
+
         // Use a high limit to get all data for the chart
         // Note: With DESC ordering, we need enough limit to reach historical data
         const result = await queryTraces({
@@ -111,4 +125,3 @@ export async function signozRoutes(fastify: FastifyInstance): Promise<void> {
     },
   );
 }
-

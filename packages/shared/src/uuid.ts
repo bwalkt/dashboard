@@ -13,4 +13,19 @@ export function normalizeBleUuid(uuid: string): string {
   return uuid.replace(/-/g, '').toLowerCase()
 }
 
+/**
+ * Extract the Unix millisecond timestamp from a UUIDv7 string.
+ * Returns null when the UUID is invalid or not parseable.
+ */
+export function getUuidV7Timestamp(uuid: string): number | null {
+  try {
+    const hex = uuid.replace(/-/g, '').slice(0, 12)
+    if (hex.length < 12) return null
+    const timestamp = parseInt(hex, 16)
+    return Number.isFinite(timestamp) ? timestamp : null
+  } catch {
+    return null
+  }
+}
+
 export { uuid }

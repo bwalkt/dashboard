@@ -57,9 +57,10 @@ export interface FacetMetadataSchema {
 import type { BaseChartSchema } from '@/components/infinite-data-table/types'
 import { TimingPhase } from '@/lib/request/timing'
 
-export interface TimelineChartSchema extends BaseChartSchema {
+export type TimelineChartSchema = BaseChartSchema & {
   timestamp: number
-  [K in (typeof LEVELS[number])]: number
+} & {
+  [K in (typeof LEVELS)[number]]: number
 }
 
 // =============================================================================
@@ -81,6 +82,8 @@ export interface SignozTraceSchema {
   timingPhases: Partial<Record<TimingPhase, number>>
   responseHeaders?: Record<string, string>
   requestHeaders?: Record<string, string>
+  info?: unknown
+  challengeTimeline?: unknown
 }
 
 export interface SignozColumnFilterSchema {

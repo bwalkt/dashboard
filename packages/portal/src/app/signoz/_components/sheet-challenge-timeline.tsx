@@ -1,6 +1,7 @@
 'use client'
 
 import { CHALLENGE_ANSWER_HEADER, CHALLENGE_ID_HEADER } from '@pzero/shared/http'
+import { getUuidV7Timestamp } from '@pzero/shared/uuid'
 import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SimpleTimeline, type SimpleTimelineItem } from '@/components/ui/timeline'
@@ -16,19 +17,6 @@ function getHeader(headers: Record<string, string> | undefined, key: string): st
     if (k.toLowerCase() === lowerKey) return v
   }
   return undefined
-}
-
-// Extract timestamp from UUIDv7 challenge ID (first 48 bits are Unix ms timestamp)
-function getUuidTimestamp(uuid: string | undefined): number {
-  if (!uuid) return 0
-  try {
-    // UUIDv7 format: xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx
-    // First 48 bits (12 hex chars) are the timestamp
-    const hex = uuid.replace(/-/g, '').slice(0, 12)
-    return parseInt(hex, 16)
-  } catch {
-    return 0
-  }
 }
 
 // Get challenge IDs from a trace
@@ -93,7 +81,7 @@ export function SheetChallengeTimeline({ currentTrace }: SheetChallengeTimelineP
   const current = getChallengeIds(currentTrace)
 
   // Use a time window around the current trace (±10 minutes)
-  const currentTraceTime = currentTrace.timestamp
+  const currentTraceTime = currentTrace.timestamp || getUuidV7Timestamp(current.requestId ?? '') || 0
   const tenMinutes = 10 * 60 * 1000
   const startTime = currentTraceTime - tenMinutes
   const endTime = currentTraceTime + tenMinutes

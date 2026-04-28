@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import type { ColumnFiltersState } from '@tanstack/react-table'
 import { useQueryStates } from 'nuqs'
 import * as React from 'react'
 import type { DataTableFilterField } from '@/components/data-table/types'
@@ -30,17 +31,26 @@ export function SignozClient() {
   const [search, setSearch] = useQueryStates(searchParamsParser)
   useResetFocus()
 
+  const fallbackRange = React.useMemo(() => {
+    const now = Date.now()
+    return {
+      start: now - 60 * 60 * 1000,
+      end: now,
+    }
+  }, [])
+
+  const rangeStartTime = search.startTime ?? fallbackRange.start
+  const rangeEndTime = search.endTime ?? fallbackRange.end
+
   // Initialize default time range if not set
   React.useEffect(() => {
     if (!search.startTime || !search.endTime) {
-      const now = Date.now()
-      const oneHourAgo = now - 60 * 60 * 1000
       setSearch({
-        startTime: oneHourAgo,
-        endTime: now,
+        startTime: fallbackRange.start,
+        endTime: fallbackRange.end,
       })
     }
-  }, [search.startTime, search.endTime, setSearch])
+  }, [fallbackRange.end, fallbackRange.start, search.endTime, search.startTime, setSearch])
 
   // Use infinite query for pagination
   const { data, isFetching, isLoading, fetchNextPage, hasNextPage, refetch } = useInfiniteQuery(dataOptions(search))
@@ -50,9 +60,7 @@ export function SignozClient() {
   }, [data?.pages])
 
   // Use separate query for chart summary data (fetches all data for the date range)
-  const { data: chartData = [] } = useQuery(
-    summaryOptions(search.startTime || Date.now() - 60 * 60 * 1000, search.endTime || Date.now()),
-  )
+  const { data: chartData = [] } = useQuery(summaryOptions(rangeStartTime, rangeEndTime))
 
   // Get metadata from the last page (all pages should have the same total)
   const lastPage = data?.pages?.[data?.pages.length - 1]
@@ -62,26 +70,35 @@ export function SignozClient() {
   // Extract filter values for defaultColumnFilters
   // Exclude params that are not table columns (limit, offset, sort, spanId, traceId)
   // But convert startTime/endTime to a "date" column filter
-  const { sort, spanId, traceId, startTime, endTime, limit, offset, ...filters } = search
+  const {
+    sort,
+    spanId,
+    traceId,
+    startTime: searchStartTime,
+    endTime: searchEndTime,
+    limit,
+    offset,
+    ...filters
+  } = search
 
-  const defaultColumnFilters = React.useMemo(() => {
+  const defaultColumnFilters = React.useMemo<ColumnFiltersState>(() => {
     const columnFilters = Object.entries(filters)
       .map(([key, value]) => ({
         id: key,
         value,
       }))
-      .filter(({ value }) => value != null && (!Array.isArray(value) || value.length > 0))
+      .filter(({ value }) => value != null && (!Array.isArray(value) || value.length > 0)) as ColumnFiltersState
 
     // Convert startTime/endTime URL params back to a "date" column filter
-    if (startTime && endTime) {
+    if (searchStartTime && searchEndTime) {
       columnFilters.push({
         id: 'date',
-        value: [new Date(startTime), new Date(endTime)],
+        value: [new Date(searchStartTime), new Date(searchEndTime)],
       })
     }
 
     return columnFilters
-  }, [filters, startTime, endTime])
+  }, [filters, searchEndTime, searchStartTime])
 
   return (
     <DataTableInfinite
