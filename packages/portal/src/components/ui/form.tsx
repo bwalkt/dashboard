@@ -16,19 +16,33 @@ import {
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
-const Form = ({
-  children,
-  onSubmit,
-  form,
-  className,
-  id,
-}: {
+type ManagedFormProps<TFieldValues extends FieldValues, TContext, TTransformed> = {
   children: React.ReactNode
-  onSubmit: (data: any) => void
-  form: UseFormReturn<any, any, undefined>
+  onSubmit: React.FormEventHandler<HTMLFormElement>
+  form: UseFormReturn<TFieldValues, TContext, TTransformed>
   className?: string
   id?: string
-}) => {
+}
+
+type ProviderFormProps<TFieldValues extends FieldValues, TContext, TTransformed> = UseFormReturn<
+  TFieldValues,
+  TContext,
+  TTransformed
+> & {
+  children: React.ReactNode
+}
+
+const Form = <TFieldValues extends FieldValues = FieldValues, TContext = any, TTransformed = any>(
+  props:
+    | ManagedFormProps<TFieldValues, TContext, TTransformed>
+    | ProviderFormProps<TFieldValues, TContext, TTransformed>,
+) => {
+  if (!('form' in props)) {
+    return <FormProvider {...props} />
+  }
+
+  const { children, onSubmit, form, className, id } = props
+
   return (
     <FormProvider {...form}>
       <form onSubmit={onSubmit} className={className} id={id}>

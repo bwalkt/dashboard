@@ -1,33 +1,33 @@
 import { ALLOWED_COUNTRIES, DEFAULT_COUNTRY, validatePhoneNumber } from '@pzero/shared/phone'
-import type { Org } from '@pzero/shared/pzero'
+import type { CreateOrganizationWithUserData, OrgPlan, OrgStatus } from '@pzero/shared/pzero'
 import { generateOrgHandle } from '@pzero/shared/utils/handles'
 import { createValidator } from '@pzero/shared/validator/ajv'
 import * as React from 'react'
 import { useForm } from 'react-hook-form'
-import {
-  MultiSelector,
-  MultiSelectorContent,
-  MultiSelectorInput,
-  MultiSelectorItem,
-  MultiSelectorList,
-  MultiSelectorTrigger,
-} from '@/components/form-builder/multi-select'
 import { PhoneInput } from '@/components/form-builder/phone-input'
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { createAjvResolver } from '@/lib/ajv-resolver'
 import { toastUtils } from '@/lib/toast'
 import { orgsService } from '@/services/api/orgs'
 import { useAuthStore } from '@/stores/auth'
-import { useOrgsStore } from '@/stores/orgs'
 
-interface OrgFormValues extends Omit<Org, 'id' | 'c_by' | 'u_by'> {
+interface OrgFormValues {
+  website: string
+  name: string
+  handle: string
+  dscr: string
+  contact_name: string
+  status: OrgStatus
+  plan: OrgPlan
+  email: string
+  phone: string
+  address: string
+  user_ids: string[]
   new_user: {
     name: string
     email: string
@@ -54,11 +54,11 @@ const orgFormSchema = {
     contact_name: { type: 'string', minLength: 1 },
     status: {
       type: 'string',
-      enum: ['active', 'inactive', 'suspended'],
+      enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],
     },
     plan: {
       type: 'string',
-      enum: ['free', 'starter', 'pro', 'enterprise'],
+      enum: ['FREE', 'STARTER', 'PRO', 'ENTERPRISE'],
     },
     email: {
       type: 'string',
@@ -113,7 +113,6 @@ interface AddOrgFormProps {
 
 export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormProps) {
   const { user } = useAuthStore()
-  const orgsStore = useOrgsStore()
 
   const form = useForm<OrgFormValues>({
     resolver: createAjvResolver(validateOrgForm),
@@ -124,8 +123,8 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       handle: '',
       dscr: '',
       contact_name: '',
-      status: 'active' as const,
-      plan: 'starter' as const,
+      status: 'ACTIVE' as const,
+      plan: 'STARTER' as const,
       email: '',
       phone: '',
       address: '',
@@ -155,7 +154,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
         }
 
         // Remove protocol and www for parsing
-        let cleanDomain = website
+        const cleanDomain = website
           .replace(/^https?:\/\//, '')
           .replace(/^www\./, '')
           .replace(/\/$/, '')
@@ -165,8 +164,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
 
         if (parts.length >= 2) {
           const companyName = parts[0]
-          const domain = cleanDomain // This should be the full domain like "arasva.com"
-
           // Auto-fill name if empty
           if ((!value.name || value.name.trim() === '') && companyName) {
             const capitalizedName = companyName.charAt(0).toUpperCase() + companyName.slice(1)
@@ -211,10 +208,6 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
   }, [form])
 
   const onSubmit = async (data: OrgFormValues) => {
-    console.log('Form submission started with data:', data)
-    console.log('Form validation errors:', form.formState.errors)
-    console.log('Form validation state:', form.formState.isValid)
-
     try {
       // Validate email and website domain match
       // Temporarily disabled for testing
@@ -283,20 +276,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
           : undefined,
       }
 
-      console.log('🚀 CLIENT: Sending org creation request with payload:', JSON.stringify(orgData, null, 2))
-      console.log('🚀 CLIENT: Form data validation state:', {
-        isValid: form.formState.isValid,
-        errors: form.formState.errors,
-        isDirty: form.formState.isDirty,
-        isSubmitting: form.formState.isSubmitting,
-      })
-
-      const result = await orgsService.createOrgWithUser(orgData)
-      console.log('✅ CLIENT: Received successful response from server:', JSON.stringify(result, null, 2))
-
-      // Update local store with the created organization
-      // The store will be refreshed when the orgs list is fetched again
-      console.log('✅ CLIENT: Organization created successfully:', result.org)
+      await orgsService.createOrgWithUser(orgData as CreateOrganizationWithUserData)
 
       const successMessage = data.create_new_user
         ? `Org created successfully with new user`
@@ -306,13 +286,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
       form.reset()
       onOpenChange(false)
     } catch (error) {
-      console.error('❌ CLIENT: Error creating organization:', error)
-      console.error('❌ CLIENT: Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace',
-        type: typeof error,
-        stringified: JSON.stringify(error, null, 2),
-      })
+      console.error('Error creating organization:', error)
 
       if (error instanceof Error && error.message.includes('Authentication required')) {
         toastUtils.error('Please log in first to create an organization')
@@ -394,9 +368,9 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value="SUSPENDED">Suspended</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -417,10 +391,10 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="starter">Starter</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                  <SelectItem value="FREE">Free</SelectItem>
+                  <SelectItem value="STARTER">Starter</SelectItem>
+                  <SelectItem value="PRO">Pro</SelectItem>
+                  <SelectItem value="ENTERPRISE">Enterprise</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -542,18 +516,7 @@ export function AddOrgForm({ open, onOpenChange, asPage = false }: AddOrgFormPro
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
             Cancel
           </Button>
-          <Button
-            type="submit"
-            form="org-form"
-            disabled={form.formState.isSubmitting}
-            className="flex-1"
-            onClick={() => {
-              console.log('Create Org button clicked')
-              console.log('Form errors:', form.formState.errors)
-              console.log('Form is valid:', form.formState.isValid)
-              console.log('Form values:', form.getValues())
-            }}
-          >
+          <Button type="submit" form="org-form" disabled={form.formState.isSubmitting} className="flex-1">
             {form.formState.isSubmitting ? 'Creating...' : 'Create Org'}
           </Button>
         </SheetFooter>

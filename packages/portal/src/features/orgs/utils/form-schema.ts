@@ -1,6 +1,5 @@
-import type { Org, OrgPlan, OrgStatus } from '@pzero/shared/pzero'
-import { validateCreateOrgData } from '@pzero/shared/pzero'
-import { FieldErrors, FieldValues, ResolverOptions } from 'react-hook-form'
+import type { OrgPlan, OrgStatus } from '@pzero/shared/pzero'
+import type { FieldErrors, Resolver } from 'react-hook-form'
 
 export interface OrgFormValues {
   name: string
@@ -13,10 +12,7 @@ export interface OrgFormValues {
   plan: OrgPlan
 }
 
-// Use shared validator from @pzero/shared/pzero/orgs
-const validateOrg = validateCreateOrgData
-
-export const orgResolver = (values: OrgFormValues, context: any, options: ResolverOptions<OrgFormValues>) => {
+export const orgResolver: Resolver<OrgFormValues> = values => {
   try {
     // Simple validation for required fields
     const errors: FieldErrors = {}

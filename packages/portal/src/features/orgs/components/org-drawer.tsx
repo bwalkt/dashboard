@@ -1,7 +1,7 @@
 'use client'
 
 import type { Org } from '@pzero/shared/pzero'
-import { EditIcon, PlusIcon, X } from 'lucide-react'
+import { EditIcon, PlusIcon } from 'lucide-react'
 import React from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'

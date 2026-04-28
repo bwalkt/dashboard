@@ -58,8 +58,6 @@ export function OrgForm({ org, onSubmit, onCancel, loading }: OrgFormProps) {
     resolver: orgResolver,
   })
 
-  console.log('OrgForm render:', { org: !!org, formState: form.formState, initialValues })
-
   // Reset form when org changes
   React.useEffect(() => {
     form.reset(initialValues)
@@ -81,77 +79,75 @@ export function OrgForm({ org, onSubmit, onCancel, loading }: OrgFormProps) {
   }, [nameValue, isEditing, form])
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput control={form.control} name="name" label="Org Name" placeholder="Enter org name" required />
-          <FormInput
-            control={form.control}
-            name="handle"
-            label="Handle"
-            placeholder="org-handle"
-            description="URL-friendly identifier (lowercase, no spaces)"
-            required
-          />
-        </div>
-
-        <FormTextarea
+    <Form form={form} onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormInput control={form.control} name="name" label="Org Name" placeholder="Enter org name" required />
+        <FormInput
           control={form.control}
-          name="dscr"
-          label="Description"
-          placeholder="Brief description of the org"
-          rows={3}
+          name="handle"
+          label="Handle"
+          placeholder="org-handle"
+          description="URL-friendly identifier (lowercase, no spaces)"
+          required
         />
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput
-            control={form.control}
-            name="email"
-            label="Contact Email"
-            type="email"
-            placeholder="contact@org.com"
-          />
-          <FormInput
-            control={form.control}
-            name="phone"
-            label="Phone Number"
-            type="tel"
-            placeholder="+1 (555) 000-0000"
-          />
-        </div>
+      <FormTextarea
+        control={form.control}
+        name="dscr"
+        label="Description"
+        placeholder="Brief description of the org"
+        config={{ rows: 3 }}
+      />
 
-        <FormInput control={form.control} name="website" label="Website" type="url" placeholder="https://org.com" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormInput
+          control={form.control}
+          name="email"
+          label="Contact Email"
+          type="email"
+          placeholder="contact@org.com"
+        />
+        <FormInput
+          control={form.control}
+          name="phone"
+          label="Phone Number"
+          type="tel"
+          placeholder="+1 (555) 000-0000"
+        />
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormSelect
-            control={form.control}
-            name="status"
-            label="Status"
-            placeholder="Select status"
-            options={statusOptions}
-            required
-          />
-          <FormSelect
-            control={form.control}
-            name="plan"
-            label="Plan"
-            placeholder="Select plan"
-            options={planOptions}
-            required
-          />
-        </div>
+      <FormInput control={form.control} name="website" label="Website" type="url" placeholder="https://org.com" />
 
-        <div className="flex justify-end gap-3">
-          {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
-              Cancel
-            </Button>
-          )}
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormSelect
+          control={form.control}
+          name="status"
+          label="Status"
+          placeholder="Select status"
+          options={statusOptions}
+          required
+        />
+        <FormSelect
+          control={form.control}
+          name="plan"
+          label="Plan"
+          placeholder="Select plan"
+          options={planOptions}
+          required
+        />
+      </div>
+
+      <div className="flex justify-end gap-3">
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+            Cancel
           </Button>
-        </div>
-      </form>
+        )}
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
+        </Button>
+      </div>
     </Form>
   )
 }

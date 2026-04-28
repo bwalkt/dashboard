@@ -8,7 +8,6 @@ export const filterFields = [
     label: 'Name',
     value: 'name',
     type: 'input',
-    placeholder: 'Filter organizations...',
   },
   {
     label: 'Status',
@@ -35,6 +34,5 @@ export const filterFields = [
     label: 'Email',
     value: 'email',
     type: 'input',
-    placeholder: 'Filter by email...',
   },
 ] satisfies DataTableFilterField<Org>[]
