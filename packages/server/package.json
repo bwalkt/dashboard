@@ -22,7 +22,7 @@
     "dev:both": "concurrently \"pnpm run dev\" \"pnpm run dev:centrifuge\"",
     "dev:fastify": "fastify start dist/index.js --watch --port 8090",
     "clean": "rm -rf dist",
-    "migrations:up": "DATABASE_URL=postgresql://postgres:postgres@localhost:5433/pzero && node scripts/run-migrations.js",
+    "migrations:up": "node scripts/run-migrations.js",
     "migrations:down": "node scripts/rollback-migrations.js",
     "migrations:rollback": "node scripts/rollback-migrations.js",
     "docker:down": "docker compose down --remove-orphans",
