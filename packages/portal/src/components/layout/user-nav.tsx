@@ -18,8 +18,7 @@ import { useAuthStore } from '@/stores/auth'
  *
  * The menu displays the current user's name and email, offers items for Profile, Billing,
  * Settings, New Team, and Home, and includes a Sign Out action. Activating Sign Out calls
- * the authentication sign-out function, shows a success toast and navigates to the sign-in
- * page on success, or shows an error toast on failure.
+ * the authentication sign-out function and shows a success or error toast.
  *
  * @returns A JSX element rendering the user navigation dropdown menu
  */

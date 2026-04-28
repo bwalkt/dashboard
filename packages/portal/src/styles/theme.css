@@ -1,6 +1,7 @@
 /* Theme CSS Variables */
 
 /* Default theme - Cyan/JetBlue */
+/* Note: Default and cyan are intentionally identical to allow explicit "Cyan" selection. */
 .theme-default {
   --primary: oklch(0.89 0.12 195);
   --primary-foreground: oklch(0.205 0 0);

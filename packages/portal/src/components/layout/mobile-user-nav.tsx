@@ -16,7 +16,7 @@ import { useAuthStore } from '@/stores/auth'
 /**
  * Render a mobile-friendly user avatar button that opens a dropdown menu with account and navigation actions.
  *
- * The menu displays the user's name and primary email. Selecting "Sign Out" attempts to sign the user out, shows a success or error toast, and navigates to the sign-in page on successful sign-out.
+ * The menu displays the user's name and primary email. Selecting "Sign Out" attempts to sign the user out and shows a success or error toast.
  *
  * @returns A JSX element containing the user avatar trigger and dropdown menu with profile, navigation, and sign-out actions.
  */

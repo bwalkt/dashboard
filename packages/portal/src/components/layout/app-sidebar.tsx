@@ -342,13 +342,19 @@ export default function AppSidebar({ filterFields: propFilterFields }: AppSideba
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                tooltip={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                tooltip={
+                  !resolvedTheme
+                    ? 'Toggle theme'
+                    : resolvedTheme === 'dark'
+                      ? 'Switch to light mode'
+                      : 'Switch to dark mode'
+                }
                 onClick={() => {
                   setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
                 }}
               >
                 {resolvedTheme === 'dark' ? <IconSun /> : <IconMoon />}
-                <span>{resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                <span>{!resolvedTheme ? 'Theme' : resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
