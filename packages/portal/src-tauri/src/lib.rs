@@ -23,12 +23,6 @@ struct AuthRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct AuthResponse {
-    id: String,
-    approved: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 struct AuthTimeout {
     id: String,
     reason: String,

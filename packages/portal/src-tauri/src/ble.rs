@@ -442,7 +442,9 @@ impl BLEManager {
             tries += 1;
         }
 
-        adapter.stop_scan().await?;
+        if let Err(e) = adapter.stop_scan().await {
+            eprintln!("Warning: Failed to stop scan: {}", e);
+        }
 
         // Get discovered peripherals
         let peripherals = adapter.peripherals().await?;
@@ -464,18 +466,13 @@ impl BLEManager {
 
                 // Check if this is the device we're looking for
                 // iOS uses identifierForVendor (UUID), Android uses BLE address
-                // We match by name containing "PZero" as backup
                 let local_name = props.local_name.clone().unwrap_or_default();
                 let address = peripheral.id().to_string();
 
                 println!("Checking peripheral: {} (address: {})", local_name, address);
 
-                // Try to match by address or name
-                if address.to_lowercase().contains(&oob_data.address.to_lowercase())
-                    || oob_data.address.to_lowercase().contains(&address.to_lowercase())
-                    || (local_name.to_lowercase().contains("pzero")
-                        && props.services.contains(&service_uuid))
-                {
+                // Match strictly by address to preserve OOB security guarantees
+                if address.to_lowercase() == oob_data.address.to_lowercase() {
                     found_peripheral = Some(peripheral);
                     println!("Found matching device: {}", local_name);
                     break;
